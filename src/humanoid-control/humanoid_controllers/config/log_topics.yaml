@@ -1,0 +1,21 @@
+topics:
+  - /cmd_vel
+  - /joint_cmd
+  - /sensors_data_raw
+  - /joy
+  - /joy/set_feedback
+  - /kuavo_.*
+  - /monitor/.*
+  - /odom
+  - /pose
+  - /quest_joystick_data
+  - /rosout
+  - /rosout_agg
+  - /tf
+  - /tf_static
+  - /state_estimate/.*
+  - /external_wrench
+  - /ground_truth/state
+  - /humanoid.*
+  - /inekf_state/.*
+  - /visualization_marker.*

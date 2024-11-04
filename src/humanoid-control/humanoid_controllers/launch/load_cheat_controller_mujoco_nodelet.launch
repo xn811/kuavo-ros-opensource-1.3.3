@@ -1,0 +1,76 @@
+<?xml version="1.0" ?>
+
+<launch>
+    <arg name="robot_version"      default="40"/>
+    <arg name="robot_type"         default="humanoid"/>
+    <arg name="rviz"               default="true" />
+    <arg name="description_name"   default="humanoid_description"/>
+    <arg name="multiplot"          default="false"/>
+    <arg name="use_external_mpc"   default="true"/>
+    <arg name="wbc_frequency"      default="500"/>
+    <arg name="sensor_frequency"   default="500"/>
+    <arg name="wbc_only"           default="false"/>
+    <arg name="use_joystick"       default="false"/>
+
+    <arg name="taskFile"          default="$(find humanoid_interface)/config/mpc/task.info"/>
+    <arg name="dynamicQrFile"     default="$(find humanoid_interface)/config/mpc/dynamic_qr.info"/>
+    <!-- The reference related config file of the robot -->
+    <arg name="referenceFile"     default="$(find humanoid_interface)/config/command/reference.info"/>
+    <!-- The URDF model of the robot -->
+    <arg name="urdfFile"          default="$(find biped_s3)/urdf/biped_s3.urdf"/>
+
+    <!-- The file defining gait definition -->
+    <arg name="gaitCommandFile"   default="$(find humanoid_interface)/config/command/gait.info"/>
+
+    <include file="$(find humanoid_interface_ros)/launch/robot_version_manager.launch">
+      <arg name="robot_version" value="$(arg robot_version)"/>
+      <arg name="rviz" value="$(arg rviz)"/>
+    </include>
+
+    <!-- multiplot -->
+    <group if="$(arg multiplot)">
+      <include file="$(find humanoid_interface_ros)/launch/multiplot.launch"/>
+    </group>
+
+    <!-- make the files into global parameters -->
+    <param name="multiplot"         value="$(arg multiplot)"/>
+    <param name="taskFile"          value="$(arg taskFile)" />
+    <param name="referenceFile"     value="$(arg referenceFile)" />
+    <param name="gaitCommandFile"   value="$(arg gaitCommandFile)"/>
+    <param name="wbc_only"          value="$(arg wbc_only)"/>
+    <param name="use_external_mpc"  value="$(arg use_external_mpc)"/>
+    <param name="wbc_frequency"     value="$(arg wbc_frequency)"/>
+    <param name="sensor_frequency"  value="$(arg sensor_frequency)"/>
+    <param name="dynamicQrFile"     value="$(arg dynamicQrFile)"/>
+
+    <!-- mpc node -->
+    <group if="$(arg use_external_mpc)">
+      <node pkg="humanoid_interface_ros" type="humanoid_ddp_mpc" name="humanoid_ddp_mpc" output="screen" launch-prefix=""/>
+    </group>
+
+    <group unless="$(arg use_joystick)">
+      <node pkg="humanoid_interface_ros" type="humanoid_target" name="humanoid_target"
+            output="screen" launch-prefix="gnome-terminal --"/>
+
+      <node pkg="humanoid_interface_ros" type="humanoid_gait_command" name="humanoid_gait_command"
+            output="screen" launch-prefix="gnome-terminal --"/>
+    </group>
+    <!-- <node pkg="humanoid_controllers" type="cheat_controller_node" name="cheat_controller"
+          output="screen"/> -->
+
+    <!-- nodelet manager -->
+     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" output="screen" >
+        <param name="num_worker_threads" type="int" value="8" />
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" >
+      </node>
+    <!-- <node pkg="mujoco_sim" type="humanoid_sim.py" name="humanoid_sim"
+          output="screen"/> -->
+      <include file="$(find mujoco_cpp)/launch/nodelet.launch"/>
+      <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
+    <group if="$(arg use_joystick)">
+      <include file="$(find humanoid_controllers)/launch/joy_control.launch"/>
+    </group>
+
+</launch>

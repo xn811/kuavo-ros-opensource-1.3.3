@@ -1,0 +1,28 @@
+
+(cl:in-package :asdf)
+
+(defsystem "motion_capture_ik-msg"
+  :depends-on (:roslisp-msg-protocol :roslisp-utils :std_msgs-msg
+)
+  :components ((:file "_package")
+    (:file "armHandPose" :depends-on ("_package_armHandPose"))
+    (:file "_package_armHandPose" :depends-on ("_package"))
+    (:file "handPose" :depends-on ("_package_handPose"))
+    (:file "_package_handPose" :depends-on ("_package"))
+    (:file "headBodyPose" :depends-on ("_package_headBodyPose"))
+    (:file "_package_headBodyPose" :depends-on ("_package"))
+    (:file "ikSolveError" :depends-on ("_package_ikSolveError"))
+    (:file "_package_ikSolveError" :depends-on ("_package"))
+    (:file "ikSolveParam" :depends-on ("_package_ikSolveParam"))
+    (:file "_package_ikSolveParam" :depends-on ("_package"))
+    (:file "recordArmHandPose" :depends-on ("_package_recordArmHandPose"))
+    (:file "_package_recordArmHandPose" :depends-on ("_package"))
+    (:file "robotArmQVVD" :depends-on ("_package_robotArmQVVD"))
+    (:file "_package_robotArmQVVD" :depends-on ("_package"))
+    (:file "robotHandPosition" :depends-on ("_package_robotHandPosition"))
+    (:file "_package_robotHandPosition" :depends-on ("_package"))
+    (:file "twoArmHandPose" :depends-on ("_package_twoArmHandPose"))
+    (:file "_package_twoArmHandPose" :depends-on ("_package"))
+    (:file "twoArmHandPoseCmd" :depends-on ("_package_twoArmHandPoseCmd"))
+    (:file "_package_twoArmHandPoseCmd" :depends-on ("_package"))
+  ))

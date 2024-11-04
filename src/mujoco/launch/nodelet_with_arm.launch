@@ -1,0 +1,6 @@
+<launch>
+  <arg name="legged_robot_scene" default="$(find mujoco_cpp)/model/kuavo/scene_with_arm.xml"/>
+  <!-- <arg name="legged_robot_scene" default="$(find mujoco_cpp)/model/kuavo/scene_with_arm_stage.xml"/> -->
+  <param name="legged_robot_scene_param" value="$(arg legged_robot_scene)" />
+  <node pkg="nodelet" type="nodelet" name="nodelet_mujoco" args="load MujocoNodelet nodelet_manager" respawn="false" output="screen" />
+</launch>

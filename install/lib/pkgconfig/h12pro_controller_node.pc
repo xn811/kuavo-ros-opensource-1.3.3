@@ -1,0 +1,8 @@
+prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
+
+Name: h12pro_controller_node
+Description: Description of h12pro_controller_node
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="biped_v3_all_joint"
+  xmlns:xacro="http://wiki.ros.org/xacro">
+
+  <!-- 躯干属性 -->
+  <xacro:property name="torso_mass" value="21.51783" />
+  <!-- 可视化，需要并连杆 -->
+  <xacro:property name="is_parallel" value="1" />
+  <xacro:property name="is_parallel_solve" value="0" />
+  <xacro:arg name="path" default="original_xacro" />
+
+  <xacro:include filename="$(arg path)/torso.xacro" />
+  <xacro:include filename="$(arg path)/left_leg_all.xacro" />
+  <xacro:include filename="$(arg path)/right_leg_all.xacro" />
+  <xacro:include filename="$(arg path)/left_arm_all.xacro" />
+  <xacro:include filename="$(arg path)/right_arm_all.xacro" />
+  <xacro:include filename="$(arg path)/left_eef.xacro" />
+  <xacro:include filename="$(arg path)/right_eef.xacro" />
+
+</robot>

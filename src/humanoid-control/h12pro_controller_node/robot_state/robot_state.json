@@ -1,0 +1,138 @@
+{
+  "states":[
+      "initial",
+      "calibrate",
+      "squat",
+      "stand",
+      "jump",
+      "walk"
+  ],
+  "transitions": [
+    {
+      "trigger": "calibrate",
+      "source": "initial",
+      "dest": "calibrate",
+      "before": "calibrate_callback"
+    },
+    {
+      "trigger": "start",
+      "source": "initial",
+      "dest": "squat",
+      "before": "start_callback"
+    },
+    {
+      "trigger": "set_zero",
+      "source": "initial",
+      "dest": "initial",
+      "before": "set_zero_callback"
+    },
+    {
+      "trigger": "calibrate_finished",
+      "source": "calibrate",
+      "dest": "initial",
+      "before":"calibrate_finished_callback"
+    },
+    {
+      "trigger": "stop",
+      "source": "squat",
+      "dest": "initial",
+      "before": "stop_callback"
+    },
+    {
+      "trigger": "stand",
+      "source": "squat",
+      "dest": "stand",
+      "before": "squat_to_stand_callback"
+    },
+    {
+      "trigger": "squat",
+      "source": "stand",
+      "dest": "squat",
+      "before": "squat_callback"
+    },
+    {
+      "trigger": "jump_pre",
+      "source": "stand",
+      "dest": "jump",
+      "before": "jump_pre_callback"
+    },
+    {
+      "trigger": "jump_take_off",
+      "source": "jump",
+      "dest": "jump",
+      "before": "jump_take_off_callback"
+    },
+    {
+      "trigger": "walk",
+      "source": "stand",
+      "dest": "walk",
+      "before": "walk_callback"
+    },
+    {
+      "trigger": "stand",
+      "source": "jump",
+      "dest": "stand",
+      "before": "stand_callback"
+    },
+    {
+      "trigger": "stand",
+      "source": "walk",
+      "dest": "stand",
+      "before": "stand_callback"
+    },
+    {
+      "trigger":"emergency_stop",
+      "source":"calibrate",
+      "dest":"initial",
+      "before":"emergency_stop_callback"
+    },
+    {
+      "trigger": "emergency_stop",
+      "source": "squat",
+      "dest": "initial",
+      "before": "emergency_stop_callback"
+    },
+    {
+      "trigger": "emergency_stop",
+      "source": "stand",
+      "dest": "initial",
+      "before": "emergency_stop_callback"
+    },
+    {
+      "trigger": "emergency_stop",
+      "source": "jump",
+      "dest": "initial",
+      "before": "emergency_stop_callback"
+    },
+    {
+      "trigger": "emergency_stop",
+      "source": "walk",
+      "dest": "initial",
+      "before": "emergency_stop_callback"
+    },
+    {
+      "trigger":"arm_pose1",
+      "source":"stand",
+      "dest":"stand",
+      "before":"arm_pose_callback"
+    },
+    {
+      "trigger":"arm_pose2",
+      "source":"stand",
+      "dest":"stand",
+      "before":"arm_pose_callback"
+    },
+    {
+      "trigger":"arm_pose3",
+      "source":"stand",
+      "dest":"stand",
+      "before":"arm_pose_callback"
+    },
+    {
+      "trigger":"arm_pose4",
+      "source":"stand",
+      "dest":"stand",
+      "before":"arm_pose_callback"
+    }
+  ]
+}

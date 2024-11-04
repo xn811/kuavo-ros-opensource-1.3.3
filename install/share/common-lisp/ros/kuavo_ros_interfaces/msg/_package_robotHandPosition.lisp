@@ -1,0 +1,8 @@
+(cl:in-package kuavo_ros_interfaces-msg)
+(cl:export '(HEADER-VAL
+          HEADER
+          LEFT_HAND_POSITION-VAL
+          LEFT_HAND_POSITION
+          RIGHT_HAND_POSITION-VAL
+          RIGHT_HAND_POSITION
+))

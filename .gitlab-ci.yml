@@ -1,0 +1,131 @@
+before_script:
+  - export CATKIN_WS_INSTALL_CACHE=/tmp/catkin_ws_install_cache
+  - export ROBOT_VERSION=34
+  - export https_proxy=http://192.168.16.1:7890 
+  - export http_proxy=http://192.168.16.1:7890 
+  - export all_proxy=socks5://192.168.16.1:7891
+  - export LD_LIBRARY_PATH="/opt/drake/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  - export PATH="/opt/drake/bin${PATH:+:${PATH}}"
+  - export CC="ccache gcc"
+  - export CXX="ccache g++"
+  - ccache --max-size=10G
+
+
+stages:
+  - setup_env
+  - compile
+  - clone_opensource_project
+  - pull_opensource_project
+  - sync_to_opensource
+  - notify
+
+setup_env:
+  stage: setup_env
+  script:
+    - ccache -s
+    - echo "Setup environment..."
+    - cd ci_scripts
+    - sudo chmod +x ci_install_dependencies.bash
+    - ./ci_install_dependencies.bash
+
+compile:
+  stage: compile
+  script:
+    - echo "Compiling..."
+    - rm -rf src/manipulation_nodes/motion_capture_ik
+    - git submodule update --init --recursive --force
+    - cd ci_scripts
+    - sudo chmod +x build.sh
+    - sudo chmod +x build_hardware_node.sh
+    - ./build.sh
+    - ./build_hardware_node.sh
+    - cd $CI_PROJECT_DIR/install/lib && strip --strip-unneeded *.a *.so && cd -
+    - mkdir -p $CATKIN_WS_INSTALL_CACHE
+    - cp -r $CI_PROJECT_DIR/install $CATKIN_WS_INSTALL_CACHE
+    - ls -la $CATKIN_WS_INSTALL_CACHE/install/share
+    - cd ..
+    - catkin clean -y
+  dependencies:
+    - setup_env
+
+clone_source_code_of_opensource_project:
+  stage: clone_opensource_project
+  script:
+    - mkdir -p $temp_target_repo_path
+    - cd $temp_target_repo_path
+    - git clone $opensource_project_origin git_repo || echo "After clone"
+  only:
+    - dev
+    - beta
+    - /^opensource.*/
+
+pull_source_code_of_opensource_project:
+  stage: pull_opensource_project
+  script:
+    - cd $temp_target_repo_path/git_repo
+    - git fetch --all
+    - git clean -dfx && git checkout . 
+    - if git show-ref --verify --quiet refs/heads/$CI_COMMIT_BRANCH; then
+        echo "Branch $CI_COMMIT_BRANCH exists. Checking out.";
+        git checkout -f $CI_COMMIT_BRANCH;
+      else
+        echo "Branch $CI_COMMIT_BRANCH does not exist. Creating and pushing the branch.";
+        git checkout -b $CI_COMMIT_BRANCH;
+        git push origin $CI_COMMIT_BRANCH;
+      fi
+    - git reset --hard origin/$CI_COMMIT_BRANCH
+    - git clean -df
+  only:
+    - dev
+    - beta
+    - /^opensource.*/
+  dependencies:
+    - clone_source_code_of_opensource_project
+
+sync_to_opensource:
+  stage: sync_to_opensource
+  script:
+    - echo "Sync to opensource..."
+    - cd ci_scripts
+    - sudo chmod +x build.sh
+    - sudo chmod +x del_close_source_packs.sh
+    - ./build_motion_ik.sh
+    - ./del_close_source_packs.sh close_source_packs.txt
+    - cd ..
+    - rsync -av --delete --exclude='.git' . $temp_target_repo_path/git_repo 
+    - cd $temp_target_repo_path/git_repo
+    - sudo rm -rf install
+    - cp -r $CATKIN_WS_INSTALL_CACHE/install install
+    - rm -rf $CATKIN_WS_INSTALL_CACHE
+    - cd ci_scripts
+    - ./del_close_source_packs.sh close_source_packs.txt
+    - cd $temp_target_repo_path/git_repo/ci_scripts
+    - ./build.sh
+    - cd $temp_target_repo_path/git_repo
+    - catkin clean -d -b -L -y
+    - git add . && git add -u
+    - git add -f src/manipulation_nodes/motion_capture_ik/scripts/ik/*.pyc
+    - git commit -am "sync $PROJECT_VERSION_VAR of $opensource_project_origin" && git push origin $CI_COMMIT_BRANCH
+    - cd $CI_PROJECT_DIR
+    - git clean -dfx
+    - git checkout .
+  only:
+    - dev
+    - beta
+    - /^opensource.*/
+  dependencies:
+    - pull_source_code_of_opensource_project
+
+notify:
+  stage: notify
+  script:
+    - echo "Notify..."
+    - cd ci_scripts
+    - sudo chmod +x wechat_bot_notify.sh
+    - ./wechat_bot_notify.sh "OCS2 开源仓库分支 $CI_COMMIT_BRANCH 同步成功， 请问访问 https://www.lejuhub.com/highlydynamic/craic_code_repo/-/tree/$CI_COMMIT_BRANCH 查看详情" "$WECHAT_BOT_TOKEN"
+  only:
+    - dev
+    - beta
+    - /^opensource.*/
+  dependencies:
+    - sync_to_opensource

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="right_eef"
+  xmlns:xacro="http://wiki.ros.org/xacro">
+
+
+
+  <!-- end frame -->
+  <frame link="r_hand_pitch" name="r_hand_sole" xyz="0 0 -0.1" />
+
+  <!-- left arm constraint -->
+  <xacro:if value="${is_parallel==1}">
+    <frame link="r_hand_pitch" name="r_l_hand_socket" xyz="-0.016 0.028 0.00024" />
+    <frame link="r_hand_pitch" name="r_r_hand_socket" xyz="-0.016 -0.028 0.00024" />
+  </xacro:if>
+</robot>

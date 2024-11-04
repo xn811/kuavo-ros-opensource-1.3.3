@@ -1,0 +1,13 @@
+(cl:defpackage handcontrollerdemorosnode-msg
+  (:use )
+  (:export
+   "<ARMPOSEWITHTIMESTAMP>"
+   "ARMPOSEWITHTIMESTAMP"
+   "<HANDROTATIONEULAR>"
+   "HANDROTATIONEULAR"
+   "<ROBOTARMPOSE>"
+   "ROBOTARMPOSE"
+   "<ROBOTHANDPOSITION>"
+   "ROBOTHANDPOSITION"
+  ))
+

@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<launch>
+    <include file="$(find h12pro_controller_node)/launch/h12pro_to_joystick.launch"/>
+
+    <node pkg="humanoid_interface_ros" type="humanoid_joy_control_auto_gait_with_vel" name="humanoid_joy_control_auto_gait_with_vel" output="screen"/>
+</launch>

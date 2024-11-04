@@ -1,0 +1,8 @@
+prefix=/media/data/gitlab-runner/builds/8rHoW4Dt/0/highlydynamic/kuavo-ros-control/install
+
+Name: blasfeo_catkin
+Description: Description of blasfeo_catkin
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lblasfeo
+Requires: 

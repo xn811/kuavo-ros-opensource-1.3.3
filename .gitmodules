@@ -1,0 +1,9 @@
+[submodule "src/kuavo-ros-control-lejulib"]
+	path = src/kuavo-ros-control-lejulib
+	url = ssh://git@www.lejuhub.com:10026/highlydynamic/kuavo-ros-control-lejulib.git
+[submodule "src/manipulation_nodes/motion_capture_ik"]
+	path = src/manipulation_nodes/motion_capture_ik
+	url = ssh://git@www.lejuhub.com:10026/highlydynamic/motion_capture_ik.git
+[submodule "src/manipulation_nodes/planarmwebsocketservice"]
+	path = src/manipulation_nodes/planarmwebsocketservice
+	url = ssh://git@www.lejuhub.com:10026/highlydynamic/planarmwebsocketservice.git

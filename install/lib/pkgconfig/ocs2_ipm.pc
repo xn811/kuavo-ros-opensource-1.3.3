@@ -1,0 +1,8 @@
+prefix=/media/data/gitlab-runner/builds/8rHoW4Dt/0/highlydynamic/kuavo-ros-control/install
+
+Name: ocs2_ipm
+Description: Description of ocs2_ipm
+Version: 0.0.0
+Cflags: -I${prefix}/include -I/usr/include/eigen3 -I/usr/include
+Libs: -L${prefix}/lib -locs2_ipm /usr/lib/x86_64-linux-gnu/libboost_system.so.1.71.0 /usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0
+Requires: ocs2_core ocs2_mpc ocs2_oc blasfeo_catkin hpipm_catkin

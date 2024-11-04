@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by
+Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="left_leg_all"
+  xmlns:xacro="http://wiki.ros.org/xacro"
+  xmlns:drake="https://drake.mit.edu">
+  <!-- 并连杆解算的基link名为baselink -->
+  <xacro:if value="${is_parallel_solve==1}">
+    <xacro:property name="base_link" value="base_link" />
+  </xacro:if>
+  <xacro:if value="${is_parallel_solve==0}">
+    <xacro:property name="base_link" value="l_knee" />
+  </xacro:if>
+  <!-- left leg -->
+  <!-- 并连杆解算不需要的部分 -->
+  <xacro:if value="${is_parallel_solve==0}">
+    <link name="l_leg_roll">
+      <inertial>
+        <origin xyz="0.06614234 -0.00000119 -0.00862806" rpy="0 0 0" />
+        <mass value="1.53800733" />
+        <inertia ixx="0.00189451" ixy="-0.00000100" ixz="-0.00010566" iyy="0.00282649" iyz="-0.00000006" izz="0.00366404" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_leg_roll.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.6902 0.65882 0.63922 1" />
+        </material>
+      </visual>
+    </link>
+    <joint name="l_leg_roll_joint" type="continuous">
+      <origin xyz="-0.139 0.088087 -0.065549" rpy="0 0 0" />
+      <parent link="torso" />
+      <child link="l_leg_roll" />
+      <axis xyz="1 0 0" />
+      <limit lower="-0.78" upper="1.57" effort="100" velocity="25" />
+    </joint>
+    <!--        ssss -->
+    <transmission type="SimpleTransmission">
+      <joint name="l_leg_roll_joint" />
+      <actuator name="l_leg_roll_motor" />
+    </transmission>
+    <!-- sssssssss -->
+
+    <link name="l_leg_yaw">
+      <inertial>
+        <origin xyz="0.00000000 0.04610400 -0.13256100" rpy="0 0 0" />
+        <mass value="1.60096700" />
+        <inertia ixx="0.00698359" ixy="0.00000237" ixz="-0.00000315" iyy="0.00460736" iyz="-0.00105143" izz="0.00482586" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_leg_yaw.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.65098 0.61961 0.58824 1" />
+        </material>
+      </visual>
+    </link>
+    <joint name="l_leg_yaw_joint" type="continuous">
+      <origin xyz="0.1365 -0.0010866 -0.033901" rpy="0 0 0" />
+      <parent link="l_leg_roll" />
+      <child link="l_leg_yaw" />
+      <axis xyz="0 0 1" />
+      <limit lower="-1.57" upper="1.57" effort="100" velocity="25" />
+    </joint>
+    <!--        ssss -->
+    <transmission type="SimpleTransmission">
+      <joint name="l_leg_yaw_joint" />
+      <actuator name="l_leg_yaw_motor" />
+    </transmission>
+    <!-- sssssssss -->
+
+
+    <link name="l_leg_pitch">
+      <inertial>
+        <origin xyz="-0.00644903 -0.09813560 -0.05357606" rpy="0 0 0" />
+        <mass value="2.46657100" />
+        <inertia ixx="0.02261778" ixy="-0.00007906" ixz="-0.00029350" iyy="0.02315672" iyz="-0.00182962" izz="0.00415881" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_leg_pitch.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.52941 0.54902 0.54902 1" />
+        </material>
+      </visual>
+    </link>
+    <joint name="l_leg_pitch_joint" type="continuous">
+      <origin xyz="0 0.094 -0.09" rpy="0 0 0" />
+      <parent link="l_leg_yaw" />
+      <child link="l_leg_pitch" />
+      <axis xyz="0 1 0" />
+      <limit lower="-2.35" upper="0.78" effort="100" velocity="47" />
+    </joint>
+    <!--        ssss -->
+    <transmission type="SimpleTransmission">
+      <joint name="l_leg_pitch_joint" />
+      <actuator name="l_leg_pitch_motor" />
+    </transmission>
+    <!-- sssssssss -->
+  </xacro:if>
+
+  <link name="${base_link}">
+    <inertial>
+      <origin xyz="0.00080045 -0.00004225 -0.12049699" rpy="0 0 0" />
+      <mass value="1.62911554" />
+      <inertia ixx="0.01343597" ixy="-0.00000234" ixz="0.00020391" iyy="0.01359234" iyz="0.00018311" izz="0.00092149" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_knee.obj" />
+      </geometry>
+      <material name="">
+        <color rgba="0.68627 0.65882 0.63922 1" />
+      </material>
+    </visual>
+  </link>
+  <xacro:if value="${is_parallel_solve==0}">
+    <joint name="l_knee_pitch_joint" type="revolute">
+      <origin xyz="0.004136 -0.06635 -0.24997" rpy="0 0 0" />
+      <parent link="l_leg_pitch" />
+      <child link="l_knee" />
+      <axis xyz="0 1 0" />
+      <limit lower="0.0" upper="2.61" effort="100" velocity="47" />
+    </joint>
+    <!--        ssss -->
+    <transmission type="SimpleTransmission">
+      <joint name="l_knee_pitch_joint" />
+      <actuator name="l_knee_pitch_motor" />
+    </transmission>
+    <!-- sssssssss -->
+  </xacro:if>
+
+  <link name="l_foot_pitch">
+    <inertial>
+      <origin xyz="0.00000000 -0.02099982 0" rpy="0 0 0" />
+      <mass value="0.05444454" />
+      <inertia ixx="0.00000411" ixy="0.00000000" ixz="0.00000000" iyy="0.00000411" iyz="0.00000000" izz="0.00000728" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_foot_pitch.obj" />
+      </geometry>
+      <material name="">
+        <color rgba="0.6902 0.65882 0.63922 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="l_foot_pitch_joint" type="continuous">
+    <origin xyz="0 -0.0022 -0.346" rpy="0 0 0" />
+    <parent link="${base_link}" />
+    <child link="l_foot_pitch" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="25" />
+  </joint>
+  <!--        ssss -->
+  <xacro:if value="${is_parallel==0}">
+    <transmission type="SimpleTransmission">
+      <joint name="l_foot_pitch_joint" />
+      <actuator name="l_foot_pitch_motor" />
+    </transmission>
+  </xacro:if>
+  <!-- sssssssss -->
+
+
+  <link name="l_foot_roll">
+    <inertial>
+      <origin xyz="-0.03594832 0.00000978 -0.02713029" rpy="0 0 0" />
+      <mass value="0.46707519" />
+      <inertia ixx="0.00040711" ixy="0.00000016" ixz="-0.00023147" iyy="0.00127525" iyz="-0.00000006" izz="0.00135360" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_foot_roll.obj" />
+      </geometry>
+      <material name="">
+        <color rgba="0.6902 0.65882 0.63922 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.09 0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.09 0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.09 -0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.09 -0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="0.15 0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.15 0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.15 -0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.15 -0.05 -0.0465" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="l_foot_roll_joint" type="continuous">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="l_foot_pitch" />
+    <child link="l_foot_roll" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.39" upper="0.78" effort="100" velocity="25" />
+  </joint>
+
+  <!--        ssss -->
+  <xacro:if value="${is_parallel==0}">
+    <transmission type="SimpleTransmission">
+      <joint name="l_foot_roll_joint" />
+      <actuator name="l_foot_roll_motor" />
+    </transmission>
+  </xacro:if>
+  <!-- sssssssss -->
+
+  <!-- 并连杆部分，用于并连杆解算以及可视化 -->
+  <xacro:if value="${is_parallel==1}">
+    <link name="l_l_bar_y">
+      <inertial>
+        <origin xyz="-0.017639 -0.0012332 0.0047224" rpy="0 0 0" />
+        <mass value="0.041379" />
+        <inertia ixx="6.3487E-06" ixy="-2.7168E-06" ixz="4.9324E-06" iyy="2.8379E-05" iyz="7.2737E-07" izz="2.3451E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_l_bar.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.6902 0.65882 0.63922 1" />
+        </material>
+      </visual>
+      <!-- <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_l_bar.obj" />
+      </geometry>
+    </collision> -->
+    </link>
+    <joint name="l_l_bar_y" type="continuous">
+      <origin xyz="0 0.0318 -0.09" rpy="0 0 0" />
+      <parent link="${base_link}" />
+      <child link="l_l_bar_y" />
+      <axis xyz="0 1 0" />
+      <!-- <limit lower="-1.58" upper="0.50" effort="74" velocity="47" /> -->
+    </joint>
+
+    <transmission type="SimpleTransmission">
+      <joint name="l_l_bar_y" />
+      <actuator name="l_l_bar_y_motor">
+        <drake:gear_ratio value="10.0" />
+        <drake:rotor_inertia value="0.0001002" />
+      </actuator>
+    </transmission>
+
+    <link name="l_l_tendon_y">
+      <inertial>
+        <origin xyz="-1.3642E-05 -0.00048331 -0.13953" rpy="0 0 0" />
+        <mass value="0.13223" />
+        <inertia ixx="0.00049161" ixy="3.0645E-12" ixz="1.52E-08" iyy="0.00048973" iyz="-2.4263E-07" izz="4.775E-06" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_l_tendon.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.6902 0.65882 0.63922 1" />
+        </material>
+      </visual>
+      <!-- <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_l_tendon.obj" />
+      </geometry>
+    </collision> -->
+    </link>
+    <drake:joint name="l_l_tendon_y" type="universal">
+      <origin xyz="-0.056027 -0.0085 0.015" rpy="0 0 0" />
+      <parent link="l_l_bar_y" />
+      <child link="l_l_tendon_y" />
+    </drake:joint>
+    <frame link="l_l_tendon_y" name="l_l_tendon_socket" xyz="0 0 -0.256" />
+    <link name="l_r_bar_y">
+      <inertial>
+        <origin xyz="-0.017639 0.0012332 0.0047224" rpy="0 0 0" />
+        <mass value="0.041379" />
+        <inertia ixx="6.3486E-06" ixy="2.7168E-06" ixz="4.9323E-06" iyy="2.8379E-05" iyz="-7.2736E-07" izz="2.3451E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_r_bar.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.6902 0.65882 0.63922 1" />
+        </material>
+      </visual>
+      <!-- <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_r_bar.obj" />
+      </geometry>
+    </collision> -->
+    </link>
+    <joint name="l_r_bar_y" type="continuous">
+      <origin xyz="0 -0.0362 -0.153" rpy="0 0 0" />
+      <parent link="${base_link}" />
+      <child link="l_r_bar_y" />
+      <axis xyz="0 1 0" />
+    </joint>
+    <link name="l_r_tendon_y">
+      <inertial>
+        <origin xyz="-1.9777E-05 0.00047927 -0.10625" rpy="0 0 0" />
+        <mass value="0.10643" />
+        <inertia ixx="0.0001972" ixy="4.1988E-12" ixz="-1.2811E-08" iyy="0.00019587" iyz="1.7341E-07" izz="3.9152E-06" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../meshes/l_r_tendon.obj" />
+        </geometry>
+        <material name="">
+          <color rgba="0.6902 0.65882 0.63922 1" />
+        </material>
+      </visual>
+      <!-- <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/l_r_tendon.obj" />
+      </geometry>
+    </collision> -->
+    </link>
+    <drake:joint name="l_r_tendon_y" type="universal">
+      <origin xyz="-0.056027 0.0085 0.015" rpy="0 0 0" />
+      <parent link="l_r_bar_y" />
+      <child link="l_r_tendon_y" />
+    </drake:joint>
+    <frame link="l_r_tendon_y" name="l_r_tendon_socket" xyz="0 0 -0.193" />
+
+    <transmission type="SimpleTransmission">
+      <joint name="l_r_bar_y" />
+      <actuator name="l_r_bar_y_motor">
+        <drake:gear_ratio value="10.0" />
+        <drake:rotor_inertia value="0.0001002" />
+      </actuator>
+    </transmission>
+  </xacro:if>
+
+  <!-- frame -->
+  <xacro:if value="${is_parallel==1}">
+    <frame link="l_foot_roll" name="l_l_foot_socket" xyz="-0.056027 0.0255 0.015" />
+    <frame link="l_foot_roll" name="l_r_foot_socket" xyz="-0.056027 -0.0255 0.015" />
+    <!-- 曲柄 -->
+    <frame link="l_l_bar_y" name="l_l_foot_bar_frame" xyz="0 -0.0085 0" />
+    <frame link="l_r_bar_y" name="l_r_foot_bar_frame" xyz="0 0.0085 0" />
+  </xacro:if>
+
+  <!-- 足端 -->
+  <xacro:if value="${is_parallel==0}">
+    <frame link="l_foot_roll" name="l_foot_sole" xyz="0.03 0.0 -0.0465" />
+    <frame link="l_foot_roll" name="l_foot_toe" xyz="0.15 0.0 -0.0465" />
+    <frame link="l_foot_roll" name="l_foot_heel" xyz="-0.09 0.0 -0.0465" />
+  </xacro:if>
+</robot>

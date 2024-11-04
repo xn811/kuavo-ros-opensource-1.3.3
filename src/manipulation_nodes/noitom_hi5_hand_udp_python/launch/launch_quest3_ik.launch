@@ -1,0 +1,15 @@
+<launch>
+    <!-- 定义命令行参数 -->
+    <arg name="version" default="4" />
+    <arg name="ctrl_arm_idx" default="0" />
+    <arg name="ik_type_idx" default="0" />
+    <arg name="ip_address" default="192.168.3.17" />
+
+    <!-- motion_capture_ik -->
+    <node pkg="motion_capture_ik" type="ik_ros_uni.py" name="ik_ros_uni" args=" --version $(arg version) --ctrl_arm_idx $(arg ctrl_arm_idx) --ik_type_idx $(arg ik_type_idx)" output="screen">
+    </node>
+
+    <!-- noitom_hi5_hand_udp_python -->
+    <node pkg="noitom_hi5_hand_udp_python" type="monitor_quest3.py" args="$(arg ip_address)" name="monitor_quest3" output="screen">
+    </node>
+</launch>

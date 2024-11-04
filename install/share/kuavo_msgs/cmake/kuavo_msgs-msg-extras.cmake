@@ -1,0 +1,2 @@
+set(kuavo_msgs_MESSAGE_FILES "msg/imuData.msg;msg/jointData.msg;msg/sensorsData.msg;msg/endEffectorData.msg;msg/jointCmd.msg;msg/robotState.msg;msg/armPoseWithTimeStamp.msg;msg/headBodyPose.msg;msg/robotHandPosition.msg;msg/gaitTimeName.msg;msg/questJoySticks.msg;msg/armTargetPoses.msg;msg/robotHeadMotionData.msg;msg/footPose.msg;msg/footPoseTargetTrajectories.msg")
+set(kuavo_msgs_SERVICE_FILES "srv/jointMoveTo.srv;srv/setHwIntialState.srv;srv/changeArmCtrlMode.srv;srv/singleStepControl.srv;srv/changeTorsoCtrlMode.srv")

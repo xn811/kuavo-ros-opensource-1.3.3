@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<robot name="Rleg"
+  xmlns:xacro="http://wiki.ros.org/xacro"
+  xmlns:drake="https://drake.mit.edu">
+
+  <!-- 并连杆解算 -->
+  <xacro:property name="is_parallel" value="1" />
+  <xacro:property name="is_parallel_solve" value="1" />
+  <xacro:arg name="path" default="original_xacro" />
+
+  <xacro:include filename="$(arg path)/right_leg_all.xacro" />
+</robot>

@@ -1,0 +1,8 @@
+prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
+
+Name: mujoco_cpp
+Description: Description of mujoco_cpp
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lmujoco_cpp
+Requires: roscpp realtime_tools lcm_msg
