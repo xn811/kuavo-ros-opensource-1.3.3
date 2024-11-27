@@ -75,3 +75,4 @@ urdfdom-py==0.4.6
 xacro==1.14.16
 numpy-quaternion
 scipy==1.10.1
+torch

@@ -38,19 +38,15 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'nMPC',
-      items: [
-        'basic_usage/kuavo-ros-control/readme'
-      ],
-    },
-    {
-      type: 'category',
       label: 'Changelog',
       items: [
         'basic_usage/kuavo_ros1_workspace/CHANGELOG'
+        // Add changelog items here
       ],
     },
+    // Add more categories or individual docs as needed
   ],
+  // You can add more sidebars if needed, following a similar structure
 };
 
 module.exports = sidebars;

@@ -13,8 +13,6 @@ import logging
 import sys
 import time
 
-ENABLE_EXTENDED_DEBUG = False
-
 try:
     # Try builtin Python 3 Windows API
     from _winapi import WaitForSingleObject, INFINITE
@@ -99,52 +97,18 @@ class BmCanBus(BusABC):
         infolist = bmapi.BM_ChannelInfoListTypeDef()
         numOfInfo = ctypes.c_int(len(infolist.entries))
         bmapi.BM_Enumerate(ctypes.byref(infolist), ctypes.byref(numOfInfo))
-            # 打印设备信息
-        print("Enumerated Devices:")
-        target_device_info = None  
-        for i in range(numOfInfo.value):
-            device_info = infolist.entries[i]
-            device_version = '.'.join(map(str, device_info.version))
-            print(f"Index: {i}, Name: {device_info.name.decode()}, Version: {device_version}")
-            # 如果版本号符合要求，记录设备信息
-            if device_version == "2.2.4.10":
-                target_device_info = device_info
-                print(f"Selected device: {device_info.name.decode()}")
-                break
-
-        if target_device_info is None:
-            raise BmError(bmapi.BM_ERROR_NODRIVER, "No device with version 2.2.4.10 found.", "BmCanBus.__init__")
-         # 根据选择的设备初始化通道信息
         if isinstance(channel, int):
-            if target_device_info is not None and channel == 0:  # 确保选择的是版本号对应的设备
-                self._channelinfo = target_device_info
+            if channel < numOfInfo.value:
+                self._channelinfo = infolist.entries[channel]
             else:
-                raise BmError(bmapi.BM_ERROR_NODRIVER, f"Channel {channel} is not connected or is in use by another app.", "BmCanBus.__init__")
+                raise BmError(bmapi.BM_ERROR_NODRIVER, "Channel %d is not connected or is in use by another app." % channel, "BmCanBus.__init__")
         elif isinstance(channel, str):
-            if target_device_info and target_device_info.name.decode() == channel:
-                self._channelinfo = target_device_info
+            for info in infolist.entries:
+                if info.name.decode() == channel:
+                    self._channelinfo = info
+                    break
             else:
-                raise BmError(bmapi.BM_ERROR_NODRIVER, f"Channel {channel} is not connected or is in use by another app.", "BmCanBus.__init__")
-
-
-        if ENABLE_EXTENDED_DEBUG:
-            for i in range(numOfInfo.value):
-                device_info = infolist.entries[i]
-                print(f"Index: {i}, Name: {device_info.name.decode()}, Additional Info: {device_info}")
-                device_details = {
-                    "Index": i,
-                    "Name": device_info.name.decode(),
-                    "Serial Number (SN)": ''.join(f'{x:02X}' for x in device_info.sn),
-                    "UID": ''.join(f'{x:02X}' for x in device_info.uid),
-                    "Firmware Version": '.'.join(map(str, device_info.version)),
-                    "VID": f"0x{device_info.vid:04X}",
-                    "PID": f"0x{device_info.pid:04X}",
-                    "Port": device_info.port,
-                    "Capabilities": f"0x{device_info.cap:04X}",
-                }
-                for key, value in device_details.items():
-                    print(f"{key}: {value}")
-                print("-" * 40)
+                raise BmError(bmapi.BM_ERROR_NODRIVER, "Channel %s is not connected or is in use by another app." % channel, "BmCanBus.__init__")
 
         self._mode = bmapi.BM_CAN_NORMAL_MODE
         if not fd:

@@ -17,7 +17,7 @@ if [ -z "${ROBOT_VERSION}" ]; then
 fi
 
 # 允许的机器人版本号列表
-allowed_versions=("30" "31" "32" "40" "41" "42")
+allowed_versions=("40" "41" "42")
 if ! [[ " ${allowed_versions[@]} " =~ " ${ROBOT_VERSION} " ]]; then
     echo -e "\033[31m\nError: 机器人版本号(环境变量中 ROBOT_VERSION 的值) = '${ROBOT_VERSION}' 无效 \033[0m" >&2
     echo -e "\033[31m请参考readme.md文档，确认你的机器人版本号\n目前可用的版本号有: \n[${allowed_versions[*]}] \033[0m\n" >&2
@@ -54,7 +54,7 @@ BASE_URDF_PATH="${SRC_DIR}/models/biped_s${ROBOT_VERSION}/urdf"
 CONFIG_DIR=~/.config/lejuconfig
 MASS_FILE=${CONFIG_DIR}/TotalMassV${ROBOT_VERSION}
 MASS_BAK=${CONFIG_DIR}/.TotalMassV${ROBOT_VERSION}.bak
-OCS2_DIR=/var/ocs2/full_v${ROBOT_VERSION}*
+OCS2_DIR=/var/ocs2/full_v${ROBOT_VERSION}
 
 # 确保配置目录存在
 mkdir -p ${CONFIG_DIR}

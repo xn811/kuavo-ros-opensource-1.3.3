@@ -235,11 +235,6 @@ class SwingTrajectoryPlanner {
     current_state_= current_state;
   }
   void printFeetPositions(size_t leg) const;
-  inline void setArmDof(size_t num)
-  {
-    num_arm_joints_ = num;
-    std::cout << "[SwingTrajectoryPlanner] num_arm_joints_ = " << num_arm_joints_ << std::endl;
-  }
 
  private:
   vector3_t calNextFootPos(int feet, scalar_t current_time, scalar_t stop_time,

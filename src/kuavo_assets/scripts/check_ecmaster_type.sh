@@ -7,7 +7,7 @@ ROBOT_VERSION=${ROBOT_VERSION}
 FILE_PATH="$HOME/.config/lejuconfig/EcMasterType.ini"
 
 # 检查环境变量是否为 42版本才有ecmaster驱动器区别
-if [ "$ROBOT_VERSION" == "42" || "$ROBOT_VERSION" == "32" ]; then
+if [ "$ROBOT_VERSION" == "42" ]; then
     if [ ! -f "$FILE_PATH" ]; then
         echo -e "\033[33m\nWarning: 未指定硬件EcMaster类型(只运行仿真可以忽略), 实物机器将默认使用\`Elmo\`类型驱动器\033[0m" >&2
         echo "elmo" > $FILE_PATH

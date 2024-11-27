@@ -2,13 +2,13 @@
 <launch>
     <arg name="joystick_type" default="bt2"/>
     <group if="$(eval arg('joystick_type') == 'sim')">
-        <node pkg="humanoid_interface_ros" type="joystickSimulator.py" name="joystickSimulator" output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
+        <node pkg="humanoid_interface_ros" type="joystickSimulator.py" name="joystickSimulator" output="screen" launch-prefix="gnome-terminal --"/>
     </group>
     <group unless="$(eval arg('joystick_type') == 'sim')">
-        <node pkg="joy" type="joy_node" name="joy_node" output="screen" respawn="true">
+        <node pkg="joy" type="joy_node" name="joy_node" output="screen">
             <param name="dev" value="/dev/input/js0"/>
             <param name="autorepeat_rate" type="double" value="100.0"/>
-            <param name="deadzone" type="double" value="0.18"/>
+            <param name="deadzone" type="double" value="0.15"/>
         </node>
     </group>
 

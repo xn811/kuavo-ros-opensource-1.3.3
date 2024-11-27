@@ -32,9 +32,9 @@
     <mesh name="r_hand_yaw" file="r_hand_yaw.obj"/>
     <mesh name="r_hand_pitch" file="r_hand_pitch.obj"/>
     <mesh name="r_hand_roll" file="r_hand_roll.obj"/>
-    <mesh name="neck_motor" file="neck_motor.obj" />
-    <mesh name="head" file="head.obj" />
-    <mesh name="camera" file="camera.obj" />
+    <mesh name="neck_motor" file="neck_motor.STL" />
+    <mesh name="head" file="head.STL" />
+    <mesh name="camera" file="camera.STL" />
   </asset>
   <worldbody>
     <body name="base_link" pos="0 0 0.78">

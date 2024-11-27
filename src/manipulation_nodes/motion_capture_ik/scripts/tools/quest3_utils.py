@@ -135,9 +135,6 @@ class Quest3ArmInfoTransformer:
         """
         Read the PoseInfoList message and extract the left and right finger joint angles.
         """
-        if self.left_joystick is None:
-            print("No joystick message received yet")
-            return
         self.pose_info_list = msg.poses
         self.timestamp_ms = msg.timestamp_ms
         self.is_high_confidence = msg.is_high_confidence
@@ -569,8 +566,6 @@ class Quest3ArmInfoTransformer:
         """
         Check if the VR system is error.
         """
-        if self.left_hand_pose is None:
-            return False
         left_hand_pos = self.left_hand_pose[0]
         right_hand_pos = self.right_hand_pose[0]
         error = True

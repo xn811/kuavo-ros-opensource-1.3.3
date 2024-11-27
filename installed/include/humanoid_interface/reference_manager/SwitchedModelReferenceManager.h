@@ -202,7 +202,6 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Subscriber footPoseTargetTrajectoriesSubscriber_;
   ros::Publisher footContactPointPublisher_;
   ros::Publisher gaitTimeNamePublisher_;
-  ros::Publisher armTargetCommandedPublisher_;
   ros::ServiceServer change_arm_control_service_;
   ros::ServiceServer get_arm_control_mode_service_;
   ros::ServiceServer singleStepControlService_;
@@ -229,13 +228,10 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   vector_t TargetState_, initTargetState_;
   scalar_array_t lastTimeTrajectoryWithVel;
   vector_array_t lastStateTrajectoryWithVel;
-  int feetJointNums_ = 12;
-  int armJointNums_ = 10;// will replace in initialize
-  int armRealDof_ = -1;
-  
+  const int feetJointNums_ = 12;
+  int armJointNums_ = 14;
   std::mutex cmdvel_mtx_;
   std::mutex cmdPose_mtx_;
-  std::mutex armTargetCommanded_mtx_;
 
   vector_t currentCmdVel_ = vector_t::Zero(6);
   vector_t currentCmdPose_ = vector_t::Zero(6);
@@ -253,8 +249,6 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::NodeHandle nodeHandle_;
   bool update_foot_trajectory_ = false;
   FootPoseSchedule footPoseSchedule_;
-  ros::Time lastArmControlModeWarnTime_ = ros::Time(0);
-
 
   double arm_move_spd_{1.2};
 };

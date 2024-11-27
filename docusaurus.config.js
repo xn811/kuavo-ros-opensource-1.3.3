@@ -15,8 +15,6 @@ const config = {
     locales: ['zh-Hans'],
   },
 
-  onBrokenLinks: 'warn', // or 'ignore', 'log', 'throw'
-
   presets: [
     [
       'classic',
