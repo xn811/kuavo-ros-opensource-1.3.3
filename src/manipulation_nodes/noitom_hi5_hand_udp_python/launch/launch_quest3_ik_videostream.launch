@@ -1,6 +1,6 @@
 <launch>
     <!-- 定义命令行参数 -->
-    <arg name="send_srv" default="0"/> <!-- 0: 不需要手动打开手臂控制，1: 需要手动打开手臂控制 -->
+    <arg name="send_srv" default="1"/> <!-- 1: 不需要手动打开手臂控制，0: 需要手动打开手臂控制 -->
     <arg name="version" default="4" />
     <arg name="ctrl_arm_idx" default="2" />
     <arg name="ik_type_idx" default="0" />
