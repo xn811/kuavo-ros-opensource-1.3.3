@@ -8,11 +8,13 @@ OCS2_H12PRO_MONITOR_SERVICE=$SERVICE_DIR/ocs2_h12pro_monitor.service
 START_OCS2_H12PRO_NODE=$SCRIPT_DIR/start_ocs2_h12pro_node.sh
 MONITOR_OCS2_H12PRO=$SCRIPT_DIR/monitor_ocs2_h12pro.sh
 KUAVO_ROS_CONTROL_WS_PATH=$(dirname $(dirname $(dirname $(dirname $SCRIPT_DIR))))
+NOITOM_HI5_HAND_UDP_PYTHON=$KUAVO_ROS_CONTROL_WS_PATH/src/manipulation_nodes/noitom_hi5_hand_udp_python
 KUAVO_REMOTE_PATH=$(dirname $SCRIPT_DIR)/lib/kuavo_remote
 ROBOT_VERSION=$ROBOT_VERSION
-
+INSTALLED_DIR=$KUAVO_ROS_CONTROL_WS_PATH/installed
 cd $H12PRO_CONTROLLER_NODE_DIR
 pip3 install -r requirements.txt
+pip3 install -r $NOITOM_HI5_HAND_UDP_PYTHON/requirements.txt
 
 echo "KUAVO_ROS_CONTROL_WS_PATH: $KUAVO_ROS_CONTROL_WS_PATH"
 echo "SERVICE_DIR: $SERVICE_DIR"
@@ -20,6 +22,10 @@ echo "MONITOR_OCS2_H12PRO: $MONITOR_OCS2_H12PRO"
 echo "KUAVO_REMOTE_PATH: $KUAVO_REMOTE_PATH"
 
 cd $KUAVO_ROS_CONTROL_WS_PATH
+if [ -d "$INSTALLED_DIR" ] && [ -f "$INSTALLED_DIR/devel/setup.bash" ]; then
+    echo "Sourcing existing installation..."
+    source $INSTALLED_DIR/devel/setup.bash
+fi
 catkin build humanoid_controllers
 catkin build h12pro_controller_node
 catkin build humanoid_plan_arm_trajectory

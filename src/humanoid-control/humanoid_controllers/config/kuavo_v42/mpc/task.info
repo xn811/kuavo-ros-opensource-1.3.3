@@ -17,23 +17,14 @@ model_settings
 
   verboseCppAd                  false
   recompileLibrariesCppAd       false
-  modelFolderCppAd              /var/ocs2/full_v42
+  modelFolderCppAd              /var/ocs2/full_v42 ; will save in <modelFolderCppAd>/<centroidalModelType>/<dof>
+
+  modelDof                     26 ; total dof of the model, including the arms and legs
+  mpcArmsDof                   8 ; mpc dof of the arms, you can simplify the model by reducing this value(will automatically reduce the QR size)
+  mpcLegsDof                   12 ; mpc dof of the legs
 
   jointNames
   {
-    ; [0] "leg_l1_joint"
-    ; [1] "leg_l2_joint"
-    ; [2] "leg_l3_joint"
-    ; [3] "leg_l4_joint"
-    ; [4] "leg_l5_joint"
-    ; [5] "leg_l6_joint"
-    ; [6] "leg_r1_joint"
-    ; [7] "leg_r2_joint"
-    ; [8] "leg_r3_joint"
-    ; [9] "leg_r4_joint"
-    ; [10] "leg_r5_joint"
-    ; [11] "leg_r6_joint"
- 
     [0]   "leg_l1_joint"
     [1]   "leg_l2_joint"
     [2]   "leg_l3_joint"
@@ -60,9 +51,39 @@ model_settings
     [23]  "zarm_r5_joint"
     [24]  "zarm_r6_joint"
     [25]  "zarm_r7_joint"
-  
+
   };
 
+jointNamesReal
+  {
+    [0]   "leg_l1_joint"
+    [1]   "leg_l2_joint"
+    [2]   "leg_l3_joint"
+    [3]   "leg_l4_joint"
+    [4]   "leg_l5_joint"
+    [5]   "leg_l6_joint"
+    [6]   "leg_r1_joint"
+    [7]   "leg_r2_joint"
+    [8]   "leg_r3_joint"
+    [9]   "leg_r4_joint"
+    [10]  "leg_r5_joint"
+    [11]  "leg_r6_joint"
+    [12]  "zarm_l1_joint"
+    [13]  "zarm_l2_joint"
+    [14]  "zarm_l3_joint"
+    [15]  "zarm_l4_joint"
+    [16]  "zarm_l5_joint"
+    [17]  "zarm_l6_joint"
+    [18]  "zarm_l7_joint"
+    [19]  "zarm_r1_joint"
+    [20]  "zarm_r2_joint"
+    [21]  "zarm_r3_joint"
+    [22]  "zarm_r4_joint"
+    [23]  "zarm_r5_joint"
+    [24]  "zarm_r6_joint"
+    [25]  "zarm_r7_joint"
+  };
+  
   contactNames6DoF
   {
     [0] "zarm_l7_end_effector"
@@ -228,56 +249,6 @@ mpc
   mpcDesiredFrequency             50  ; [Hz]
   mrtDesiredFrequency             1000 ; [Hz] Useless
 }
-
-initialState
-{
-   ;; Normalized Centroidal Momentum: [linear, angular] ;;
-   (0,0)  0.0     ; vcom_x
-   (1,0)  0.0     ; vcom_y
-   (2,0)  0.0     ; vcom_z
-   (3,0)  0.0     ; L_x / robotMass
-   (4,0)  0.0     ; L_y / robotMass
-   (5,0)  0.0     ; L_z / robotMass
-
-   ;; Base Pose: [position, orientation] ;;
-   (6,0)  -0.00593     ; p_base_x
-   (7,0)  0.0     ; p_base_y
-   (8,0)  0.77461   ; p_base_z
-   (9,0)  0.0     ; theta_base_z
-   (10,0) 0.10472     ; theta_base_y
-   (11,0) 0.0     ; theta_base_x
-
-   ;; Leg Joint Positions: [LF, LH, RF, RH] ;;
-
-   (12,0)  -0.01867   ; leg_l1_joint
-   (13,0)  -0.00196   ; leg_l2_joint
-   (14,0)  -0.65815   ; leg_l3_joint
-   (15,0)  0.86691    ; leg_l4_joint
-   (16,0)  -0.31346   ; leg_l5_joint
-   (17,0)  0.01878    ; leg_l6_joint
-   (18,0)   0.01868   ; leg_r1_joint
-   (19,0)  0.00197    ; leg_r2_joint
-   (20,0)  -0.65815   ; leg_r3_joint
-   (21,0)   0.86692   ; leg_r4_joint
-   (22,0)  -0.31347   ; leg_r5_joint
-   (23,0)  -0.01878   ; leg_r6_joint
-   (24,0)  -0.01      ; zarm_l1_joint
-   (25,0)  -0.01      ; zarm_l2_joint
-   (26,0)  0.001      ; zarm_l3_joint
-   (27,0)  -0.1       ; zarm_l4_joint
-   (28,0)  -0.001     ; zarm_l5_joint
-   (29,0)  -0.001     ; zarm_l6_joint
-   (30,0)  -0.001     ; zarm_l7_joint
-   (31,0)  -0.01      ; zarm_r1_joint
-   (32,0)  -0.01      ; zarm_r2_joint
-   (33,0)  0.001      ; zarm_r3_joint
-   (34,0)  -0.1       ; zarm_r4_joint
-   (35,0)  0.001      ; zarm_r5_joint
-   (36,0)  0.001      ; zarm_r6_joint
-   (37,0)  0.001      ; zarm_r7_joint
-
-}; [-0.01867, -0.00196, -0.65815,  0.86691, -0.31346,  0.01878,  0.01868,  0.00197, -0.65815,  0.86692, -0.31347, -0.01878]
-
 
 ; standard state weight matrix
 Q

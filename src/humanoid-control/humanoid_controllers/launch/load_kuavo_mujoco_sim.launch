@@ -26,7 +26,7 @@
     <arg name="estimator_type"     default="1"/>
     <arg name="wbc_only"           default="false"/>
     <arg name="play_back"          default="false"/>  
-    <arg name="joystick_type"      default="bt2"/>
+    <arg name="joystick_type"      default="sim"/>
     <arg name="arm_move_spd"      default="3.0"/>
     <arg name="start_way"          default="manual"/>
 
@@ -54,11 +54,9 @@
       <node pkg="humanoid_interface_ros" type="humanoid_sqp_mpc" name="humanoid_sqp_mpc" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh"/>
     </group>
     <!-- <group unless="$(arg use_joystick)"> -->
-      <node pkg="humanoid_interface_ros" type="humanoid_target_with_arm" name="humanoid_target_with_arm"
-            output="screen" launch-prefix="gnome-terminal --"/>
 
       <node pkg="humanoid_interface_ros" type="humanoid_gait_command" name="humanoid_gait_command"
-            output="screen" launch-prefix="gnome-terminal --"/>
+            output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
     <!-- </group> -->
 
     <node pkg="humanoid_interface_ros" type="humanoid_hand_control" name="humanoid_hand_control" output="screen" launch-prefix=""/>

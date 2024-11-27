@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/6/24.
-//
-
 #include <pinocchio/fwd.hpp> // forward declarations must be included first.
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
@@ -237,7 +233,6 @@ namespace humanoid_controller
     gait_map_ = HumanoidInterface_->getSwitchedModelReferenceManagerPtr()->getGaitSchedule()->getGaitMap();
     std::cout << "gait_map size: " << gait_map_.size() << std::endl;
 
-    // loadData::loadEigenMatrix(referenceFile, "defaultJointState", defalutJointPos_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_", joint_kp_);
     loadData::loadEigenMatrix(referenceFile, "joint_kd_", joint_kd_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_walking_", joint_kp_walking_);
@@ -388,51 +383,7 @@ namespace humanoid_controller
     if (!is_initialized_)
       is_initialized_ = true;
   }
-  void humanoidController::jointStateCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != 2 * jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointPos_(i) = msg->data[i];
-      jointVel_(i) = msg->data[i + jointNum_];
-    }
-  }
-
-  void humanoidController::jointAccCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointAcc_(i) = msg->data[i];
-    }
-  }
-
-  void humanoidController::ImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
-  {
-    quat_.coeffs().w() = msg->orientation.w;
-    quat_.coeffs().x() = msg->orientation.x;
-    quat_.coeffs().y() = msg->orientation.y;
-    quat_.coeffs().z() = msg->orientation.z;
-    angularVel_ << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
-    linearAccel_ << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
-    orientationCovariance_ << msg->orientation_covariance[0], msg->orientation_covariance[1], msg->orientation_covariance[2],
-        msg->orientation_covariance[3], msg->orientation_covariance[4], msg->orientation_covariance[5],
-        msg->orientation_covariance[6], msg->orientation_covariance[7], msg->orientation_covariance[8];
-    angularVelCovariance_ << msg->angular_velocity_covariance[0], msg->angular_velocity_covariance[1], msg->angular_velocity_covariance[2],
-        msg->angular_velocity_covariance[3], msg->angular_velocity_covariance[4], msg->angular_velocity_covariance[5],
-        msg->angular_velocity_covariance[6], msg->angular_velocity_covariance[7], msg->angular_velocity_covariance[8];
-    linearAccelCovariance_ << msg->linear_acceleration_covariance[0], msg->linear_acceleration_covariance[1], msg->linear_acceleration_covariance[2],
-        msg->linear_acceleration_covariance[3], msg->linear_acceleration_covariance[4], msg->linear_acceleration_covariance[5],
-        msg->linear_acceleration_covariance[6], msg->linear_acceleration_covariance[7], msg->linear_acceleration_covariance[8];
-  }
+  
 
   void humanoidController::starting(const ros::Time &time)
   {
@@ -467,9 +418,9 @@ namespace humanoid_controller
     if (!is_play_back_mode_)
       updateStateEstimation(time, true);
     currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
-    optimizedState_mrt_ = currentObservation_.state;
+    optimizedState2WBC_mrt_ = currentObservation_.state;
     std::cout << "initial state: " << currentObservation_.state.transpose() << std::endl;
-    optimizedInput_mrt_ = currentObservation_.input;
+    optimizedInput2WBC_mrt_ = currentObservation_.input;
 
     currentObservation_.mode = ModeNumber::SS;
     SystemObservation initial_observation = currentObservation_;
@@ -494,7 +445,7 @@ namespace humanoid_controller
     intail_input_ = vector_t::Zero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
     for (int i = 0; i < 8; i++)
       intail_input_(3 * i + 2) = HumanoidInterface_->getCentroidalModelInfo().robotMass * 9.81 / 8; // 48.7*g/8
-    optimizedInput_mrt_ = intail_input_;
+    optimizedInput2WBC_mrt_ = intail_input_;
     // else
     // {
     //   mpcMrtInterface_->setCurrentObservation(currentObservation_);
@@ -651,16 +602,16 @@ namespace humanoid_controller
     // std::cout << "optimizedState_mrt:" << optimizedState_mrt.transpose() << " \noptimizedInput_mrt:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
     auto &info = HumanoidInterface_->getCentroidalModelInfo();
 
-    optimizedState_mrt_ = optimizedState_mrt;
-    optimizedInput_mrt_ = optimizedInput_mrt;
+    optimizedState2WBC_mrt_ = optimizedState_mrt;
+    optimizedInput2WBC_mrt_ = optimizedInput_mrt;
     if (wbc_only_)
     {
-      optimizedState_mrt_ = initial_status_;
-      optimizedInput_mrt_ = intail_input_;
+      optimizedState2WBC_mrt_ = initial_status_;
+      optimizedInput2WBC_mrt_ = intail_input_;
     }
 
     optimized_mode_ = plannedMode_;
-    currentObservation_.input = optimizedInput_mrt_;
+    currentObservation_.input = optimizedInput2WBC_mrt_;
     // currentObservation_.input.tail(info.actuatedDofNum) = measuredRbdState_.tail(info.actuatedDofNum);
 
     // Whole body control
@@ -673,10 +624,10 @@ namespace humanoid_controller
     if (lf_contact && rf_contact)
     {
       // TODO:站立也使用mrt获取到的optimizedState
-      // optimizedInput_mrt_.setZero();
+      // optimizedInput2WBC_mrt_.setZero();
 
-      // optimizedState_mrt_.segment(6, 6) = currentObservation_.state.segment<6>(6);
-      // optimizedState_mrt_.segment(6 + 6, jointNum_) = defalutJointPos_;
+      // optimizedState2WBC_mrt_.segment(6, 6) = currentObservation_.state.segment<6>(6);
+      // optimizedState2WBC_mrt_.segment(6 + 6, jointNum_) = defalutJointPos_;
       // plannedMode_ = 3;
       wbc_->setStanceMode(true);
     }

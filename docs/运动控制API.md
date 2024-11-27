@@ -92,3 +92,26 @@
 - `humanoid_mpc_foot_pose_target_trajectories` <kuavo_msgs::footPoseTargetTrajectories>
   - 参考`src/humanoid-control/humanoid_interface_ros/scripts/simStepControl.py`,发布脚的步态位姿（xyz+yaw,后续会添加脚的pitch和yaw）指令
   - 事实上, 可以指定每一步的脚步态位姿, 以及对应时刻的躯干姿态, 但这一功能建议高级开发者使用
+
+- `/robot_head_motion_data`<kuavo_msgs::robotHeadMotionData>
+  - 发布头部关节的目标角度：
+  -	joint_data[0]：偏航角度（yaw），范围：[-30°, 30°]。
+  -	joint_data[1]：俯仰角度（pitch），范围：[-25°, 25°]。
+  -	该话题用于控制机器人头部的运动，通过发布目标关节角度来实现头部的偏航和俯仰控制。
+
+- `/control_robot_hand_position` <kuavo_msgs::robotHandPosition>
+  - 发布机器人手部的目标位置：
+  - left_hand_position：左手各关节的目标位置，包含6个元素，每个元素的取值范围为[0, 100]。
+  - right_hand_position：右手各关节的目标位置，包含6个元素，每个元素的取值范围为[0, 100]。
+  - 该话题用于控制机器人双手的运动，通过发布目标关节位置来实现手部的精确控制。
+
+- `/kuavo_arm_traj` <sensor_msgs::JointState>
+  - 发布机器人双手各关节的目标位置：
+  - left_hand_position：左手各关节的目标位置, 速度，扭矩。
+  - right_hand_position：右手各关节的目标位置, 速度，扭矩。
+  - 位置的单位 `Degree`
+  - 速度的单位 `Degree/S`
+  - 扭矩的单位 `N·m`
+  - 该话题用于控制机器人双手的运动，通过发布目标关节位置来实现手部的精确控制。
+  - 请注意，每个手臂的关节数目应与配置文件中的 NUM_ARM_JOINT(代表两条手臂的总关节数，两条手臂的关节数是对称的。所以单条手臂的关节数为 `NUM_ARM_JOINT/2`) 参数一致。
+  - 请注意，目前只有位置信息会生效，后续支持速度和扭矩之后当前备注会去掉

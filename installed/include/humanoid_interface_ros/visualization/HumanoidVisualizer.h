@@ -105,6 +105,8 @@ namespace ocs2
       void publishPlanedFootPositions(const feet_array_t<vector3_t> &footPositions);
 
       void updateHeadJointPositions(const vector_t &positions);
+      
+      void updateSimplifiedArmPositions(const vector_t &positions);
 
     private:
       HumanoidVisualizer(const HumanoidVisualizer &) = delete;
@@ -130,7 +132,9 @@ namespace ocs2
 
       ros::Publisher currentStatePublisher_;
       std::vector<std::string> head_joint_names_;
+      bool updateHeadJointPositions_ = false;
       std::vector<double> head_joint_positions_;
+      std::vector<double> simplifiedJointPositions_;
 
       scalar_t lastTime_;
       scalar_t minPublishTimeDifference_;

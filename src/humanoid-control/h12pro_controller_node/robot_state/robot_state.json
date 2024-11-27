@@ -167,6 +167,12 @@
         "before": "ready_stance_callback"
       },
       {
+        "trigger": "stance",
+        "source": "stance",
+        "dest": "stance",
+        "before": "stance_callback"
+      },
+      {
         "trigger": "walk",
         "source": "stance",
         "dest": "walk",

@@ -126,7 +126,7 @@ roslaunch humanoid_controllers load_kuavo_real.launch cali:=true # 以校准模�
             - 打开机器人急停按键给机器人电机上电
             - 运行程序（增加**cali_leg:=true**参数）
             - 腿部电机进入使能状态之后，按'c'键，自动保存腿部**当前位置**作为零点
-      2. 手臂的零点位置存储于`~/.config/lejuconfig/config.yaml`文件中的`zero_position`字段中,如需微调某个关节可以调整
+      2. 手臂的零点位置存储于`~/.config/lejuconfig/arms_zero.yaml`文件中,如需微调某个关节可以调整
             - 手臂校准在**root**下执行`rosrun hardware_node setZero.sh`将会以当前手臂位置作为零点并保存到配置文件中;
             - 多圈的情况下手臂后续无需校准, 没有多圈记忆功能的机器**重启之后**需要按下述手臂校准流程校准手臂零点所在圈数
    - **电机的运动方向**：

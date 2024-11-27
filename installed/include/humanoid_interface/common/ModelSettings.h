@@ -47,6 +47,10 @@ struct ModelSettings {
   scalar_t positionErrorGain = 0.0;
   scalar_t positionErrorGain_xy = 0.0;
   scalar_t velocityErrorGain_xy = 0.0;
+  int mpcArmsDof = 14;
+  int mpcLegsDof = 12;
+  int modelDof = 26;
+
 
 
   scalar_t phaseTransitionStanceTime = 0.4;
@@ -56,7 +60,9 @@ struct ModelSettings {
   std::string modelFolderCppAd = "/tmp/ocs2";
 
   // This is only used to get names for the knees and to check urdf for extra joints that need to be fixed.
-  std::vector<std::string> jointNames{};
+  std::vector<std::string> jointNames{}; // joint names with MPC dof
+  std::vector<std::string> jointNamesReal{}; // joint names with same dof as the real robot
+  std::vector<std::string> simplifiedJointNames{}; // jointNamesReal - jointNames
   std::vector<std::string> contactNames6DoF{};
   std::vector<std::string> contactNames3DoF{};
 

@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/6/24.
-//
-
 #pragma once
 
 #include <controller_interface/controller.h>
@@ -186,9 +182,6 @@ namespace humanoid_controller
     void sensorsDataCallback(const kuavo_msgs::sensorsData::ConstPtr &msg);
     void startMpccallback(const std_msgs::Bool::ConstPtr &msg);
 
-    void jointStateCallback(const std_msgs::Float32MultiArray::ConstPtr &msg);
-    void jointAccCallback(const std_msgs::Float32MultiArray::ConstPtr &msg);
-    void ImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     bool enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
     void real_init_wait();
     void swingArmPlanner(double st, double current_time, double stepDuration, Eigen::VectorXd &desire_arm_q, Eigen::VectorXd &desire_arm_v);
@@ -214,13 +207,17 @@ namespace humanoid_controller
 
     // Interface
     std::shared_ptr<HumanoidInterface> HumanoidInterface_;
+    std::shared_ptr<PinocchioInterface> pinocchioInterfaceWBCPtr_;
     std::shared_ptr<HumanoidInterface> HumanoidInterface_mpc;
     std::shared_ptr<PinocchioEndEffectorKinematics> eeKinematicsPtr_;
+    std::shared_ptr<PinocchioEndEffectorKinematics> eeKinematicsWBCPtr_;
     std::shared_ptr<PinocchioEndEffectorSpatialKinematics> eeSpatialKinematicsPtr_;
 
     // State Estimation
     SystemObservation currentObservation_, lastObservation_;
     vector_t measuredRbdState_;
+    vector_t measuredRbdStateReal_;
+    vector_t simplifiedJointPos_;
     std::shared_ptr<StateEstimateBase> stateEstimate_;
     std::shared_ptr<CentroidalModelRbdConversions> rbdConversions_;
     bool is_initialized_ = false;
@@ -262,6 +259,7 @@ namespace humanoid_controller
     ros::Subscriber gait_scheduler_sub_;
     ros::Subscriber head_sub_;
     ros::Subscriber arm_joint_traj_sub_;
+    ros::Subscriber arm_target_traj_sub_;//最终的手臂目标位置
     ros::Publisher mpcPolicyPublisher_;
 
     ros::ServiceServer enableArmCtrlSrv_;
@@ -269,6 +267,7 @@ namespace humanoid_controller
 
     PinocchioInterface *pinocchioInterface_ptr_;
     CentroidalModelInfo centroidalModelInfo_;
+    CentroidalModelInfo centroidalModelInfoWBC_;
 
     // Node Handle
     ros::NodeHandle controllerNh_;
@@ -296,6 +295,15 @@ namespace humanoid_controller
     size_t jointNum_ = 12;
     size_t armNum_ = 0;
     size_t headNum_ = 2;
+    size_t jointNumReal_ = 12;
+    size_t armNumReal_ = 0;
+    size_t actuatedDofNumReal_ = 12;// 实物的自由度
+    int armDofMPC_ = 7; // 单手臂的自由度，会从配置文件中重新计算
+    int armDofReal_ = 7; // 实际单手臂的自由度
+    int armDofDiff_ = 0; // 单手臂的自由度差
+
+    bool is_simplified_model_ = false;// 是否是简化的MPC模型
+    TargetTrajectories currentArmTargetTrajectories_;// 当前手臂的目标轨迹，简化模型的关节target将会从这里读取
 
     SensorData sensor_data_head_;
     vector_t desire_head_pos_ = vector_t::Zero(2);
@@ -314,7 +322,7 @@ namespace humanoid_controller
     vector_t initial_status_;
     vector_t intail_input_;
     vector_t joint_kp_, joint_kd_, joint_kp_walking_, joint_kd_walking_, head_kp_, head_kd_;
-    vector_t output_tau_;
+    vector_t output_tau_, output_pos_, output_vel_;
     Eigen::MatrixXd joint_state_limit_; // 26x2, lower and upper limit
     double contact_cst_st_ = 0.1;
     double contact_cst_et_ = 0.1;
@@ -325,7 +333,7 @@ namespace humanoid_controller
     bool use_joint_filter_{false};
 
     TopicLogger *ros_logger_{nullptr};
-    vector_t optimizedState_mrt_, optimizedInput_mrt_;
+    vector_t optimizedState2WBC_mrt_, optimizedInput2WBC_mrt_;
     size_t optimized_mode_;
     bool is_play_back_mode_ = false;
     int control_mode_ = 2; // 0：CST, 1: CSV, 2:CSP

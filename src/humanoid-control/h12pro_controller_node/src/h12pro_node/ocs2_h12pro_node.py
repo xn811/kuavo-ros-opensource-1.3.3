@@ -395,6 +395,25 @@ class H12PROControllerNode:
         # Handle normal state transitions
         self._handle_normal_transitions(current_state, key_combination, msg)
 
+    def _gradually_move_right_stick_down(self, time=0.1, times=20) -> None:
+        """Gradually move right stick down to stop robot.
+        
+        Args:
+            time: Time to wait between each step.
+            times: Number of times to repeat the process.
+        """
+        while times > 0:
+            stick_channels = Config.get_default_channels()
+            stick_channels[:4] = [Config.H12_AXIS_MID_VALUE] * 4
+            stick_channels[1] = Config.H12_AXIS_RANGE_MAX
+            stick_msg = h12proRemoteControllerChannel()
+            stick_msg.channels = tuple(stick_channels)
+
+            self.h12_to_joy_node.update_channels_msg(msg=stick_msg)
+            self.h12_to_joy_node.process_channels()
+            rospy.sleep(time)
+            times -= 1
+
     def _handle_emergency_stop(self, current_state: str, 
                              msg: h12proRemoteControllerChannel) -> None:
         """Handle emergency stop condition.
@@ -404,6 +423,9 @@ class H12PROControllerNode:
             msg: Channel message for response.
         """
         try:
+            if current_state == "stance":
+                self._gradually_move_right_stick_down()
+          
             getattr(self.robot_state_machine, "stop")(source=current_state)
             stop_msg = h12proRemoteControllerChannel()
             channels = Config.get_default_channels()

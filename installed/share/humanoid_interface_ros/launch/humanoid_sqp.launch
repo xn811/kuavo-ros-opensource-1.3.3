@@ -28,13 +28,13 @@
     <node pkg="humanoid_interface_ros" type="humanoid_sqp_mpc" name="humanoid_sqp_mpc" output="screen" launch-prefix=""/>
 
     <node pkg="humanoid_interface_ros" type="humanoid_dummy" name="humanoid_dummy"
-            output="screen" launch-prefix="gnome-terminal --"/>
+            output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
 
     <node pkg="humanoid_interface_ros" type="humanoid_target_with_arm" name="humanoid_target_with_arm"
-          output="screen" launch-prefix="gnome-terminal --"/>
+          output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
 
     <node pkg="humanoid_interface_ros" type="humanoid_gait_command" name="humanoid_gait_command"
-          output="screen" launch-prefix="gnome-terminal --"/>
+          output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
     
     <node pkg="humanoid_interface_ros" type="humanoid_hand_control" name="humanoid_hand_control" output="screen" launch-prefix=""/>
     <node pkg="humanoid_interface_ros" type="humanoid_VR_hand_control" name="humanoid_VR_hand_control" output="screen" launch-prefix=""/>

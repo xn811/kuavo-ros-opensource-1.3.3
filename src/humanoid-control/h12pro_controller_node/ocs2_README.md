@@ -201,6 +201,7 @@ rostopic echo /h12pro_channel
 
 - 遥控器按键组合中，长按(LONG_PRESS)表示按键按下后持续保持按下状态，直到听到遥控器发出 “滴” 的一声
 - 手臂动作存放在 `~/.config/lejuconfig/action_files` 路径下，文件名格式为 `arm_pose1.tact`, `arm_pose2.tact` 等
+- 手臂动作做完后，假设手臂没有回到初始位置，可以通过 E中+F中+D键，将手臂回到初始位置
 - 进入 VR 遥控遥操作状态后，遥控器将不再响应遥控器按键组合（除了紧急停止按键组合和退出 VR 遥控遥操作按键组合），直到退出 VR 遥控遥操作状态
 - VR 遥操作文档请参考 [LINK](https://www.lejuhub.com/highlydynamic/craic_code_repo/-/tree/dev?ref_type=heads#quest3-vr%E6%8E%A7%E5%88%B6)
 - VR 录制的 rosbag 文件存放在 `~/.log/vr_remote_control/rosbag` 路径下, 按照日期和时间命名
@@ -246,3 +247,4 @@ rostopic echo /h12pro_channel
 
 - 组合键: C_LONG_PRESS + D_LONG_PRESS
 - 适用状态: 所有状态(除了 initial 状态)
+- **假如在站立状态下触发停止，机器人会先下蹲再停止**

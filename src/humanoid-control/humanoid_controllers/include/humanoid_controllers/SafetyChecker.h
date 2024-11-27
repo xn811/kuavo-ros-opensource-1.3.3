@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/7/26.
-//
-
 #pragma once
 
 #include <ocs2_centroidal_model/AccessHelperFunctions.h>

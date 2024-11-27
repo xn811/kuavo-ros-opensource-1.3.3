@@ -103,6 +103,7 @@ namespace ocs2
       std::unique_ptr<StateCost> getBaseTrackingTerminalCost(const std::string &taskFile, const CentroidalModelInfo &info, bool verbose);
       
       matrix_t initializeInputCostWeight(const std::string &taskFile, const CentroidalModelInfo &info);
+      matrix_t initializeStateCostWeight(const std::string &taskFile, const CentroidalModelInfo &info, std::string feildName = "Q");
 
       std::pair<scalar_t, RelaxedBarrierPenalty::Config> loadFrictionConeSettings(const std::string &taskFile, bool verbose) const;
       std::unique_ptr<StateInputConstraint> getFrictionConeConstraint(size_t contactPointIndex, scalar_t frictionCoefficient);
