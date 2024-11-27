@@ -225,6 +225,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ArmControlMode newArmControlMode_ = ArmControlMode::AUTO_SWING;
   TorsoControlMode torsoControlMode_ = TorsoControlMode::SIX_DOF;
   bool isArmControlModeChanged_ = false;
+  bool isArmControlModeChangedTrigger_ = false;
 
   vector_t TargetState_, initTargetState_;
   scalar_array_t lastTimeTrajectoryWithVel;
@@ -245,7 +246,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   InverseKinematics inverseKinematics_;
   TargetTrajectories currentArmTargetTrajectories_;
+  TargetTrajectories currentArmTargetTrajectoriesWithAllJoints_;
   BufferedValue<TargetTrajectories> armTargetTrajectories_;
+  BufferedValue<TargetTrajectories> armFullDofTargetTrajectories_;
 
   BufferedValue<TargetTrajectories> poseTargetTrajectories_;
 

@@ -386,6 +386,8 @@ namespace humanoid_controller
 
       wbcFrequencyPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/frequency/wbc", 10);
       wbcTimeCostPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/time_cost/wbc", 10);
+      wbc_observation_publisher_ = controllerNh_.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_wbc_observation", 1);
+
 
       // State estimation
       setupStateEstimate(taskFile, verbose);
@@ -564,6 +566,10 @@ namespace humanoid_controller
     }
 
     // applySensorsData(sensors_data_buffer_ptr_->getLastData());
+    currentObservationWBC_.state.setZero(centroidalModelInfoWBC_.stateDim);
+    currentObservationWBC_.input.setZero(centroidalModelInfoWBC_.inputDim);
+    measuredRbdStateReal_.setZero(centroidalModelInfoWBC_.generalizedCoordinatesNum*2);
+    currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
 
     last_time_ = current_time_;
     updateStateEstimation(time, true);
@@ -621,6 +627,9 @@ namespace humanoid_controller
         optimizedState2WBC_mrt_.segment(12 + jointNum_ + i * armDofReal_, armDofMPC_) = optimizedState2WBC_mrt_.segment(12 + jointNum_ + i * armDofMPC_, armDofMPC_);
       }
     }
+    currentObservationWBC_ = currentObservation_;
+    currentObservationWBC_.state = optimizedState2WBC_mrt_;
+    currentObservationWBC_.input = optimizedInput2WBC_mrt_;
 
     // else
     // {
@@ -690,6 +699,7 @@ namespace humanoid_controller
 
     auto& info = centroidalModelInfo_;
     auto& infoWBC = centroidalModelInfoWBC_;
+
     vector_t optimizedState_mrt, optimizedInput_mrt;
     bool is_mpc_updated = false;
     if (use_external_mpc_)
@@ -1070,7 +1080,6 @@ namespace humanoid_controller
       robotVisualizer_->update(currentObservation_, mpcMrtInterface_->getPolicy(), mpcMrtInterface_->getCommand());
 
     // Publish the observation. Only needed for the command interface
-    // observationPublisher_.publish(ros_msg_conversions::createObservationMsg(currentObservation_));
     const auto t6 = Clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count() > 1000)
     {
@@ -1241,7 +1250,6 @@ namespace humanoid_controller
     currentObservation_.mode = est_mode;
     if (is_simplified_model_)
     {
-      measuredRbdStateReal_.resize(centroidalModelInfoWBC_.generalizedCoordinatesNum*2);
 
       for (int i = 0; i < 2; i++)// qv
       {
@@ -1265,11 +1273,36 @@ namespace humanoid_controller
               joint_qv.segment(sensors_joint_num * i + jointNum_ + armDofReal_ * j + armDofMPC_, armDofDiff_);
         }
       }
+
+       // obs
+      currentObservationWBC_.state.head(info.stateDim) = currentObservation_.state;
+      currentObservationWBC_.input.head(info.inputDim) = currentObservation_.input;
+      currentObservationWBC_.state.tail(armNumReal_).setZero();
+      currentObservationWBC_.input.tail(armNumReal_).setZero();
+      // 共有部分
+      for (int i = 0; i < 2; i++)
+      {
+        currentObservationWBC_.state.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            currentObservation_.state.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+        currentObservationWBC_.input.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            currentObservation_.input.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+      }
+      // 手臂target后半简化部分
+      int arm_start_index = 6 + jointNum_;
+      for (int i = 0; i < 2; i++)
+      {
+        currentObservationWBC_.state.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
+            measuredRbdStateReal_.segment(arm_start_index + armDofReal_ * i + armDofMPC_, armDofDiff_);
+      }
+
     }
     else
     {
+      currentObservationWBC_ = currentObservation_;
       measuredRbdStateReal_ = measuredRbdState_;
     }
+    wbc_observation_publisher_.publish(ros_msg_conversions::createObservationMsg(currentObservationWBC_));
+
   }
 
   humanoidController::~humanoidController()

@@ -214,7 +214,7 @@ namespace humanoid_controller
     std::shared_ptr<PinocchioEndEffectorSpatialKinematics> eeSpatialKinematicsPtr_;
 
     // State Estimation
-    SystemObservation currentObservation_, lastObservation_;
+    SystemObservation currentObservation_, currentObservationWBC_, lastObservation_;
     vector_t measuredRbdState_;
     vector_t measuredRbdStateReal_;
     vector_t simplifiedJointPos_;
@@ -238,7 +238,7 @@ namespace humanoid_controller
     std::shared_ptr<HumanoidVisualizer> robotVisualizer_;
     // std::shared_ptr<biped_robot::BipedRobotVisualizer> bipedRobotVisualizer_;//TODO: check if this is needed
     ros::Publisher observationPublisher_;
-
+    ros::Publisher wbc_observation_publisher_;
     // Controller Interface
     ros::Publisher jointCmdPub_;
     ros::Publisher targetPosPub_;
