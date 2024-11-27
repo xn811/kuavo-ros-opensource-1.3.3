@@ -7,11 +7,10 @@ Panels:
         - /Global Options1
         - /Status1
         - /RobotModel1
-        - /TF1
         - /TF1/Frames1
         - /MarkerArray1
-        - /MarkerArray1/Status1
         - /Marker1
+        - /Marker6
       Splitter Ratio: 0.5
     Tree Height: 712
   - Class: rviz/Selection
@@ -304,6 +303,58 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        Chest:
+          Value: true
+        Head:
+          Value: true
+        LeftArmLower:
+          Value: true
+        LeftArmUpper:
+          Value: true
+        LeftHandIndexTip:
+          Value: true
+        LeftHandLittleTip:
+          Value: true
+        LeftHandMiddleTip:
+          Value: true
+        LeftHandPalm:
+          Value: true
+        LeftHandRingTip:
+          Value: true
+        LeftHandThumbDistal:
+          Value: true
+        LeftHandThumbMetacarpal:
+          Value: true
+        LeftHandThumbProximal:
+          Value: true
+        LeftHandThumbTip:
+          Value: true
+        Neck:
+          Value: true
+        RightArmLower:
+          Value: true
+        RightArmUpper:
+          Value: true
+        RightHandIndexTip:
+          Value: true
+        RightHandLittleTip:
+          Value: true
+        RightHandMiddleTip:
+          Value: true
+        RightHandPalm:
+          Value: true
+        RightHandRingTip:
+          Value: true
+        RightHandThumbDistal:
+          Value: true
+        RightHandThumbMetacarpal:
+          Value: true
+        RightHandThumbProximal:
+          Value: true
+        RightHandThumbTip:
+          Value: true
+        Root:
+          Value: true
         base_link:
           Value: true
         camera:
@@ -364,6 +415,8 @@ Visualization Manager:
           Value: false
         rr_foot_toe:
           Value: false
+        torso:
+          Value: true
         zarm_l1_link:
           Value: false
         zarm_l2_link:
@@ -465,6 +518,59 @@ Visualization Manager:
                         zarm_r7_link:
                           zarm_r7_end_effector:
                             {}
+        torso:
+          Chest:
+            {}
+          Head:
+            {}
+          LeftArmLower:
+            {}
+          LeftArmUpper:
+            {}
+          LeftHandIndexTip:
+            {}
+          LeftHandLittleTip:
+            {}
+          LeftHandMiddleTip:
+            {}
+          LeftHandPalm:
+            {}
+          LeftHandRingTip:
+            {}
+          LeftHandThumbDistal:
+            {}
+          LeftHandThumbMetacarpal:
+            {}
+          LeftHandThumbProximal:
+            {}
+          LeftHandThumbTip:
+            {}
+          Neck:
+            {}
+          RightArmLower:
+            {}
+          RightArmUpper:
+            {}
+          RightHandIndexTip:
+            {}
+          RightHandLittleTip:
+            {}
+          RightHandMiddleTip:
+            {}
+          RightHandPalm:
+            {}
+          RightHandRingTip:
+            {}
+          RightHandThumbDistal:
+            {}
+          RightHandThumbMetacarpal:
+            {}
+          RightHandThumbProximal:
+            {}
+          RightHandThumbTip:
+            {}
+          Root:
+            {}
       Update Interval: 0
       Value: true
     - Class: rviz/MarkerArray
@@ -519,7 +625,7 @@ Visualization Manager:
       Marker Topic: /visualization_marker
       Name: Marker
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -527,7 +633,7 @@ Visualization Manager:
       Marker Topic: /visualization_marker_right
       Name: Marker
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -535,7 +641,7 @@ Visualization Manager:
       Marker Topic: /visualization_marker/elbow
       Name: Marker
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -543,7 +649,7 @@ Visualization Manager:
       Marker Topic: /visualization_marker_right/elbow
       Name: Marker
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -551,8 +657,7 @@ Visualization Manager:
       Marker Topic: /humanoid/planedFootPositions
       Name: MarkerArray
       Namespaces:
-        foot_positions_back: true
-        foot_positions_front: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -561,6 +666,38 @@ Visualization Manager:
       Name: Marker
       Namespaces:
         {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker/shoulder
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker_right/shoulder
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker/shoulder_quest3
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker_right/shoulder_quest3
+      Name: Marker
+      Namespaces:
+        "": true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -591,7 +728,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.5777177810668945
+      Distance: 1.6946470737457275
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -599,17 +736,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.30118393898010254
-        Y: -0.3050302267074585
-        Z: -0.07362465560436249
+        X: 0.18825635313987732
+        Y: -0.09394228458404541
+        Z: -0.052684277296066284
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3134896457195282
+      Pitch: 0.9097958207130432
       Target Frame: base_link
-      Yaw: 0.919990599155426
+      Yaw: 0.5899927616119385
     Saved:
       - Class: rviz/Orbit
         Distance: 5.575319766998291

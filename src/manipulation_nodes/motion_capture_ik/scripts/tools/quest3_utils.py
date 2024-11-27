@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -107,6 +108,8 @@ class Quest3ArmInfoTransformer:
         self.left_shoulder_rpy_in_robot = [0.0, 0.0, 0.0] # expressed in robot frame
         self.right_shoulder_rpy_in_robot = [0.0, 0.0, 0.0]
         self.chest_axis_agl = [0.0, 0.0, 0.0]  # in robot frame
+        self.upper_arm_length = 22.0
+        self.lower_arm_length = 19.0
         self.head_body_pose = HeadBodyPose()
         self.marker_pub = rospy.Publisher("visualization_marker", Marker, queue_size=10)
         self.marker_pub_right = rospy.Publisher("visualization_marker_right", Marker, queue_size=10)
@@ -114,6 +117,8 @@ class Quest3ArmInfoTransformer:
         self.marker_pub_elbow_right = rospy.Publisher("visualization_marker_right/elbow", Marker, queue_size=10)
         self.marker_pub_shoulder = rospy.Publisher("visualization_marker/shoulder", Marker, queue_size=10)
         self.marker_pub_shoulder_right = rospy.Publisher("visualization_marker_right/shoulder", Marker, queue_size=10)
+        self.marker_pub_shoulder_quest3 = rospy.Publisher("visualization_marker/shoulder_quest3", Marker, queue_size=10)
+        self.marker_pub_shoulder_quest3_right = rospy.Publisher("visualization_marker_right/shoulder_quest3", Marker, queue_size=10)
         self.marker_pub_chest = rospy.Publisher("visualization_marker_chest", Marker, queue_size=10)
         self.joint_state_puber = rospy.Publisher('/joint_states', JointState, queue_size=10)
         self.shoulder_angle_puber = rospy.Publisher('/quest3_debug/shoulder_angle', Float32MultiArray, queue_size=10)
@@ -126,7 +131,13 @@ class Quest3ArmInfoTransformer:
             hand_gesture_model_path = os.path.join(current_dir, "hand_gesture_model.onnx")
             self.hand_gesture_predictor = HandGesturePredictor(hand_gesture_model_path)
         self.listener = tf.TransformListener()
-                
+        if rospy.has_param("/quest3/upper_arm_length"):
+            self.upper_arm_length = rospy.get_param("/quest3/upper_arm_length")
+            print(f"get rosparams upper_arm_length: {self.upper_arm_length}")
+        if rospy.has_param("/quest3/lower_arm_length"):
+            self.lower_arm_length = rospy.get_param("/quest3/lower_arm_length")
+            print(f"get rosparams lower_arm_length: {self.lower_arm_length}")
+              
     def read_joySticks_msg(self, msg):
         self.left_joystick = [msg.left_trigger, msg.left_grip]
         self.right_joystick = [msg.right_trigger, msg.right_grip]
@@ -523,36 +534,44 @@ class Quest3ArmInfoTransformer:
         shoulder_pos = axis_angle_to_matrix(self.chest_axis_agl).T @ shoulder_pos
         shoulder_pos[0] += bias_chest_to_base_link[0]
         shoulder_pos[2] += bias_chest_to_base_link[2]
-
-        # chest_pos = [chest_pose.position.x, chest_pose.position.y, chest_pose.position.z]
-        # radi0 = 26/14 # 机器人肩（measurement）/人体肩
-        radi1 = 22.0/32 # 机器人大臂/人体大臂
-        radi2 = 19.0/26 # 机器人小臂/人体小臂
-        # shoulder_pos[1] = radi0 * shoulder_pos[1]
+        shoulder_width = 0.15 # 一半肩宽
+        robot_shoulder_width = 0.15 # 机器人肩宽
+        human_shoulder_pos = list(shoulder_pos[:])
         if (side == "Right"):
-            shoulder_pos[1] -= 0.15
+            shoulder_pos[1] -= robot_shoulder_width
+            human_shoulder_pos[1] -= shoulder_width
         elif (side == "Left"):
-            shoulder_pos[1] += 0.15
+            shoulder_pos[1] += robot_shoulder_width
+            human_shoulder_pos[1] += shoulder_width
+            
+        # chest_pos = [chest_pose.position.x, chest_pose.position.y, chest_pose.position.z]
+        human_upper_arm_length = 100*math.sqrt((elbow_pos[0] - shoulder_pos[0])**2 + (elbow_pos[1] - shoulder_pos[1])**2 + (elbow_pos[2] - shoulder_pos[2])**2)
+        human_lower_arm_length = 100*math.sqrt((hand_pos[0] - elbow_pos[0])**2 + (hand_pos[1] - elbow_pos[1])**2 + (hand_pos[2] - elbow_pos[2])**2)
+        radi1 = self.upper_arm_length/human_upper_arm_length # 机器人大臂/人体大臂
+        radi2 = self.lower_arm_length/human_lower_arm_length # 机器人小臂/人体小臂
+   
+        # shoulder_pos[1] = radi0 * shoulder_pos[1]
+        
         for i in range(3):
-            elbow_pos[i] = shoulder_pos[i] + radi1 * (elbow_pos[i] - shoulder_pos[i])
-            # hand_pos[i] = elbow_pos[i] + (hand_pos[i] - (shoulder_pos[i] + (elbow_pos[i] - shoulder_pos[i]) / radi1))
+            elbow_pos[i] = shoulder_pos[i] + radi1 * (elbow_pos[i] - human_shoulder_pos[i])
+            hand_pos[i] = elbow_pos[i] + (hand_pos[i] - (human_shoulder_pos[i] + (elbow_pos[i] - shoulder_pos[i]) / radi1))*radi2
 
-        # print(f"{side} elbow pos: {elbow_pos}")
-
-        # print("{} hand pos: {}, elbow pos: {}".format(side, hand_pos, elbow_pos))
         if self.vis_pub:
             # marker = self.construct_marker(hand_pos, hand_quat, 1.0 if side == "Left" else 0.0, 0.0 if side == "Left" else 1.0, 0.0, side)
             marker = self.construct_point_marker(hand_pos, 0.08, 0.9, color=[1, 0, 0])
             elbow_marker = self.construct_point_marker(elbow_pos, 0.1, color=[0, 1, 0])
-            shoulder_marker = self.construct_point_marker(shoulder_pos, 0.1)
+            shoulder_marker = self.construct_point_marker(shoulder_pos, 0.1, color=[0, 0, 1])
+            # shoulder_marker_quest3 = self.construct_point_marker(human_shoulder_pos, 0.1, color=[1, 0, 1])
             if side == "Left":
                 self.marker_pub.publish(marker)
                 self.marker_pub_elbow.publish(elbow_marker)
                 self.marker_pub_shoulder.publish(shoulder_marker)
+                # self.marker_pub_shoulder_quest3.publish(shoulder_marker_quest3)
             else:
                 self.marker_pub_right.publish(marker)
                 self.marker_pub_elbow_right.publish(elbow_marker)
                 self.marker_pub_shoulder_right.publish(shoulder_marker)
+                # self.marker_pub_shoulder_quest3_right.publish(shoulder_marker_quest3)
             chest_pos = [chest_pose.position.x, chest_pose.position.y, chest_pose.position.z]
             chest_quat = [chest_pose.orientation.w, chest_pose.orientation.x, chest_pose.orientation.y, chest_pose.orientation.z]
             # chest_marker = self.construct_marker(chest_pos, chest_quat, 0, 0, 1, "Torso")

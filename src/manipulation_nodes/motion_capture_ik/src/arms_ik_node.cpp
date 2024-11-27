@@ -7,6 +7,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <ros/package.h>
 
 #include "plantIK.h"
 #include "motion_capture_ik/package_path.h"
@@ -399,12 +400,17 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "ik_publisher");
     ros::NodeHandle nh;
     double eef_z_bias = 0.0;
-    std::string relative_model_path = "models/biped_gen4.0/urdf/biped_v3_arm.urdf";
+    std::string model_path = "models/biped_gen4.0/urdf/biped_v3_arm.urdf";
     int control_hand_side = 2; // 0: left, 1: right, 2: both
     if(ros::param::has("model_path"))
     {
-        ros::param::get("model_path", relative_model_path);
-        std::cout << "model_path: " << relative_model_path << std::endl;
+        ros::param::get("model_path", model_path);
+        
+        std::cout << "model_path: " << model_path << std::endl;
+    }else
+    {
+        std::string package_path = ros::package::getPath("kuavo_assets");
+        model_path = package_path + "/models/biped_s40/urdf/drake/biped_v3_arm.urdf";
     }
     if(ros::param::has("eef_z_bias"))
     {
@@ -417,7 +423,6 @@ int main(int argc, char* argv[])
         std::cout << "control_hand_side: " << control_hand_side << std::endl;
     }
     
-    std::string model_path = HighlyDynamic::getPath() + "/" + relative_model_path;
     std::cout << "model_path: " << model_path << std::endl;
     std::vector<std::string> end_frames_name = {"torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"};
     Eigen::Vector3d custom_eef_frame_pos = Eigen::Vector3d(0, 0, eef_z_bias);

@@ -716,7 +716,6 @@ if __name__ == "__main__":
     ctrl_arm_idx = ArmIdx.LEFT  # 默认只控制左臂
     eef_z_bias = -0.0  # 末端坐标系的z轴偏移量
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", type=int, default=4, help="Robot version, 3 or 4.")
     parser.add_argument("--ctrl_arm_idx", type=int, default=0, help="Control left or right arm, 0 for left, 1 for right.2 for both.")
     parser.add_argument("--ik_type_idx", type=int, default=0, help="Ik type, 0 for TorsoIK, 1 for DiffIK.")
     parser.add_argument("--ee_type", "--end_effector_type", dest="end_effector_type", type=str, default="", help="End effector type, jodell or qiangnao.")
@@ -726,7 +725,6 @@ if __name__ == "__main__":
     parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
 
     args, unknown = parser.parse_known_args()
-    version = args.version
     end_effector_type = args.end_effector_type
     ctrl_arm_idx = ArmIdx(args.ctrl_arm_idx)
     ik_type_idx = IkTypeIdx(args.ik_type_idx)
@@ -739,18 +737,32 @@ if __name__ == "__main__":
     print(f"\033[92mControl {ctrl_arm_idx.name()} arms.\033[0m")
     print(f"\033[92mIk type: {ik_type_idx.name()}\033[0m")
     print(f"\033[92mControl_torso: {control_torso}\033[0m")
-
+    
     current_pkg_path = get_package_path("motion_capture_ik")
-
-    model_file = current_pkg_path + "/models/biped_gen4.0/urdf/biped_v3_arm.urdf"
-    end_frames_name = ["torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"]
-    if version == 3:
-        model_file = current_pkg_path + "/models/biped_gen3.4/urdf/biped_v3_arm.urdf"
-        eef_z_bias = -0.098
-        end_frames_name = ["torso", "l_hand_pitch", "r_hand_pitch"]
-    print(f"\033[92mRobot Version: {version}, make sure it is correct!!!\033[0m")
-    print(f"You can run `rosrun motion_capture_ik ik_ros_uni.py 3` to use version 3(3.4).")
+    kuavo_assests_path = get_package_path("kuavo_assets")
+    robot_version = os.environ.get('ROBOT_VERSION', '40')
+    model_file = kuavo_assests_path + f"/models/biped_s{robot_version}/urdf/drake/biped_v3_arm.urdf"
+    model_config_file = kuavo_assests_path + f"/config/kuavo_v{robot_version}/kuavo.json"
+    # model_file = current_pkg_path + "/models/biped_gen4.0/urdf/biped_v3_arm.urdf"
+    
+    assert os.path.exists(model_file), f"Model file {model_file} does not exist."
+    assert os.path.exists(model_config_file), f"Model config file {model_config_file} does not exist."
+    
+    # end_frames_name = ["torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"]
+    import json
+    with open(model_config_file, 'r') as f:
+        model_config = json.load(f)
+    end_frames_name = model_config["end_frames_name_ik"]
+    shoulder_frame_names = model_config["shoulder_frame_names"]
+    upper_arm_length = model_config["upper_arm_length"]
+    lower_arm_length = model_config["lower_arm_length"]
+    print(f"upper_arm_length: {upper_arm_length}, lower_arm_length: {lower_arm_length}")
+    rospy.set_param("/quest3/upper_arm_length", upper_arm_length)
+    rospy.set_param("/quest3/lower_arm_length", lower_arm_length)
+    
     print(f"Model file: {model_file}")
+    print(f"Model config file: {model_config_file}")
+    print(f"shoulder_frame_names: {shoulder_frame_names}")
     print(f"End effector z-axis bias distance: {eef_z_bias} m.")
     print(f"End frames names: {end_frames_name}")
     print(f"Send srv?: {send_srv}")
@@ -758,11 +770,9 @@ if __name__ == "__main__":
     print(f"Predict gesture?: {predict_gesture}")
     arm_ik = None
 
-    arm_min = np.pi/180.0 * np.array([-180, -10, -135, -100, -135, -10, -15, -180, -135, -180, -180, -180, -10, -15], dtype=float)
-    arm_max = np.pi/180.0 * np.array([30, 135, 135, 100, 135, 10, 15, 180, 10, 180, 180, 180, 10, 15], dtype=float)
-    if version == 4: #TO-DO: 待填入版本4的限值
-        arm_min = np.array([-3.14, -0.70, -1.57, -1.57, -1.57, -1.57, -1.57, -3.14, -2.09, -1.57, -1.57, -1.57, -1.57, -1.57], dtype=float)
-        arm_max = np.array([0.520, 2.09, 1.570, 0.000, 1.570, 1.570, 1.570, 0.7, 1.000, 1.570, 0.000, 1.570, 1.570, 1.570], dtype=float)
+
+    arm_min = np.array([-3.14, -0.70, -1.57, -1.57, -1.57, -1.57, -1.57, -3.14, -2.09, -1.57, -1.57, -1.57, -1.57, -1.57], dtype=float)
+    arm_max = np.array([0.520, 2.09, 1.570, 0.000, 1.570, 1.570, 1.570, 0.7, 1.000, 1.570, 0.000, 1.570, 1.570, 1.570], dtype=float)
     q_limit = [arm_min, arm_max]
     if ik_type_idx == IkTypeIdx.DiffIK:        
         arm_ik = DiffIK(
@@ -772,6 +782,7 @@ if __name__ == "__main__":
             q_limit=q_limit, 
             meshcat=meshcat,
             eef_z_bias=eef_z_bias,
+            shoulder_frame_names=shoulder_frame_names
             )
     if ik_type_idx == IkTypeIdx.TorsoIK:
         arm_ik = ArmIk(
@@ -784,6 +795,8 @@ if __name__ == "__main__":
             eef_z_bias=eef_z_bias,
             ctrl_arm_idx=ctrl_arm_idx,
             as_mc_ik=True,
+            shoulder_frame_names=shoulder_frame_names
+
         )
         arm_ik.init_state(0.0, 0.0)
     arm_length_left, arm_length_right = arm_ik.get_arm_length()
