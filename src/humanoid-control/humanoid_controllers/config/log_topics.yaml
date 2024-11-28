@@ -26,3 +26,5 @@ topics:
   - /kuavo_arm_traj
   - /gait_receiver/.*
   - /SwitchedModelReferenceManager/.*
+  - /motor_cmd/.*
+  - /sensor_data_motor/.*
