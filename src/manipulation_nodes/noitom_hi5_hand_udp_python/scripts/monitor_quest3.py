@@ -266,7 +266,6 @@ class Quest3BoneFramePublisher:
 
             if bone_name == "Head":
                 self.pub_head_motion_data(right_hand_quat)
-        self.update_quest_hand_finger_tf()
 
     def restart_socket(self):
         print("Restarting socket connection...")
