@@ -13,7 +13,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base_link.obj"/>
+        <mesh filename="../../meshes/base_link.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.43137 0.45098 0.43137 1"/>
@@ -22,7 +22,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/base_link.obj" />
+        <mesh filename="../../meshes/base_link.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -35,7 +35,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_leg_roll.obj"/>
+        <mesh filename="../../meshes/l_leg_roll.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -64,7 +64,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_leg_yaw.obj"/>
+        <mesh filename="../../meshes/l_leg_yaw.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.65098 0.61961 0.58824 1"/>
@@ -93,7 +93,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_leg_pitch.obj"/>
+        <mesh filename="../../meshes/l_leg_pitch.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.52941 0.54902 0.54902 1"/>
@@ -122,7 +122,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_knee.obj"/>
+        <mesh filename="../../meshes/l_knee.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.68627 0.65882 0.63922 1"/>
@@ -151,7 +151,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_foot_pitch.obj"/>
+        <mesh filename="../../meshes/l_foot_pitch.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -175,7 +175,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_foot_roll.obj"/>
+        <mesh filename="../../meshes/l_foot_roll.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -247,7 +247,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_l_bar.obj"/>
+        <mesh filename="../../meshes/l_l_bar.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -256,7 +256,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/l_l_bar.obj" />
+        <mesh filename="../../meshes/l_l_bar.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -283,7 +283,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_l_tendon.obj"/>
+        <mesh filename="../../meshes/l_l_tendon.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -292,7 +292,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/l_l_tendon.obj" />
+        <mesh filename="../../meshes/l_l_tendon.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -311,7 +311,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_r_bar.obj"/>
+        <mesh filename="../../meshes/l_r_bar.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -320,7 +320,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/l_r_bar.obj" />
+        <mesh filename="../../meshes/l_r_bar.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -339,7 +339,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/l_r_tendon.obj"/>
+        <mesh filename="../../meshes/l_r_tendon.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -348,7 +348,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/l_r_tendon.obj" />
+        <mesh filename="../../meshes/l_r_tendon.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -379,7 +379,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_leg_roll.obj"/>
+        <mesh filename="../../meshes/r_leg_roll.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1"/>
@@ -408,7 +408,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_leg_yaw.obj"/>
+        <mesh filename="../../meshes/r_leg_yaw.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.650980392156863 0.619607843137255 0.588235294117647 1"/>
@@ -437,7 +437,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_leg_pitch.obj"/>
+        <mesh filename="../../meshes/r_leg_pitch.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.529411764705882 0.549019607843137 0.549019607843137 1"/>
@@ -466,7 +466,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_knee.obj"/>
+        <mesh filename="../../meshes/r_knee.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.686274509803922 0.658823529411765 0.63921568627451 1"/>
@@ -495,7 +495,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_foot_pitch.obj"/>
+        <mesh filename="../../meshes/r_foot_pitch.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -520,7 +520,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_foot_roll.obj"/>
+        <mesh filename="../../meshes/r_foot_roll.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -593,7 +593,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_r_bar.obj"/>
+        <mesh filename="../../meshes/r_r_bar.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -602,7 +602,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/r_r_bar.obj" />
+        <mesh filename="../../meshes/r_r_bar.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -621,7 +621,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_r_tendon.obj"/>
+        <mesh filename="../../meshes/r_r_tendon.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -630,7 +630,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/r_r_tendon.obj" />
+        <mesh filename="../../meshes/r_r_tendon.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -656,7 +656,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_l_bar.obj"/>
+        <mesh filename="../../meshes/r_l_bar.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -665,7 +665,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/r_l_bar.obj" />
+        <mesh filename="../../meshes/r_l_bar.STL" />
       </geometry>
     </collision> -->
   </link>
@@ -691,7 +691,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/r_l_tendon.obj"/>
+        <mesh filename="../../meshes/r_l_tendon.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.690196078431373 0.658823529411765 0.63921568627451 1"/>
@@ -700,7 +700,7 @@
     <!-- <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../meshes/r_l_tendon.obj" />
+        <mesh filename="../../meshes/r_l_tendon.STL" />
       </geometry>
     </collision> -->
   </link>

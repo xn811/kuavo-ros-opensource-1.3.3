@@ -23,7 +23,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/torso.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/torso.STL" />
       </geometry>
       <material 
         name="">
@@ -59,7 +59,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_roll.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_roll.STL" />
       </geometry>
       <material 
         name="">
@@ -108,7 +108,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_yaw.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_yaw.STL" />
       </geometry>
       <material 
         name="">
@@ -155,7 +155,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh 
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_leg_pitch.STL" />
       </geometry>
       <material 
         name="">
@@ -204,7 +204,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh 
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_knee.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_knee.STL" />
       </geometry>
       <material 
         name="">
@@ -250,7 +250,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_foot_pitch.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_foot_pitch.STL" />
       </geometry>
       <material name="">
         <color rgba="0.6902 0.65882 0.63922 1" />
@@ -296,7 +296,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_foot_roll.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/l_foot_roll.STL" />
       </geometry>
       <material 
         name="">
@@ -519,7 +519,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_roll.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_roll.STL" />
       </geometry>
       <material 
         name="">
@@ -565,7 +565,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_yaw.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_yaw.STL" />
       </geometry>
       <material 
         name="">
@@ -613,7 +613,7 @@ Stephen Brawner (brawner@gmail.com)
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_pitch.obj" />
+        <mesh filename="package://kuavo_assets/models/biped_s40/meshes/r_leg_pitch.STL" />
       </geometry>
       <material 
         name="">
@@ -660,7 +660,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh 
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_knee.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_knee.STL" />
       </geometry>
       <material 
         name="">
@@ -709,7 +709,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh 
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_foot_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_foot_pitch.STL" />
       </geometry>
       <material 
         name="">
@@ -756,7 +756,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh 
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_foot_roll.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_foot_roll.STL" />
       </geometry>
       <material 
         name="">
@@ -988,7 +988,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1040,7 +1040,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_roll.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_roll.STL" />
       </geometry>
       <material
         name="">
@@ -1092,7 +1092,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_yaw.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_arm_yaw.STL" />
       </geometry>
       <material
         name="">
@@ -1144,7 +1144,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_forearm_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_forearm_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1192,7 +1192,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_yaw.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_yaw.STL" />
       </geometry>
       <material
         name="">
@@ -1244,7 +1244,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1296,7 +1296,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_roll.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/l_hand_roll.STL" />
       </geometry>
       <material
         name="">
@@ -1369,7 +1369,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1421,7 +1421,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_roll.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_roll.STL" />
       </geometry>
       <material
         name="">
@@ -1473,7 +1473,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_yaw.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_arm_yaw.STL" />
       </geometry>
       <material
         name="">
@@ -1525,7 +1525,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_forearm_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_forearm_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1577,7 +1577,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_yaw.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_yaw.STL" />
       </geometry>
       <material
         name="">
@@ -1629,7 +1629,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_pitch.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1681,7 +1681,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_roll.obj" />
+          filename="package://kuavo_assets/models/biped_s40/meshes/r_hand_roll.STL" />
       </geometry>
       <material
         name="">
