@@ -97,7 +97,7 @@ fi
 
 # 获取总质量并修改所有URDF
 TOTAL_MASS=$(cat ${MASS_FILE})
-echo "Total mass: $TOTAL_MASS" >&2
+echo "由配置文件 ${MASS_FILE} 指定总质量为: $TOTAL_MASS kg" >&2
 # 遍历URDF_FILES，并同步取出链接名称
 for index in "${!URDF_FILES[@]}"; do
     URDF_FILE="${URDF_FILES[$index]}"

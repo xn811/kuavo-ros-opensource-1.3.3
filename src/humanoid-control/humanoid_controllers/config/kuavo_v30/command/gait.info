@@ -25,17 +25,13 @@ trot
  {
    modeSequence
    {
-     [0]     SS
-     [1]     SF
-     [2]     SS
-     [3]     FS
+     [0]     SF
+     [1]     FS
    }
    switchingTimes
    {
-     [0]     0.16
+     [0]     0.35
      [1]     0.35
-     [2]     0.16
-     [3]     0.35
    }
 }
 
