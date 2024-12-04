@@ -40,6 +40,7 @@ add_service_files(
   changeArmCtrlMode.srv
   twoArmHandPoseCmdSrv.srv
   changeArmCtrlModeKuavo.srv
+  fkSrv.srv
 )
 generate_messages(
   DEPENDENCIES

@@ -34,6 +34,7 @@
 #include "motion_capture_ik/headBodyPose.h"
 // srv
 #include "motion_capture_ik/twoArmHandPoseCmdSrv.h"
+#include "motion_capture_ik/fkSrv.h"
 
 
 namespace
@@ -110,7 +111,7 @@ class ArmsIKNode
             // srv
             // 初始化服务服务器
             ik_server_ = nh_.advertiseService("/ik/two_arm_hand_pose_cmd_srv", &ArmsIKNode::handleServiceRequest, this);
-
+            fk_server_ = nh_.advertiseService("/ik/fk_srv", &ArmsIKNode::handleFKServiceRequest, this);
             // solver params
             ik_solve_params_.major_optimality_tol = 9e-3;
             ik_solve_params_.major_feasibility_tol = 9e-3;
@@ -358,12 +359,30 @@ class ArmsIKNode
                 if(start_idx > 0)//包含躯干
                 {
                     res.with_torso = true;
-                    res.q_torso = {q[0], q[1], q[2], q[3]};
+                    res.q_torso = std::vector<double>(q.data(), q.data() + start_idx);
                 }
                 motion_capture_ik::twoArmHandPose msg = publish_ik_result_info(q);
                 res.hand_poses = msg;
             }
             // 返回响应
+            return true;
+        }
+
+        bool handleFKServiceRequest(motion_capture_ik::fkSrv::Request &req, motion_capture_ik::fkSrv::Response &res) 
+        {
+            const int num_dof = q0_.size(); 
+            if(req.q.size() != num_dof)
+            {
+                ROS_ERROR_STREAM("The size of the request q ("<< req.q.size() << ") is not equal to the number of dof in ik_node(" << num_dof << ")");
+                res.success = false;
+                return false;
+            }
+            Eigen::VectorXd q = Eigen::VectorXd::Zero(num_dof);
+            for(int i = 0; i < num_dof; i++)
+                q(i) = req.q[i];
+            auto msg = publish_ik_result_info(q);
+            res.hand_poses = msg;
+            res.success = true;
             return true;
         }
 
@@ -386,6 +405,7 @@ class ArmsIKNode
         ros::Publisher ik_result_pub_;
         ros::Publisher head_body_pose_pub_;
         ros::ServiceServer ik_server_;
+        ros::ServiceServer fk_server_;
         bool recived_cmd_ = false;
         bool recived__new_cmd_ = false;
         HighlyDynamic::IKParams ik_solve_params_;

@@ -1,3 +1,32 @@
+# 使用方法
+## 编译
+```bash
+catkin build general_ik
+```
+## 运行
+### ros调用
+- 启动ik节点
+```bash
+roslaunch general_ik ik_node.launch visualize:=1
+```
+- 调用逆解
+```bash
+rosrun general_ik sim_ik_cmd.py
+```
+调用后会打印出求解结果，例如：
+```bash
+time_cost: 4.02 ms. left_pos_error: 2.13 mm, right_pos_error: 2.20 mm
+```
+- 调用正解
+```bash
+rosrun general_ik test_fk_srv.py
+```
+### 直接调用
+```bash
+rosrun general_ik plant_ik_test
+```
+- 参考`test/plant_ik_test.cpp`
+
 # 更新日志
 ## 2024-09-19
 使用Y键锁定/解锁手指，下扳机恢复为控制中指、无名指和小指。

@@ -10,8 +10,8 @@
     <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
     <param name="robot_version"    value="$(arg robot_version)"/>
   
-    <!-- <arg name="urdfFile"           default="$(find biped_s3)/urdf/biped_s3_with_v3_arm.urdf"/> -->
-    <arg name="model_path"           default="$(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/drake/biped_v3_arm.urdf"/>
+    <arg name="model_path"     default="$(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/drake/biped_v3_arm.urdf"/>
+    <arg name="vis_model_path" default="$(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/biped_s$(arg robot_version).urdf"/>
   
     <!-- <arg name="model_path" default="models/biped_gen4.0/urdf/biped_v3_arm.urdf"/> -->
     <!-- <arg name="model_path" default="models/biped_gen4.0/urdf/biped_v3_arm_virtual_joint.urdf"/> -->
@@ -47,7 +47,7 @@
     <group if="$(arg visualize)">    
         <node name="visulize_traj_node" pkg="motion_capture_ik" type="visulize_traj.py" output="screen"  args="--ee_type $(arg ee_type)"/>
         <arg name="model" />
-        <param name="robot_description" textfile="$(find biped_s40_hand)/urdf/biped_s40_hand_virtual_joint.urdf" />
+        <param name="robot_description" textfile="$(arg vis_model_path)" />
         <!-- <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" /> -->
         <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
         <node name="rviz" pkg="rviz" type="rviz" args="-d $(find motion_capture_ik)/rviz/mc_robot_state.rviz" />    
