@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 
 <launch>
-    <arg name="rviz"               default="true" />
+    <arg name="rviz"               default="false" />
     <arg name="description_name"   default="humanoid_description"/>
     <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
     <param name="robot_version"    value="$(arg robot_version)"/>

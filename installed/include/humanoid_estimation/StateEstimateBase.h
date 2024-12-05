@@ -63,6 +63,11 @@ namespace ocs2
                              const vector3_t &linearAccelLocal, const matrix3_t &orientationCovariance,
                              const matrix3_t &angularVelCovariance, const matrix3_t &linearAccelCovariance);
 
+      virtual Eigen::Quaternion<scalar_t> getImuOrientation()
+      {
+        return quat_;
+      } 
+      
       virtual vector_t update(const ros::Time &time, const ros::Duration &period) = 0;
 
       size_t ContactDetection(size_t mode_des, const Eigen::VectorXd &joint_v, const Eigen::VectorXd &joint_current, double dt);

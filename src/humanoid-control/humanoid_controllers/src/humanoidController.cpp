@@ -1295,6 +1295,9 @@ namespace humanoid_controller
             measuredRbdStateReal_.segment(arm_start_index + armDofReal_ * i + armDofMPC_, armDofDiff_);
       }
 
+      currentObservationWBC_.time = currentObservation_.time;
+      currentObservationWBC_.mode = currentObservation_.mode;
+
     }
     else
     {
