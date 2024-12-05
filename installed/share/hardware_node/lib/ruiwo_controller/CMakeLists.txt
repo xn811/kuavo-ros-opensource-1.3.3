@@ -41,14 +41,9 @@ install(TARGETS ruiwo_actuatorLib
 
 install(DIRECTORY ./
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/lib/ruiwo_controller
+    FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                   GROUP_EXECUTE GROUP_READ
+                   WORLD_EXECUTE WORLD_READ
 )
 
-install(CODE "
-    file(GLOB SCRIPT_FILES
-        \"${CATKIN_PACKAGE_SHARE_DESTINATION}/lib/ruiwo_controller/*.sh\"
-        \"${CATKIN_PACKAGE_SHARE_DESTINATION}/lib/ruiwo_controller/*.py\"
-    )
-    foreach(SCRIPT ${SCRIPT_FILES})
-        file(CHANGE_MODE ${SCRIPT} OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
-    endforeach()
-")
+
