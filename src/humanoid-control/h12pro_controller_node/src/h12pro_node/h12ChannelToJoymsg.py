@@ -132,6 +132,6 @@ class H12ToJoyControllerNode:
             rate.sleep()
 
 if __name__ == '__main__':
-    rospy.init_node('h12_to_joy_controller_node')
+    rospy.init_node('joy_node')
     node = H12ToJoyControllerNode()
     node.run()

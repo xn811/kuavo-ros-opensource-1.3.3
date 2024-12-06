@@ -47,7 +47,7 @@ RUN apt-get update -y \
     python3-rosinstall-generator python3-wstool python3-catkin-tools build-essential \
     && apt-get install ros-noetic-plotjuggler* -y \
     && apt-get install -y ros-noetic-interactive-markers ros-noetic-tf ros-noetic-tf2-ros ros-noetic-urdf \
-    ros-noetic-kdl-parser ros-noetic-robot-state-publisher \
+    ros-noetic-kdl-parser ros-noetic-robot-state-publisher  ros-noetic-rqt-graph \
     && apt-get install -y ros-noetic-realtime-tools ros-noetic-ros-control ros-noetic-xacro\
     && echo 'source /opt/ros/noetic/setup.bash' >> /root/.bashrc \
     && echo 'source /opt/ros/noetic/setup.zsh' >> /root/.zshrc \
@@ -72,8 +72,8 @@ RUN apt-get update -y && apt-get install libeigen3-dev libboost-all-dev -y \
     && apt-get install liblcm-dev libgflags-dev libgoogle-glog-dev liblmdb-dev -y \
     && apt-get install libgflags-dev libgoogle-glog-dev liblmdb-dev -y \
     # set robot version
-    && echo 'export ROBOT_VERSION=34' >> /root/.bashrc \
-    && echo 'export ROBOT_VERSION=34' >> /root/.zshrc
+    && echo 'export ROBOT_VERSION=40' >> /root/.bashrc \
+    && echo 'export ROBOT_VERSION=40' >> /root/.zshrc
 
 # lcm lib
 RUN apt-get update -y && apt-get install build-essential libglib2.0-dev git cmake -y \
@@ -84,7 +84,7 @@ RUN apt-get update -y && apt-get install build-essential libglib2.0-dev git cmak
     && cmake .. \
     && make -j$(nproc) \
     && make install
-RUN ln -s /usr/lib/x86_64-linux-gnu/liblcm.so  /usr/local/lib/liblcm.so
+RUN ln -sf /usr/lib/x86_64-linux-gnu/liblcm.so  /usr/local/lib/liblcm.so
 # drake
 RUN apt-get update -y && apt-get install --no-install-recommends ca-certificates gnupg lsb-release wget -y \
     && wget -qO- https://drake-apt.csail.mit.edu/drake.asc | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/drake.gpg >/dev/null \
@@ -149,12 +149,12 @@ RUN mkdir -p /root/.mujoco \
     && wget https://github.com/google-deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz -O mujoco.tar.gz \
     && tar -xf mujoco.tar.gz -C /root/.mujoco \
     && rm mujoco.tar.gz \
-    && echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin' >> /root/.bashrc \
+    && echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco210/bin' >> /root/.bashrc \
     && echo 'export PATH=$LD_LIBRARY_PATH:$PATH' >> /root/.bashrc \
-    && echo 'export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so' >> /root/.bashrc \
-    && echo 'export LD_LIBRARY_PATH=/root/.mujoco/mujoco210/bin' >> /root/.zshrc \
+    && echo 'export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libGLEW.so' >> /root/.bashrc \
+    && echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco210/bin' >> /root/.zshrc \
     && echo 'export PATH=$LD_LIBRARY_PATH:$PATH' >> /root/.zshrc \
-    && echo 'export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so' >> /root/.zshrc
+    && echo 'export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libGLEW.so' >> /root/.zshrc
 
 # mujoco-py
 RUN apt-get update -y && apt-get install python3-pip git -y \
@@ -165,6 +165,7 @@ RUN apt-get update -y && apt-get install python3-pip git -y \
     && pip3 install -r requirements.dev.txt -i https://pypi.tuna.tsinghua.edu.cn/simple \
     && python3 setup.py install \
     && pip3 install mujoco \
+    && pip3 install psutil \
     && pip3 install pynput
 
 # other tools

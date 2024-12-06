@@ -5,6 +5,8 @@
 #include <kuavo_msgs/jointMoveTo.h>
 #include <kuavo_msgs/setHwIntialState.h>
 #include "humanoid_interface_drake/common/sensor_data.h"
+#include "kuavo_msgs/setMotorEncoderRoundService.h"
+
 namespace ocs2
 {
   namespace humanoid
@@ -32,6 +34,8 @@ namespace ocs2
       void getSensorData(SensorData_t &sensor_data_motor);
       void writeCommand(Eigen::VectorXd cmd_r, std::vector<uint8_t> control_modes);
       void jointMoveTo(std::vector<double> goal_pos, double speed, double dt, bool is_intial_state = false);
+      void calibrateMotor(int motor_id, int direction, bool save_offset = false);
+
     };
 
     void KuavoHardwareInterface::sensorDataCallback(const kuavo_msgs::sensorsData::ConstPtr &msg)
@@ -102,6 +106,29 @@ namespace ocs2
         sensors_data_sub_.shutdown();
       }
       return 0;
+    }
+    void KuavoHardwareInterface::calibrateMotor(int motor_id, int direction, bool save_offset)
+    {
+      ros::ServiceClient client;
+      bool res = false;
+      bool service_available = ros::service::waitForService("hardware/modify_motor_encoder_offset", ros::Duration(5.0));
+      if (!service_available)
+      {
+        ROS_ERROR("Failed to connect to modify_motor_encoder_offset service");
+        return;
+      }
+      client = nh_ptr_->serviceClient<kuavo_msgs::setMotorEncoderRoundService>("hardware/modify_motor_encoder_offset");
+      kuavo_msgs::setMotorEncoderRoundService srv;
+      srv.request.motor_id = motor_id;
+      srv.request.direction = direction;
+      srv.request.save_offset = save_offset;
+      res = client.call(srv);
+      if (!res)
+      {
+        ROS_ERROR("Failed to call modify_motor_encoder_offset service");
+        ROS_ERROR("%s", srv.response.message.c_str());
+      }
+      
     }
     void KuavoHardwareInterface::jointMoveTo(std::vector<double> goal_pos, double speed, double dt, bool is_intial_state)
     {

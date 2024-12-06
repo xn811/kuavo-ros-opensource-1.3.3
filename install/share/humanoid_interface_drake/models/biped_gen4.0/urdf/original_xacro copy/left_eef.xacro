@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<robot name="left_eef"
-  xmlns:xacro="http://wiki.ros.org/xacro">
-
-
-  <!-- end frame -->
-  <!-- <frame link="l_hand_pitch" name="l_hand_sole" xyz="0 0 -0.1" /> -->
-
-</robot>

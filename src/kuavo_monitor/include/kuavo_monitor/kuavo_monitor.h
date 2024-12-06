@@ -30,7 +30,7 @@ namespace HighlyDynamic
         ros::Subscriber wbc_frequency_sub_;
         ros::Subscriber wbc_time_cost_sub_;
 
-        MpcPolicyPublisher mpc_policy_pub_;
+        // MpcPolicyPublisher mpc_policy_pub_;
 
         // for analyzing
         double warning_threshold_, error_threshold_;
@@ -45,6 +45,8 @@ namespace HighlyDynamic
         void wbcTimecostCallback(const std_msgs::Float64 &msg);
 
         void loadParams(const std::string &filename, bool verbose);
+
+        bool doesNodeExist(const std::string& node_name);
     };
 
 } // namespace HighlyDynamic

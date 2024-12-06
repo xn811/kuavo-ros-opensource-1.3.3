@@ -3,6 +3,7 @@
 #include <chrono>
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
+#include <ros/package.h>
 
 #include "plantIK.h"
 
@@ -31,9 +32,16 @@ int main(int argc, char* argv[])
     ros::NodeHandle nh;
     ros::Publisher joint_pub = nh.advertise<sensor_msgs::JointState>("/kuavo_arm_traj", 10);
 
-    std::string model_path = "/root/mc_ws/src/motion_capture_ik/models/biped_gen4.0/urdf/biped_v3_arm.urdf";
-    // std::string model_path = "/root/mc_ws/src/motion_capture_ik/models/biped_gen4.0/urdf/biped_v3_arm_left.urdf";
-    std::cout << "model_path: " << model_path << std::endl;
+    std::string model_path;
+    if(ros::param::has("model_path"))
+    {
+        ros::param::get("model_path", model_path);        
+        std::cout << "model_path: " << model_path << std::endl;
+    }else
+    {
+        std::string package_path = ros::package::getPath("kuavo_assets");
+        model_path = package_path + "/models/biped_s40/urdf/drake/biped_v3_arm.urdf";
+    }
     std::vector<std::string> end_frames_name = {"torso", "l_hand_roll", "r_hand_roll"};
     // std::vector<std::string> end_frames_name = {"torso", "l_hand_roll"};
     double dt = 0.001;
@@ -86,7 +94,6 @@ int main(int argc, char* argv[])
             for (int j = 0; j < 14; ++j) {
                 joint_state.name.push_back("joint_"+std::to_string(j+1));
             }
-            // 假设左右手关节值分别为q的第7到13和第14到20个元素
             int start_idx = 0;
             for (int j = start_idx; j < start_idx+7; ++j) {
                 joint_state.position.push_back(q[j]);

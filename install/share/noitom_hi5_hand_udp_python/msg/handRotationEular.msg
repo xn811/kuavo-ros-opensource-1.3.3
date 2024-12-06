@@ -1,1 +1,0 @@
-noitom_hi5_hand_udp_python/Vector4[] eulerAngles

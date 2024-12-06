@@ -20,6 +20,7 @@ add_message_files(
     lagrangian_metrics.msg
     multiplier.msg
     constraint.msg
+    mpc_solver_data.msg
 )
 
 add_service_files(

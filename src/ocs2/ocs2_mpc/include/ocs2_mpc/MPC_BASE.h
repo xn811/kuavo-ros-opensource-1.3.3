@@ -79,6 +79,11 @@ class MPC_BASE {
   /** Gets the MPC settings. */
   const mpc::Settings& settings() const { return mpcSettings_; }
 
+  mpc::Settings& settings() { return mpcSettings_; }
+  
+  /** playback function for the MPC. */
+  bool playback(const SolverData &solverData);
+
  protected:
   /**
    * Solves the optimal control problem for the given state and time period ([initTime,finalTime]).
@@ -88,13 +93,13 @@ class MPC_BASE {
    * @param [in] finalTime: Final time. This value can be adjusted by the optimizer.
    */
   virtual void calculateController(scalar_t initTime, const vector_t& initState, scalar_t finalTime) = 0;
-
+  
   /** Whether this is the first iteration of MPC or not. */
   bool isFirstMpcRun() const { return initRun_; }
 
  private:
   bool initRun_ = true;
-  const mpc::Settings mpcSettings_;
+  mpc::Settings mpcSettings_;
 
   benchmark::RepeatedTimer mpcTimer_;
 };

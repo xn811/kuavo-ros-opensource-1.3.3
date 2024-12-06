@@ -92,6 +92,7 @@ namespace
   // model and data
   mjModel *m = nullptr;
   mjData *d = nullptr;
+  std::vector<double> qpos_init;
 
   // ******
   low_cmd_t recvCmd;
@@ -283,18 +284,12 @@ namespace
 
   void InitRobotState(mjData *d)
   {
-    std::cout << "InitRobotState" << numJoints << std::endl;
     // init qpos
-    mjtNum qpos[] = {-0.01537, 0.00000, 0.79055, 0.99864, 0.00001, 0.05214, 0.00000,
-                     -0.01825, -0.00191, -0.54021, 0.73428, -0.29839, 0.01833, 
-                     0.01822, 0.00191, -0.54022, 0.73430, -0.29839, -0.01832, 
-                     0, 0, 0, 0, 0, 0, 0, 
-                     0, 0, 0, 0, 0, 0, 0,
-                     };
+    
 //0.99863, -0.00000, 0.05233, -0.00000, -0.01767, 0.00000, 0.77337, -0.01871, -0.00197, -0.63345, 0.88205, -0.35329, 0.01882, 0.01871, 0.00197, -0.63345, 0.88204, -0.35329, -0.01882, 
     for (int i = 0; i < m->nq; i++)
     {
-      d->qpos[i] = qpos[i];
+      d->qpos[i] = qpos_init[i];
     }
   }
 
@@ -741,11 +736,14 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
       d = mj_makeData(m);
     m->opt.timestep = 1 / frequency;
     numJoints = m->nq - 7;
-    ROS_INFO("Num Joint: %d \n\n", numJoints);
+    std::cout << "numJoints: " << numJoints << std::endl;
     if (d)
     {
       // ********************************
       init_cmd(d);
+      qpos_init.resize(m->nq);
+      std::fill(qpos_init.begin(), qpos_init.end(), 0);
+      qpos_init[2] = 0.99;// 初始化位置
       InitRobotState(d);
       // ********************************
       sim->Load(m, d, filename);
@@ -771,6 +769,48 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
   // // 创建订阅器
   ros::Subscriber jointCmdSub = g_nh_ptr->subscribe("/joint_cmd", 10, jointCmdCallback);
   ros::Subscriber extWrenchSub = g_nh_ptr->subscribe("/external_wrench", 10, extWrenchCallback);
+
+  std::cout << "[mujoco_node]: waiting for init qpos" << std::endl;
+  while (ros::ok())
+  {
+    if (g_nh_ptr->hasParam("mujoco_init_state"))
+    {
+              std::cout << "qpos_init size: " << m->nq<< std::endl;
+
+      qpos_init.resize(m->nq);
+      std::vector<double> qpos_init_temp;
+      qpos_init_temp.resize(50);
+      if (g_nh_ptr->getParam("mujoco_init_state", qpos_init_temp))
+      {
+        ROS_INFO("Get init qpos ");
+        
+        for (int i = 0; i < qpos_init_temp.size(); i++)
+        {
+          qpos_init[i] = qpos_init_temp[i];
+          std::cout << qpos_init_temp[i] << ", ";
+        }
+        std::cout << std::endl;
+        break;
+      }
+      else
+      {
+        ROS_INFO("[mujoco_node]Failed to get init qpos, use default qpos");
+        qpos_init = {-0.00505, 0.00000, 0.84414, 0.99864, 0.00000, 0.05215, -0.00000,
+                     -0.01825, -0.00190, -0.52421, 0.73860, -0.31872, 0.01835, 
+                     0.01825, 0.00190, -0.52421, 0.73860, -0.31872, -0.01835, 
+                     0, 0, 0, 0, 0, 0, 0, 
+                     0, 0, 0, 0, 0, 0, 0};
+        break;
+      }
+    }
+    
+    usleep(10000);
+  }
+  // 更新机器人初始状态,从rosparam获取
+  InitRobotState(d);
+  sim->Load(m, d, filename);
+  mj_forward(m, d);
+
   if (is_spin_thread)
   {
     std::thread spin_thread([]()
@@ -836,7 +876,7 @@ int simulate_loop(ros::NodeHandle &nh, bool spin_thread = false)
   std::string filename_str;
   if (nh.getParam("legged_robot_scene_param", filename_str))
   {
-    ROS_INFO("The value of filename is: %s", filename_str.c_str());
+    ROS_INFO("[mujoco_node.cc]: Get legged_robot_scene_param: %s", filename_str.c_str());
   }
   else
   {
@@ -844,7 +884,9 @@ int simulate_loop(ros::NodeHandle &nh, bool spin_thread = false)
     exit(1);
   }
   const char *filename = filename_str.c_str();
-
+    
+    
+ 
   // if (argc > 1)
   // {
   //   filename = argv[1];

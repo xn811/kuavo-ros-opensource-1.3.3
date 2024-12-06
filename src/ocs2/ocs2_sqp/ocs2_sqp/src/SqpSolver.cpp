@@ -179,6 +179,118 @@ ScalarFunctionQuadraticApproximation SqpSolver::getValueFunction(scalar_t time, 
     return valueFunction;
   }
 }
+void SqpSolver::runImplPlayback(const SolverData& solverData)
+{
+  if (settings_.printSolverStatus || settings_.printLinesearch) {
+    std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+    std::cerr << "\n+++++++++++++ SQP solver is initialized ++++++++++++++";
+    std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+  }
+
+  // **************** Playback data ****************       
+  scalar_t initTime = solverData.initTime_;
+  vector_t initState = solverData.initState_;
+  scalar_t finalTime = solverData.finalTime_;
+  primalSolution_ = solverData.primalSolution_;
+  this->getReferenceManager().setModeSchedule(solverData.modeSchedule_);
+  this->getReferenceManager().setTargetTrajectories(solverData.targetTrajectories_);
+  this->getReferenceManager().resetReference(solverData.swingPlannerMultipliers_, solverData.modeSchedule_);
+  this->getReferenceManager().updateBuffer();
+  // **************** Playback data ****************       
+
+  // Determine time discretization, taking into account event times.
+  const auto& eventTimes = this->getReferenceManager().getModeSchedule().eventTimes;
+  const auto timeDiscretization = timeDiscretizationWithEvents(initTime, finalTime, settings_.dt, eventTimes);
+
+  // Initialize references
+  for (auto& ocpDefinition : ocpDefinitions_) {
+    const auto& targetTrajectories = this->getReferenceManager().getTargetTrajectories();
+    ocpDefinition.targetTrajectoriesPtr = &targetTrajectories;
+  }
+
+  // Trajectory spread of primalSolution_
+  if (!primalSolution_.timeTrajectory_.empty()) {
+    std::ignore = trajectorySpread(primalSolution_.modeSchedule_, this->getReferenceManager().getModeSchedule(), primalSolution_);
+  }
+  
+  // solverData_.initTime_ = initTime;
+  // solverData_.finalTime_ = finalTime;
+  // solverData_.initState_ = initState;
+  // solverData_.modeSchedule_ = this->getReferenceManager().getModeSchedule();
+  // solverData_.primalSolution_ = primalSolution_;
+  // solverData_.targetTrajectories_ = this->getReferenceManager().getTargetTrajectories();
+  // solverData_.swingPlannerMultipliers_ = this->getReferenceManager().getSwingPlannerMultipliers();
+
+  // Initialize the state and input
+  vector_array_t x, u;
+  multiple_shooting::initializeStateInputTrajectories(initState, timeDiscretization, primalSolution_, *initializerPtr_, x, u);
+
+  // Bookkeeping
+  performanceIndeces_.clear();
+  std::vector<Metrics> metrics;
+
+  int iter = 0;
+  sqp::Convergence convergence = sqp::Convergence::FALSE;
+  while (convergence == sqp::Convergence::FALSE) {
+    if (settings_.printSolverStatus || settings_.printLinesearch) {
+      std::cerr << "\nSQP iteration: " << iter << "\n";
+    }
+    // Make QP approximation
+    linearQuadraticApproximationTimer_.startTimer();
+    const auto baselinePerformance = setupQuadraticSubproblem(timeDiscretization, initState, x, u, metrics);
+    linearQuadraticApproximationTimer_.endTimer();
+
+    // Solve QP
+    solveQpTimer_.startTimer();
+    const vector_t delta_x0 = initState - x[0];
+    const auto deltaSolution = getOCPSolution(delta_x0);
+    extractValueFunction(timeDiscretization, x);
+    solveQpTimer_.endTimer();
+
+    // Apply step
+    linesearchTimer_.startTimer();
+    const auto stepInfo = takeStep(baselinePerformance, timeDiscretization, initState, deltaSolution, x, u, metrics);
+    performanceIndeces_.push_back(stepInfo.performanceAfterStep);
+    linesearchTimer_.endTimer();
+
+    // Check convergence
+    convergence = checkConvergence(iter, baselinePerformance, stepInfo);
+
+    // Logging
+    if (settings_.enableLogging) {
+      auto& logEntry = logger_.currentEntry();
+      logEntry.problemNumber = numProblems_;
+      logEntry.time = initTime;
+      logEntry.iteration = iter;
+      logEntry.linearQuadraticApproximationTime = linearQuadraticApproximationTimer_.getLastIntervalInMilliseconds();
+      logEntry.solveQpTime = solveQpTimer_.getLastIntervalInMilliseconds();
+      logEntry.linesearchTime = linesearchTimer_.getLastIntervalInMilliseconds();
+      logEntry.baselinePerformanceIndex = baselinePerformance;
+      logEntry.totalConstraintViolationBaseline = FilterLinesearch::totalConstraintViolation(baselinePerformance);
+      logEntry.stepInfo = stepInfo;
+      logEntry.convergence = convergence;
+      logger_.advance();
+    }
+
+    // Next iteration
+    ++iter;
+    ++totalNumIterations_;
+  }
+
+  ++numProblems_;
+
+  computeControllerTimer_.startTimer();
+  primalSolution_ = toPrimalSolution(timeDiscretization, std::move(x), std::move(u));
+  problemMetrics_ = multiple_shooting::toProblemMetrics(timeDiscretization, std::move(metrics));
+  computeControllerTimer_.endTimer();
+
+  if (settings_.printSolverStatus || settings_.printLinesearch) {
+    std::cerr << "\nConvergence : " << toString(convergence) << "\n";
+    std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+    std::cerr << "\n+++++++++++++ SQP solver has terminated ++++++++++++++";
+    std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+  }
+}
 
 void SqpSolver::runImpl(scalar_t initTime, const vector_t& initState, scalar_t finalTime) {
   if (settings_.printSolverStatus || settings_.printLinesearch) {
@@ -201,6 +313,14 @@ void SqpSolver::runImpl(scalar_t initTime, const vector_t& initState, scalar_t f
   if (!primalSolution_.timeTrajectory_.empty()) {
     std::ignore = trajectorySpread(primalSolution_.modeSchedule_, this->getReferenceManager().getModeSchedule(), primalSolution_);
   }
+  
+  solverData_.initTime_ = initTime;
+  solverData_.finalTime_ = finalTime;
+  solverData_.initState_ = initState;
+  solverData_.modeSchedule_ = this->getReferenceManager().getModeSchedule();
+  solverData_.primalSolution_ = primalSolution_;
+  solverData_.targetTrajectories_ = this->getReferenceManager().getTargetTrajectories();
+  solverData_.swingPlannerMultipliers_ = this->getReferenceManager().getSwingPlannerMultipliers();
 
   // Initialize the state and input
   vector_array_t x, u;

@@ -4,6 +4,7 @@
 import os
 import signal
 import rospy
+import rospkg
 import numpy as np
 from sensor_msgs.msg import JointState
 from tools.drake_trans import *
@@ -15,6 +16,13 @@ from motion_capture_ik.srv import changeArmCtrlMode
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
 from handcontrollerdemorosnode.msg import robotHandPosition
 
+def get_package_path(package_name):
+    try:
+        rospack = rospkg.RosPack()
+        package_path = rospack.get_path(package_name)
+        return package_path
+    except rospkg.ResourceNotFound:
+        return None
 class Quest3Node:
     def __init__(self):
         self.model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -33,6 +41,18 @@ class Quest3Node:
         self.freeze_finger = False
 
         rospy.init_node('quest3_node')
+        kuavo_assests_path = get_package_path("kuavo_assets")
+        robot_version = os.environ.get('ROBOT_VERSION', '40')
+        model_config_file = kuavo_assests_path + f"/config/kuavo_v{robot_version}/kuavo.json"
+        import json
+        with open(model_config_file, 'r') as f:
+            model_config = json.load(f)
+        upper_arm_length = model_config["upper_arm_length"]
+        lower_arm_length = model_config["lower_arm_length"]
+        print(f"upper_arm_length: {upper_arm_length}, lower_arm_length: {lower_arm_length}")
+        rospy.set_param("/quest3/upper_arm_length", upper_arm_length)
+        rospy.set_param("/quest3/lower_arm_length", lower_arm_length)
+        
         self.control_robot_hand_position_pub = rospy.Publisher("control_robot_hand_position", robotHandPosition, queue_size=10)
         self.pub = rospy.Publisher('/ik/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
 
@@ -141,7 +161,7 @@ class Quest3Node:
         eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
 
         if(self.quest3_arm_info_transformer.check_if_vr_error()):
-            print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3!!!\033[0m")
+            print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3 or check the battery level of the joystick!!!\033[0m")
             return
         if self.quest3_arm_info_transformer.is_runing:
             self.pub.publish(eef_pose_msg)

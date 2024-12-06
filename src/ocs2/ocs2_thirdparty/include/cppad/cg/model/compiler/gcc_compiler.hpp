@@ -26,7 +26,18 @@ namespace cg {
 static std::mutex gccMutex;
 static std::condition_variable gccCv;
 static std::atomic<int> gccCounter(0);
-static const int maxGccProcesses = std::thread::hardware_concurrency();  // 最大并发进程数
+static std::atomic<int> totalCppadFiles(0);
+static std::atomic<int> buildCppadFiles(0);
+
+static const int maxGccProcesses = std::thread::hardware_concurrency() - 3;  // 最大并发进程数
+
+static int getTotalCppadFiles() {
+    return totalCppadFiles;
+}
+
+static int getBuildCppadFiles() {
+    return buildCppadFiles;
+}
 /**
  * C compiler class used to create a dynamic library
  *
@@ -112,6 +123,7 @@ protected:
         }
         args.push_back("-o");
         args.push_back(output);
+        totalCppadFiles.fetch_add(1);
 
         {
             std::unique_lock<std::mutex> lock(gccMutex);
@@ -119,6 +131,7 @@ protected:
                        { return gccCounter < maxGccProcesses; });
             ++gccCounter;
         }
+        std::cout << "totalCppadFiles: " << totalCppadFiles << std::endl;
         std::cout << "Compiling " << output << " , current process count: " << gccCounter << " max: " << maxGccProcesses << std::endl;
         system::callExecutable(this->_path, args, nullptr, &source);
 
@@ -126,7 +139,7 @@ protected:
             std::unique_lock<std::mutex> lock(gccMutex);
             --gccCounter;
         }
-
+        buildCppadFiles.fetch_add(1);
         gccCv.notify_all(); // 通知等待中的线程
     }
 
@@ -144,6 +157,9 @@ protected:
         args.push_back(path);
         args.push_back("-o");
         args.push_back(output);
+        totalCppadFiles.fetch_add(1);
+        size_t lastSlashPos = output.find_last_of("/");
+        std::string jobName = output.substr(lastSlashPos + 1);
 
         {
             std::unique_lock<std::mutex> lock(gccMutex);
@@ -151,16 +167,20 @@ protected:
                        { return gccCounter < maxGccProcesses; });
             ++gccCounter;
         }
-        std::cout << "start gcc compiling " << output << " , process count: " << gccCounter << " max: " << maxGccProcesses << std::endl;
+       
+        std::cout << "compiling cppad file: " << jobName << std::endl;
+
         
         system::callExecutable(this->_path, args);
-
 
         {
             std::unique_lock<std::mutex> lock(gccMutex);
             --gccCounter;
         }
-
+        buildCppadFiles.fetch_add(1);
+        std::cout << "building cppad files: " << buildCppadFiles << "/" << totalCppadFiles \
+        << ", process: " << gccCounter << "/" << maxGccProcesses 
+        << ", please wait for some minutes..." << std::endl;
         gccCv.notify_all(); // 通知等待中的线程
     }
 

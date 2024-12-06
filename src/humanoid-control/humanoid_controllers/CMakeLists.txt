@@ -44,8 +44,8 @@ catkin_package(
         humanoid_common
         humanoid_interface
         humanoid_interface_ros
-        biped_s3
         biped_s40
+        biped_s42
         # mujoco_sim
         humanoid_wbc
         humanoid_estimation

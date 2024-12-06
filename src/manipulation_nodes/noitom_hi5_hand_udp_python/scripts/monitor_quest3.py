@@ -14,7 +14,10 @@ from pprint import pprint
 from kuavo_ros_interfaces.msg import robotHeadMotionData
 from noitom_hi5_hand_udp_python.msg import PoseInfoList, PoseInfo, JoySticks
 from geometry_msgs.msg import Point, Quaternion
-
+import threading
+from visualization_msgs.msg import Marker
+from tf2_msgs.msg import TFMessage
+from geometry_msgs.msg import TransformStamped
 # Add the parent directory to the system path to allow relative imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
@@ -33,7 +36,8 @@ class Quest3BoneFramePublisher:
             "RightHandMiddleTip", "RightHandRingTip", "RightHandLittleTip",
             "Root", "Chest", "Neck", "Head"
         ]
-        
+
+        self.exit_listen_thread_for_quest3_broadcast = False
         self.bone_name_to_index = {name: index for index, name in enumerate(self.bone_names)}
         self.index_to_bone_name = {index: name for index, name in enumerate(self.bone_names)}
         
@@ -45,6 +49,8 @@ class Quest3BoneFramePublisher:
         self.sock = None
         self.server_address = None
         self.port = None
+
+        self.listening_udp_ports_cnt = 0
         
         rospy.init_node('Quest3_bone_frame_publisher', anonymous=True)
         self.rate = rospy.Rate(100.0)
@@ -54,6 +60,8 @@ class Quest3BoneFramePublisher:
         self.head_data_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=10)
         self.joysticks_pub = rospy.Publisher('quest_joystick_data', JoySticks, queue_size=10)
         
+        self.listener = tf.TransformListener()
+        self.hand_finger_tf_pub = rospy.Publisher('/quest_hand_finger_tf', TFMessage, queue_size=10)
         signal.signal(signal.SIGINT, self.signal_handler)
 
     def load_config(self):
@@ -72,16 +80,21 @@ class Quest3BoneFramePublisher:
 
     def signal_handler(self, sig, frame):
         print('Exiting gracefully...')
+        self.exit_listen_thread_for_quest3_broadcast = True
         if self.sock:
             self.sock.close()
         sys.exit(0)
 
     def setup_socket(self, server_address, port):
-        self.server_address = (server_address, port)
-        self.port = port
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.settimeout(1)
+        if self.sock is not None:
+            print("Socket is already established, skip creating a new one.")
+        else:
+            self.server_address = (server_address, port)
+            self.port = port
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.settimeout(1)
         return (server_address, port)
+
 
     def send_initial_message(self):
         message = b'hi'
@@ -90,10 +103,10 @@ class Quest3BoneFramePublisher:
             try:
                 self.sock.sendto(message, self.server_address)
                 self.sock.recvfrom(1024)
-                print(f"Acknowledgment received on attempt {attempt + 1}, start to receiving data...")
+                print(f"\033[92mAcknowledgment From Quest3 received on attempt {attempt + 1}, start to receiving data...\033[0m")
                 return True
             except socket.timeout:
-                print(f"Attempt {attempt + 1} timed out. Retrying...")
+                print(f"\033[91mQuest3_timeout: Attempt {attempt + 1} timed out. Retrying...\033[0m")
             except KeyboardInterrupt:
                 print("Force quit by Ctrl-c.")
                 self.signal_handler(signal.SIGINT, None)
@@ -118,6 +131,38 @@ class Quest3BoneFramePublisher:
     def updateAFrame(self, frame_name, frame_position, frame_rotation_quat, time_now):
         self.br.sendTransform((frame_position["x"], frame_position["y"], frame_position["z"]), 
                               frame_rotation_quat, time_now, frame_name, "torso")
+        
+    def update_quest_hand_finger_tf(self):
+        tf_msg = TFMessage()
+        for frame_name in [
+                "LeftHandPalm", "RightHandPalm","LeftHandThumbMetacarpal",
+                "LeftHandThumbProximal", "LeftHandThumbDistal", "LeftHandThumbTip",
+                "LeftHandIndexTip", "LeftHandMiddleTip", "LeftHandRingTip",
+                "LeftHandLittleTip", "RightHandThumbMetacarpal", "RightHandThumbProximal",
+                "RightHandThumbDistal", "RightHandThumbTip", "RightHandIndexTip",
+                "RightHandMiddleTip", "RightHandRingTip", "RightHandLittleTip"
+            ]:
+                try:
+                    if "Left" in frame_name:
+                        relative_position, relative_rotation = self.listener.lookupTransform("LeftHandPalm", frame_name, rospy.Time(0))
+                    else:   
+                        relative_position, relative_rotation = self.listener.lookupTransform("RightHandPalm", frame_name, rospy.Time(0))
+                    transform = TransformStamped()
+                    transform.header.stamp = rospy.Time.now()
+                    transform.header.frame_id = "LeftHandPalm" if "Left" in frame_name else "RightHandPalm"
+                    transform.child_frame_id = frame_name
+                    transform.transform.translation.x = relative_position[0]
+                    transform.transform.translation.y = relative_position[1]
+                    transform.transform.translation.z = relative_position[2]
+                    transform.transform.rotation.x = relative_rotation[0]
+                    transform.transform.rotation.y = relative_rotation[1]
+                    transform.transform.rotation.z = relative_rotation[2]
+                    transform.transform.rotation.w = relative_rotation[3]
+                    tf_msg.transforms.append(transform)
+                except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+                    rospy.logerr(f"TF lookup failed: {e}")
+                    return
+        self.hand_finger_tf_pub.publish(tf_msg)
 
     def normalize_degree_in_180(self, degree):
         if degree > 180:
@@ -215,11 +260,12 @@ class Quest3BoneFramePublisher:
             
             for axis in ["x", "y", "z"]:
                 right_hand_position[axis] *= scale_factor[axis]
-            
+
             self.updateAFrame(bone_name, right_hand_position, right_hand_quat, time_now)
-            
-            if bone_name == "Head":
-                self.pub_head_motion_data(right_hand_quat)
+
+
+            # if bone_name == "Head":
+            #     self.pub_head_motion_data(right_hand_quat)
 
     def restart_socket(self):
         print("Restarting socket connection...")
@@ -232,24 +278,70 @@ class Quest3BoneFramePublisher:
         print("Socket connection restarted successfully.")
         return True
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2 or "." not in sys.argv[1]:
-        print("Usage: python test_unity.py <server_address[:port]> ")
-        sys.exit(1)
+    def waiting_for_quest3_broadcast(self):
+        start_port = 11000
+        end_port = 11010
+        threads = []
+        for port in range(start_port, end_port + 1):
+            thread = threading.Thread(target=self.listen_for_quest3_broadcasts, args=(port,))
+            thread.daemon = False  # Set as non-daemon thread to wait for threads to finish
+            thread.start()
+            threads.append(thread)
 
-    try:
-        if ':' in sys.argv[1]:
-            server_address, port = sys.argv[1].split(':')
-            port = int(port)
-        else:
-            server_address = sys.argv[1]
-            port = 10019
-    except ValueError:
-        print("Argument must be in the format <server_address[:port]> and port must be an integer")
-        sys.exit(1)
+        import os
+
+        if self.listening_udp_ports_cnt == 0:
+            print("\033[91m" + "carlos_ All UDP broadcast ports are occupied. Please check using the command 'lsof -i :11000-11010' to see the process which occupy the ports." + "\033[0m")
+            os._exit(1)
+
+        for thread in threads:
+            thread.join()
+
+        print("\033[92m" + "Received Quest3 Broadcast, starting to connect." + "\033[0m")
+
+    def listen_for_quest3_broadcasts(self, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.bind(('', port))  # Listen on all interfaces
+        except OSError as e:
+            pass
+            return
+        sock.settimeout(1)  # Set timeout to 1 second
+        self.listening_udp_ports_cnt += 1
+        while not self.exit_listen_thread_for_quest3_broadcast:
+            try:
+                data, addr = sock.recvfrom(1024)
+                self.exit_listen_thread_for_quest3_broadcast = True
+                print(f"carlos_ Received message from Quest3: {data.decode()} from {addr[0]} on port {port} - Setting up socket connection")
+                self.setup_socket(addr[0], 10019)
+                break
+            except socket.timeout:
+                continue
+
+
+if __name__ == "__main__":
 
     publisher = Quest3BoneFramePublisher()
-    publisher.setup_socket(server_address, port)
+    if len(sys.argv) < 2 or "." not in sys.argv[1]:
+        print("Quest3 IP not received. Attempting to auto-connect and waiting for Quest3 broadcasts. Please ensure the Quest3 app is running and both Quest3 and the robot are on the same network.\n未收到 Quest3 的 IP，请确保 Quest3 应用正在运行并且 Quest3 和机器人在同一网络下。")
+        publisher.waiting_for_quest3_broadcast()
+    else:
+        try:
+
+            if ':' in sys.argv[1]:
+                server_address, port = sys.argv[1].split(':')
+                port = int(port)
+            else:
+                server_address = sys.argv[1]
+                port = 10019
+
+        except ValueError:
+            print("Argument must be in the format <server_address[:port]> and port must be an integer")
+            sys.exit(1)
+
+
+        publisher.setup_socket(server_address, port)
+
     if publisher.send_initial_message():
         publisher.run()
     else:

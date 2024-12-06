@@ -1,8 +1,0 @@
-(cl:in-package kuavo_msgs-msg)
-(cl:export '(TIMETRAJECTORY-VAL
-          TIMETRAJECTORY
-          FOOTINDEXTRAJECTORY-VAL
-          FOOTINDEXTRAJECTORY
-          FOOTPOSETRAJECTORY-VAL
-          FOOTPOSETRAJECTORY
-))

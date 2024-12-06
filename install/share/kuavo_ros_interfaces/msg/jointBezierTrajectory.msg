@@ -1,1 +1,0 @@
-kuavo_ros_interfaces/bezierCurveCubicPoint[] bezier_curve_points

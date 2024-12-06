@@ -203,7 +203,7 @@ public:
         auto compileWorker = [&](const std::pair<std::string, std::string> &source)
         {
             std::string file = system::createPath(this->_tmpFolder, source.first + outputExtension);
-            std::cout << "start job:"<<file<<std::endl;
+            // std::cout << "start job:"<<file<<std::endl;
             {
                 std::lock_guard<std::mutex> lock(outputMutex);
                 outputFiles.insert(file);
@@ -266,7 +266,6 @@ public:
                 std::cout << "done [" << std::fixed << std::setprecision(3)
                           << dt.count() << "]" << std::endl;
             }
-            std::cout << "end job:"<<file<<std::endl;
         };
 
         // Start threads

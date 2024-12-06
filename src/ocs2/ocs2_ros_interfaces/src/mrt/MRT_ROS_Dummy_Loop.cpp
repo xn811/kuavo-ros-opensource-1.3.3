@@ -90,7 +90,7 @@ void MRT_ROS_Dummy_Loop::synchronizedDummyLoop(const SystemObservation& initObse
 
   ros::Rate simRate(mrtDesiredFrequency_);
   while (ros::ok() && ros::master::check()) {
-    std::cout << "### Current time " << currentObservation.time << "\n";
+    // std::cout << "### Current time " << currentObservation.time << "\n";
 
     // Trigger MRT callbacks
     mrt_.spinMRT();
@@ -101,7 +101,7 @@ void MRT_ROS_Dummy_Loop::synchronizedDummyLoop(const SystemObservation& initObse
       while (!policyUpdatedForTime(currentObservation.time) && ros::ok() && ros::master::check()) {
         mrt_.spinMRT();
       }
-      std::cout << "<<< New MPC policy starting at " << mrt_.getPolicy().timeTrajectory_.front() << "\n";
+      // std::cout << "<<< New MPC policy starting at " << mrt_.getPolicy().timeTrajectory_.front() << "\n";
     }
 
     // Forward simulation
@@ -136,14 +136,14 @@ void MRT_ROS_Dummy_Loop::realtimeDummyLoop(const SystemObservation& initObservat
 
   ros::Rate simRate(mrtDesiredFrequency_);
   while (ros::ok() && ros::master::check()) {
-    std::cout << "### Current time " << currentObservation.time << "\n";
+    // std::cout << "### Current time " << currentObservation.time << "\n";
 
     // Trigger MRT callbacks
     mrt_.spinMRT();
 
     // Update the policy if a new on was received
     if (mrt_.updatePolicy()) {
-      std::cout << "<<< New MPC policy starting at " << mrt_.getPolicy().timeTrajectory_.front() << "\n";
+      // std::cout << "<<< New MPC policy starting at " << mrt_.getPolicy().timeTrajectory_.front() << "\n";
     }
 
     // Forward simulation

@@ -1,7 +1,9 @@
 topics:
   - /cmd_vel
-  - /joint_cmd
+  - /joint_cmd.*
+  - /cmd.*
   - /sensors_data_raw
+  - /sensor_data/.*
   - /joy
   - /joy/set_feedback
   - /kuavo_.*
@@ -19,3 +21,10 @@ topics:
   - /humanoid.*
   - /inekf_state/.*
   - /visualization_marker.*
+  - /route_plan_pose_array
+  - /state_motion_control
+  - /kuavo_arm_traj
+  - /gait_receiver/.*
+  - /SwitchedModelReferenceManager/.*
+  - /motor_cmd/.*
+  - /sensor_data_motor/.*

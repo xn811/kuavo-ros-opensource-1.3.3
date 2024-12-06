@@ -50,6 +50,7 @@ Settings loadSettings(const std::string& filename, const std::string& fieldName,
 
   loadData::loadPtreeValue(pt, settings.timeHorizon_, fieldName + ".timeHorizon", verbose);
   loadData::loadPtreeValue(pt, settings.solutionTimeWindow_, fieldName + ".solutionTimeWindow", verbose);
+  loadData::loadPtreeValue(pt, settings.recordSolverData_, fieldName + ".recordSolverData", verbose);
   loadData::loadPtreeValue(pt, settings.coldStart_, fieldName + ".coldStart", verbose);
 
   loadData::loadPtreeValue(pt, settings.debugPrint_, fieldName + ".debugPrint", verbose);

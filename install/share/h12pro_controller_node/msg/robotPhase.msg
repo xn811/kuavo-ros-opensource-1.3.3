@@ -1,2 +1,0 @@
-uint8 mainPhase
-uint8 subPhase

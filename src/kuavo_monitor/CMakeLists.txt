@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(kuavo_monitor)
 
 # add_compile_options(-std=c++11)
-
+find_package(yaml-cpp REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -50,6 +50,7 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
 
 target_link_libraries(${PROJECT_NAME}_node
   mpc_policy_publisher
+  yaml-cpp
   ${catkin_LIBRARIES})
 #############
 ## Install ##

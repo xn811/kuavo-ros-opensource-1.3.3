@@ -1,6 +1,0 @@
-humanoid_estimation
-humanoid_interface
-humanoid_interface_drake
-humanoid_interface_ros
-humanoid_wbc
-kuavo-ros-control-lejulib

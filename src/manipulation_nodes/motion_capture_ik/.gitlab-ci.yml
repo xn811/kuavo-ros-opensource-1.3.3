@@ -1,13 +1,14 @@
 before_script:
   - export SYNC_REPO_URL="ssh://git@www.lejuhub.com:10026/highlydynamic/motion_capture_ik_packaged.git"
   - export SYNC_REPO_NAME="motion_capture_ik_packaged"
-  - export CI_PATH=/home/leju/CI
+  - export CI_PATH=/tmp/ik_ci
 stages:
   - sync
 
 pull_repo:
   stage: sync
   script:
+    - mkdir -p $CI_PATH
     - cd $CI_PATH
     - git clone $SYNC_REPO_URL || echo "Repo already exists"
     - cd $SYNC_REPO_NAME

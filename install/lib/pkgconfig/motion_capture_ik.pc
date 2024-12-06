@@ -1,8 +1,0 @@
-prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
-
-Name: motion_capture_ik
-Description: Description of motion_capture_ik
-Version: 0.0.0
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib 
-Requires: rospy std_msgs message_runtime

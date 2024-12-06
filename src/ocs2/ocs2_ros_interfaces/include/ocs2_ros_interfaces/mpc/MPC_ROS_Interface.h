@@ -47,6 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_msgs/mpc_flattened_controller.h>
 #include <ocs2_msgs/mpc_observation.h>
 #include <ocs2_msgs/mpc_target_trajectories.h>
+#include <ocs2_msgs/mpc_solver_data.h>
 #include <ocs2_msgs/reset.h>
 
 #include <ocs2_core/control/FeedforwardController.h>
@@ -125,6 +126,24 @@ namespace ocs2
     static ocs2_msgs::mpc_flattened_controller createMpcPolicyMsg(const PrimalSolution &primalSolution, const CommandData &commandData,
                                                                   const PerformanceIndex &performanceIndices);
 
+    void readPolicyMsg(const ocs2_msgs::mpc_flattened_controller& msg, CommandData& commandData,
+                                      PrimalSolution& primalSolution, PerformanceIndex& performanceIndices);
+    /**
+     * Creates MPC Solver Data message.
+     * @param [in] solverData: The solver data of the MPC.
+     * @param [in] mpcPolicyMsg: The MPC policy message.
+     * @return MPC solver data message.
+     */
+    ocs2_msgs::mpc_solver_data createMPCSolverDataMsg(const SolverData &solverData, const ocs2_msgs::mpc_flattened_controller &mpcPolicyMsg);
+
+
+    /**
+     * Reads MPC Solver Data message.
+     * @param [in] mpcSolverDataMsg: The MPC solver data message.
+     * @return MPC solver data. 
+     */
+    SolverData readMPCSolverDataMsg(const ocs2_msgs::mpc_solver_data &mpcSolverDataMsg);
+
     /**
      * Handles ROS publishing thread.
      */
@@ -145,6 +164,7 @@ namespace ocs2
      */
     void mpcObservationCallback(const ocs2_msgs::mpc_observation::ConstPtr &msg);
 
+    void mpcPlaybackCallback(const ocs2_msgs::mpc_solver_data::ConstPtr &msg);
   protected:
     /*
      * Variables
@@ -158,7 +178,9 @@ namespace ocs2
     // Publishers and subscribers
     ::ros::Subscriber mpcObservationSubscriber_;
     ::ros::Subscriber mpcTargetTrajectoriesSubscriber_;
+    ::ros::Subscriber mpcPlaybackSubscriber_;
     ::ros::Publisher mpcPolicyPublisher_;
+    ::ros::Publisher mpcSolverDataPublisher_;
     ::ros::Publisher mpcFrequencyPublisher_;
     ::ros::Publisher mpcTimeCostPublisher_;
     ::ros::ServiceServer mpcResetServiceServer_;

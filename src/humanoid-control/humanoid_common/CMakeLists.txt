@@ -15,8 +15,19 @@ catkin_package(
         LIBRARIES
         CATKIN_DEPENDS
         roscpp
-        hardware_interface
-        humanoid_interface_drake
+        qpoases_catkin
+        ocs2_core
+        ocs2_oc
+        ocs2_ddp
+        ocs2_mpc
+        ocs2_sqp
+        ocs2_ipm
+        ocs2_robotic_tools
+        ocs2_pinocchio_interface
+        ocs2_centroidal_model
+        # ocs2_robotic_assets
+        ocs2_msgs
+        ocs2_ros_interfaces
         DEPENDS
 )
 

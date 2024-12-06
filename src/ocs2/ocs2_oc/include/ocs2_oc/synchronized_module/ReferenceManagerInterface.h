@@ -125,6 +125,12 @@ class ReferenceManagerInterface {
 
   virtual void observationStateCallback(const vector_t& state) {};
 
+  // 获取当前的swing planner的所有规划值
+  virtual std::vector<scalar_t> getSwingPlannerMultipliers(){
+    std::cout << "getSwingPlannerMultipliers is not implemented" << std::endl;
+    return std::vector<scalar_t>();}
+  virtual void resetReference(const std::vector<scalar_t> multipliers, const ModeSchedule& modeSchedule){std::cout << "resetReference is not implemented" << std::endl;}
+  virtual void updateBuffer() { std::cout << "updateBuffer is not implemented" << std::endl; }
   virtual bool getUpdatedR() const { return false; }
   virtual bool getUpdatedQ() const { return false; }
   virtual void setUpdatedR(bool flag) { }

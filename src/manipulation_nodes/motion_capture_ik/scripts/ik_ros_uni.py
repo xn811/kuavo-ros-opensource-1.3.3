@@ -16,7 +16,7 @@ import threading
 import ctypes
 from tools.drake_trans import *
 
-from motion_capture_ik.srv import changeArmCtrlMode
+from motion_capture_ik.srv import changeArmCtrlMode, changeArmCtrlModeKuavo
 
 import numpy as np
 from pydrake.all import (
@@ -62,6 +62,16 @@ SCHED_OTHER = 0
 SCHED_FIFO = 1
 SCHED_RR = 2
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 # 定义sched_param结构体
 class sched_param(ctypes.Structure):
     _fields_ = [('sched_priority', ctypes.c_int)]
@@ -91,7 +101,7 @@ control_finger_type = 0
 control_torso = 0
 
 class IkRos:
-    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True):
+    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True, predict_gesture=False):
         self.__start_time = None
         self.__timestamp = None
         self.__ctrl_arm_idx = ctrl_arm_idx
@@ -120,11 +130,11 @@ class IkRos:
         self.__freeze_finger = False
         self.__button_y_last = False
 
-        self.hand_pub_timer = rospy.Timer(rospy.Duration(0.001), self.hand_finger_data_process)
+        # self.hand_pub_timer = rospy.Timer(rospy.Duration(0.001), self.hand_finger_data_process)
 
 
         model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path)
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path, predict_gesture=predict_gesture)
         self.quest3_arm_info_transformer.control_torso = control_torso
         initial_state = np.array([0, 0, 0, 0, 0, 0])  # 初始状态 [x, y, z, vx, vy, vz]
         initial_covariance = np.eye(6)  # 初始协方差矩阵
@@ -244,12 +254,24 @@ class IkRos:
         return q_limited
 
     @staticmethod
-    def change_arm_ctrl_mode(mode: bool):
+    def change_arm_ctrl_mode(mode: int):
         service_name = "/change_arm_ctrl_mode"
         try:
             rospy.wait_for_service(service_name)
             changeHandTrackingMode_srv = rospy.ServiceProxy(
                 service_name, changeArmCtrlMode
+            )
+            changeHandTrackingMode_srv(mode)
+        except rospy.ROSException:
+            rospy.logerr(f"Service {service_name} not available")
+
+    @staticmethod
+    def change_arm_ctrl_mode4kuavo(mode: bool):
+        service_name = "/change_arm_ctrl_mode"
+        try:
+            rospy.wait_for_service(service_name)
+            changeHandTrackingMode_srv = rospy.ServiceProxy(
+                service_name, changeArmCtrlModeKuavo
             )
             changeHandTrackingMode_srv(mode)
         except rospy.ROSException:
@@ -285,16 +307,18 @@ class IkRos:
         if self.__as_mc_ik:
             print("[ik]: Waiting for OK-guesture(hold on for 1-2 seconds) to start teleoperation...")
             while not self.quest3_arm_info_transformer.is_runing:
+                self.hand_finger_data_process(0)
                 if self.stop_event.is_set():
                     print("[ik]: Stop event is set, exit.")
                     return
                 if(self.quest3_arm_info_transformer.check_if_vr_error()):
-                    sys.stdout.write("\r\033[91mDetected VR ERROR!!! Please restart VR app in quest3!!!\033[0m")
+                    sys.stdout.write("\r\033[91mDetected VR ERROR!!! Please restart VR app in quest3 or check the battery level of the joystick!!!\033[0m")
                 rate.sleep()
             print("[ik]: OK-guesture recieved!!!")
         if self.__send_srv:
             print("[ik]: Send start service signal to robot, wait for response.")
-            self.change_arm_ctrl_mode(True)
+            self.change_arm_ctrl_mode(2)
+            # self.change_arm_ctrl_mode4kuavo(True)
             print("\033[92m[ik]: Recied start signal response, Start teleoperation.\033[0m")
         if self.__as_mc_ik:
             print("[ik]: If you want to stop teleoperation, please make a Shot-guesture(hold on for 1-2 seconds).")
@@ -308,13 +332,14 @@ class IkRos:
         sum_time_cost = 0.0
         arm_q_filtered = [0.0] * 14
         while not rospy.is_shutdown():
+            self.hand_finger_data_process(0)
             # print(f"q_now: {q_now}")
             is_runing = self.quest3_arm_info_transformer.is_runing if self.__as_mc_ik else True
             self.__current_pose, self.__current_pose_right = self.get_two_arm_pose(q_last)
             self.pub_solved_arm_eef_pose(q_last, self.__current_pose, self.__current_pose_right)
             if(self.__as_mc_ik and self.quest3_arm_info_transformer.check_if_vr_error()):
                 rate.sleep()
-                print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3!!!\033[0m")
+                print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3 or check the battery level of the joystick!!!\.\033[0m")
                 continue
             elif(self.__as_mc_ik and self.judge_target_is_far(0.35) or not is_runing):
                 rate.sleep()
@@ -336,7 +361,7 @@ class IkRos:
                     l_hand_RPY = quaternion_to_RPY(l_hand_quat)
                     l_elbow_pos = self.__left_elbow_pos
                     if l_elbow_pos is not None:
-                        print(f"l_elbow_pos: {l_elbow_pos}")
+                        # print(f"l_elbow_pos: {l_elbow_pos}")
                         l_elbow_pos[0] = 0.0 if l_elbow_pos[0] < 0.0 else l_elbow_pos[0]
                     left_shoulder_rpy_in_robot = self.quest3_arm_info_transformer.left_shoulder_rpy_in_robot
                 if self.__target_pose_right[0] is not None and (self.__ctrl_arm_idx == ArmIdx.BOTH
@@ -603,16 +628,26 @@ class IkRos:
             return True
         return False
 
-    def hand_finger_data_process(self, event):
-        if self.joySticks_data is not None:
-            self.pub_robot_end_hand(joyStick_data=self.joySticks_data)
-            # self.joySticks_data = None
-            self.hand_finger_data = None
-            return
+    @staticmethod
+    def isJoyPushed(joySticks_data):
+        pushed = False
+        pushed |= (joySticks_data.left_trigger > 0.0)
+        pushed |= (joySticks_data.right_trigger > 0.0)
+        pushed |= (joySticks_data.left_grip > 0.0)
+        pushed |= (joySticks_data.right_grip > 0.0)
+        pushed |= joySticks_data.left_first_button_touched
+        pushed |= joySticks_data.right_first_button_touched
+        return pushed
 
-        if self.hand_finger_data is not None:
+    def hand_finger_data_process(self, event):
+        # if(self.isJoyPushed(self.joySticks_data)):
+        if(not self.quest3_arm_info_transformer.is_hand_tracking):
+            # print(f"\033[91mJoystick is pushed, stop control.\033[0m")
+            self.pub_robot_end_hand(joyStick_data=self.joySticks_data)            
+        else:
+            # print(f"\033[91mJoystick is not pushed, continue control.\033[0m")
             self.pub_robot_end_hand(hand_finger_data=self.hand_finger_data)
-            return
+
 
     def pub_robot_end_hand(self, joyStick_data=None, hand_finger_data = None):
         global control_finger_type
@@ -630,7 +665,7 @@ class IkRos:
                     # print(f"\033[91mFinger is frozen.\033[0m")
                     return
                 for i in range(6):
-                    idx = 6 if control_finger_type is 0 else 2
+                    idx = 6 if (control_finger_type == 0) else 2
                     if i <= idx:
                         left_hand_position[i] = int(100.0 * joyStick_data.left_trigger)
                         right_hand_position[i] = int(100.0 * joyStick_data.right_trigger)
@@ -681,16 +716,15 @@ if __name__ == "__main__":
     ctrl_arm_idx = ArmIdx.LEFT  # 默认只控制左臂
     eef_z_bias = -0.0  # 末端坐标系的z轴偏移量
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", type=int, default=4, help="Robot version, 3 or 4.")
     parser.add_argument("--ctrl_arm_idx", type=int, default=0, help="Control left or right arm, 0 for left, 1 for right.2 for both.")
     parser.add_argument("--ik_type_idx", type=int, default=0, help="Ik type, 0 for TorsoIK, 1 for DiffIK.")
     parser.add_argument("--ee_type", "--end_effector_type", dest="end_effector_type", type=str, default="", help="End effector type, jodell or qiangnao.")
-    parser.add_argument("--send_srv", type=int, default=0, help="Send arm control service, True or False.")
+    parser.add_argument("--send_srv", type=int, default=1, help="Send arm control service, True or False.")
     parser.add_argument("--control_finger_type", type=int, default=0, help="0: control all fingers by upper-gripper. 1: control thumb and index fingers by upper-gripper, control other fingers by lower-gripper.")
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
+    parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
 
     args, unknown = parser.parse_known_args()
-    version = args.version
     end_effector_type = args.end_effector_type
     ctrl_arm_idx = ArmIdx(args.ctrl_arm_idx)
     ik_type_idx = IkTypeIdx(args.ik_type_idx)
@@ -698,34 +732,47 @@ if __name__ == "__main__":
     send_srv = args.send_srv
     control_finger_type = args.control_finger_type
     control_torso = args.control_torso
-
+    predict_gesture = args.predict_gesture
 
     print(f"\033[92mControl {ctrl_arm_idx.name()} arms.\033[0m")
     print(f"\033[92mIk type: {ik_type_idx.name()}\033[0m")
     print(f"\033[92mControl_torso: {control_torso}\033[0m")
-
+    
     current_pkg_path = get_package_path("motion_capture_ik")
-
-    model_file = current_pkg_path + "/models/biped_gen4.0/urdf/biped_v3_arm.urdf"
-    end_frames_name = ["torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"]
-    if version == 3:
-        model_file = current_pkg_path + "/models/biped_gen3.4/urdf/biped_v3_arm.urdf"
-        eef_z_bias = -0.098
-        end_frames_name = ["torso", "l_hand_pitch", "r_hand_pitch"]
-    print(f"\033[92mRobot Version: {version}, make sure it is correct!!!\033[0m")
-    print(f"You can run `rosrun motion_capture_ik ik_ros_uni.py 3` to use version 3(3.4).")
+    kuavo_assests_path = get_package_path("kuavo_assets")
+    robot_version = os.environ.get('ROBOT_VERSION', '40')
+    model_file = kuavo_assests_path + f"/models/biped_s{robot_version}/urdf/drake/biped_v3_arm.urdf"
+    model_config_file = kuavo_assests_path + f"/config/kuavo_v{robot_version}/kuavo.json"
+    # model_file = current_pkg_path + "/models/biped_gen4.0/urdf/biped_v3_arm.urdf"
+    
+    assert os.path.exists(model_file), f"Model file {model_file} does not exist."
+    assert os.path.exists(model_config_file), f"Model config file {model_config_file} does not exist."
+    
+    # end_frames_name = ["torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"]
+    import json
+    with open(model_config_file, 'r') as f:
+        model_config = json.load(f)
+    end_frames_name = model_config["end_frames_name_ik"]
+    shoulder_frame_names = model_config["shoulder_frame_names"]
+    upper_arm_length = model_config["upper_arm_length"]
+    lower_arm_length = model_config["lower_arm_length"]
+    print(f"upper_arm_length: {upper_arm_length}, lower_arm_length: {lower_arm_length}")
+    rospy.set_param("/quest3/upper_arm_length", upper_arm_length)
+    rospy.set_param("/quest3/lower_arm_length", lower_arm_length)
+    
     print(f"Model file: {model_file}")
+    print(f"Model config file: {model_config_file}")
+    print(f"shoulder_frame_names: {shoulder_frame_names}")
     print(f"End effector z-axis bias distance: {eef_z_bias} m.")
     print(f"End frames names: {end_frames_name}")
     print(f"Send srv?: {send_srv}")
     print(f"Control finger type: {control_finger_type}")
+    print(f"Predict gesture?: {predict_gesture}")
     arm_ik = None
 
-    arm_min = np.pi/180.0 * np.array([-180, -10, -135, -100, -135, -10, -15, -180, -135, -180, -180, -180, -10, -15], dtype=float)
-    arm_max = np.pi/180.0 * np.array([30, 135, 135, 100, 135, 10, 15, 180, 10, 180, 180, 180, 10, 15], dtype=float)
-    if version == 4: #TO-DO: 待填入版本4的限值
-        arm_min = np.array([-3.14, -0.70, -1.57, -1.57, -1.57, -1.57, -1.57, -3.14, -2.09, -1.57, -1.57, -1.57, -1.57, -1.57], dtype=float)
-        arm_max = np.array([0.520, 2.09, 1.570, 0.000, 1.570, 1.570, 1.570, 0.7, 1.000, 1.570, 0.000, 1.570, 1.570, 1.570], dtype=float)
+
+    arm_min = np.array([-3.14, -0.70, -1.57, -1.57, -1.57, -1.57, -1.57, -3.14, -2.09, -1.57, -1.57, -1.57, -1.57, -1.57], dtype=float)
+    arm_max = np.array([0.520, 2.09, 1.570, 0.000, 1.570, 1.570, 1.570, 0.7, 1.000, 1.570, 0.000, 1.570, 1.570, 1.570], dtype=float)
     q_limit = [arm_min, arm_max]
     if ik_type_idx == IkTypeIdx.DiffIK:        
         arm_ik = DiffIK(
@@ -735,6 +782,7 @@ if __name__ == "__main__":
             q_limit=q_limit, 
             meshcat=meshcat,
             eef_z_bias=eef_z_bias,
+            shoulder_frame_names=shoulder_frame_names
             )
     if ik_type_idx == IkTypeIdx.TorsoIK:
         arm_ik = ArmIk(
@@ -747,8 +795,10 @@ if __name__ == "__main__":
             eef_z_bias=eef_z_bias,
             ctrl_arm_idx=ctrl_arm_idx,
             as_mc_ik=True,
+            shoulder_frame_names=shoulder_frame_names
+
         )
         arm_ik.init_state(0.0, 0.0)
     arm_length_left, arm_length_right = arm_ik.get_arm_length()
     print(f"\033[92mLeft Arm Length: {arm_length_left:.3f} m, Right Arm Length:{arm_length_right:.3f} m.\033[0m")
-    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv)
+    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv, predict_gesture=predict_gesture)

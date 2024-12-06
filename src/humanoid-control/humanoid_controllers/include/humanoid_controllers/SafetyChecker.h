@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/7/26.
-//
-
 #pragma once
 
 #include <ocs2_centroidal_model/AccessHelperFunctions.h>
@@ -20,7 +16,7 @@ class SafetyChecker {
  protected:
   bool checkOrientation(const SystemObservation& observation) {
     vector_t pose = getBasePose(observation.state, info_);
-    if (pose(5) > M_PI_2 || pose(5) < -M_PI_2) {
+    if (pose(5) > M_PI_4 || pose(5) < -M_PI_4) {
       std::cerr << "[SafetyChecker] Orientation safety check failed!" << std::endl;
       //output pose
 //        std::cerr << "pose: " << pose << std::endl;

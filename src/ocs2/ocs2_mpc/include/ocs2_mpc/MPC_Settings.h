@@ -49,6 +49,17 @@ struct Settings {
    * */
   scalar_t solutionTimeWindow_ = -1;
 
+  /**
+   * The number of threads to use for parallelization. If set to 0, the number of threads will be
+   * determined automatically.
+   */
+  bool playBackMode_ = false;
+
+  /**
+   * recordSolverData_ determines whether to record and publish the solver data to play back in the future.
+   */
+  bool recordSolverData_ = false;
+
   /** This value determines to display the log output of MPC. */
   bool debugPrint_ = false;
 

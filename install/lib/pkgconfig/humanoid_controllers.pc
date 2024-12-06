@@ -1,8 +1,0 @@
-prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
-
-Name: humanoid_controllers
-Description: Description of humanoid_controllers
-Version: 0.0.0
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib -lhumanoid_controllers
-Requires: roscpp controller_interface humanoid_common humanoid_interface humanoid_interface_ros biped_s3 biped_s40 humanoid_wbc humanoid_estimation kuavo_estimation ocs2_self_collision_visualization angles

@@ -1,8 +1,0 @@
-prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
-
-Name: kuavo_ros_interfaces
-Description: Description of kuavo_ros_interfaces
-Version: 0.0.0
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib 
-Requires: roscpp rospy std_msgs message_runtime

@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_core/misc/Numerics.h>
 
 #include <ocs2_oc/oc_solver/SolverBase.h>
-#include <ocs2_oc/synchronized_module/ReferenceManager.h>
+// #include <ocs2_oc/synchronized_module/ReferenceManager.h>
 
 namespace ocs2 {
 
@@ -50,6 +50,19 @@ void SolverBase::run(scalar_t initTime, const vector_t& initState, scalar_t fina
   preRun(initTime, initState, finalTime);
   runImpl(initTime, initState, finalTime);
   postRun();
+}
+
+void SolverBase::playback(const SolverData& solverData) {
+  runImplPlayback(solverData);
+  postRun();
+}
+
+
+/**********/
+void SolverBase::runImplPlayback(const SolverData& solverData)
+{
+  // TODO: implement this function
+  throw std::runtime_error("runImplPlayback() not implemented for this solver.");
 }
 
 /******************************************************************************************************/

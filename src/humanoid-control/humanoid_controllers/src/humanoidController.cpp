@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/6/24.
-//
-
 #include <pinocchio/fwd.hpp> // forward declarations must be included first.
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
@@ -11,6 +7,8 @@
 
 #include <ocs2_centroidal_model/AccessHelperFunctions.h>
 #include <ocs2_centroidal_model/CentroidalModelPinocchioMapping.h>
+#include <ocs2_centroidal_model/ModelHelperFunctions.h>
+
 #include <ocs2_core/thread_support/ExecuteAndSleep.h>
 #include <ocs2_core/thread_support/SetThreadPriority.h>
 #include <humanoid_interface_ros/gait/GaitReceiver.h>
@@ -22,7 +20,7 @@
 #include <ocs2_ddp/GaussNewtonDDP_MPC.h>
 #include <ocs2_ddp/GaussNewtonDDP_MPC.h>
 #include <std_srvs/Trigger.h>
-
+#include <algorithm> 
 #include <angles/angles.h>
 #include <humanoid_estimation/FromTopiceEstimate.h>
 #include <humanoid_estimation/LinearKalmanFilter.h>
@@ -41,6 +39,8 @@ namespace humanoid_controller
   using namespace humanoid;
   using Duration = std::chrono::duration<double>;
   using Clock = std::chrono::high_resolution_clock;
+  std::mutex head_mtx;
+
 
   static void mujocoSimStart(ros::NodeHandle &nh_)
   {
@@ -86,12 +86,16 @@ namespace humanoid_controller
     {
       std::cerr << "Failed to set keyboard_thread_func's scheduling parameters. Error: " << strerror(result) << std::endl;
     }
-    ros::NodeHandle nh;
-    stop_pub_ = nh.advertise<std_msgs::Bool>("/stop_robot", 10);
+    stop_pub_ = controllerNh_.advertise<std_msgs::Bool>("/stop_robot", 10);
 
     char Walk_Command = '\0';
     while (ros::ok())
     {
+      if (hardware_status_ != 1)
+      {
+        usleep(100000);
+        continue;
+      }
       if (kbhit())
       {
         Walk_Command = getchar();
@@ -113,17 +117,17 @@ namespace humanoid_controller
           wbc_only_ = !wbc_only_;
           std::cout << "start using mpc: " << !wbc_only_ << std::endl;
         }
-        else if (Walk_Command == 'v')
+        else if (Walk_Command == 'r')
         {
-          std::cout << "v" << std::endl;
-          control_mode_ = (control_mode_ == 1) ? 2 : 1;
-          std::cout << "control mode:" << control_mode_ << std::endl;
+          std::cerr << "reset MPC " << std::endl;
+          reset_mpc_ = true;
         }
-        else if (Walk_Command == 't')
+        else if (Walk_Command == 'g')
         {
-          control_mode_ = (control_mode_ == 0) ? 2 : 0;
-          std::cout << "control mode:" << control_mode_ << std::endl;
+          std::cout << "reset estimator" << std::endl;
+          reset_estimator_ = true;
         }
+        
 
         Walk_Command = '\0';
       }
@@ -146,6 +150,14 @@ namespace humanoid_controller
     drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(robot_version, true, 2e-3);
     kuavo_settings_ = drake_interface_->getKuavoSettings();
     auto &motor_info = kuavo_settings_.hardware_settings;
+    headNum_ = motor_info.num_head_joints;
+    armNumReal_ = motor_info.num_arm_joints;
+    jointNumReal_ = motor_info.num_joints - headNum_ - armNumReal_;
+    actuatedDofNumReal_ = jointNumReal_ + armNumReal_ + headNum_;
+    ros::param::set("/armRealDof",  static_cast<int>(armNumReal_));
+    ros::param::set("/legRealDof",  static_cast<int>(jointNumReal_));
+    ros::param::set("/headRealDof",  static_cast<int>(headNum_));
+
     motor_c2t_ = Eigen::Map<Eigen::VectorXd>(motor_info.c2t_coeff.data(), motor_info.c2t_coeff.size());
     auto [plant, context] = drake_interface_->getPlantAndContext();
     ros_logger_ = new TopicLogger(controller_nh);
@@ -177,13 +189,11 @@ namespace humanoid_controller
     if (controllerNh_.hasParam("wbc_only"))
     {
       controllerNh_.getParam("/wbc_only", wbc_only_);
-      std::cout << "get param wbc_only: " << wbc_only_ << std::endl;
     }
     if (controllerNh_.hasParam("play_back"))
     {
       controllerNh_.getParam("/play_back", is_play_back_mode_);
 
-      std::cout << "get param play_back: " << is_play_back_mode_ << std::endl;
     }
 
     if (controllerNh_.hasParam("use_joint_filter"))
@@ -191,6 +201,7 @@ namespace humanoid_controller
       controllerNh_.getParam("/use_joint_filter", use_joint_filter_);
     }
     // trajectory_publisher_ = new TrajectoryPublisher(controller_nh, 0.001);
+    
     size_t buffer_size = (is_play_back_mode_) ? 20 : 5;
     sensors_data_buffer_ptr_ = new KuavoDataBuffer<SensorData>("humanoid_sensors_data_buffer", buffer_size, dt_);
     gaitManagerPtr_ = new GaitManager(20);
@@ -207,146 +218,217 @@ namespace humanoid_controller
     setupMpc();
     setupMrt();
     // Visualization
-    ros::NodeHandle nh;
     CentroidalModelPinocchioMapping pinocchioMapping(HumanoidInterface_->getCentroidalModelInfo());
     std::cout << "HumanoidInterface_->getCentroidalModelInfo().robotMass:" << HumanoidInterface_->getCentroidalModelInfo().robotMass << std::endl;
+
     eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(HumanoidInterface_->getPinocchioInterface(), pinocchioMapping,
                                                                         HumanoidInterface_->modelSettings().contactNames3DoF);
     eeSpatialKinematicsPtr_ = std::make_shared<PinocchioEndEffectorSpatialKinematics>(HumanoidInterface_->getPinocchioInterface(), pinocchioMapping, 
                                                                                       HumanoidInterface_->modelSettings().contactNames6DoF);
+    
     robotVisualizer_ = std::make_shared<HumanoidVisualizer>(HumanoidInterface_->getPinocchioInterface(),
                                                             HumanoidInterface_->getCentroidalModelInfo(), 
-                                                            *eeKinematicsPtr_, *eeSpatialKinematicsPtr_, nh, taskFile);
+                                                            *eeKinematicsPtr_, *eeSpatialKinematicsPtr_, controllerNh_, taskFile);
 
     pinocchioInterface_ptr_ = new PinocchioInterface(HumanoidInterface_->getPinocchioInterface());
     centroidalModelInfo_ = HumanoidInterface_->getCentroidalModelInfo();
     eeKinematicsPtr_->setPinocchioInterface(*pinocchioInterface_ptr_);
 
     auto &info = HumanoidInterface_->getCentroidalModelInfo();
+    jointNum_ = HumanoidInterface_->modelSettings().mpcLegsDof;
     armNum_ = info.actuatedDofNum - jointNum_;
+
+
+    if (armNumReal_ + jointNumReal_ != jointNum_ + armNum_) // mpc维度和实际维度不一致，简化的模型
+    {
+      is_simplified_model_ = true;
+      std::cout << "[HumanoidController]: using simplified mpc model" << std::endl;
+      std::cout << "jointNumReal_:" << jointNumReal_ << " jointNum_:" << jointNum_ << std::endl;
+      std::cout << "headNum_:" << headNum_ << std::endl;
+      std::cout << "armNumReal_:" << armNumReal_ << " armNum_:" << armNum_<< std::endl;
+      armDofMPC_ = armNum_ / 2;
+      armDofReal_ = armNumReal_ / 2;
+      armDofDiff_ = armDofReal_ - armDofMPC_;
+      simplifiedJointPos_ = vector_t::Zero(armDofDiff_*2);
+    }
     defalutJointPos_.resize(info.actuatedDofNum);
-    joint_kp_.resize(info.actuatedDofNum);
-    joint_kd_.resize(info.actuatedDofNum);
-    joint_kp_walking_.resize(info.actuatedDofNum);
-    joint_kd_walking_.resize(info.actuatedDofNum);
-    output_tau_.resize(info.actuatedDofNum);
-    output_tau_.setZero();
+    sensor_data_head_.resize_joint(headNum_);
+    joint_kp_.resize(actuatedDofNumReal_);
+    joint_kd_.resize(actuatedDofNumReal_);
+    joint_kp_walking_.resize(actuatedDofNumReal_);
+    joint_kd_walking_.resize(actuatedDofNumReal_);
+    head_kp_.resize(headNum_);
+    head_kd_.resize(headNum_);
+
+    joint_control_modes_ = Eigen::VectorXd::Constant(actuatedDofNumReal_, 2);
+    output_tau_ = vector_t::Zero(actuatedDofNumReal_);
+    output_pos_ = vector_t::Zero(actuatedDofNumReal_);
+    output_vel_ = vector_t::Zero(actuatedDofNumReal_);
     Eigen::Vector3d acc_filter_params;
     Eigen::Vector3d gyro_filter_params;
-    double arm_joint_pos_filter_cutoff_freq=20,arm_joint_vel_filter_cutoff_freq=20;
+    double arm_joint_pos_filter_cutoff_freq=20,arm_joint_vel_filter_cutoff_freq=20,mrt_joint_vel_filter_cutoff_freq=200;
     auto drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(robot_version, true, 2e-3);
     defalutJointPos_.head(jointNum_) = drake_interface_->getDefaultJointState();
     defalutJointPos_.tail(armNum_) = vector_t::Zero(armNum_);
-    jointArmNum_ = kuavo_settings_.hardware_settings.num_arm_joints;
-    desire_arm_q_prev_.resize(jointArmNum_);
-    desire_arm_q_prev_.setZero();
-    desire_arm_q.resize(jointArmNum_);
-    desire_arm_v.resize(jointArmNum_);
-    desire_arm_q.setZero();
-    desire_arm_v.setZero();
-    joint_state_limit_.resize(info.actuatedDofNum, 2);
+    currentArmTargetTrajectories_ = {{0.0}, {vector_t::Zero(armNumReal_)}, {vector_t::Zero(info.inputDim)}};
+
+    vector_t drake_q = drake_interface_->getDrakeState();
+    vector_t mujoco_q = vector_t::Zero(drake_q.size());
+    mujoco_q << drake_q.segment(4, 3), drake_q.head(4), drake_q.tail(drake_q.size() - 7);
+    std::vector<double> mujoco_init_state;
+    for (int i = 0; i < drake_q.size(); i++)
+    {
+      mujoco_init_state.push_back(mujoco_q(i));
+    }
+    
+    ros::param::set("mujoco_init_state", mujoco_init_state);
+  
+
+    joint_state_limit_.resize(actuatedDofNumReal_, 2);
 
     auto robot_config = drake_interface_->getRobotConfig();
     is_swing_arm_ = robot_config->getValue<bool>("swing_arm");
     swing_arm_gain_ = robot_config->getValue<double>("swing_arm_gain");
     swing_elbow_scale_ = robot_config->getValue<double>("swing_elbow_scale");
+    ruiwo_motor_velocities_factor_ = robot_config->getValue<double>("motor_velocities_factor");
     gait_map_ = HumanoidInterface_->getSwitchedModelReferenceManagerPtr()->getGaitSchedule()->getGaitMap();
     std::cout << "gait_map size: " << gait_map_.size() << std::endl;
 
-    // loadData::loadEigenMatrix(referenceFile, "defaultJointState", defalutJointPos_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_", joint_kp_);
     loadData::loadEigenMatrix(referenceFile, "joint_kd_", joint_kd_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_walking_", joint_kp_walking_);
     loadData::loadEigenMatrix(referenceFile, "joint_kd_walking_", joint_kd_walking_);
+    if (headNum_ > 0)
+    {
+      loadData::loadEigenMatrix(referenceFile, "head_kp_", head_kp_);
+      loadData::loadEigenMatrix(referenceFile, "head_kd_", head_kd_);
+    }
     loadData::loadEigenMatrix(referenceFile, "acc_filter_cutoff_freq", acc_filter_params);
     loadData::loadEigenMatrix(referenceFile, "gyro_filter_cutoff_freq", gyro_filter_params);
     loadData::loadEigenMatrix(referenceFile, "jointStateLimit", joint_state_limit_);
-    std::cout << "joint_state_limit: " << joint_state_limit_.transpose() << std::endl;
     loadData::loadCppDataType(referenceFile, "arm_joint_pos_filter_cutoff_freq", arm_joint_pos_filter_cutoff_freq);
     loadData::loadCppDataType(referenceFile, "arm_joint_vel_filter_cutoff_freq", arm_joint_vel_filter_cutoff_freq);
+    loadData::loadCppDataType(referenceFile, "mrt_joint_vel_filter_cutoff_freq", mrt_joint_vel_filter_cutoff_freq);
+    loadData::loadEigenMatrix(referenceFile, "defaultCotrolMode", joint_control_modes_);
 
-    real_initial_start_service_ = nh.advertiseService("/humanoid_controller/real_initial_start", &humanoidController::realIntialStartCallback, this);
+
     // Hardware interface
     // TODO: setup hardware controller interface
     // create a ROS subscriber to receive the joint pos and vel
     jointPos_ = vector_t::Zero(info.actuatedDofNum);
-    // set jointPos_ to {0, 0, 0.35, -0.90, -0.55, 0, 0, 0, 0.35, -0.90, -0.55, 0}
-    loadData::loadEigenMatrix(referenceFile, "defaultJointState", jointPos_);
+    jointPos_.setZero();
+    jointPos_.head(jointNum_) = drake_interface_->getDefaultJointState();
 
     jointVel_ = vector_t::Zero(info.actuatedDofNum);
     jointAcc_ = vector_t::Zero(info.actuatedDofNum);
+    jointCurrent_ = vector_t::Zero(info.actuatedDofNum);
     quat_ = Eigen::Quaternion<scalar_t>(1, 0, 0, 0);
-    arm_joint_pos_cmd_prev_ = vector_t::Zero(armNum_);
-    arm_joint_pos_filter_.setParams(dt_, Eigen::VectorXd::Constant(armNum_, arm_joint_pos_filter_cutoff_freq));
-    arm_joint_vel_filter_.setParams(dt_, Eigen::VectorXd::Constant(armNum_, arm_joint_vel_filter_cutoff_freq));
+    arm_joint_pos_cmd_prev_ = vector_t::Zero(armNumReal_);
+    arm_joint_pos_filter_.setParams(dt_, Eigen::VectorXd::Constant(armNumReal_, arm_joint_pos_filter_cutoff_freq));
+    arm_joint_vel_filter_.setParams(dt_, Eigen::VectorXd::Constant(armNumReal_, arm_joint_vel_filter_cutoff_freq));
+    mrt_joint_vel_filter_.setParams(dt_, Eigen::VectorXd::Constant(info.actuatedDofNum-armNum_, mrt_joint_vel_filter_cutoff_freq));
     acc_filter_.setParams(dt_, acc_filter_params);
     // free_acc_filter_.setParams(dt_, acc_filter_params);
     gyro_filter_.setParams(dt_, gyro_filter_params);
     sensorsDataSub_ = controllerNh_.subscribe<kuavo_msgs::sensorsData>("/sensors_data_raw", 10, &humanoidController::sensorsDataCallback, this);
     mpcStartSub_ = controllerNh_.subscribe<std_msgs::Bool>("/start_mpc", 10, &humanoidController::startMpccallback, this);
-    arm_joint_trajectory_.initialize(armNum_);
+    arm_joint_trajectory_.initialize(armNumReal_);
     arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
       {
-        if(msg->name.size() != armNum_){
-          std::cerr << "The dimensin of arm joint pos is NOT equal to the armNum_!!" << msg->name.size() << " vs " << armNum_ << "\n";
+        if(msg->name.size() != armNumReal_){
+          std::cerr << "The dimensin of arm joint pos is NOT equal to the armNumReal_!!" << msg->name.size() << " vs " << armNumReal_ << "\n";
           return;
         }
-        for(int i = 0; i < armNum_; i++)
+        for(int i = 0; i < armNumReal_; i++)
         {
           // std::cout << "arm joint pos: " << msg->position[i] << std::endl;
           arm_joint_trajectory_.pos[i] = msg->position[i] * M_PI / 180.0;
-          if(msg->velocity.size() == armNum_)
+          if(msg->velocity.size() == armNumReal_)
             arm_joint_trajectory_.vel[i] = msg->velocity[i] * M_PI / 180.0;
-          if(msg->effort.size() == armNum_)
+          if(msg->effort.size() == armNumReal_)
             arm_joint_trajectory_.tau[i] = msg->effort[i];
         }
         // std::cout << "arm joint pos: " << arm_joint_trajectory_.pos.size() << std::endl;
       });
-    gait_scheduler_sub_ = controllerNh_.subscribe<kuavo_msgs::gaitTimeName>(robotName_ + "_mpc_gait_time_name", 10, [this](const kuavo_msgs::gaitTimeName::ConstPtr &msg)
-                                                                            {
+     
+      // Arm TargetTrajectories
+      auto armTargetTrajectoriesCallback = [this](const ocs2_msgs::mpc_target_trajectories::ConstPtr &msg)
+      {
+        auto targetTrajectories = ros_msg_conversions::readTargetTrajectoriesMsg(*msg);
+
+        if (targetTrajectories.stateTrajectory[0].size() != armNumReal_)
+        {
+          ROS_WARN_STREAM("[humanoidController]:Using simplified model, but arm targetTrajectories size : "
+                          << std::to_string(targetTrajectories.stateTrajectory[0].size()) << " != "
+                          << std::to_string(armNumReal_) << ", will keep the simplified arm's joints target");
+          return;
+        }
+        currentArmTargetTrajectories_ = targetTrajectories;
+      };
+      if (is_simplified_model_)// 简化模型需要直接从全部target的topic中去获取被简化关节的target
+        arm_target_traj_sub_ =
+            controllerNh_.subscribe<ocs2_msgs::mpc_target_trajectories>(robotName_ + "_mpc_arm_commanded", 3, armTargetTrajectoriesCallback);
+
+      gait_scheduler_sub_ = controllerNh_.subscribe<kuavo_msgs::gaitTimeName>(robotName_ + "_mpc_gait_time_name", 10, [this](const kuavo_msgs::gaitTimeName::ConstPtr &msg)
+                                                                              {
                                                                               last_gait_ = current_gait_;
             current_gait_.name = msg->gait_name;
             current_gait_.startTime = msg->start_time;
             if (gaitManagerPtr_)
               gaitManagerPtr_->add(current_gait_.startTime, current_gait_.name);
             std::cout << "[controller] receive current gait name: " << current_gait_.name << " start time: " << current_gait_.startTime << std::endl; });
-    // jointPosVelSub_ = controllerNh_.subscribe<std_msgs::Float32MultiArray>("/jointsPosVel", 10, &humanoidController::jointStateCallback, this);
-    // jointAccSub_ = controllerNh_.subscribe<std_msgs::Float32MultiArray>("/jointsAcc", 10, &humanoidController::jointAccCallback, this);
-    // imuSub_ = controllerNh_.subscribe<sensor_msgs::Imu>("/imu", 10, &humanoidController::ImuCallback, this);
-    enableArmCtrlSrv_ = controllerNh_.advertiseService("/enable_wbc_arm_trajectory_control", &humanoidController::enableArmTrajectoryControlCallback, this);
-    jointCmdPub_ = controllerNh_.advertise<kuavo_msgs::jointCmd>("/joint_cmd", 10);
-    mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
-    feettargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("/humanoid_controller/feet_target_policys", 10, true);
+      head_sub_ = controllerNh_.subscribe("/robot_head_motion_data", 10, &humanoidController::headCmdCallback, this);
 
-    // targetPosPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetPos", 10);
-    // targetVelPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetVel", 10);
-    // targetKpPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetKp", 10);
-    // targetKdPub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/targetKd", 10);
-    // RbdStatePub_ = controllerNh_.advertise<std_msgs::Float32MultiArray>("/RbdState", 10);
-    wbcFrequencyPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/frequency/wbc", 10);
-    wbcTimeCostPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/time_cost/wbc", 10);
+      enableArmCtrlSrv_ = controllerNh_.advertiseService("/enable_wbc_arm_trajectory_control", &humanoidController::enableArmTrajectoryControlCallback, this);
+      jointCmdPub_ = controllerNh_.advertise<kuavo_msgs::jointCmd>("/joint_cmd", 10);
+      mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
+      feettargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("/humanoid_controller/feet_target_policys", 10, true);
 
-    // State estimation
-    setupStateEstimate(taskFile, verbose);
-    sensors_data_buffer_ptr_->waitForReady();
-    // std::cout << "waitForReady estimate ready" << std::endl;
-    // Whole body control/HierarchicalWbc/WeightedWbc
-    // wbc 中 eeKinematicsPtr_ 可能需要修改
-    wbc_ = std::make_shared<WeightedWbc>(HumanoidInterface_->getPinocchioInterface(), HumanoidInterface_->getCentroidalModelInfo(),
-                                         *eeKinematicsPtr_);
-    wbc_->setArmNums(armNum_);
-    wbc_->loadTasksSetting(taskFile, verbose, is_real_);
+      wbcFrequencyPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/frequency/wbc", 10);
+      wbcTimeCostPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/time_cost/wbc", 10);
+      wbc_observation_publisher_ = controllerNh_.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_wbc_observation", 1);
 
-    // Safety Checker
-    safetyChecker_ = std::make_shared<SafetyChecker>(HumanoidInterface_->getCentroidalModelInfo());
-    keyboardThread_ = std::thread(&humanoidController::keyboard_thread_func, this);
-    if (!keyboardThread_.joinable())
-    {
-      std::cerr << "Failed to start keyboard thread" << std::endl;
-      exit(1);
+
+      // State estimation
+      setupStateEstimate(taskFile, verbose);
+      sensors_data_buffer_ptr_->waitForReady();
+      // std::cout << "waitForReady estimate ready" << std::endl;
+      // Whole body control/HierarchicalWbc/WeightedWbc
+      // wbc 中 eeKinematicsPtr_ 可能需要修改
+      wbc_ = std::make_shared<WeightedWbc>(*pinocchioInterfaceWBCPtr_, centroidalModelInfoWBC_,
+                                           *eeKinematicsWBCPtr_);
+      wbc_->setArmNums(armNumReal_);
+      wbc_->loadTasksSetting(taskFile, verbose, is_real_);
+
+      // Safety Checker
+      safetyChecker_ = std::make_shared<SafetyChecker>(HumanoidInterface_->getCentroidalModelInfo());
+      keyboardThread_ = std::thread(&humanoidController::keyboard_thread_func, this);
+      if (!keyboardThread_.joinable())
+      {
+        std::cerr << "Failed to start keyboard thread" << std::endl;
+        exit(1);
     }
 
     return true;
+  }
+  void humanoidController::headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg)
+  {
+      if (msg->joint_data.size() ==2)
+      {
+          if (msg->joint_data[0] < -30 || msg->joint_data[0] > 30 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
+          {
+              ROS_WARN("Invalid robot head motion data. Joint data must be in the range [-30, 30] and [-25, 25].");
+              return;
+          }
+          head_mtx.lock();
+          desire_head_pos_[0] = msg->joint_data[0]*M_PI/180.0;
+          desire_head_pos_[1] = msg->joint_data[1]*M_PI/180.0;
+          head_mtx.unlock();
+      }
+      else
+      {
+          ROS_WARN("Invalid robot head motion data. Expected 2 elements, but received %lu elements.", msg->joint_data.size());
+      }
   }
   void humanoidController::startMpccallback(const std_msgs::Bool::ConstPtr &msg)
   {
@@ -392,9 +474,9 @@ namespace humanoid_controller
     auto &imu_data = msg->imu_data;
     auto &end_effector_data = msg->end_effector_data; // TODO: add end_effector_data to the observation
     SensorData sensor_data;
-    sensor_data.resize_joint(jointNum_+armNum_);
+    sensor_data.resize_joint(jointNumReal_+armNumReal_);
     // JOINT DATA
-    for (size_t i = 0; i < jointNum_+armNum_; ++i)
+    for (size_t i = 0; i < jointNumReal_+armNumReal_; ++i)
     {
       sensor_data.jointPos_(i) = joint_data.joint_q[i];
       sensor_data.jointVel_(i) = joint_data.joint_v[i];
@@ -427,54 +509,23 @@ namespace humanoid_controller
     // sensorDataQueue.push(sensor_data);
     // sensor_data_mutex_.unlock();
     sensors_data_buffer_ptr_->addData(sensor_data.timeStamp_.toSec(), sensor_data);
+
+    if (headNum_ > 0 && joint_data.joint_q.size() == jointNumReal_+armNumReal_ + headNum_)
+    {
+      int head_start_index  = joint_data.joint_q.size() - headNum_;
+      for (size_t i = 0; i < headNum_; ++i)
+      {
+        
+        sensor_data_head_.jointPos_(i) = joint_data.joint_q[i + head_start_index];
+        sensor_data_head_.jointVel_(i) = joint_data.joint_v[i + head_start_index];
+        sensor_data_head_.jointAcc_(i) = joint_data.joint_vd[i + head_start_index];
+        sensor_data_head_.jointCurrent_(i) = joint_data.joint_current[i + head_start_index];
+      }
+    }
     if (!is_initialized_)
       is_initialized_ = true;
   }
-  void humanoidController::jointStateCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != 2 * jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointPos_(i) = msg->data[i];
-      jointVel_(i) = msg->data[i + jointNum_];
-    }
-  }
-
-  void humanoidController::jointAccCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointAcc_(i) = msg->data[i];
-    }
-  }
-
-  void humanoidController::ImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
-  {
-    quat_.coeffs().w() = msg->orientation.w;
-    quat_.coeffs().x() = msg->orientation.x;
-    quat_.coeffs().y() = msg->orientation.y;
-    quat_.coeffs().z() = msg->orientation.z;
-    angularVel_ << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
-    linearAccel_ << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
-    orientationCovariance_ << msg->orientation_covariance[0], msg->orientation_covariance[1], msg->orientation_covariance[2],
-        msg->orientation_covariance[3], msg->orientation_covariance[4], msg->orientation_covariance[5],
-        msg->orientation_covariance[6], msg->orientation_covariance[7], msg->orientation_covariance[8];
-    angularVelCovariance_ << msg->angular_velocity_covariance[0], msg->angular_velocity_covariance[1], msg->angular_velocity_covariance[2],
-        msg->angular_velocity_covariance[3], msg->angular_velocity_covariance[4], msg->angular_velocity_covariance[5],
-        msg->angular_velocity_covariance[6], msg->angular_velocity_covariance[7], msg->angular_velocity_covariance[8];
-    linearAccelCovariance_ << msg->linear_acceleration_covariance[0], msg->linear_acceleration_covariance[1], msg->linear_acceleration_covariance[2],
-        msg->linear_acceleration_covariance[3], msg->linear_acceleration_covariance[4], msg->linear_acceleration_covariance[5],
-        msg->linear_acceleration_covariance[6], msg->linear_acceleration_covariance[7], msg->linear_acceleration_covariance[8];
-  }
+  
 
   bool humanoidController::enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
@@ -509,15 +560,25 @@ namespace humanoid_controller
       real_init_wait();
       std::cout << "real_init_wait done\n";
     }
+    else
+    {
+      hardware_status_ = 1;
+    }
 
     // applySensorsData(sensors_data_buffer_ptr_->getLastData());
+    currentObservationWBC_.state.setZero(centroidalModelInfoWBC_.stateDim);
+    currentObservationWBC_.input.setZero(centroidalModelInfoWBC_.inputDim);
+    measuredRbdStateReal_.setZero(centroidalModelInfoWBC_.generalizedCoordinatesNum*2);
+    currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
 
     last_time_ = current_time_;
     updateStateEstimation(time, true);
     currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
-    optimizedState_mrt_ = currentObservation_.state;
+    optimizedState2WBC_mrt_ = vector_t::Zero(centroidalModelInfoWBC_.stateDim);
+    optimizedState2WBC_mrt_.head(centroidalModelInfo_.stateDim) = currentObservation_.state;
     std::cout << "initial state: " << currentObservation_.state.transpose() << std::endl;
-    optimizedInput_mrt_ = currentObservation_.input;
+    optimizedInput2WBC_mrt_ = vector_t::Zero(centroidalModelInfoWBC_.inputDim);
+    optimizedInput2WBC_mrt_.head(centroidalModelInfo_.inputDim) = currentObservation_.input;
 
     currentObservation_.mode = ModeNumber::SS;
     SystemObservation initial_observation = currentObservation_;
@@ -551,10 +612,25 @@ namespace humanoid_controller
       }
     }
 
-    intail_input_ = vector_t::Zero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
+    intail_input_ = vector_t::Zero(centroidalModelInfoWBC_.inputDim);
     for (int i = 0; i < 8; i++)
-      intail_input_(3 * i + 2) = HumanoidInterface_->getCentroidalModelInfo().robotMass * 9.81 / 8; // 48.7*g/8
-    optimizedInput_mrt_ = intail_input_;
+      intail_input_(3 * i + 2) = centroidalModelInfoWBC_.robotMass * 9.81 / 8; // 48.7*g/8
+    optimizedInput2WBC_mrt_ = intail_input_;
+
+    if (is_simplified_model_)
+    {
+      optimizedState2WBC_mrt_.head(centroidalModelInfo_.stateDim) = currentObservation_.state;
+      optimizedState2WBC_mrt_.tail(armNumReal_).setZero();
+
+      for (int i = 0; i < 2; i++)
+      {
+        optimizedState2WBC_mrt_.segment(12 + jointNum_ + i * armDofReal_, armDofMPC_) = optimizedState2WBC_mrt_.segment(12 + jointNum_ + i * armDofMPC_, armDofMPC_);
+      }
+    }
+    currentObservationWBC_ = currentObservation_;
+    currentObservationWBC_.state = optimizedState2WBC_mrt_;
+    currentObservationWBC_.input = optimizedInput2WBC_mrt_;
+
     // else
     // {
     //   mpcMrtInterface_->setCurrentObservation(currentObservation_);
@@ -587,96 +663,32 @@ namespace humanoid_controller
   }
   void humanoidController::real_init_wait()
   {
-
-    vector_t intial_state = HumanoidInterface_->getInitialState();
-    vector_t ready_joint_pos_ = intial_state.tail(jointNum_+armNum_) * 180 / M_PI;
-    std::vector<double> moving_pos(jointNum_+armNum_, 0);
-    std::vector<double> ready_inital_pos(jointNum_+armNum_, 0); // 进入反馈的初始位置
-    for (int i = 0; i < jointNum_; i++)
+    while (ros::ok())
     {
-      ready_inital_pos[i] = ready_joint_pos_[i];
-    }
-
-    std::vector<double> ready_pos(jointNum_+armNum_, 0); // 挂起的动作
-    ready_pos[0] = 0;
-    ready_pos[2] = -1.3 * TO_DEGREE;
-    ready_pos[3] = 1.6 * TO_DEGREE;
-    ready_pos[4] = -0.3 * TO_DEGREE;
-    ready_pos[6] = -0;
-    ready_pos[8] = -1.3 * TO_DEGREE;
-    ready_pos[9] = 1.6 * TO_DEGREE;
-    ready_pos[10] = -0.3 * TO_DEGREE;
-
-    bool ready_to_feedback = false;
-
-    if (!is_cali_)
-    {
-      ready_to_feedback = true;
-      moving_pos = ready_pos;
-      std::cout << "moving to ready posture ..." << std::endl;
-    }
-    else
-    {
-      std::fill(moving_pos.begin(), moving_pos.end(), 0.0);
-      std::cout << "moving to calibration posture ..." << std::endl;
-    }
-
-    hardware_interface_ptr_->jointMoveTo(moving_pos, 60.0, dt_);
-
-    if (!is_cali_)
-      std::cout << "\033[32mCheck the status of your robot:"
-                << "Type 'o' when you're ready(the robot will stand up!):\033[0m" << std::endl;
-    else
-      std::cout << "\033[32mCheck the status of your robot and calibrate it\nType 'c' to calibrate ankle motors\n"
-                << "Type 'o' to move to ready posture, or just 'ctrl+c' to exit..\033[0m" << std::endl;
-
-    while (1)
-    {
-      if (kbhit())
+      if (ros::param::get("/hardware/is_ready", hardware_status_))
       {
-        intial_input_cmd_ = '\0';
-        intial_input_cmd_ = getchar();
-      }
-      if (intial_input_cmd_ == 'o')
-      {
-        intial_input_cmd_ = '\0';
-        if (!ready_to_feedback)
+        if (hardware_status_ == 1)
         {
-          moving_pos = ready_pos;
-          std::cout << "moving to ready posture..." << std::endl;
-          hardware_interface_ptr_->jointMoveTo(moving_pos, 60.0, dt_);
-          std::cout << "\033[32mType 'q' to goback to calibration status, or type 'o' again when you're ready(the robot will stand up!):\033[0m" << std::endl;
-          ready_to_feedback = true;
-          continue;
+          std::cerr << "real robot is ready\n";
+          break;
         }
-        printf("feedback start!!! \r\n");
-        break;
-      }
-      if (intial_input_cmd_ == 'q')
-      {
-        intial_input_cmd_ = '\0';
-        if (ready_to_feedback)
-        {
-          std::fill(moving_pos.begin(), moving_pos.end(), 0.0);
-          std::cout << "moving to calibration posture..." << std::endl;
-          hardware_interface_ptr_->jointMoveTo(moving_pos, 60.0, dt_);
-          std::cout << "\033[32mType 'o' to enter ready status\033[0m" << std::endl;
-          ready_to_feedback = false;
-          continue;
-        }
-        exit(0);
       }
       usleep(1000);
     }
-
-    moving_pos = ready_inital_pos;
-    std::cout << "moving to ready posture ..." << std::endl;
-
-    hardware_interface_ptr_->jointMoveTo(moving_pos, 30.0, dt_, true);
+    
   }
   void humanoidController::update(const ros::Time &time, const ros::Duration &dfd)
   {
     const auto t1 = Clock::now();
+
+    if (reset_mpc_)// 重置mpc
+    {
+      currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
+      auto target_trajectories = TargetTrajectories({currentObservation_.time}, {currentObservation_.state}, {currentObservation_.input});
+      mrtRosInterface_->resetMpcNode(target_trajectories);
+      reset_mpc_ = false;
+      std::cout << "reset MPC node at "<<currentObservation_.time << "\n";
+    }
     // kuavo_msgs::sensorsData msg = sensors_data_buffer_ptr_->getNextData();
     // // kuavo_msgs::sensorsData msg = sensors_data_buffer_ptr_->getData(ros::Time::now().toSec());
     // applySensorsData(msg);
@@ -685,8 +697,9 @@ namespace humanoid_controller
     updateStateEstimation(time, false);
     const auto t2 = Clock::now();
 
-    auto& info = HumanoidInterface_->getCentroidalModelInfo();
-    Eigen::VectorXd joint_control_modes = Eigen::VectorXd::Constant(info.actuatedDofNum, control_mode_); // init control mode
+    auto& info = centroidalModelInfo_;
+    auto& infoWBC = centroidalModelInfoWBC_;
+
     vector_t optimizedState_mrt, optimizedInput_mrt;
     bool is_mpc_updated = false;
     if (use_external_mpc_)
@@ -705,42 +718,9 @@ namespace humanoid_controller
         TargetTrajectories target_trajectories(policy.timeTrajectory_, policy.stateTrajectory_, policy.inputTrajectory_);
 
         publishFeetTrajectory(target_trajectories);
-        // std::cout << "state_trajectory.size :" << state_trajectory.size() << std::endl;
-        // std::cout << "state_trajectory.front().size :" << state_trajectory.front().size() << std::endl;
-        // std::cout << "<<< New MPC policy starting at " << mrtRosInterface_->getPolicy().timeTrajectory_.front() << "\n";
       }
       mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
-      // std::cout << "plannedMode_:"<<plannedMode_<<std::endl;
-      // std::cout << "currentObservation_.time:" << currentObservation_.time << " \noptimizedState:" << optimizedState_mrt.transpose() << " \noptimizedInput:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
-      // std::cout << "optimizedState_mrt_.size" << optimizedState_mrt.size() << " \noptimizedInput.size" << optimizedInput_mrt.size() << std::endl;
-      // std::cout << "HumanoidInterface_->getCentroidalModelInfo().stateDim:" << HumanoidInterface_->getCentroidalModelInfo().stateDim << std::endl;
-
-      // std::cout << "HumanoidInterface_->getCentroidalModelInfo().inputDim:" << HumanoidInterface_->getCentroidalModelInfo().inputDim << std::endl;
-
-      // change controll mode
-      // const ModeSchedule mode_schedule = mrtRosInterface_->getCurrentModeSchedule();
-
-      // size_t last_mode = mode_schedule.modeBefore(currentObservation_.time);
-      // double last_time_switch = mode_schedule.timeBefore(currentObservation_.time);
-      // size_t next_mode = mode_schedule.modeNext(currentObservation_.time);
-      // double current_switch_time = mode_schedule.timeSwitch(currentObservation_.time);
-      // // std::cout << "currentObservation_.time"<<currentObservation_.time<<std::endl;
-      // // std::cout << "current_time"<<current_switch_time<<" last_time_switch"<<last_time_switch<<std::endl;
-
-      // if (currentObservation_.time > current_switch_time - 0.05)
-      // {
-      //   if (plannedMode_ == ModeNumber::FS)
-      //     joint_control_modes.segment(0, 6)[3] = 0;
-      //   else if (plannedMode_ == ModeNumber::SF)
-      //     joint_control_modes.segment(6, 6)[3] = 0;
-      // }
-      // else if(currentObservation_.time < last_time_switch + 0.05)
-      // {
-      //   if (last_mode == ModeNumber::FS)
-      //     joint_control_modes.segment(0, 6)[3] = 0;
-      //   else if (last_mode == ModeNumber::SF)
-      //     joint_control_modes.segment(6, 6)[3] = 0;
-      // }
+      
     }
     else
     {
@@ -762,10 +742,6 @@ namespace humanoid_controller
         // publish the message
         mpcPolicyPublisher_.publish(mpcPolicyMsg);
 
-        // trajectory_publisher_->publishTrajectory(state_trajectory);
-        // std::cout << "state_trajectory.size : " << state_trajectory.size() << std::endl;
-        // std::cout << "state_trajectory.front().size : " << state_trajectory.front().size() << std::endl;
-        // std::cout << "<<< New MPC policy starting at " << mpcMrtInterface_->getPolicy().timeTrajectory_.front() << "\n";
       }
 
       // Evaluate the current policy
@@ -775,45 +751,81 @@ namespace humanoid_controller
     // std::cout << "optimizedState_mrt:" << optimizedState_mrt.transpose() << " \noptimizedInput_mrt:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
     ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt_origin", optimizedState_mrt);
     ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_origin", optimizedInput_mrt);
-    
-    optimizedState_mrt_ = optimizedState_mrt;
-    optimizedInput_mrt_ = optimizedInput_mrt;
+    if (wbc_only_)
+    {
+      optimizedState_mrt = initial_status_;
+      optimizedInput_mrt = intail_input_;
+    }
+
+    if (is_simplified_model_)
+    {
+      // 躯干和腿部target
+      optimizedState2WBC_mrt_.head(info.stateDim) = optimizedState_mrt;
+      optimizedInput2WBC_mrt_.head(info.inputDim) = optimizedInput_mrt;
+      optimizedState2WBC_mrt_.tail(armNumReal_).setZero();
+      optimizedInput2WBC_mrt_.tail(armNumReal_).setZero();
+
+      // 手臂target前半部分
+      for (int i = 0; i < 2; i++)
+      {
+        optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            optimizedState_mrt.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+        optimizedInput2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            optimizedInput_mrt.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+      }
+
+      // 手臂target后半部分，从arm_joint_trajectory_获取
+      auto target_arm_pos = currentArmTargetTrajectories_.getDesiredState(currentObservation_.time);
+      if (target_arm_pos.size() == armNumReal_)
+      {
+        for (int i = 0; i < 2; i++)
+        {
+          optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
+              target_arm_pos.segment(i * armDofReal_ + armDofMPC_, armDofDiff_);
+        }
+      }
+    }
+    else
+    {
+      optimizedState2WBC_mrt_ = optimizedState_mrt;
+      optimizedInput2WBC_mrt_ = optimizedInput_mrt;
+      
+    }
+    currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
+
 
     // // use filter output
-    optimizedState_mrt_.tail(armNum_) = arm_joint_pos_filter_.update(optimizedState_mrt.tail(armNum_));
-    optimizedInput_mrt_.tail(armNum_) = arm_joint_vel_filter_.update(optimizedInput_mrt.tail(armNum_));
-
+    optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
+    optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
+    // optimizedInput2WBC_mrt_.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_) = mrt_joint_vel_filter_.update(optimizedInput_mrt.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_));
+    // ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_filtered", optimizedInput2WBC_mrt_);
+    
     // // use ik output 
     // vector_t filtered_arm_pose = arm_joint_pos_filter_.update(arm_joint_trajectory_.pos);
-    // optimizedState_mrt_.tail(armNum_) = filtered_arm_pose;
+    // optimizedState2WBC_mrt_.tail(armNum_) = filtered_arm_pose;
     // vector_t filter_input_vel = (filtered_arm_pose- arm_joint_pos_cmd_prev_)/dt_;
-    // optimizedInput_mrt_.tail(armNum_) = arm_joint_vel_filter_.update(filter_input_vel);
+    // optimizedInput2WBC_mrt_.tail(armNum_) = arm_joint_vel_filter_.update(filter_input_vel);
     // arm_joint_pos_cmd_prev_ = filtered_arm_pose;
   
     
-    if (wbc_only_)
-    {
-      optimizedState_mrt_ = initial_status_;
-      optimizedInput_mrt_ = intail_input_;
-    }
+    
     if(use_ros_arm_joint_trajectory_)
     {
       // TODO: feedback in planner
       // auto arm_pos = currentObservation_.state.tail(armNum_); 
-      // optimizedInput_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
-      // optimizedState_mrt_.tail(armNum_) = arm_pos + optimizedInput_mrt_.tail(armNum_) * dt_;
+      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
+      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
       //直接覆盖mpc每只手臂末3位角度
-      optimizedState_mrt_.segment<3>(24+4) = arm_joint_trajectory_.pos.segment<3>(4);
-      optimizedState_mrt_.segment<3>(24+7+4) = arm_joint_trajectory_.pos.segment<3>(7+4);
+      optimizedState2WBC_mrt_.segment<3>(24+4) = arm_joint_trajectory_.pos.segment<3>(4);
+      optimizedState2WBC_mrt_.segment<3>(24+7+4) = arm_joint_trajectory_.pos.segment<3>(7+4);
       // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
     }
-    for(int i=0;i<info.actuatedDofNum;i++)
-    {
-      optimizedState_mrt_(12+i) = std::max(joint_state_limit_(i, 0), std::min(optimizedState_mrt_[12+i], joint_state_limit_(i, 1)));
-    }
+    // for(int i=0;i<info.actuatedDofNum;i++)
+    // {
+    //   optimizedState2WBC_mrt_(12+i) = std::max(joint_state_limit_(i, 0), std::min(optimizedState2WBC_mrt_[12+i], joint_state_limit_(i, 1)));
+    // }
      
     optimized_mode_ = plannedMode_;
-    currentObservation_.input = optimizedInput_mrt_;
     // currentObservation_.input.tail(info.actuatedDofNum) = measuredRbdState_.tail(info.actuatedDofNum);
 
     // Whole body control
@@ -826,12 +838,6 @@ namespace humanoid_controller
                                   { return flag; });
     if (lf_contact && rf_contact)
     {
-      // TODO:站立也使用mrt获取到的optimizedState
-      // optimizedInput_mrt_.setZero();
-
-      // optimizedState_mrt_.segment(6, 6) = currentObservation_.state.segment<6>(6);
-      // optimizedState_mrt_.segment(6 + 6, jointNum_) = defalutJointPos_;
-      // plannedMode_ = 3;
       wbc_->setStanceMode(true);
     }
     else
@@ -840,44 +846,34 @@ namespace humanoid_controller
     }
     wbcTimer_.startTimer();
     const auto t3 = Clock::now();
-    // ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt", optimizedInput_mrt_);
-    for(int i=0;i<info.numThreeDofContacts;i++)
+    for(int i=0;i<infoWBC.numThreeDofContacts;i++)
     {
-      ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/force_" + std::to_string(i+1), optimizedInput_mrt_.segment(3 * i, 3));
+      ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/force_" + std::to_string(i+1), optimizedInput2WBC_mrt_.segment(3 * i, 3));
     }
-    ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/joint_vel", optimizedInput_mrt_.segment(3 * info.numThreeDofContacts, info.actuatedDofNum));
+    ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/joint_vel", optimizedInput2WBC_mrt_.segment(3 * infoWBC.numThreeDofContacts, infoWBC.actuatedDofNum));
     
-    // ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt", optimizedState_mrt_);
-    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/com/linear_vel_xyz", optimizedState_mrt_.head<3>());
-    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/com/angular_vel_xyz", optimizedState_mrt_.segment<3>(3));
-    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/base/pos_xyz", optimizedState_mrt_.segment<3>(6));
-    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/base/angular_zyx", optimizedState_mrt_.segment<3>(9));
-    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/joint_pos", optimizedState_mrt_.segment(12, info.actuatedDofNum));
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/com/linear_vel_xyz", optimizedState2WBC_mrt_.head<3>());
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/com/angular_vel_xyz", optimizedState2WBC_mrt_.segment<3>(3));
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/base/pos_xyz", optimizedState2WBC_mrt_.segment<3>(6));
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/base/angular_zyx", optimizedState2WBC_mrt_.segment<3>(9));
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/joint_pos", optimizedState2WBC_mrt_.segment(12, infoWBC.actuatedDofNum));
     ros_logger_->publishValue("/humanoid_controller/optimized_mode", static_cast<double>(optimized_mode_));
 
-    // // measuredRbdState_.segment(0, 3) = initial_status_.segment(9, 3);
-    // measuredRbdState_.segment(3, 3) = initial_status_.segment(6, 3);
 
-    // measuredRbdState_.segment(6, info.actuatedDofNum) = initial_status_.tail( info.actuatedDofNum);
-    // measuredRbdState_.segment(info.generalizedCoordinatesNum, info.generalizedCoordinatesNum).setZero();
-    // std::cout << "measuredRbdState_:\n"
-    //           << std::fixed << std::setprecision(5) << measuredRbdState_.transpose() << std::endl;
-    // std::cout << "optimizedState_mrt_:\n"
-    //           << std::fixed << std::setprecision(5) << optimizedState_mrt_.transpose() << std::endl;
-    // std::cout << "optimizedInput_mrt_:\n"
-    //           << std::fixed << std::setprecision(5) << optimizedInput_mrt_.transpose() << std::endl;
-    vector_t x = wbc_->update(optimizedState_mrt_, optimizedInput_mrt_, measuredRbdState_, plannedMode_, period.toSec(), is_mpc_updated);
+    
+    // *************************** WBC **********************************
+    vector_t x = wbc_->update(optimizedState2WBC_mrt_, optimizedInput2WBC_mrt_, measuredRbdStateReal_, plannedMode_, period.toSec(), is_mpc_updated);
     // wbc_->updateVd(jointAcc_);
     const auto t4 = Clock::now();
     wbcTimer_.endTimer();
 
     // 决策变量, 6*body_acc + 12*joint_acc + 3x4*contact_force + 12*torque = 42
-    const vector_t &torque = x.tail(info.actuatedDofNum);
-    const vector_t &wbc_planned_joint_acc = x.segment(6, info.actuatedDofNum);
+    vector_t torque = x.tail(infoWBC.actuatedDofNum);
+    const vector_t &wbc_planned_joint_acc = x.segment(6, infoWBC.actuatedDofNum);
     const vector_t &wbc_planned_body_acc = x.head(6);
     // std::cout << "wbc_planned_joint_acc:" << wbc_planned_joint_acc.transpose() << std::endl;
     // std::cout << "wbc_planned_body_acc:" << wbc_planned_body_acc.transpose() << std::endl;
-    const vector_t &wbc_planned_contact_force = x.segment(6 + info.actuatedDofNum, wbc_->getContactForceSize());
+    const vector_t &wbc_planned_contact_force = x.segment(6 + infoWBC.actuatedDofNum, wbc_->getContactForceSize());
     // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
     // std::cout << "torque:" << torque.transpose() << std::endl;
     ros_logger_->publishVector("/humanoid_controller/torque", torque);
@@ -888,17 +884,29 @@ namespace humanoid_controller
     ros_logger_->publishVector("/humanoid_controller/wbc_planned_contact_force/right_foot", wbc_planned_contact_force.tail<12>());
     // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
 
-    vector_t posDes = centroidal_model::getJointAngles(optimizedState_mrt_, HumanoidInterface_->getCentroidalModelInfo());
-    vector_t velDes = centroidal_model::getJointVelocities(optimizedInput_mrt_, HumanoidInterface_->getCentroidalModelInfo());
+    vector_t posDes = centroidal_model::getJointAngles(optimizedState2WBC_mrt_, infoWBC);
+    vector_t velDes = centroidal_model::getJointVelocities(optimizedInput2WBC_mrt_, infoWBC);
 
     scalar_t dt = period.toSec();
-    posDes = posDes + 0.5 * wbc_planned_joint_acc * dt * dt;
-    velDes = velDes + wbc_planned_joint_acc * dt;
+    // bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
+    // if (is_joint_acc_out_of_range)
+    // {
+    //   std::cerr << "wbc_planned_joint_acc is out of range, reset it to zero." << std::endl;
+    //   std::cerr << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
+    //   torque = output_tau_;
+    // }
+    // else
+    {
+      posDes = posDes + 0.5 * wbc_planned_joint_acc * dt * dt;
+      velDes = velDes + wbc_planned_joint_acc * dt;
+    }
     // ros_logger_->publishVector("/humanoid_controller/posDes", posDes);
     // ros_logger_->publishVector("/humanoid_controller/velDes", velDes);
+    // ***************************** WBC END **********************************
+
 
     // Safety check, if failed, stop the controller
-    if (!safetyChecker_->check(currentObservation_, optimizedState_mrt_, optimizedInput_mrt_))
+    if (!safetyChecker_->check(currentObservation_, optimizedState_mrt, optimizedInput_mrt))
     {
       ROS_ERROR_STREAM("[humanoid Controller] Safety check failed, stopping the controller.");
       std_msgs::Bool stop_msg;
@@ -908,32 +916,36 @@ namespace humanoid_controller
       // TODO: send the stop command to hardware interface
       return;
     }
+
+
+    {
+      output_pos_ = posDes;
+      output_vel_ = velDes;
+      output_tau_ = torque;
+    }
     vector_t kp_ = joint_kp_, kd_ = joint_kd_;
     if (currentObservation_.mode != ModeNumber::SS)
     {
       kp_ = joint_kp_walking_;
       kd_ = joint_kd_walking_;
     }
-    auto current_jointPos = measuredRbdState_.segment(6, info.actuatedDofNum);
-    auto current_jointVel = measuredRbdState_.segment(6 + info.generalizedCoordinatesNum, info.actuatedDofNum);
 
-    output_tau_ = torque;
 
     const auto t5 = Clock::now();
 
     kuavo_msgs::jointCmd jointCmdMsg;
     jointCmdMsg.header.stamp = time;
     // std::cout << "jointNum_:  " << jointNum_+armNum_ << "\n\n";
-    for (int i1 = 0; i1 < jointNum_; ++i1)
+    for (int i1 = 0; i1 < jointNumReal_; ++i1)
     {
-      jointCmdMsg.joint_q.push_back(posDes(i1));
-      jointCmdMsg.joint_v.push_back(velDes(i1));
+      jointCmdMsg.joint_q.push_back(output_pos_(i1));
+      jointCmdMsg.joint_v.push_back(output_vel_(i1));
       jointCmdMsg.tau.push_back(output_tau_(i1));
       jointCmdMsg.tau_ratio.push_back(1);
       jointCmdMsg.joint_kp.push_back(joint_kp_[i1]);
       jointCmdMsg.joint_kd.push_back(joint_kd_[i1]);
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[i1]);
-      jointCmdMsg.control_modes.push_back(joint_control_modes[i1]);
+      jointCmdMsg.control_modes.push_back(joint_control_modes_[i1]);
     }
 
     ModeSchedule current_mode_schedule = mrtRosInterface_->getCurrentModeSchedule();
@@ -956,11 +968,7 @@ namespace humanoid_controller
     bool is_stance_mode_ = is_SS_mode_after(current_mode_schedule);
 
     // 膝关节全程力控
-    if (!is_stance_mode_) // 当前不是stance
-    {
-      jointCmdMsg.control_modes[3] = 0;
-      jointCmdMsg.control_modes[9] = 0;
-    }
+
     const auto &current_time = currentObservation_.time - dt_;
     size_t current_mode = currentObservation_.mode;
     size_t before_mode = current_mode_schedule.modeBefore(current_time);
@@ -1022,25 +1030,56 @@ namespace humanoid_controller
     }
 
     // 补全手臂的Cmd维度
-    for(int i2 = 0; i2 < armNum_; ++i2)
+    for(int i2 = 0; i2 < armNumReal_; ++i2)
     {
-      jointCmdMsg.joint_q.push_back(posDes(jointNum_+i2));
-      jointCmdMsg.joint_v.push_back(velDes(jointNum_+i2));
+      jointCmdMsg.joint_q.push_back(output_pos_(jointNum_+i2));
+      jointCmdMsg.joint_v.push_back(output_vel_(jointNum_+i2));
       jointCmdMsg.tau.push_back(output_tau_(jointNum_+i2));
       jointCmdMsg.tau_ratio.push_back(1);
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNum_+i2]);
-      jointCmdMsg.control_modes.push_back(joint_control_modes[i2]);
+      jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNum_+i2]);
     }
-    jointCmdPub_.publish(jointCmdMsg);
 
+    // 补充头部维度
+    // 计算头部反馈力
+    if (headNum_ > 0)
+    {
+      vector_t get_head_pos = vector_t::Zero(headNum_);
+      head_mtx.lock();
+      get_head_pos = desire_head_pos_;
+      head_mtx.unlock();
+      auto &hardware_settings = kuavo_settings_.hardware_settings;
+      vector_t head_feedback_tau = vector_t::Zero(headNum_);
+      vector_t head_feedback_vel = vector_t::Zero(headNum_);
+      if (!is_real_) // 实物不需要头部反馈力，来自kuavo仓库的移植
+        head_feedback_tau = head_kp_.cwiseProduct(get_head_pos - sensor_data_head_.jointPos_) + head_kd_.cwiseProduct(-sensor_data_head_.jointVel_);
+      for (int i3 = 0; i3 < headNum_; ++i3)
+      {
+        auto cur_head_pos = sensor_data_head_.jointPos_ * TO_DEGREE;
+        auto vel = (get_head_pos[i3] - sensor_data_head_.jointPos_[i3]) * TO_DEGREE / dt_ * ruiwo_motor_velocities_factor_;
+        double head_limit_vel = hardware_settings.joint_velocity_limits[jointNum_ + armNumReal_ + i3];
+
+        vel = std::clamp(vel, -head_limit_vel, head_limit_vel) * TO_RADIAN;
+        jointCmdMsg.joint_q.push_back(get_head_pos(i3));
+        jointCmdMsg.joint_v.push_back(0);
+        jointCmdMsg.tau.push_back(head_feedback_tau(i3));
+        jointCmdMsg.tau_ratio.push_back(1);
+        jointCmdMsg.tau_max.push_back(10);
+        jointCmdMsg.control_modes.push_back(2);
+      }
+      robotVisualizer_->updateHeadJointPositions(sensor_data_head_.jointPos_);
+    }
+
+    jointCmdPub_.publish(jointCmdMsg);
+    
     // Visualization
+    robotVisualizer_->updateSimplifiedArmPositions(simplifiedJointPos_);
     if (use_external_mpc_)
       robotVisualizer_->update(currentObservation_, mrtRosInterface_->getPolicy(), mrtRosInterface_->getCommand());
     else
       robotVisualizer_->update(currentObservation_, mpcMrtInterface_->getPolicy(), mpcMrtInterface_->getCommand());
 
     // Publish the observation. Only needed for the command interface
-    // observationPublisher_.publish(ros_msg_conversions::createObservationMsg(currentObservation_));
     const auto t6 = Clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count() > 1000)
     {
@@ -1079,40 +1118,34 @@ namespace humanoid_controller
       applySensorData(data);
     }
   }
-  void humanoidController::swingArmPlanner(double st, double current_time, double stepDuration, Eigen::VectorXd &desire_arm_q, Eigen::VectorXd &desire_arm_v)
-  {
-    const double amplitude = swing_arm_gain_; // 曲线振幅
-    static double angle_p_prev = 0, angle_elbow_prev = 0;
-    double angle_p, l_angle_elbow, r_angle_elbow;
-    double phase_time = current_time - st;
-    // if (phase_time < stepDuration / 4) // 起摆
-    // {
-    //   angle_p = amplitude * std::sin(M_PI * 2 / stepDuration * phase_time);
-    //   l_angle_elbow = -amplitude * swing_elbow_scale_ * (std::sin(M_PI * 2 / stepDuration * phase_time));
-    //   r_angle_elbow = 0;
-    // }
-    // else
-    {
-      angle_p = amplitude * std::sin(M_PI * 2 / stepDuration * phase_time);
-      l_angle_elbow = -amplitude * swing_elbow_scale_ * (std::sin(M_PI * 2 / stepDuration * phase_time) + 1) / 2;
-      r_angle_elbow = -amplitude * swing_elbow_scale_ * (-std::sin(M_PI * 2 / stepDuration * phase_time) + 1) / 2;
-    }
-
-    desire_arm_q[0] = -angle_p;
-    desire_arm_q[3] = std::min(l_angle_elbow, 0.0);
-    desire_arm_q[jointArmNum_ / 2] = angle_p;
-    desire_arm_q[jointArmNum_ / 2 + 3] = std::min(r_angle_elbow, 0.0);
-
-    // 计算手臂速度
-    desire_arm_v = (desire_arm_q - desire_arm_q_prev_) / dt_;
-    desire_arm_q_prev_ = desire_arm_q;
-  }
+  
   void humanoidController::applySensorData(const SensorData &data)
   {
-    jointPos_ = data.jointPos_;
-    jointVel_ = data.jointVel_;
-    jointAcc_ = data.jointAcc_;
-    jointCurrent_ = data.jointCurrent_;
+    if (is_simplified_model_)// 简化模型, 需要将实物维度转为MPC维度
+    {
+      jointPos_.head(jointNum_) = data.jointPos_.head(jointNum_);
+      jointVel_.head(jointNum_) = data.jointVel_.head(jointNum_);
+      jointAcc_.head(jointNum_) = data.jointAcc_.head(jointNum_);
+      jointCurrent_.head(jointNum_) = data.jointCurrent_.head(jointNum_);
+
+      for (int i = 0; i < 2; i++)
+      {
+
+        jointPos_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointPos_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
+        jointVel_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointVel_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
+        jointAcc_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointAcc_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
+        jointCurrent_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointCurrent_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
+        simplifiedJointPos_.segment(armDofDiff_ * i, armDofDiff_) = data.jointPos_.segment(jointNum_ + armDofReal_ * i + armDofMPC_, armDofDiff_);
+      }
+    }
+    else
+    {
+      jointPos_ = data.jointPos_;
+      jointVel_ = data.jointVel_;
+      jointAcc_ = data.jointAcc_;
+      jointCurrent_ = data.jointCurrent_;
+    }
+
     quat_ = data.quat_;
     angularVel_ = data.angularVel_;
     linearAccel_ = data.linearAccel_;
@@ -1125,6 +1158,11 @@ namespace humanoid_controller
   }
   void humanoidController::updateStateEstimation(const ros::Time &time, bool is_init)
   {
+    if (reset_estimator_)
+    {
+      stateEstimate_->reset();
+      reset_estimator_ = false;
+    }
     // vector_t jointPos(jointNum_+armNum_), jointVel(jointNum_+armNum_), jointCurrent(jointNum_+armNum_);
     // contact_flag_t contacts;
     // Eigen::Quaternion<scalar_t> quat;
@@ -1150,7 +1188,7 @@ namespace humanoid_controller
       applySensorData(sensors_data);
       stateEstimate_->set_intial_state(currentObservation_.state);
       measuredRbdState_ = stateEstimate_->getRbdState();
-      std::cout << "initial measuredRbdState_:" << measuredRbdState_.transpose() << std::endl;
+      // std::cout << "initial measuredRbdState_:" << measuredRbdState_.transpose() << std::endl;
       // clear the sensor data queue
       // sensor_data_mutex_.lock();
       // while (!sensorDataQueue.empty())
@@ -1175,7 +1213,6 @@ namespace humanoid_controller
 
     stateEstimate_->updateMode(est_mode);
     stateEstimate_->updateGait(gaitManagerPtr_->getGaitName(currentObservation_.time));
-
     // rbdState_: Angular(zyx),pos(xyz),jointPos[info_.actuatedDofNum],angularVel(zyx),linervel(xyz),jointVel[info_.actuatedDofNum]
     if (diff_time > 0.00005 || is_init)
     {
@@ -1188,23 +1225,13 @@ namespace humanoid_controller
         joint_filter_ptr_->update(measuredRbdState_, updated_joint_pos, updated_joint_vel, updated_joint_current, output_tau_, est_mode);
       }
 #endif
-      // ros_logger_->publishVector("/humanoid_controller/updated_joint_pos", updated_joint_pos);
-      // ros_logger_->publishVector("/humanoid_controller/updated_joint_vel", updated_joint_vel);
       stateEstimate_->updateJointStates(updated_joint_pos, updated_joint_vel); // 使用关节滤波之后的jointPos和jointVel更新状态估计器
       measuredRbdState_ = stateEstimate_->update(time, period);                // angle(zyx),pos(xyz),jointPos[info_.actuatedDofNum],angularVel(zyx),linervel(xyz),jointVel[info_.actuatedDofNum]
       currentObservation_.time += period.toSec();
     }
-    // ros_logger_->publishVector("/humanoid_controller/measuredRbdState", measuredRbdState_);
-    ros_logger_->publishVector("/state_estimate/base/angular_zyx", measuredRbdState_.segment(0, 3));
-    ros_logger_->publishVector("/state_estimate/base/pos_xyz", measuredRbdState_.segment(3, 3));
+    ros_logger_->publishVector("/state_estimate/measuredRbdState", measuredRbdState_);
     auto &info = HumanoidInterface_->getCentroidalModelInfo();
-    ros_logger_->publishVector("/state_estimate/joint/pos", measuredRbdState_.segment(6, info.actuatedDofNum));
-    ros_logger_->publishVector("/state_estimate/base/angular_vel_zyx", measuredRbdState_.segment(6 + info.actuatedDofNum, 3));
-    ros_logger_->publishVector("/state_estimate/base/linear_vel", measuredRbdState_.segment(9 + info.actuatedDofNum, 3));
-    ros_logger_->publishVector("/state_estimate/joint/vel", measuredRbdState_.segment(12 + info.actuatedDofNum, 3));
-    // else
-    //   std::cout << "diff_time too small, skip update state estimate" << std::endl;
-    // std::cout << "measuredRbdState_:" << measuredRbdState_.transpose() << std::endl;
+
 
     scalar_t yawLast = currentObservation_.state(9);
     currentObservation_.state = rbdConversions_->computeCentroidalStateFromRbdModel(measuredRbdState_);
@@ -1221,6 +1248,64 @@ namespace humanoid_controller
     // TODO: 暂时用plannedMode_代替，需要在接触传感器可靠之后修改为stateEstimate_->getMode()
     // currentObservation_.mode = plannedMode_;
     currentObservation_.mode = est_mode;
+    if (is_simplified_model_)
+    {
+
+      for (int i = 0; i < 2; i++)// qv
+      {
+        // 躯干+腿部自由度
+        measuredRbdStateReal_.segment(centroidalModelInfoWBC_.generalizedCoordinatesNum * i, 6 + jointNum_) =
+            measuredRbdState_.segment(info.generalizedCoordinatesNum * i, 6 + jointNum_);
+
+        // 共有的手臂关节
+        int arm_start_index = centroidalModelInfoWBC_.generalizedCoordinatesNum * i + 6 + jointNum_;
+        int arm_start_index_mpc = info.generalizedCoordinatesNum * i + 6 + jointNum_ ;
+        for (int j = 0; j < 2; j++) // 左右手
+        {
+          measuredRbdStateReal_.segment(arm_start_index + armDofReal_ * j, armDofMPC_) =
+              measuredRbdState_.segment(arm_start_index_mpc + armDofMPC_ * j, armDofMPC_);
+
+          // 简化的手臂关节部分从传感器数据获取
+          vector_t joint_qv(sensors_data.jointPos_.size() * 2);
+          joint_qv << sensors_data.jointPos_, sensors_data.jointVel_;
+          int sensors_joint_num = sensors_data.jointPos_.size();
+          measuredRbdStateReal_.segment(arm_start_index + armDofReal_ * j + armDofMPC_, armDofDiff_) =
+              joint_qv.segment(sensors_joint_num * i + jointNum_ + armDofReal_ * j + armDofMPC_, armDofDiff_);
+        }
+      }
+
+       // obs
+      currentObservationWBC_.state.head(info.stateDim) = currentObservation_.state;
+      currentObservationWBC_.input.head(info.inputDim) = currentObservation_.input;
+      currentObservationWBC_.state.tail(armNumReal_).setZero();
+      currentObservationWBC_.input.tail(armNumReal_).setZero();
+      // 共有部分
+      for (int i = 0; i < 2; i++)
+      {
+        currentObservationWBC_.state.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            currentObservation_.state.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+        currentObservationWBC_.input.tail(armNumReal_).segment(i * armDofReal_, armDofMPC_) =
+            currentObservation_.input.tail(armNum_).segment(i * armDofMPC_, armDofMPC_);
+      }
+      // 手臂target后半简化部分
+      int arm_start_index = 6 + jointNum_;
+      for (int i = 0; i < 2; i++)
+      {
+        currentObservationWBC_.state.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
+            measuredRbdStateReal_.segment(arm_start_index + armDofReal_ * i + armDofMPC_, armDofDiff_);
+      }
+
+      currentObservationWBC_.time = currentObservation_.time;
+      currentObservationWBC_.mode = currentObservation_.mode;
+
+    }
+    else
+    {
+      currentObservationWBC_ = currentObservation_;
+      measuredRbdStateReal_ = measuredRbdState_;
+    }
+    wbc_observation_publisher_.publish(ros_msg_conversions::createObservationMsg(currentObservationWBC_));
+
   }
 
   humanoidController::~humanoidController()
@@ -1246,6 +1331,26 @@ namespace humanoid_controller
     HumanoidInterface_ = std::make_shared<HumanoidInterface>(taskFile, urdfFile, referenceFile, gaitCommandFile, robot_version_int);
     rbdConversions_ = std::make_shared<CentroidalModelRbdConversions>(HumanoidInterface_->getPinocchioInterface(),
                                                                       HumanoidInterface_->getCentroidalModelInfo());
+    // **************** create the centroidal model for WBC ***********
+    // PinocchioInterface
+    auto &modelSettings_ = HumanoidInterface_->modelSettings();
+    pinocchioInterfaceWBCPtr_.reset(new PinocchioInterface(centroidal_model::createPinocchioInterface(urdfFile, modelSettings_.jointNamesReal)));
+
+    vector_t defaultJointState(pinocchioInterfaceWBCPtr_->getModel().nq - 6);
+    defaultJointState.setZero();
+    auto drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(RobotVersion(robot_version_int / 10, robot_version_int % 10), true, 2e-3);
+    defaultJointState.head(jointNum_) = drake_interface_->getDefaultJointState();
+
+    // CentroidalModelInfo
+    centroidalModelInfoWBC_ = centroidal_model::createCentroidalModelInfo(
+        *pinocchioInterfaceWBCPtr_, centroidal_model::loadCentroidalType(taskFile), defaultJointState, modelSettings_.contactNames3DoF,
+        modelSettings_.contactNames6DoF);
+    CentroidalModelPinocchioMapping pinocchioMapping(centroidalModelInfoWBC_);
+
+    eeKinematicsWBCPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfaceWBCPtr_, pinocchioMapping,
+                                                                    modelSettings_.contactNames3DoF);
+    eeKinematicsWBCPtr_->setPinocchioInterface(*pinocchioInterfaceWBCPtr_);
+  
   }
 
   void humanoidController::setupMpc()
@@ -1258,16 +1363,16 @@ namespace humanoid_controller
     mpc_ = std::make_shared<GaussNewtonDDP_MPC>(HumanoidInterface_->mpcSettings(), HumanoidInterface_->ddpSettings(), HumanoidInterface_->getRollout(),
                                                 HumanoidInterface_->getOptimalControlProblem(), HumanoidInterface_->getInitializer());
 
-    ros::NodeHandle nh;
+
     // Gait receiver
     auto gaitReceiverPtr =
-        std::make_shared<GaitReceiver>(nh, HumanoidInterface_->getSwitchedModelReferenceManagerPtr(), robotName_);
+        std::make_shared<GaitReceiver>(controllerNh_, HumanoidInterface_->getSwitchedModelReferenceManagerPtr(), robotName_);
     // ROS ReferenceManager
     auto rosReferenceManagerPtr = std::make_shared<RosReferenceManager>(robotName_, HumanoidInterface_->getReferenceManagerPtr());
-    rosReferenceManagerPtr->subscribe(nh);
+    rosReferenceManagerPtr->subscribe(controllerNh_);
     mpc_->getSolverPtr()->addSynchronizedModule(gaitReceiverPtr);
     mpc_->getSolverPtr()->setReferenceManager(rosReferenceManagerPtr);
-    observationPublisher_ = nh.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_mpc_observation", 1);
+    observationPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_mpc_observation", 1);
   }
 
   void humanoidController::setupMrt()

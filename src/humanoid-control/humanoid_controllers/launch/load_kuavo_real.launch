@@ -1,12 +1,20 @@
 <?xml version="1.0" ?>
 
 <launch>
+    <!-- 输出日志格式 -->
     <env name="ROSCONSOLE_FORMAT" value="[${severity} ][${time:%Y-%m-%d-%H:%M:%S}][${node}]: ${message}"/>
-    <arg name="robot_version"      default="40"/>
+
+    <arg name="vr_remote_control" default="false"/>
     <arg name="robot_type"         default="humanoid"/>
     <arg name="rviz"                default="false" />
-    <arg name="description_name"   default="humanoid_description"/>
     <arg name="multiplot"          default="false"/>
+    <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
+    <!-- load the robot version manager -->
+    <include file="$(find humanoid_controllers)/launch/robot_version_manager.launch">
+      <arg name="robot_version" value="$(arg robot_version)"/>
+      <arg name="rviz" value="$(arg rviz)"/>
+    </include>
+
     <arg name="use_external_mpc"   default="true"/>
     <arg name="wbc_frequency"      default="500"/>
     <arg name="sensor_frequency"   default="500"/>
@@ -16,19 +24,9 @@
     <arg name="use_joint_filter"   default="false"/>
     <arg name="wbc_only"           default="false"/>
     <arg name="joystick_type"      default="bt2"/>
-    <arg name="taskFile"           default="$(find humanoid_interface)/config/mpc/task_all_arms.info"/>
     <!-- The reference related config file of the robot -->
-    <arg name="referenceFile"     default="$(find humanoid_interface)/config/command/reference_all_arms.info"/>
-    <arg name="dynamicQrFile"      default="$(find humanoid_interface)/config/mpc/dynamic_qr.info"/>
-    <arg name="arm_move_spd"      default="3.0"/>
-
+    <arg name="start_way"         default="manual"/>
     <!-- The file defining gait definition -->
-    <arg name="gaitCommandFile"   default="$(find humanoid_interface)/config/command/gait.info"/>
-
-    <include file="$(find humanoid_interface_ros)/launch/robot_version_manager_with_arm.launch">
-      <arg name="robot_version" value="$(arg robot_version)"/>
-      <arg name="rviz" value="$(arg rviz)"/>
-    </include>
 
     <!-- multiplot -->
     <group if="$(arg multiplot)">
@@ -38,21 +36,16 @@
     <param name="wbc_only"          value="$(arg wbc_only)"/>
     <!-- make the files into global parameters -->
     <param name="multiplot"         value="$(arg multiplot)"/>
-    <param name="taskFile"          value="$(arg taskFile)" />
-    <param name="referenceFile"     value="$(arg referenceFile)" />
-    <param name="gaitCommandFile"   value="$(arg gaitCommandFile)"/>
-    
     <param name="use_external_mpc"   value="$(arg use_external_mpc)"/>
     <param name="wbc_frequency"   value="$(arg wbc_frequency)"/>
     <param name="sensor_frequency"   value="$(arg sensor_frequency)"/>
     <param name="with_estimation"    value="$(arg with_estimation)"/>
     <param name="estimator_type"     value="$(arg estimator_type)"/>
     <param name="use_joint_filter"     value="$(arg use_joint_filter)"/>
-    <param name="dynamicQrFile"     value="$(arg dynamicQrFile)"/>
     <param name="joystick_type"  value="$(arg joystick_type)"/>
 
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
-    <param name="arm_move_spd"  value="$(arg arm_move_spd)"/>
+    <param name="start_way"  value="$(arg start_way)"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">
@@ -60,29 +53,30 @@
     </group>
 
     <group unless="$(arg use_joystick)">
-      <node pkg="humanoid_interface_ros" type="humanoid_target_with_arm" name="humanoid_target_with_arm"
-            output="screen" launch-prefix="gnome-terminal --"/>
 
       <node pkg="humanoid_interface_ros" type="humanoid_gait_command" name="humanoid_gait_command"
-            output="screen" launch-prefix="gnome-terminal --"/>
+            output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
     </group>
-    <node pkg="humanoid_interface_ros" type="humanoid_VR_hand_control" name="humanoid_VR_hand_control" output="screen" launch-prefix=""/>
+    <node pkg="humanoid_interface_ros" type="humanoid_VR_hand_control" name="humanoid_VR_hand_control" output="screen"/>
     <node pkg="humanoid_interface_ros" type="humanoid_quest_control_with_arm" name="humanoid_quest_control_with_arm" output="screen"/>
-
     <node pkg="humanoid_interface_ros" type="humanoid_Arm_time_target_control" name="humanoid_Arm_time_target_control" output="screen"/>
-
-    <!-- <node pkg="humanoid_controllers" type="cheat_controller_node" name="cheat_controller"
-          output="screen"/> -->
 
     <!-- nodelet manager -->
     <arg name="real" default="true" />
     <arg name="log" default="true" />
     <arg name="cali" default="false" />
+    <arg name="cali_arm" default="false" />
+    <arg name="cali_leg" default="false" />
+
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />
     <param name="cali" value="$(arg cali)" />
-   <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh">
-        <param name="num_worker_threads" type="int" value="8" />
+    <param name="cali_arm" value="$(arg cali_arm)" />
+    <param name="cali_leg" value="$(arg cali_leg)" />
+   <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" 
+       output="screen" required="true" clear_params="true"
+       launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh">
+        <param name="num_worker_threads" type="int" value="10" />
     </node>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" required="true" />
@@ -91,7 +85,9 @@
     <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
     <group if="$(arg use_joystick)">
       <group if="$(eval arg('joystick_type') == 'h12')">
-        <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch"/>
+        <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">
+          <arg name="start_way" value="$(arg start_way)"/>
+        </include>
       </group>
       <group unless="$(eval arg('joystick_type') == 'h12')">
         <include file="$(find humanoid_controllers)/launch/joy/joy_control_bt.launch">
@@ -100,4 +96,12 @@
       </group>
     </group>
 
+    <!--publish system state  -->
+    <node pkg="humanoid_controllers" type="system_info_publisher.py" name="system_info_publisher" />
+    <!-- monitor node -->
+    <node pkg="kuavo_monitor" type="kuavo_monitor_node" name="kuavo_monitor_node" />
+
+    <group if="$(arg vr_remote_control)">
+      <include file="$(find noitom_hi5_hand_udp_python)/launch/launch_quest3_ik.launch"/>
+    </group>
 </launch>

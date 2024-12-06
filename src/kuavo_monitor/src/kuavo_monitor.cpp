@@ -2,6 +2,7 @@
 #include "kuavo_monitor/package_path.h"
 
 #include <stdlib.h>
+#include <yaml-cpp/yaml.h>
 
 namespace HighlyDynamic
 {
@@ -14,8 +15,8 @@ namespace HighlyDynamic
           mpc_frequency_des_(100.0),
           wbc_frequency_des_(wbc_frequency_des),
           mpc_frequency_bias_percent_(20.0),
-          wbc_frequency_bias_percent_(20.0),
-          mpc_policy_pub_(nh)
+          wbc_frequency_bias_percent_(20.0)
+        //   mpc_policy_pub_(nh)
     {
         loadParams(taskfile, true);
         mpc_frequency_analyzer_ = DataAnalyzer(total_num_, recent_num_, "MPC Frequency", print_warning_);
@@ -29,15 +30,26 @@ namespace HighlyDynamic
         wbc_frequency_sub_ = nh_.subscribe("/monitor/frequency/wbc", 1, &KuavoMonitor::wbcFrequencyCallback, this);
         wbc_time_cost_sub_ = nh_.subscribe("/monitor/time_cost/wbc", 1, &KuavoMonitor::wbcTimecostCallback, this);
 
-        mpc_policy_pub_.run();
+        // mpc_policy_pub_.run();
     }
 
     void KuavoMonitor::run()
     {
         const std::string path = getPath();
-        std::string command = "bash " + path + "/script/record_dstat.sh";
-        int result = system(command.c_str());
-        ros::spin();
+        // std::string command = "bash " + path + "/script/monitor_NUC.sh";
+        // int result = system(command.c_str());
+        YAML::Node config = YAML::LoadFile(path + "/cfg/cfg.yaml");
+
+        ros::Rate rate(config["monitor_rate"].as<int>());
+        auto node_list = config["node_list"].as<std::vector<std::string>>();
+        while(ros::ok())
+        {
+          for(auto node_name : node_list)
+            if(!doesNodeExist(node_name))
+              ROS_ERROR("Node %s is not running", node_name.c_str());
+          ros::spinOnce();
+          rate.sleep();
+        }
     }
 
     void KuavoMonitor::mpcFrequencyCallback(const std_msgs::Float64 &msg)
@@ -92,5 +104,20 @@ namespace HighlyDynamic
         {
             std::cerr << " #### =============================================================================\n";
         }
+    }
+
+    bool KuavoMonitor::doesNodeExist(const std::string& node_name) {
+      // 获取当前活跃的节点列表
+      ros::V_string node_list;
+      if (ros::master::getNodes(node_list))
+      {
+        for (const auto& node : node_list)
+        {
+          // std::cout << "Node: " << node << std::endl;
+          if (node == node_name)
+              return true; // 节点存在
+        }
+      }
+      return false; // 节点不存在
     }
 }

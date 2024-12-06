@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/6/24.
-//
-
 #include <pinocchio/fwd.hpp> // forward declarations must be included first.
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
@@ -136,8 +132,17 @@ namespace humanoid_controller
 
   bool humanoidController::init(HybridJointInterface *robot_hw, ros::NodeHandle &controller_nh, bool is_nodelet_node)
   {
+    int robot_version_int;
+    RobotVersion robot_version(3, 4);
+    if (controllerNh_.hasParam("/robot_version"))
+    {
+        controllerNh_.getParam("/robot_version", robot_version_int);
+        int major = robot_version_int / 10;
+        int minor = robot_version_int % 10;
+        robot_version = RobotVersion(major, minor);
+    }
     is_nodelet_node_ = is_nodelet_node;
-    drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(RobotVersion(3, 4), true, 2e-3);
+    drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(robot_version, true, 2e-3);
     kuavo_settings_ = drake_interface_->getKuavoSettings();
     auto [plant, context] = drake_interface_->getPlantAndContext();
     ros_logger_ = new TopicLogger(controller_nh);
@@ -189,15 +194,7 @@ namespace humanoid_controller
 
     bool verbose = false;
     loadData::loadCppDataType(taskFile, "humanoid_interface.verbose", verbose);
-    int robot_version_int;
-    RobotVersion robot_version(3, 4);
-    if (controllerNh_.hasParam("/robot_version"))
-    {
-        controllerNh_.getParam("/robot_version", robot_version_int);
-        int major = robot_version_int / 10;
-        int minor = robot_version_int % 10;
-        robot_version = RobotVersion(major, minor);
-    }
+    
     setupHumanoidInterface(taskFile, urdfFile, referenceFile, gaitCommandFile, verbose,robot_version_int);
     setupMpc();
     setupMrt();
@@ -228,13 +225,6 @@ namespace humanoid_controller
     Eigen::Vector3d gyro_filter_params;
     auto drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(RobotVersion(3, 4), true, 2e-3);
     defalutJointPos_ = drake_interface_->getDefaultJointState();
-    jointArmNum_ = kuavo_settings_.hardware_settings.num_arm_joints;
-    desire_arm_q_prev_.resize(jointArmNum_);
-    desire_arm_q_prev_.setZero();
-    desire_arm_q.resize(jointArmNum_);
-    desire_arm_v.resize(jointArmNum_);
-    desire_arm_q.setZero();
-    desire_arm_v.setZero();
 
     auto robot_config = drake_interface_->getRobotConfig();
     is_swing_arm_ = robot_config->getValue<bool>("swing_arm");
@@ -243,14 +233,13 @@ namespace humanoid_controller
     gait_map_ = HumanoidInterface_->getSwitchedModelReferenceManagerPtr()->getGaitSchedule()->getGaitMap();
     std::cout << "gait_map size: " << gait_map_.size() << std::endl;
 
-    // loadData::loadEigenMatrix(referenceFile, "defaultJointState", defalutJointPos_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_", joint_kp_);
     loadData::loadEigenMatrix(referenceFile, "joint_kd_", joint_kd_);
     loadData::loadEigenMatrix(referenceFile, "joint_kp_walking_", joint_kp_walking_);
     loadData::loadEigenMatrix(referenceFile, "joint_kd_walking_", joint_kd_walking_);
     loadData::loadEigenMatrix(referenceFile, "acc_filter_cutoff_freq", acc_filter_params);
     loadData::loadEigenMatrix(referenceFile, "gyro_filter_cutoff_freq", gyro_filter_params);
-    real_initial_start_service_ = nh.advertiseService("/humanoid_controller/real_initial_start", &humanoidController::realIntialStartCallback, this);
+    // real_initial_start_service_ = nh.advertiseService("/humanoid_controller/real_initial_start", &humanoidController::realIntialStartCallback, this);
     // Hardware interface
     // TODO: setup hardware controller interface
     // create a ROS subscriber to receive the joint pos and vel
@@ -394,51 +383,7 @@ namespace humanoid_controller
     if (!is_initialized_)
       is_initialized_ = true;
   }
-  void humanoidController::jointStateCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != 2 * jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointPos_(i) = msg->data[i];
-      jointVel_(i) = msg->data[i + jointNum_];
-    }
-  }
-
-  void humanoidController::jointAccCallback(const std_msgs::Float32MultiArray::ConstPtr &msg)
-  {
-    if (msg->data.size() != jointNum_)
-    {
-      ROS_ERROR_STREAM("Received joint state message with wrong size: " << msg->data.size());
-      return;
-    }
-    for (size_t i = 0; i < jointNum_; ++i)
-    {
-      jointAcc_(i) = msg->data[i];
-    }
-  }
-
-  void humanoidController::ImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
-  {
-    quat_.coeffs().w() = msg->orientation.w;
-    quat_.coeffs().x() = msg->orientation.x;
-    quat_.coeffs().y() = msg->orientation.y;
-    quat_.coeffs().z() = msg->orientation.z;
-    angularVel_ << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
-    linearAccel_ << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
-    orientationCovariance_ << msg->orientation_covariance[0], msg->orientation_covariance[1], msg->orientation_covariance[2],
-        msg->orientation_covariance[3], msg->orientation_covariance[4], msg->orientation_covariance[5],
-        msg->orientation_covariance[6], msg->orientation_covariance[7], msg->orientation_covariance[8];
-    angularVelCovariance_ << msg->angular_velocity_covariance[0], msg->angular_velocity_covariance[1], msg->angular_velocity_covariance[2],
-        msg->angular_velocity_covariance[3], msg->angular_velocity_covariance[4], msg->angular_velocity_covariance[5],
-        msg->angular_velocity_covariance[6], msg->angular_velocity_covariance[7], msg->angular_velocity_covariance[8];
-    linearAccelCovariance_ << msg->linear_acceleration_covariance[0], msg->linear_acceleration_covariance[1], msg->linear_acceleration_covariance[2],
-        msg->linear_acceleration_covariance[3], msg->linear_acceleration_covariance[4], msg->linear_acceleration_covariance[5],
-        msg->linear_acceleration_covariance[6], msg->linear_acceleration_covariance[7], msg->linear_acceleration_covariance[8];
-  }
+  
 
   void humanoidController::starting(const ros::Time &time)
   {
@@ -473,9 +418,9 @@ namespace humanoid_controller
     if (!is_play_back_mode_)
       updateStateEstimation(time, true);
     currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
-    optimizedState_mrt_ = currentObservation_.state;
+    optimizedState2WBC_mrt_ = currentObservation_.state;
     std::cout << "initial state: " << currentObservation_.state.transpose() << std::endl;
-    optimizedInput_mrt_ = currentObservation_.input;
+    optimizedInput2WBC_mrt_ = currentObservation_.input;
 
     currentObservation_.mode = ModeNumber::SS;
     SystemObservation initial_observation = currentObservation_;
@@ -500,7 +445,7 @@ namespace humanoid_controller
     intail_input_ = vector_t::Zero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
     for (int i = 0; i < 8; i++)
       intail_input_(3 * i + 2) = HumanoidInterface_->getCentroidalModelInfo().robotMass * 9.81 / 8; // 48.7*g/8
-    optimizedInput_mrt_ = intail_input_;
+    optimizedInput2WBC_mrt_ = intail_input_;
     // else
     // {
     //   mpcMrtInterface_->setCurrentObservation(currentObservation_);
@@ -657,16 +602,16 @@ namespace humanoid_controller
     // std::cout << "optimizedState_mrt:" << optimizedState_mrt.transpose() << " \noptimizedInput_mrt:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
     auto &info = HumanoidInterface_->getCentroidalModelInfo();
 
-    optimizedState_mrt_ = optimizedState_mrt;
-    optimizedInput_mrt_ = optimizedInput_mrt;
+    optimizedState2WBC_mrt_ = optimizedState_mrt;
+    optimizedInput2WBC_mrt_ = optimizedInput_mrt;
     if (wbc_only_)
     {
-      optimizedState_mrt_ = initial_status_;
-      optimizedInput_mrt_ = intail_input_;
+      optimizedState2WBC_mrt_ = initial_status_;
+      optimizedInput2WBC_mrt_ = intail_input_;
     }
 
     optimized_mode_ = plannedMode_;
-    currentObservation_.input = optimizedInput_mrt_;
+    currentObservation_.input = optimizedInput2WBC_mrt_;
     // currentObservation_.input.tail(info.actuatedDofNum) = measuredRbdState_.tail(info.actuatedDofNum);
 
     // Whole body control
@@ -679,10 +624,10 @@ namespace humanoid_controller
     if (lf_contact && rf_contact)
     {
       // TODO:站立也使用mrt获取到的optimizedState
-      // optimizedInput_mrt_.setZero();
+      // optimizedInput2WBC_mrt_.setZero();
 
-      // optimizedState_mrt_.segment(6, 6) = currentObservation_.state.segment<6>(6);
-      // optimizedState_mrt_.segment(6 + 6, jointNum_) = defalutJointPos_;
+      // optimizedState2WBC_mrt_.segment(6, 6) = currentObservation_.state.segment<6>(6);
+      // optimizedState2WBC_mrt_.segment(6 + 6, jointNum_) = defalutJointPos_;
       // plannedMode_ = 3;
       wbc_->setStanceMode(true);
     }
@@ -727,34 +672,7 @@ namespace humanoid_controller
       applySensorData(data);
     }
   }
-  void humanoidController::swingArmPlanner(double st, double current_time, double stepDuration, Eigen::VectorXd &desire_arm_q, Eigen::VectorXd &desire_arm_v)
-  {
-    const double amplitude = swing_arm_gain_; // 曲线振幅
-    static double angle_p_prev = 0, angle_elbow_prev = 0;
-    double angle_p, l_angle_elbow, r_angle_elbow;
-    double phase_time = current_time - st;
-    // if (phase_time < stepDuration / 4) // 起摆
-    // {
-    //   angle_p = amplitude * std::sin(M_PI * 2 / stepDuration * phase_time);
-    //   l_angle_elbow = -amplitude * swing_elbow_scale_ * (std::sin(M_PI * 2 / stepDuration * phase_time));
-    //   r_angle_elbow = 0;
-    // }
-    // else
-    {
-      angle_p = amplitude * std::sin(M_PI * 2 / stepDuration * phase_time);
-      l_angle_elbow = -amplitude * swing_elbow_scale_ * (std::sin(M_PI * 2 / stepDuration * phase_time) + 1) / 2;
-      r_angle_elbow = -amplitude * swing_elbow_scale_ * (-std::sin(M_PI * 2 / stepDuration * phase_time) + 1) / 2;
-    }
-
-    desire_arm_q[0] = -angle_p;
-    desire_arm_q[3] = std::min(l_angle_elbow, 0.0);
-    desire_arm_q[jointArmNum_ / 2] = angle_p;
-    desire_arm_q[jointArmNum_ / 2 + 3] = std::min(r_angle_elbow, 0.0);
-
-    // 计算手臂速度
-    desire_arm_v = (desire_arm_q - desire_arm_q_prev_) / dt_;
-    desire_arm_q_prev_ = desire_arm_q;
-  }
+  
   void humanoidController::applySensorData(const SensorData &data)
   {
     jointPos_ = data.jointPos_;

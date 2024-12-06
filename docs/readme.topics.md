@@ -1,6 +1,6 @@
 # 1. 通信流程图
 
-<img src=img/ocs2_topics.jpg width="70%">
+<img src="img/ocs2_topics.jpg" width="70%"/>
 
 # 2. mpc的x和u
 ## 2.1 OCS2中状态向量顺序

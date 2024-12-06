@@ -46,7 +46,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ocs2_oc/synchronized_module/SolverObserver.h"
 #include "ocs2_oc/synchronized_module/SolverSynchronizedModule.h"
 
+#include <ocs2_oc/synchronized_module/ReferenceManager.h>
+
+
 namespace ocs2 {
+
+struct SolverData 
+{
+  // SolverData(scalar_t initTime, const vector_t& initState, scalar_t finalTime)
+  //     : initTime_(initTime), initState_(initState), finalTime_(finalTime) {};
+
+  scalar_t initTime_;
+  vector_t initState_;
+  scalar_t finalTime_;
+  ModeSchedule modeSchedule_;
+  TargetTrajectories targetTrajectories_;
+  PrimalSolution primalSolution_;
+
+  // swingplanner data
+  std::vector<scalar_t> swingPlannerMultipliers_;
+
+};
 
 /**
  * This class is an interface class for the single-thread and multi-thread SLQ.
@@ -76,7 +96,13 @@ class SolverBase {
    * @param [in] finalTime: The final time.
    */
   void run(scalar_t initTime, const vector_t& initState, scalar_t finalTime);
-
+  
+  /**
+   * playback the solver data to the current state of the system.
+   *
+   * @param [in] solverData: The solver data to be played back.
+   */
+  virtual void playback(const SolverData& solverData);
   /**
    * The main routine of solver which runs the optimizer for a given initial state, initial time, final time, and
    * initial controller.
@@ -256,8 +282,11 @@ class SolverBase {
 
   std::shared_ptr<ReferenceManagerInterface> referenceManagerPtr_;  // this pointer cannot be nullptr
   std::vector<std::shared_ptr<SolverSynchronizedModule>> synchronizedModules_;
-  
+  SolverData getSolverData() const { return solverData_; }
+protected:
+  SolverData solverData_;
  private:
+  virtual void runImplPlayback(const SolverData& solverData);
   virtual void runImpl(scalar_t initTime, const vector_t& initState, scalar_t finalTime) = 0;
 
   virtual void runImpl(scalar_t initTime, const vector_t& initState, scalar_t finalTime, const ControllerBase* externalControllerPtr) = 0;

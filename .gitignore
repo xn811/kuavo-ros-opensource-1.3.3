@@ -10,3 +10,6 @@ logs/*
 .ccache
 ecmaster*.log
 ecmaster*.csv
+
+node_modules/
+.docusaurus/

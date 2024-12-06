@@ -1,7 +1,3 @@
-//
-// Created by qiayuan on 2022/7/24.
-//
-
 #include "humanoid_controllers/TargetTrajectoriesPublisher.h"
 
 #include <ocs2_core/Types.h>
@@ -127,7 +123,6 @@ int main(int argc, char **argv)
   auto drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(robot_version, true, 2e-3);
   DEFAULT_JOINT_STATE = drake_interface_->getDefaultJointState();
   COM_HEIGHT = drake_interface_->getIntialHeight();
-  // loadData::loadEigenMatrix(referenceFile, "defaultJointState", DEFAULT_JOINT_STATE);
   loadData::loadCppDataType(referenceFile, "targetRotationVelocity", TARGET_ROTATION_VELOCITY);
   loadData::loadCppDataType(referenceFile, "targetDisplacementVelocity", TARGET_DISPLACEMENT_VELOCITY);
   loadData::loadCppDataType(taskFile, "mpc.timeHorizon", TIME_TO_TARGET);

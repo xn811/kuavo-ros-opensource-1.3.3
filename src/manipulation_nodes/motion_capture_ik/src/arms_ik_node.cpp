@@ -7,6 +7,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <ros/package.h>
 
 #include "plantIK.h"
 #include "motion_capture_ik/package_path.h"
@@ -33,6 +34,7 @@
 #include "motion_capture_ik/headBodyPose.h"
 // srv
 #include "motion_capture_ik/twoArmHandPoseCmdSrv.h"
+#include "motion_capture_ik/fkSrv.h"
 
 
 namespace
@@ -109,7 +111,7 @@ class ArmsIKNode
             // srv
             // 初始化服务服务器
             ik_server_ = nh_.advertiseService("/ik/two_arm_hand_pose_cmd_srv", &ArmsIKNode::handleServiceRequest, this);
-
+            fk_server_ = nh_.advertiseService("/ik/fk_srv", &ArmsIKNode::handleFKServiceRequest, this);
             // solver params
             ik_solve_params_.major_optimality_tol = 9e-3;
             ik_solve_params_.major_feasibility_tol = 9e-3;
@@ -357,12 +359,30 @@ class ArmsIKNode
                 if(start_idx > 0)//包含躯干
                 {
                     res.with_torso = true;
-                    res.q_torso = {q[0], q[1], q[2], q[3]};
+                    res.q_torso = std::vector<double>(q.data(), q.data() + start_idx);
                 }
                 motion_capture_ik::twoArmHandPose msg = publish_ik_result_info(q);
                 res.hand_poses = msg;
             }
             // 返回响应
+            return true;
+        }
+
+        bool handleFKServiceRequest(motion_capture_ik::fkSrv::Request &req, motion_capture_ik::fkSrv::Response &res) 
+        {
+            const int num_dof = q0_.size(); 
+            if(req.q.size() != num_dof)
+            {
+                ROS_ERROR_STREAM("The size of the request q ("<< req.q.size() << ") is not equal to the number of dof in ik_node(" << num_dof << ")");
+                res.success = false;
+                return false;
+            }
+            Eigen::VectorXd q = Eigen::VectorXd::Zero(num_dof);
+            for(int i = 0; i < num_dof; i++)
+                q(i) = req.q[i];
+            auto msg = publish_ik_result_info(q);
+            res.hand_poses = msg;
+            res.success = true;
             return true;
         }
 
@@ -385,6 +405,7 @@ class ArmsIKNode
         ros::Publisher ik_result_pub_;
         ros::Publisher head_body_pose_pub_;
         ros::ServiceServer ik_server_;
+        ros::ServiceServer fk_server_;
         bool recived_cmd_ = false;
         bool recived__new_cmd_ = false;
         HighlyDynamic::IKParams ik_solve_params_;
@@ -399,12 +420,17 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "ik_publisher");
     ros::NodeHandle nh;
     double eef_z_bias = 0.0;
-    std::string relative_model_path = "models/biped_gen4.0/urdf/biped_v3_arm.urdf";
+    std::string model_path = "models/biped_gen4.0/urdf/biped_v3_arm.urdf";
     int control_hand_side = 2; // 0: left, 1: right, 2: both
     if(ros::param::has("model_path"))
     {
-        ros::param::get("model_path", relative_model_path);
-        std::cout << "model_path: " << relative_model_path << std::endl;
+        ros::param::get("model_path", model_path);
+        
+        std::cout << "model_path: " << model_path << std::endl;
+    }else
+    {
+        std::string package_path = ros::package::getPath("kuavo_assets");
+        model_path = package_path + "/models/biped_s40/urdf/drake/biped_v3_arm.urdf";
     }
     if(ros::param::has("eef_z_bias"))
     {
@@ -417,7 +443,6 @@ int main(int argc, char* argv[])
         std::cout << "control_hand_side: " << control_hand_side << std::endl;
     }
     
-    std::string model_path = HighlyDynamic::getPath() + "/" + relative_model_path;
     std::cout << "model_path: " << model_path << std::endl;
     std::vector<std::string> end_frames_name = {"torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"};
     Eigen::Vector3d custom_eef_frame_pos = Eigen::Vector3d(0, 0, eef_z_bias);

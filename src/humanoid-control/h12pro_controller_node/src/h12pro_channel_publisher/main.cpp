@@ -27,9 +27,9 @@ int main(int argc, char **argv) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    if (initSbus() == -1) {
-        ROS_ERROR("Sbus init failed");
-        return -1;
+    while (initSbus() == -1) {
+        ROS_ERROR("Sbus init failed, retrying...");
+        ros::Duration(1.0).sleep();  // 暂停 1 秒
     }
     
     ros::init(argc, argv, "h12pro_channel_publisher_node");

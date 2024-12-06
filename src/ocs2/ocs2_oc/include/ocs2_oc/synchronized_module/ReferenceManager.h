@@ -52,6 +52,11 @@ class ReferenceManager : public ReferenceManagerInterface {
   void setModeSchedule(ModeSchedule&& modeSchedule) override { modeSchedule_.setBuffer(std::move(modeSchedule)); }
 
   const TargetTrajectories& getTargetTrajectories() const override { return targetTrajectories_.get(); }
+  
+  void updateBuffer() override {
+    modeSchedule_.updateFromBuffer();
+    targetTrajectories_.updateFromBuffer();
+  }
   void setTargetTrajectories(const TargetTrajectories& targetTrajectories) override {
     return targetTrajectories_.setBuffer(targetTrajectories);
   }

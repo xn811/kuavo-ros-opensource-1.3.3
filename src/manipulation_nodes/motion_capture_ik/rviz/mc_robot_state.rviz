@@ -64,7 +64,12 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        base_camera:
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -73,142 +78,136 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        head_camera:
+        head:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        head_pitch:
+        l_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        head_yaw:
+        l_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_index_distal_finger:
+        leg_l1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_index_proximal_finger:
+        leg_l2_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_middle_distal_finger:
+        leg_l3_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_middle_proximal_finger:
+        leg_l4_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_pinky_distal_finger:
+        leg_l5_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_pinky_proximal_finger:
+        leg_l6_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_ring_distal_finger:
+        leg_r1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_ring_proximal_finger:
+        leg_r2_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_thumb_distal_pitch:
+        leg_r3_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        l_thumb_proximal_yaw:
+        leg_r4_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_index_distal_finger:
+        leg_r5_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_index_proximal_finger:
+        leg_r6_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_middle_distal_finger:
+        ll_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_middle_proximal_finger:
+        ll_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_pinky_distal_finger:
+        lr_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_pinky_proximal_finger:
+        lr_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_ring_distal_finger:
+        neck_motor:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_ring_proximal_finger:
+        r_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_thumb_distal_pitch:
+        r_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        r_thumb_proximal_yaw:
+        rl_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        vj_base:
+        rl_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        vj_pitch:
+        rr_foot_heel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        vj_roll:
+          Value: true
+        rr_foot_toe:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        vj_yaw:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        vj_z:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
+          Value: true
         zarm_l1_link:
           Alpha: 1
           Show Axes: false
@@ -372,7 +371,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: dummy_link
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:

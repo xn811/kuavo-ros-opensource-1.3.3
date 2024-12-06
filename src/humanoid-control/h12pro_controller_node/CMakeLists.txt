@@ -22,6 +22,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
 )
 
+catkin_python_setup()
+
 add_message_files(
   # DIRECTORY ./msg/
   FILES walkCommand.msg
@@ -57,7 +59,6 @@ catkin_package(
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -149,7 +150,7 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-
+add_subdirectory_if_exists(lib/kuavo_remote)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 set(h12pro_controller_node_include_dir
@@ -170,7 +171,6 @@ include_directories(
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -182,6 +182,11 @@ add_executable(h12pro_channel_publisher src/h12pro_channel_publisher/main.cpp)
 #   ${PROJECT_SOURCE_DIR}/lib/kuavo_remote/src
 # )
 
+add_dependencies(h12pro_channel_publisher
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+  SBUS_SDK
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -208,10 +213,14 @@ target_link_libraries(h12pro_channel_publisher
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  src/h12pro_node/ocs2_h12pro_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY robot_state utils src
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -253,4 +262,3 @@ target_link_libraries(h12pro_channel_publisher
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-add_subdirectory_if_exists(lib/kuavo_remote)

@@ -63,6 +63,7 @@ class ReferenceManagerDecorator : public ReferenceManagerInterface {
   void setTargetTrajectories(TargetTrajectories&& targetTrajectories) override {
     referenceManagerPtr_->setTargetTrajectories(std::move(targetTrajectories));
   }
+  void updateBuffer() override { referenceManagerPtr_->updateBuffer(); }
 
   void setSwingHeight(scalar_t toe_height,  scalar_t heel_height) override {
     referenceManagerPtr_->setSwingHeight(toe_height, heel_height);
@@ -78,6 +79,16 @@ class ReferenceManagerDecorator : public ReferenceManagerInterface {
   inline bool getUpdatedQ() const override{ return referenceManagerPtr_->getUpdatedQ(); }
   inline void setUpdatedR(bool flag) override{ referenceManagerPtr_->setUpdatedR(flag); }
   inline void setUpdatedQ(bool flag) override{ referenceManagerPtr_->setUpdatedQ(flag); }
+  
+  inline std::vector<scalar_t> getSwingPlannerMultipliers() override
+  {
+    return referenceManagerPtr_->getSwingPlannerMultipliers();
+  }
+
+  virtual void resetReference(const std::vector<scalar_t> multipliers, const ModeSchedule& modeSchedule) override
+  {
+      referenceManagerPtr_->resetReference(multipliers, modeSchedule);
+  }
 
  protected:
   std::shared_ptr<ReferenceManagerInterface> referenceManagerPtr_;

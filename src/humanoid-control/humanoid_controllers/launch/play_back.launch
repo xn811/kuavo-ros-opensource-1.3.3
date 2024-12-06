@@ -1,10 +1,17 @@
 <?xml version="1.0" ?>
 
 <launch>
-    <arg name="robot_version"      default="40"/>
+
+
     <arg name="robot_type"         default="humanoid"/>
     <arg name="rviz"                default="true" />
-    <arg name="description_name"   default="humanoid_description"/>
+    <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
+
+    <!-- load the robot version manager -->
+    <include file="$(find humanoid_controllers)/launch/robot_version_manager.launch">
+      <arg name="robot_version" value="$(arg robot_version)"/>
+      <arg name="rviz" value="$(arg rviz)"/>
+    </include>
     <arg name="multiplot"          default="false"/>
     <arg name="use_external_mpc"   default="true"/>
     <arg name="wbc_frequency"      default="500"/>
@@ -17,19 +24,12 @@
     <arg name="play_back"          default="true"/>  
     <arg name="joystick_type"      default="bt2"/>
 
-    <arg name="taskFile"          default="$(find humanoid_interface)/config/mpc/task_all_arms.info"/>
-    <arg name="dynamicQrFile"      default="$(find humanoid_interface)/config/mpc/dynamic_qr.info"/>
 
     <!-- The reference related config file of the robot -->
-    <arg name="referenceFile"     default="$(find humanoid_interface)/config/command/reference_all_arms.info"/>
 
     <!-- The file defining gait definition -->
-    <arg name="gaitCommandFile"   default="$(find humanoid_interface)/config/command/gait.info"/>
 
-    <include file="$(find humanoid_interface_ros)/launch/robot_version_manager_with_arm.launch">
-      <arg name="robot_version" value="$(arg robot_version)"/>
-      <arg name="rviz" value="$(arg rviz)"/>
-    </include>
+
 
     <!-- multiplot -->
     <group if="$(arg multiplot)">
@@ -39,9 +39,6 @@
     <!-- make the files into global parameters -->
     <param name="robot_version"     value="$(arg robot_version)"/>
     <param name="multiplot"         value="$(arg multiplot)"/>
-    <param name="taskFile"          value="$(arg taskFile)" />
-    <param name="referenceFile"     value="$(arg referenceFile)" />
-    <param name="gaitCommandFile"   value="$(arg gaitCommandFile)"/>
     <param name="wbc_only"          value="$(arg wbc_only)"/>
     <param name="use_external_mpc"  value="$(arg use_external_mpc)"/>
     <param name="wbc_frequency"     value="$(arg wbc_frequency)"/>
@@ -50,11 +47,9 @@
     <param name="use_joint_filter"  value="$(arg use_joint_filter)"/>
     <param name="estimator_type"    value="$(arg estimator_type)"/>
     <param name="play_back"         value="$(arg play_back)"/>
-    <param name="dynamicQrFile"     value="$(arg dynamicQrFile)"/>
     <param name="joystick_type"  value="$(arg joystick_type)"/>
 
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
-
 
     <!-- nodelet manager -->
      <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" output="screen" required="true" />

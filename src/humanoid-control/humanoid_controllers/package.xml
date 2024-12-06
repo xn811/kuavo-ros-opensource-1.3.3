@@ -19,8 +19,8 @@
     <depend>humanoid_interface_drake</depend>
     <depend>kuavo_estimation</depend>
     <depend>kuavo_monitor</depend>
-    <depend>biped_s3</depend>
     <depend>biped_s40</depend>
+    <depend>biped_s42</depend>
     <depend>kuavo_msgs</depend>
     <!-- <depend>mujoco_sim</depend> -->
     <depend>mujoco_cpp</depend>
@@ -29,7 +29,7 @@
     <depend>h12pro_controller_node</depend>
     <depend>motion_capture_ik</depend>
     <depend>hardware_node</depend>
-
+    <depend>kuavo_assets</depend>
     <depend>ocs2_self_collision_visualization</depend>
     <!-- <depend>ocs2_biped_robot_ros</depend> -->
 

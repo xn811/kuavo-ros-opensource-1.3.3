@@ -101,6 +101,7 @@ class SqpSolver : public SolverBase {
       throw std::runtime_error("[SqpSolver::run] This solver does not support external controller!");
     }
   }
+  void runImplPlayback(const SolverData& solverData) override;
 
   void runImpl(scalar_t initTime, const vector_t& initState, scalar_t finalTime, const PrimalSolution& primalSolution) override {
     // Copy all except the controller

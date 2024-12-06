@@ -1,8 +1,0 @@
-prefix=/home/carlos/CI/highlydynamic/craic_code_repo/git_repo/install
-
-Name: biped_s40
-Description: Description of biped_s40
-Version: 1.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
