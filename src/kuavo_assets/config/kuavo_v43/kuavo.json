@@ -114,6 +114,7 @@
      
     "end_frames_name_ik":  ["torso", "zarm_l7_link", "zarm_r7_link", "zarm_l4_link", "zarm_r4_link"], 
     "shoulder_frame_names" : ["zarm_l1_link", "zarm_r1_link"],
+    "eef_visual_stl_files" : ["l_hand_pitch.STL", "r_hand_pitch.STL"],
     "upper_arm_length": 32.0,
     "lower_arm_length": 26.0,
 
