@@ -1,6 +1,6 @@
 # KUAVO 软件出厂文档
 
-<img src="./imgs/banner-kuavo.png" align="center">
+<img src="./imgs/banner-kuavo.png" alt="Banner Kuavo" style={{ display: 'block', margin: '0 auto' }} />
 
 ## 概述
 
@@ -453,10 +453,3 @@ roslaunch humanoid_controllers load_kuavo_real_with_vr.launch
 - 选择对应的日期 ROSBAG 文件，下载日志(文件结尾以 `.bag` 或者 `.bag.active` 结尾)，如下图
 ![download_ros_logs](./imgs/download_ros_logs.png)
 
-### 删除闭源代码
-
-执行以下代码：
-新建终端
-```bash
-find ~ -type d -name "*kuavo*" | while read -r dir; do if [ -d "$dir/.git" ]; then REMOTE_URL=$(git -C "$dir" remote get-url origin 2>/dev/null); if [[ "$REMOTE_URL" == "ssh://git@www.lejuhub.com:10026/highlydynamic/kuavo.git" || "$REMOTE_URL" == "https://www.lejuhub.com/highlydynamic/kuavo.git" || "$REMOTE_URL" == "ssh://git@www.lejuhub.com:10026/highlydynamic/kuavo-ros-control.git" || "$REMOTE_URL" == "https://www.lejuhub.com/highlydynamic/kuavo-ros-control.git" ]]; then echo "删除匹配目录：$dir"; sudo rm -rf "$dir"; fi; fi; done
-```
