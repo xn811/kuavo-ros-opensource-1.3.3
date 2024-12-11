@@ -148,6 +148,18 @@ python3 Hardware_tool.py
 
 [kuaov_关节正方向运动_说明](https://www.bilibili.com/video/BV1AXzRYeERe/?share_source=copy_web&vd_source=2d815abfceff1874dd081e6eb77cc262)
 
+### 检测手臂电机运动方向
+
+新建终端
+```bash
+cd ~/kuavo_opensource/tools/check_tool
+python3 Hardware_tool.py 
+```
+
+输入 `e` 加回车,瑞沃电机辨识方向
+
+然后输入 1 到 14 选择手臂电机，观察电机运动方向是否符合kuaov_关节正方向运动, 如果符合，则输入 `no` 加回车, 如果不符合，则输入 `yes` 加回车
+
 ### 零点校准
 
 1. 请将工装插入机器人腿部, 如下图所示
