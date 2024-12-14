@@ -292,6 +292,7 @@
   - gyro: 表示陀螺仪的角速度，单位弧度每秒（rad/s）
   - acc: 表示加速度计的加速度，单位米每平方秒（m/s<sup>2</sup>）
   - quat: IMU的姿态（orientation）
+  
 <details>
 <summary>点击展开, 查看详细信息</summary>
 <pre>
