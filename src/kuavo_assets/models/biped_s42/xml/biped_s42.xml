@@ -198,7 +198,7 @@
             <geom type="mesh" rgba="1 1 1 1" mesh="neck_motor" />
             <body name="head" pos="0 0 0">
                 <inertial pos="0.0288293 -0.000555727 0.109528" quat="0.946713 0.00285973 -0.32153 0.018565" mass="0.621655" diaginertia="0.00252459 0.00223454 0.00172044" />
-                <joint name="head" pos="0 0 0" axis="0 -1 0" limited="true" range="-0.532 0.532" />
+                <joint name="head" pos="0 0 0" axis="0 1 0" limited="true" range="-0.532 0.532" />
                 <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head" />
                 <geom type="mesh" rgba="1 1 1 1" mesh="head" />
                 <geom pos="0.096751 0.0175003 0.125953" quat="0.970296 0 0.241922 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="camera" />

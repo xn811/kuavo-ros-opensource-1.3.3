@@ -1967,7 +1967,7 @@
     <child
       link="head" />
     <axis
-      xyz="0 -1 0" />
+      xyz="0 1 0" />
     <limit
       lower="-0.532"
       upper="0.532"
