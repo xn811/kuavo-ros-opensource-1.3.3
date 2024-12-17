@@ -1,0 +1,68 @@
+# SDK介绍
+
+- [SDK介绍](#sdk介绍)
+  - [代码架构](#代码架构)
+    - [上位机](#上位机)
+    - [下位机](#下位机)
+  - [SDK目录结构说明](#sdk目录结构说明)
+  - [SDK使用](#sdk使用)
+    - [SDK环境构建](#sdk环境构建)
+  - [说明](#说明)
+    - [**机器人坐标系说明**：](#机器人坐标系说明)
+  - [使用](#使用)
+  - [SDK版本](#sdk版本)
+
+本SDK主要用于控制机器人各个部分的运动和状态。使用ROS1（Robot Operating System）框架，通过发布和订阅消息(ROS Topic)以及调用服务(Ros Service)来实现对机器人的控制
+
+## 代码架构
+- SDK包含有机器人上位机与下位机两部分的话题和服务调用，使用前需要确保上、下位机
+### 上位机
+- 功能说明：机器人的上位机为头部nuc，负责图像、音频的处理与解析，比如语音交互、视觉特征检测等；上位机安装有软路由软件，与下位机通过网线连接并给下位机分配ip；在机器人ROS的主从机系统中，上位机作为从机
+- 代码仓库：[上位机代码仓库](https://gitee.com/leju-robot/kuavo_ros_application/tree/dev/)
+
+### 下位机
+- 功能说明：机器人下位机为胸部nuc，负责整机的运动控制，比如机器人逆运动学、步态算法等；下位机通过网线与上位机连接建立通讯；在机器人ROS的主从机系统中，下位机作为主机(master)
+- 代码仓库：[下位机代码仓库](https://gitee.com/leju-robot/kuavo-ros-opensource/tree/dev/)
+
+## SDK目录结构说明
+- kuavo_sdk/
+  - msg：ROS Topic消息格式定义文件
+  - srv：ROS Service格式定义文件
+  - sdk：SDK 案例程序
+  - CMakeLists.txt/package.xml：编译配置文件
+
+## SDK使用
+- 可在实机上安装使用，也可安装docker镜像在仿真环境下使用
+  - [仿真环境部署使用](仿真环境使用.md)
+- **一般开发过程中建议先通过仿真验证无误后再到实机上部署
+
+### SDK环境构建
+```sh
+cp -r ~/kuavo-ros-control/docs/kuavo_sdk ~
+cd ~/sdk_doc
+catkin build
+```
+
+## 说明
+### **机器人坐标系说明**：
+  ![侧视图](images/坐标系侧视图.png)
+  ![正视图](images/坐标系正视图.png)
+  - 机器人基座标系为图示腰部坐标系，相机坐标系为图示头部坐标系,红色为x轴，绿色为y轴，蓝色为z轴
+
+## 使用
+- source 环境变量
+```sh
+source ~/kuavo_sdk/devel/setup.zsh # zsh还是bash根据使用终端环境选择
+```
+
+- 启动上下位机主程序
+  - 参考阅读[自定义启动](../4功能案例/通用案例/1_自定义启动案例.md)
+
+- 执行SDK示例程序
+```sh
+python3 src/kuavo_sdk/sdk/01_use_music/playmusic.py # 音频播放示例
+```
+
+## SDK版本
+- 版本：**1.0**
+- 发布时间：**2024-12-20**
