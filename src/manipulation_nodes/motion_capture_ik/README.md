@@ -7,7 +7,7 @@ catkin build motion_capture_ik
 ### ros调用
 - 启动ik节点
 ```bash
-roslaunch motion_capture_ik ik_node.launch visualize:=1
+roslaunch motion_capture_ik ik_node.launch visualize:=1 print_ik_info:=false
 ```
 - 调用逆解
 ```bash
@@ -21,6 +21,27 @@ time_cost: 4.02 ms. left_pos_error: 2.13 mm, right_pos_error: 2.20 mm
 ```bash
 rosrun motion_capture_ik test_fk_srv.py
 ```
+#### Note:
+- 如果设置`print_ik_info:=true`，则会打印详细的求解信息如下：
+```bash
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++ IK RESULT INFO +++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Eef cmd: 
+  Left pos: 0.243 0.355 0.319
+  Left quat:  0.426 -0.661 -0.352  0.508
+  Right pos: -0.161 -0.336  0.004
+  Right quat: -0.495  0.032  0.066  0.866
+Result:
+  q: -0.836  0.812 -0.453 -1.372 -0.269  0.161 -0.067  0.413 -0.205 -0.307  0.009  0.340 -0.289 -0.852
+  Left eef pos: 0.242 0.352 0.317, Left eef quat:  0.426 -0.661 -0.351  0.508
+  Left pos error: -0.001 -0.002 -0.002, error norm: 3.344 mm.
+  Right eef pos: -0.159 -0.334  0.007, Right eef quat: -0.491  0.041  0.073  0.867
+  Right pos error: 0.002 0.002 0.003, error norm: 4.276 mm.
+
+```
+- ik求解末端（eef）定义在手掌中心，如果把eef定义在最后一个关节上，则需要在launch时设置`eef_z_bias:=0.0`。eef_z_bias标准值为-0.17。
+
 ### 直接调用
 ```bash
 rosrun motion_capture_ik plant_ik_test

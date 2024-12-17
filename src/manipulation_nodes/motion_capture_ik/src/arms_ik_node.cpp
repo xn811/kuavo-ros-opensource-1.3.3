@@ -130,6 +130,10 @@ class ArmsIKNode
             // q0 for ik
             ik_cmd_left_.joint_angles = Eigen::VectorXd::Zero(single_arm_num_);
             ik_cmd_right_.joint_angles = Eigen::VectorXd::Zero(single_arm_num_);
+            // ros param
+            if(nh_.hasParam("print_ik_info"))
+                nh_.getParam("print_ik_info", print_ik_info_);
+            std::cout << "print_ik_info: " << print_ik_info_ << std::endl;
         }
 
         void run()
@@ -200,7 +204,8 @@ class ArmsIKNode
                     }
                     publish_ik_result_info(q);
                 }
-                printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
+                if(print_ik_info_)
+                    printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
                 // else
                 //     std::cout << "IK failed" << std::endl;
                 rate.sleep();
@@ -445,7 +450,8 @@ class ArmsIKNode
                 motion_capture_ik::twoArmHandPose msg = publish_ik_result_info(q);
                 res.hand_poses = msg;
             }
-            printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
+            if(print_ik_info_)
+                printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
             // 返回响应
             return true;
         }
@@ -543,6 +549,7 @@ class ArmsIKNode
         long long int ik_count_{0};
         long long int ik_success_count_{0};
         std::vector<std::string> shoulder_frame_names_;
+        bool print_ik_info_{false};
 };
 }
 
