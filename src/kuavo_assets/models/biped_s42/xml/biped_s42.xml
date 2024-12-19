@@ -32,9 +32,10 @@
     <mesh name="r_hand_yaw" file="r_hand_yaw.STL"/>
     <mesh name="r_hand_pitch" file="r_hand_pitch.STL"/>
     <mesh name="r_hand_roll" file="r_hand_roll.STL"/>
-    <mesh name="neck_motor" file="neck_motor.STL" />
-    <mesh name="head" file="head.STL" />
+    <mesh name="head_yaw" file="head_yaw.STL"/>
+    <mesh name="head_pitch" file="head_pitch.STL"/>
     <mesh name="camera" file="camera.STL" />
+    <mesh name="radar" file="radar.STL"/>
   </asset>
   <worldbody>
     <body name="base_link" pos="0 0 0.82">
@@ -194,15 +195,17 @@
       <body name="neck_motor" pos="-0.0185 0 0.6014">
             <inertial pos="2.15065e-05 0.00604886 -0.0105235" quat="0.673377 -0.223487 0.219366 0.669698" mass="0.0736988" diaginertia="4.68229e-05 3.67344e-05 3.13569e-05" />
             <joint name="neck_motor" pos="0 0 0" axis="0 0 1" limited="true" range="-1.57 1.57" />
-            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="neck_motor" />
-            <geom type="mesh" rgba="1 1 1 1" mesh="neck_motor" />
+            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head_yaw" />
+            <geom type="mesh" rgba="1 1 1 1" mesh="head_yaw" />
             <body name="head" pos="0 0 0">
                 <inertial pos="0.0288293 -0.000555727 0.109528" quat="0.946713 0.00285973 -0.32153 0.018565" mass="0.621655" diaginertia="0.00252459 0.00223454 0.00172044" />
                 <joint name="head" pos="0 0 0" axis="0 1 0" limited="true" range="-0.532 0.532" />
-                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head" />
-                <geom type="mesh" rgba="1 1 1 1" mesh="head" />
+                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head_pitch" />
+                <geom type="mesh" rgba="1 1 1 1" mesh="head_pitch" />
                 <geom pos="0.096751 0.0175003 0.125953" quat="0.970296 0 0.241922 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="camera" />
                 <geom pos="0.096751 0.0175003 0.125953" quat="0.970296 0 0.241922 0" type="mesh" rgba="1 1 1 1" mesh="camera" />
+                <geom pos="0.0217799 0 0.105417" quat="0.993413 0 0.114591 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="radar"/>
+                <geom pos="0.0217799 0 0.105417" quat="0.993413 0 0.114591 0" type="mesh" rgba="1 1 1 1" mesh="radar"/>
           </body>
       </body>
     </body>

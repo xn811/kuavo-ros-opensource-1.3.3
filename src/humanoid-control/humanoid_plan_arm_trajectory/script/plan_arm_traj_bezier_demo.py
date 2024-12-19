@@ -9,7 +9,8 @@ from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierT
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest
-from ocs2_msgs.msg import mpc_observation
+from kuavo_msgs.msg import sensorsData
+# from ocs2_msgs.msg import mpc_observation
 import math
 INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 START_FRAME_TIME = 0
@@ -19,11 +20,19 @@ x_shift = START_FRAME_TIME - 1
 joint_state = JointState()
 current_arm_joint_state = []
 
-def mpc_obs_callback(msg):
+
+def sensors_data_callback(msg):
     global current_arm_joint_state
-    current_arm_joint_state = msg.state.value[24:]
+    current_arm_joint_state = msg.joint_data.joint_q[12:26]
     current_arm_joint_state = [round(pos, 2) for pos in current_arm_joint_state]
     current_arm_joint_state.extend([0] * 14)
+
+
+# def mpc_obs_callback(msg):
+#     global current_arm_joint_state
+#     current_arm_joint_state = msg.state.value[24:]
+#     current_arm_joint_state = [round(pos, 2) for pos in current_arm_joint_state]
+#     current_arm_joint_state.extend([0] * 14)
 
 import numpy as np
 
@@ -220,9 +229,16 @@ def main():
     rospy.init_node('arm_trajectory_bezier_demo')
     traj_sub = rospy.Subscriber('/bezier/arm_traj', JointTrajectory, traj_callback, queue_size=1, tcp_nodelay=True)
     kuavo_arm_traj_pub = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=1, tcp_nodelay=True)
-    mpc_obs_sub = rospy.Subscriber('/humanoid_mpc_observation', mpc_observation, mpc_obs_callback)
+    # mpc_obs_sub = rospy.Subscriber('/humanoid_mpc_observation', mpc_observation, mpc_obs_callback)
+    sensor_data_sub = rospy.Subscriber(
+            '/sensors_data_raw', 
+            sensorsData, 
+            sensors_data_callback, 
+            queue_size=1, 
+            tcp_nodelay=True
+    )
     call_change_arm_ctrl_mode_service(2)
-    file_path = rospy.get_param('~tact_file', './action_files/unfluent.tact')
+    file_path = rospy.get_param('~tact_file', './action_files/welcome.tact')
     data = load_json_file(file_path)
     if not data:
         return
