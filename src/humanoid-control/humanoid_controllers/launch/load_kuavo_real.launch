@@ -26,6 +26,7 @@
     <arg name="joystick_type"      default="bt2"/>
     <!-- The reference related config file of the robot -->
     <arg name="start_way"         default="manual"/>
+    <arg name="only_half_up_body" default="false"/>
     <!-- The file defining gait definition -->
 
     <!-- multiplot -->
@@ -43,7 +44,7 @@
     <param name="estimator_type"     value="$(arg estimator_type)"/>
     <param name="use_joint_filter"     value="$(arg use_joint_filter)"/>
     <param name="joystick_type"  value="$(arg joystick_type)"/>
-
+    <param name="only_half_up_body"   value="$(arg only_half_up_body)"/>
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
     <param name="start_way"  value="$(arg start_way)"/>
 

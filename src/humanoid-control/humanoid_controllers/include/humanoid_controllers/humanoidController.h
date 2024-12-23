@@ -331,7 +331,8 @@ namespace humanoid_controller
     const std::string robotName_ = "humanoid";
     bool use_external_mpc_{true};
     bool use_joint_filter_{false};
-
+    bool only_half_up_body_{false};
+    
     TopicLogger *ros_logger_{nullptr};
     vector_t optimizedState2WBC_mrt_, optimizedInput2WBC_mrt_;
     size_t optimized_mode_;
