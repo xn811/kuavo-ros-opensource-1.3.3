@@ -55,6 +55,46 @@ roslaunch yolo_box_object_detection yolo_segment_detect.launch
 - 📄 查看 `yolo_box_transform_torso.py` 文件第 71-74 行，由于检测只获取检测目标中心点空间位置无姿态信息，四元数为固定值非实际值
 
 ## 示例代码
-- `yolo_detect_info.py`: 
-- [示例代码](scripts/yolo_detect_info.py)
-  - 获取一次 `/object_yolo_box_tf2_torso_result` 检测结果基于机器人基座标系的位姿
+- `yolo_detect_info.py`: 获取一次 `/object_yolo_box_tf2_torso_result` 检测结果基于机器人基座标系的位姿
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy
+import numpy as np
+from vision_msgs.msg import Detection2DArray
+
+
+def normalize_quaternion(quat):
+    norm = np.linalg.norm(quat)
+    if norm == 0:
+        raise ValueError("Cannot normalize a zero-length quaternion")
+    return quat / norm
+
+def get_position_and_orientation():
+    # 等待并获取一次消息
+    data = rospy.wait_for_message("/object_yolo_box_tf2_torso_result", Detection2DArray)
+    
+    # 假设我们只关心第一个检测结果
+    if data.detections:
+        detection = data.detections[0]
+        position = detection.results[0].pose.pose.position
+        orientation = detection.results[0].pose.pose.orientation
+        
+        # 返回 Position 和 Orientation
+        return (position, orientation)
+    else:
+        return (None, None)
+
+
+if __name__ == '__main__':
+    rospy.init_node('object_yolo_box_listener', anonymous=True)
+    position, orientation = get_position_and_orientation()
+    
+    # 提取位置和四元数
+    xyz = [position.x, position.y, position.z]
+    quat = [orientation.x, orientation.y, orientation.z, orientation.w]
+    
+    # 对四元数进行归一化
+    quat_normalized = normalize_quaternion(quat)
+```
