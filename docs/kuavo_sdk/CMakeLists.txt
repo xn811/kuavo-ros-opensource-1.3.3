@@ -63,6 +63,7 @@ add_message_files(
   imuData.msg
   endEffectorData.msg
   gestureTask.msg
+  jointCmd.msg
 )
 
 ## Generate services in the 'srv' folder
