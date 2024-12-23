@@ -419,7 +419,7 @@ namespace humanoid_controller
   {
       if (msg->joint_data.size() ==2)
       {
-          if (msg->joint_data[0] < -30 || msg->joint_data[0] > 30 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
+          if (msg->joint_data[0] < -80 || msg->joint_data[0] > 80 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
           {
               ROS_WARN("Invalid robot head motion data. Joint data must be in the range [-30, 30] and [-25, 25].");
               return;
