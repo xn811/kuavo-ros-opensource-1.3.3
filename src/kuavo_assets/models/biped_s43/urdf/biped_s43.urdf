@@ -1337,7 +1337,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s43/meshes/neck_motor.STL" />
+          filename="package://kuavo_assets/models/biped_s43/meshes/head_yaw.STL" />
       </geometry>
       <material
         name="">
@@ -1351,7 +1351,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s43/meshes/neck_motor.STL" />
+          filename="package://kuavo_assets/models/biped_s43/meshes/head_yaw.STL" />
       </geometry>
     </collision>
   </link>
@@ -1395,7 +1395,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s43/meshes/head.STL" />
+          filename="package://kuavo_assets/models/biped_s43/meshes/head_pitch.STL" />
       </geometry>
       <material
         name="">
@@ -1409,7 +1409,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s43/meshes/head.STL" />
+          filename="package://kuavo_assets/models/biped_s43/meshes/head_pitch.STL" />
       </geometry>
     </collision>
   </link>
