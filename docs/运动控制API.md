@@ -206,6 +206,7 @@
 | header        | std_msgs/Header | 时间戳等信息             |
 
 - 数组长度为配置文件中的`NUM_JOINT`, 即关节总数和
+- 关节控制模式中, 0: Torque 控制模式, 1: Velocity 控制模式, 2: Position 控制模式
 
 #### /humanoid_mpc_target_arm
 
