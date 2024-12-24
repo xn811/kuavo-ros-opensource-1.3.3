@@ -8,9 +8,12 @@
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <ros/package.h>
+#include <fstream>
 
 #include "plantIK.h"
 #include "motion_capture_ik/package_path.h"
+#include "motion_capture_ik/json.hpp"
+#include "motion_capture_ik/utils.hpp"
 
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/analysis/simulator.h"
@@ -65,13 +68,16 @@ class ArmsIKNode
 {
     public:
         ArmsIKNode(ros::NodeHandle& nh, const std::string& model_path
-            , std::vector<std::string> end_frames_name, Eigen::Vector3d custom_eef_frame_pos=Eigen::Vector3d::Zero()
+            , std::vector<std::string> end_frames_name
+            , std::vector<std::string> shoulder_frame_names
+            , Eigen::Vector3d custom_eef_frame_pos=Eigen::Vector3d::Zero()
             , HighlyDynamic::HandSide hand_side=HighlyDynamic::HandSide::LEFT
             , int single_arm_num=7
         )
         : nh_(nh)
         , single_arm_num_(single_arm_num)
         , hand_side_(hand_side)
+        , shoulder_frame_names_(shoulder_frame_names)
         {
             const double dt = 0.001;
             const std::vector<std::string> custom_eef_frame_names{"eef_left", "eef_right"};
@@ -124,6 +130,10 @@ class ArmsIKNode
             // q0 for ik
             ik_cmd_left_.joint_angles = Eigen::VectorXd::Zero(single_arm_num_);
             ik_cmd_right_.joint_angles = Eigen::VectorXd::Zero(single_arm_num_);
+            // ros param
+            if(nh_.hasParam("print_ik_info"))
+                nh_.getParam("print_ik_info", print_ik_info_);
+            std::cout << "print_ik_info: " << print_ik_info_ << std::endl;
         }
 
         void run()
@@ -156,7 +166,8 @@ class ArmsIKNode
                                             << ", Left: " << q0_.tail(single_arm_num_).transpose() << std::endl;
                 }
                 auto start = std::chrono::high_resolution_clock::now();
-                bool result = ik_.solve(pose_vec, q0_, q, ik_solve_params_);
+                checkInWorkspace(pose_vec[1].second, pose_vec[2].second);
+                bool result = solveWithBinarySearch(pose_vec, q0_, q);
                 std::chrono::duration<double, std::milli> elapsed = std::chrono::high_resolution_clock::now() - start;
                 // std::cout << "Time elapsed: " << elapsed.count() << " ms" << std::endl;
 
@@ -193,6 +204,8 @@ class ArmsIKNode
                     }
                     publish_ik_result_info(q);
                 }
+                if(print_ik_info_)
+                    printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
                 // else
                 //     std::cout << "IK failed" << std::endl;
                 rate.sleep();
@@ -220,6 +233,43 @@ class ArmsIKNode
                 }
                 recived__new_cmd_ = false;
             }
+        }
+
+        double getWorkSpaceRadius()
+        {
+            auto X_bSl = plant_ptr_->GetFrameByName(shoulder_frame_names_[0]).CalcPoseInWorld(*plant_context_ptr_);
+            auto X_bEl = plant_ptr_->GetFrameByName("eef_left").CalcPoseInWorld(*plant_context_ptr_);
+            Eigen::Vector3d p_SlEl = X_bEl.translation() - X_bSl.translation();
+            return p_SlEl.norm();
+        }
+
+        Eigen::Vector3d transPosFrameToShoulder(const Eigen::Vector3d& p_bE, HighlyDynamic::HandSide hand_side)
+        {
+            auto p_bSl = plant_ptr_->GetFrameByName(shoulder_frame_names_[0]).CalcPoseInWorld(*plant_context_ptr_).translation();
+            auto p_bSr = plant_ptr_->GetFrameByName(shoulder_frame_names_[1]).CalcPoseInWorld(*plant_context_ptr_).translation();
+            auto p_bS = (hand_side == HighlyDynamic::HandSide::LEFT) ? p_bSl : p_bSr;
+            auto p_SE = p_bE - p_bS;
+            return p_SE;
+        }
+        bool checkInWorkspace(const Eigen::Vector3d& p_bE, HighlyDynamic::HandSide hand_side)
+        {
+            auto p_SE = transPosFrameToShoulder(p_bE, hand_side);
+            double radius = getWorkSpaceRadius();
+            return p_SE.norm() <= radius;
+        }
+        bool checkInWorkspace(const Eigen::Vector3d& p_bEl, const Eigen::Vector3d& p_bEr)
+        {
+            if(!checkInWorkspace(p_bEl, HighlyDynamic::HandSide::LEFT))
+            {
+                ROS_ERROR_STREAM("Left hand out of workspace!");
+                return false;
+            }
+            if(!checkInWorkspace(p_bEr, HighlyDynamic::HandSide::RIGHT))
+            {
+                ROS_ERROR_STREAM("Right hand out of workspace!");
+                return false;
+            }
+            return true;
         }
 
     private:
@@ -285,6 +335,40 @@ class ArmsIKNode
             return msg;
         }
 
+        void printIkResultInfo(const IkCmd& cmd_l, const IkCmd& cmd_r, const Eigen::VectorXd& result_q, bool result)
+        {
+            if(!result)
+            {
+                std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+                std::cerr << "\n++++++++++++++++++++ IK FAILED!!! ++++++++++++++++++++";
+                std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+                return;
+            }
+            std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+            std::cerr << "\n+++++++++++++++++++ IK RESULT INFO +++++++++++++++++++";
+            std::cerr << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            auto [left_pos, left_quat] = ik_.FK(result_q, HighlyDynamic::HandSide::LEFT);
+            auto [right_pos, right_quat] = ik_.FK(result_q, HighlyDynamic::HandSide::RIGHT);
+            std::cerr << "Eef cmd: \n" << std::fixed << std::setprecision(3) << 
+                "  Left pos: " << cmd_l.pos_xyz.transpose() << std::endl << 
+                "  Left quat: " << cmd_l.quat.coeffs().transpose() << std::endl << 
+                "  Right pos: " << cmd_r.pos_xyz.transpose() << std::endl << 
+                "  Right quat: " << cmd_r.quat.coeffs().transpose() << std::endl;
+
+            std::cerr << "Result:\n" << 
+                "  q: " << std::fixed << std::setprecision(3) << result_q.transpose() << std::endl;
+            std::cerr << "  Left eef pos: "  << std::fixed << std::setprecision(3) << left_pos.transpose() 
+                << ", Left eef quat: " << std::fixed << std::setprecision(3) << left_quat.coeffs().transpose() << std::endl;
+            std::cerr << "  Left pos error: " << (left_pos - cmd_l.pos_xyz).transpose() 
+                << ", error norm: " << 1000.0*(left_pos - cmd_l.pos_xyz).norm() << " mm." << std::endl;
+
+            std::cerr << "  Right eef pos: " << std::fixed << std::setprecision(3) << right_pos.transpose() 
+                << ", Right eef quat: " << std::fixed << std::setprecision(3) << right_quat.coeffs().transpose() << std::endl;
+            std::cerr << "  Right pos error: " << (right_pos - cmd_r.pos_xyz).transpose() 
+                << ", error norm: " << 1000.0*(right_pos - cmd_r.pos_xyz).norm() << " mm." << std::endl;
+            std::cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        }
+
         // 处理服务请求的回调函数
         bool handleServiceRequest(motion_capture_ik::twoArmHandPoseCmdSrv::Request &req,
                                 motion_capture_ik::twoArmHandPoseCmdSrv::Response &res) 
@@ -335,7 +419,9 @@ class ArmsIKNode
                     {Eigen::Quaterniond(1, 0, 0, 0), ik_cmd_right_.elbow_pos_xyz}
                     };
             Eigen::VectorXd q;
-            bool result = ik_.solve(pose_vec, q0_, q, ik_solve_params_);
+            checkInWorkspace(pose_vec[1].second, pose_vec[2].second);
+            // bool result = ik_.solve(pose_vec, q0_, q, ik_solve_params_);
+            bool result = solveWithBinarySearch(pose_vec, q0_, q);
             std::chrono::duration<double, std::milli> elapsed = std::chrono::high_resolution_clock::now() - start;
             // std::cout << "Time elapsed: " << elapsed.count() << " ms" << std::endl;
             res.success = false;
@@ -364,6 +450,8 @@ class ArmsIKNode
                 motion_capture_ik::twoArmHandPose msg = publish_ik_result_info(q);
                 res.hand_poses = msg;
             }
+            if(print_ik_info_)
+                printIkResultInfo(ik_cmd_left_, ik_cmd_right_, q, result);
             // 返回响应
             return true;
         }
@@ -385,6 +473,54 @@ class ArmsIKNode
             res.success = true;
             return true;
         }
+
+    bool solveWithBinarySearch(const std::vector<std::pair<Eigen::Quaterniond, Eigen::Vector3d>>& pose_vec, const Eigen::VectorXd& q0_, Eigen::VectorXd& q) {
+        // Step 1: 使用最粗略的精度进行求解
+        auto param_tmp = ik_solve_params_;
+        const double initial_tol = 20e-3;  // 初始最高精度
+        param_tmp.pos_constraint_tol = initial_tol;
+        param_tmp.oritation_constraint_tol = initial_tol;
+        bool result = ik_.solve(pose_vec, q0_, q, param_tmp);
+        auto q0_tmp = q;
+        // std::cout << "q0_tmp success?: " << result << std::endl;
+        if (!result) {
+            // 如果最粗略精度求解失败，直接退出
+            return false;
+        }
+        // Step 2: 使用最高精度进行求解
+        result = ik_.solve(pose_vec, q0_tmp, q, ik_solve_params_);
+        if (result) {
+            // 如果最高精度求解成功，直接返回
+            return true;
+        }
+        // Step 3: 二分法求解
+        double low_tol = param_tmp.pos_constraint_tol;  // 初始最低精度
+        auto high_tol = ik_solve_params_.pos_constraint_tol;  // 初始最高精度, 失败的情况下，使用最高精度
+        // std::cout << "pos_constraint_tol: " << ik_solve_params_.pos_constraint_tol << std::endl;
+        // std::cout << "Initial Binary search: [" << std::fixed << std::setprecision(3) << low_tol <<", " << high_tol << "]" << std::endl;
+
+        const double min_tol_diff = 2e-3;  // 最小精度区间，2mm
+
+        int compute_count = 0;
+        while (std::abs(high_tol - low_tol) > min_tol_diff) {
+            double mid_tol = (low_tol + high_tol) / 2.0;
+            param_tmp.pos_constraint_tol = mid_tol;
+            param_tmp.oritation_constraint_tol = mid_tol;
+            result = ik_.solve(pose_vec, q0_tmp, q, param_tmp);
+
+            if (result) {
+                // 如果求解成功，缩小下界
+                low_tol = mid_tol;
+            } else {
+                // 如果求解失败，缩小上界
+                high_tol = mid_tol;
+            }
+            // ROS_INFO_STREAM("Binary search: [" << compute_count << "]->[" << low_tol <<", " << high_tol << "]");
+            ++compute_count;
+        }
+        // std::cout << "compute_count: [" << compute_count << "]" << std::endl;
+        return true;
+    }
 
     private:
         HighlyDynamic::CoMIK ik_;
@@ -412,8 +548,20 @@ class ArmsIKNode
         bool use_ik_cmd_q0_{false};
         long long int ik_count_{0};
         long long int ik_success_count_{0};
+        std::vector<std::string> shoulder_frame_names_;
+        bool print_ik_info_{false};
 };
 }
+
+void loadJson(nlohmann::json &json_data, const std::string &filename)
+{
+    std::ifstream file(filename);
+    if (file.is_open())
+        file >> json_data;
+    else
+        std::cerr << "Failed to open config file: " << filename << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     // 初始化ROS节点
@@ -442,11 +590,24 @@ int main(int argc, char* argv[])
         ros::param::get("control_hand_side", control_hand_side);
         std::cout << "control_hand_side: " << control_hand_side << std::endl;
     }
+    // json
+    int robot_version_int=40;
+    if (nh.hasParam("/robot_version"))
+        nh.getParam("/robot_version", robot_version_int);
+    auto kuavo_assests_path = HighlyDynamic::getPackagePath("kuavo_assets");
+    std::string model_config_file = kuavo_assests_path + "/config/kuavo_v"+std::to_string(robot_version_int)+"/kuavo.json";
+    std::cout << "model_config_file: " << model_config_file << std::endl;
+    nlohmann::json json_data;
+    loadJson(json_data, model_config_file);
+    auto end_frames_name_ik = json_data["end_frames_name_ik"].get<std::vector<std::string>>();
+    auto shoulder_frame_names = json_data["shoulder_frame_names"].get<std::vector<std::string>>();
     
-    std::cout << "model_path: " << model_path << std::endl;
-    std::vector<std::string> end_frames_name = {"torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"};
+    // std::cout << "model_path: " << model_path << std::endl;
+    // std::vector<std::string> end_frames_name = {"torso", "l_hand_roll", "r_hand_roll", "l_forearm_pitch", "r_forearm_pitch"};
     Eigen::Vector3d custom_eef_frame_pos = Eigen::Vector3d(0, 0, eef_z_bias);
-    HighlyDynamic::ArmsIKNode arm_ik_node(nh, model_path, end_frames_name, custom_eef_frame_pos, HighlyDynamic::intToHandSide(control_hand_side));
+    HighlyDynamic::ArmsIKNode arm_ik_node(nh, model_path, end_frames_name_ik, shoulder_frame_names, custom_eef_frame_pos, HighlyDynamic::intToHandSide(control_hand_side));
+    double ws_r = arm_ik_node.getWorkSpaceRadius();
+    std::cout << "Work space radius: " << ws_r << std::endl;
     arm_ik_node.run();
 
     return 0;

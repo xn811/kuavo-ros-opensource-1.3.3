@@ -1,9 +1,8 @@
 # beta 分支
 
-## Breaking Changes
-- 无
-
 ## 文档相关
+- 🎉🎉🎉 : 新增 Kuavo 产品介绍, 快速开始, 开发接口,功能案例等文档, [内测版文档网站链接](https://kuavo.lejurobot.com/beta_manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html), [正式版文档网站链接](https://kuavo.lejurobot.com/manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html)
+- 补充运动控制接口文档中`/sensor_data_raw`话题的详细说明和数据示例 [文档链接](./docs/运动控制API.md)
 - 更新文档说明如何检测手臂电机运动方向, [文档链接](./docs/硬件基本设置/README.md)
 - 更新当前机器人发布和订阅话题的详细描述, 数据单位与物理含义, [文档链接](/docs/运动控制API.md)
 - 增加出厂流程文档, [文档链接](./docs/硬件基本设置/README.md)
@@ -13,6 +12,9 @@
 - 更新运动控制 API 接口文档, 新增`/gesture/list`, `/gesture/execute` 手势相关服务接口 [文档链接](./docs/运动控制API.md)
 
 ## 新增功能
+- 工具: 添加支持同时开启热点和连接WIFI工具, WIFI名称`$ROBOT_NAME的热点`, 密码`kuavo123456`[使用文档链接](./tools/linux_wifi_hotspot/readme.md)
+- 工具: 添加开机语音播报 WIFI 工具 [使用文档链接](./tools/announce_wifi/readme.md)
+- IK 服务增加工作空间检查和可选打印求解信息提示
 - 新增长手臂4.3版本机器人, 增加对应的 URDF 文件
 - 新增手臂电机 CAN 模块识别与绑定功能, 避免与夹爪模块冲突
 - 适配 MPC 不同手臂自由度的机器人
@@ -37,6 +39,7 @@
 - 新增 ROS 手势执行和获取手势列表服务接口, 接口详情和支持的手势列表见[文档](./docs/运动控制API.md)
 
 ## 修复问题 
+- 修复 biped_s42 机器人头部 yaw 电机方向问题, 已根据右手定更正
 - 修复 rosparam 获取`/mpc/mpcArmsDof`和`/armRealDof`参数时等待条件错误问题
 - 在校准腿部时不检查关节限位, 在跳圈或者编码器和零点位置相差较大时不触发保护挂掉,而是允许进入cali_leg模式校准
 - 修复py和shell脚本安装之后没有可执行权限  会导致开源仓库无法rosrun执行脚本,无法使用键盘控制脚本等现象

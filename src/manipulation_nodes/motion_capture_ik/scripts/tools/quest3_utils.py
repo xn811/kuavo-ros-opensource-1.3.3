@@ -84,7 +84,7 @@ class HeadBodyPose:
 
 
 class Quest3ArmInfoTransformer:
-    def __init__(self, model_path, vis_pub=True, predict_gesture=False):
+    def __init__(self, model_path, vis_pub=True, predict_gesture=False, eef_visual_stl_files=None):
         self.predict_gesture = predict_gesture
         self.model_path = model_path
         self.vis_pub = vis_pub
@@ -126,6 +126,8 @@ class Quest3ArmInfoTransformer:
         self.head_body_pose_puber = rospy.Publisher('/kuavo_head_body_orientation', headBodyPose, queue_size=10)
         self.left_joystick = None
         self.right_joystick = None
+        if eef_visual_stl_files is not None:
+            self.eef_visual_stl_files = eef_visual_stl_files
         if self.predict_gesture:
             from hand_gesture_predictor import HandGesturePredictor
             hand_gesture_model_path = os.path.join(current_dir, "hand_gesture_model.onnx")
@@ -626,20 +628,20 @@ class Quest3ArmInfoTransformer:
         if side == "Left":
             marker.mesh_resource = (
                 "file://"
-                + self.model_path
-                + "/models/biped_gen4.0/meshes/l_hand_roll.obj"
+                + self.model_path +
+                "/meshes/" + self.eef_visual_stl_files[0]
             )
         elif side == "Right":
             marker.mesh_resource = (
                 "file://"
                 + self.model_path
-                + "/models/biped_gen4.0/meshes/r_hand_roll.obj"
+                + "/meshes/" + self.eef_visual_stl_files[1]
             )
         elif side == "Torso":
             marker.mesh_resource = (
                 "file://"
                 + self.model_path
-                + "/models/biped_gen4.0/meshes/base_link.obj"
+                + "/meshes/base_link.STL"
             )
         marker.scale.x = 1
         marker.scale.y = 1
