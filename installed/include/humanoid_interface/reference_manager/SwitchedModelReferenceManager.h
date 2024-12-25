@@ -260,7 +260,6 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
 
   double arm_move_spd_{1.2};
-  bool only_half_up_body_{false};
 };
 
 }  // namespace humanoid

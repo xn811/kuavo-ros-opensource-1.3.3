@@ -55,8 +55,10 @@ class SwingTrajectoryPlanner {
 
     scalar_t swing_shoulder_center = 0.2;
     scalar_t swing_shoulder_scale = 0.2;
+    scalar_t swing_elbow_center = 0.0;
     scalar_t swing_elbow_scale = 3.0;
 
+    bool arm_joint_invert = false;
   };
 
   SwingTrajectoryPlanner(Config config, size_t numFeet, size_t numHand = 2);
