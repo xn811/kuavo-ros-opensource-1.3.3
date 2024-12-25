@@ -9,6 +9,4 @@ struct RobotVersion
     RobotVersion(u_int8_t major, u_int8_t minor) : Major(major), Minor(minor) {}
     std::string versionName() { return std::to_string(Major) + "." + std::to_string(Minor); }
     int versionInt() { return Major * 10 + Minor; }
-    bool operator == (const RobotVersion& rhs) { return ((Major == rhs.Major) && (Minor == rhs.Minor)); }
-    bool operator != (const RobotVersion& rhs) { return ((Major != rhs.Major) || (Minor != rhs.Minor)); }
 };
