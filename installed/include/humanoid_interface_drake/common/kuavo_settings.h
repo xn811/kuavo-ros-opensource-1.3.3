@@ -101,6 +101,7 @@ namespace HighlyDynamic
         double walk_stablizer_threshold;
         double v_takeoff;
         bool swing_arm;
+        bool only_half_up_body = false;
     };
 
     struct HardwareSettings
@@ -120,6 +121,9 @@ namespace HighlyDynamic
         std::vector<double> max_joint_position_limits;
         std::vector<double> joint_velocity_limits;
         std::vector<EndEffectorType> end_effector_type;
+
+        std::vector<bool> motors_exist;
+        std::vector<bool> motors_disable;
         void resizeMotor(uint8_t num_joints)
         {
             joint_ids.resize(num_joints);
@@ -131,6 +135,8 @@ namespace HighlyDynamic
             min_joint_position_limits.resize(num_joints);
             max_joint_position_limits.resize(num_joints);
             joint_velocity_limits.resize(num_joints);
+            motors_exist.resize(num_joints);
+            motors_disable.resize(num_joints);
         }
         std::string getEcmasterType(int robot_version_int=40);
 

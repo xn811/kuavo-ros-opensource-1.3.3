@@ -35,6 +35,7 @@
     "imu_invert":false,
     "imu_in_torso": [0, 0, 0],
     "isParallelArm":false,
+    "only_half_up_body":false,
     "MOTORS_TYPE":[
         "PA100_18", "PA100", "PA100", "PA100", "CK", "CK",
         "PA100_18", "PA100", "PA100", "PA100", "CK", "CK",

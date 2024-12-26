@@ -200,6 +200,10 @@ namespace humanoid_controller
     {
       controllerNh_.getParam("/use_joint_filter", use_joint_filter_);
     }
+
+    if (controllerNh_.hasParam("/only_half_up_body")) {
+      controllerNh_.getParam("/only_half_up_body", only_half_up_body_);
+    }
     // trajectory_publisher_ = new TrajectoryPublisher(controller_nh, 0.001);
     
     size_t buffer_size = (is_play_back_mode_) ? 20 : 5;
@@ -415,7 +419,7 @@ namespace humanoid_controller
   {
       if (msg->joint_data.size() ==2)
       {
-          if (msg->joint_data[0] < -30 || msg->joint_data[0] > 30 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
+          if (msg->joint_data[0] < -80 || msg->joint_data[0] > 80 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
           {
               ROS_WARN("Invalid robot head motion data. Joint data must be in the range [-30, 30] and [-25, 25].");
               return;
@@ -704,8 +708,11 @@ namespace humanoid_controller
     bool is_mpc_updated = false;
     if (use_external_mpc_)
     {
-      // Update the current state of the system
-      mrtRosInterface_->setCurrentObservation(currentObservation_);
+      // Only use halfup_body doesn't work well.
+      if (!only_half_up_body_) {
+        // Update the current state of the system
+        mrtRosInterface_->setCurrentObservation(currentObservation_);
+      }
       // Trigger MRT callbacks
       mrtRosInterface_->spinMRT();
       // Update the policy if a new on was received
@@ -719,7 +726,14 @@ namespace humanoid_controller
 
         publishFeetTrajectory(target_trajectories);
       }
-      mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
+
+      if (!only_half_up_body_) {
+        mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
+      }
+      else {
+        // Only half up body
+        mrtRosInterface_->evaluatePolicy(0.0, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
+      }
       
     }
     else
@@ -780,8 +794,15 @@ namespace humanoid_controller
       {
         for (int i = 0; i < 2; i++)
         {
-          optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
+          // 只使用上半身模式, 此时 MPC 求解未开启, 直接使用 target_arm_pos
+          if (only_half_up_body_) {
+            optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_, armDofReal_) =
+              target_arm_pos.segment(i * armDofReal_, armDofDiff_);
+          }
+          else {
+            optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
               target_arm_pos.segment(i * armDofReal_ + armDofMPC_, armDofDiff_);
+          }
         }
       }
     }
@@ -807,17 +828,22 @@ namespace humanoid_controller
     // optimizedInput2WBC_mrt_.tail(armNum_) = arm_joint_vel_filter_.update(filter_input_vel);
     // arm_joint_pos_cmd_prev_ = filtered_arm_pose;
   
-    
-    
     if(use_ros_arm_joint_trajectory_)
     {
       // TODO: feedback in planner
       // auto arm_pos = currentObservation_.state.tail(armNum_); 
       // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
       // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
-      //直接覆盖mpc每只手臂末3位角度
-      optimizedState2WBC_mrt_.segment<3>(24+4) = arm_joint_trajectory_.pos.segment<3>(4);
-      optimizedState2WBC_mrt_.segment<3>(24+7+4) = arm_joint_trajectory_.pos.segment<3>(7+4);
+      if (only_half_up_body_) 
+      {
+          optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
+          optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
+      }
+      else {
+          //直接覆盖mpc每只手臂末3位角度
+          optimizedState2WBC_mrt_.segment<3>(24+4) = arm_joint_trajectory_.pos.segment<3>(4);
+          optimizedState2WBC_mrt_.segment<3>(24+7+4) = arm_joint_trajectory_.pos.segment<3>(7+4);
+      }
       // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
     }
     // for(int i=0;i<info.actuatedDofNum;i++)

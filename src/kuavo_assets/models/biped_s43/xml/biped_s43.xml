@@ -32,8 +32,8 @@
     <mesh name="r_hand_yaw" file="r_hand_yaw.STL" />
     <mesh name="r_hand_roll" file="r_hand_roll.STL" />
     <mesh name="r_hand_pitch" file="r_hand_pitch.STL" />
-    <mesh name="neck_motor" file="neck_motor.STL" />
-    <mesh name="head" file="head.STL" />
+    <mesh name="head_yaw" file="head_yaw.STL" />
+    <mesh name="head_pitch" file="head_pitch.STL" />
     <mesh name="camera" file="camera.STL" />
   </asset>
   <worldbody>
@@ -196,13 +196,13 @@
       <body name="neck_motor" pos="-0.0175 0 0.5014">
             <inertial pos="0 0.0124496 -0.0298177" quat="0.340162 0.619911 -0.619911 0.340162" mass="0.0290833" diaginertia="3.15594e-05 2.31089e-05 1.85739e-05" />
             <joint name="neck_motor" pos="0 0 0" axis="0 0 1" limited="true" range="-1.57 1.57" />
-            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.678431 0.654902 0.827451 1" mesh="neck_motor" />
-            <geom type="mesh" rgba="0.678431 0.654902 0.827451 1" mesh="neck_motor" />
+            <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.678431 0.654902 0.827451 1" mesh="head_yaw" />
+            <geom type="mesh" rgba="0.678431 0.654902 0.827451 1" mesh="head_yaw" />
             <body name="head" pos="0 0 0">
                 <inertial pos="0.0129709 0.000710238 0.05877" quat="-0.00224721 0.862414 0.00456122 0.506178" mass="0.67563" diaginertia="0.0026087 0.00184615 0.00144101" />
                 <joint name="head" pos="0 0 0" axis="0 1 0" limited="true" range="-0.52 0.52" />
-                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head" />
-                <geom type="mesh" rgba="1 1 1 1" mesh="head" />
+                <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="head_pitch" />
+                <geom type="mesh" rgba="1 1 1 1" mesh="head_pitch" />
                 <geom pos="0.0919101 0.0175 0.0617839" quat="0.953717 0 0.300706 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="camera" />
                 <geom pos="0.0919101 0.0175 0.0617839" quat="0.953717 0 0.300706 0" type="mesh" rgba="1 1 1 1" mesh="camera" />
             </body>

@@ -13,6 +13,7 @@
     </group>
 
     <param name="channel_map_path" value="$(find humanoid_controllers)/launch/joy/$(arg joystick_type).json"/>
+    <param name="joystick_sensitivity" value="1"/>
     <node pkg="humanoid_interface_ros" type="humanoid_joy_control_auto_gait_with_vel" name="humanoid_joy_control_auto_gait_with_vel" output="screen">
 
     </node>

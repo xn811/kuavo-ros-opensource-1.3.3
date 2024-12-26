@@ -1,6 +1,8 @@
 # beta 分支
 
 ## 文档相关
+- 补充`/joint_cmd`控制话题中 control_mode 参数详细描述 [文档链接](./docs/运动控制API.md)
+- 更新如何实时查看到 Quest3 投屏的屏幕使用文档, [文档链接](./docs/Quest3_VR_basic.md)
 - 🎉🎉🎉 : 新增 Kuavo 产品介绍, 快速开始, 开发接口,功能案例等文档, [内测版文档网站链接](https://kuavo.lejurobot.com/beta_manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html), [正式版文档网站链接](https://kuavo.lejurobot.com/manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html)
 - 补充运动控制接口文档中`/sensor_data_raw`话题的详细说明和数据示例 [文档链接](./docs/运动控制API.md)
 - 更新文档说明如何检测手臂电机运动方向, [文档链接](./docs/硬件基本设置/README.md)
@@ -12,6 +14,9 @@
 - 更新运动控制 API 接口文档, 新增`/gesture/list`, `/gesture/execute` 手势相关服务接口 [文档链接](./docs/运动控制API.md)
 
 ## 新增功能
+- VR: 新增 Quest3/Vision Pro 视频流功能
+- 支持手柄控制头部运动, RT+左摇杆控制头部
+- 支持通过修改 kuavo.json 配置文件`only_half_up_body`为 true 只使能上半身电机, 并适配了半身轮臂机器人, 使用见 [REAME文档](./readme.md)
 - 工具: 添加支持同时开启热点和连接WIFI工具, WIFI名称`$ROBOT_NAME的热点`, 密码`kuavo123456`[使用文档链接](./tools/linux_wifi_hotspot/readme.md)
 - 工具: 添加开机语音播报 WIFI 工具 [使用文档链接](./tools/announce_wifi/readme.md)
 - IK 服务增加工作空间检查和可选打印求解信息提示
@@ -39,6 +44,8 @@
 - 新增 ROS 手势执行和获取手势列表服务接口, 接口详情和支持的手势列表见[文档](./docs/运动控制API.md)
 
 ## 修复问题 
+- 修复由于`/humanoid_wbc_observation` 话题数据维度减少修改导致 h12 遥控器播放动作失败问题
+- 更正  biped_s42 机器人的 URDF 文件, 新增雷达的 TF, 调整 mesh，惯量和限位
 - 修复 biped_s42 机器人头部 yaw 电机方向问题, 已根据右手定更正
 - 修复 rosparam 获取`/mpc/mpcArmsDof`和`/armRealDof`参数时等待条件错误问题
 - 在校准腿部时不检查关节限位, 在跳圈或者编码器和零点位置相差较大时不触发保护挂掉,而是允许进入cali_leg模式校准
@@ -75,6 +82,8 @@
 - 修复头部动作执行时不断读取 json 降低效率问题
 
 ## 其他改进
+- 遥控器控制改进: 使用五阶低通滤波对 cmdVel 进行滤波，截止频率1hz
+- 头部 yaw 关节软限位修正, 放宽至 +- 80°
 - kuavo_assets 更新各个版本机器人的模型快照
 - 增加遥控器topic维度不对时进行提示, 防止自动触发开始发生危险
 - trot步态去除SS相

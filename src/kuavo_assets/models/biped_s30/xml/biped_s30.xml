@@ -32,8 +32,8 @@
     <mesh name="r_hand_yaw" file="r_hand_yaw.STL"/>
     <mesh name="r_hand_pitch" file="r_hand_pitch.STL"/>
     <mesh name="r_hand_roll" file="r_hand_roll.STL"/>
-    <mesh name="neck_motor" file="neck_motor.STL" />
-    <mesh name="head" file="head.STL" />
+    <mesh name="head_yaw" file="head_yaw.STL" />
+    <mesh name="head_pitch" file="head_pitch.STL" />
     <mesh name="camera" file="camera.STL" />
   </asset>
   <worldbody>
