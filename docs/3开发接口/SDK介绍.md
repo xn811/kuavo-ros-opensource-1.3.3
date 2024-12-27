@@ -15,19 +15,13 @@
 - SDK包含有机器人上位机与下位机两部分的话题和服务调用，使用前需要确保上、下位机
 ### 上位机
 - 功能说明：机器人的上位机为头部nuc，负责图像、音频的处理与解析，比如语音交互、视觉特征检测等；上位机安装有软路由软件，与下位机通过网线连接并给下位机分配ip；在机器人ROS的主从机系统中，上位机作为从机
-- 代码仓库：[上位机代码仓库](https://gitee.com/leju-robot/kuavo_ros_application/tree/dev/)
 
 ### 下位机
 - 功能说明：机器人下位机为胸部nuc，负责整机的运动控制，比如机器人逆运动学、步态算法等；下位机通过网线与上位机连接建立通讯；在机器人ROS的主从机系统中，下位机作为主机(master)
-- 代码仓库：[下位机代码仓库](https://gitee.com/leju-robot/kuavo-ros-opensource/tree/dev/)
 
 ## 说明
-1. 机器人坐标系说明：
 
-  ![侧视图](images/坐标系侧视图.png)
-  ![正视图](images/坐标系正视图.png)
-  - 机器人基座标系为图示腰部坐标系，相机坐标系为图示头部坐标系,红色为x轴，绿色为y轴，蓝色为z轴
-2. SDK目录结构说明
+1. SDK目录结构说明
 - kuavo_sdk/
   - msg：ROS Topic消息格式定义文件
   - srv：ROS Service格式定义文件
@@ -44,17 +38,6 @@ catkin build kuavo_sdk
 ```sh
 source ~/devel/setup.zsh # zsh还是bash根据使用终端环境选择
 ```
-- 启动上下位机主程序
-  - 上位机：
-  ```bash
-  roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 仿真
-  roslaunch humanoid_controllers load_kuavo_real.launch # 实物
-  ```
-  - 下位机：
-  ```
-  roslaunch dynamic_biped load_robot_head.launch
-  ```
-
 - 执行SDK示例程序
 ```sh
 python3 src/kuavo_sdk/sdk/01_use_music/playmusic.py # 音频播放示例

@@ -99,47 +99,7 @@
   > 如果希望同时映射躯干的运动（上下蹲和弯腰），可以增加选项`control_torso:=1`，使用前**务必在站立状态下长按VR右手柄的meta键**以标定躯干高度。
 
   > 默认控制双手，如果需要控制单手，可以增加选项`ctrl_arm_idx:=0`, 其中0，1，2分别对应左手，右手，双手
-- 全程使用VR的手柄控制即可
-  - 启动时按A键站立(从启动等待开始状态站立，相当于kuavo中的按o)；
-  - 停止机器人，同时按下左侧XY两个键，停止机器人
-  - 自动模式下，推摇杆即走，松摇杆自动立即停止
-  - 按下A（stance）、B（walk）也可以手动切换gait
-  - 扳机控制手指开合，Y键用于锁定或解锁手指控制
-  - 默认摇杆左摇杆控制前后，右摇杆控制左右转；
-    - 当手放到一侧的两个按钮上时(只接触不按下)，切换为对侧为控制左右或者高度
-    - 如手指覆盖住左侧的XY键，则右侧摇杆切换为高度控制
-    - 手贴在左侧XY键，右侧摇杆会自然地变为高度控制，按下去即可关闭程序；
-  - x键为模式切换辅助键，按住x键之后,其他按键的作用如下：
-    - A:手臂模式切换为外部控制/自动摆手，这两种模式切换之后会有一个平滑同步到当前规划轨迹的过程
-    - B:手臂模式切换为保持姿态
+  - 参考[参考机器人VR控制教程](../../2快速开始/快速开始.md)
   
  > 开启手势识别，可以增加选项 `predict_gesture:=true`，利用神经网络预测手势，灵巧手会直接根据手势预测结果进行运动，目前支持的手势有（只有当预测结果同时满足：高置信度（>80%）明显优于第二预测（差值>0.3）预测分布集中（熵值<0.8）才会返回具体的手势类别。否则会认为预测失败，灵巧手会采用原来的方式控制）
-1. **单指点（外展式）**  
-   ![finger-pointing-opposed](images/finger-pointing-opposed.png)
-
-2. **五指抓取**  
-   ![cylindrical-grip](images/cylindrical-grip.png)
-
-3. **666手势**  
-   ![shaka-sign](images/shaka-sign.png)
-
-4. **两只捏（外展式）**  
-   ![precision-pinch-unopposed](images/precision-pinch-unopposed.png)
-
-5. **握拳**  
-   `fist`
-
-6. **点赞**  
-   `thumbs-up`
-
-7. **五指张开**  
-   ![palm-open](images/palm-open.png)
-
-8. **三指捏**  
-   ![tripod-pinch-unopposed](images/tripod-pinch-unopposed.png)
-
-9. **兔子头手势**  
-   ![rock-and-roll](images/rock-and-roll.png)
-
-10. **二指夹（外展式）**  
-    ![two-finger-spread-unopposed](images/two-finger-spread-unopposed.png)
+  - 参考[灵巧手手势使用案例](灵巧手手势使用案例.md)

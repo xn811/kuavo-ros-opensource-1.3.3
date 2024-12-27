@@ -75,6 +75,7 @@ const sidebars = {
       items: [
         'basic_usage/kuavo-ros-control/docs/5调试教程/快速调试',
         'basic_usage/kuavo-ros-control/docs/5调试教程/配置文件说明',
+        'basic_usage/kuavo-ros-control/docs/5调试教程/启动前准备',
       ],
     },
     {
