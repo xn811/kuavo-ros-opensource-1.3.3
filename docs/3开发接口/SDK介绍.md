@@ -27,7 +27,7 @@
   ![侧视图](images/坐标系侧视图.png)
   ![正视图](images/坐标系正视图.png)
   - 机器人基座标系为图示腰部坐标系，相机坐标系为图示头部坐标系,红色为x轴，绿色为y轴，蓝色为z轴
-1. SDK目录结构说明
+2. SDK目录结构说明
 - kuavo_sdk/
   - msg：ROS Topic消息格式定义文件
   - srv：ROS Service格式定义文件
@@ -36,25 +36,33 @@
 
 ## SDK环境构建
 ```sh
-cp -r ~/kuavo-ros-control/docs/kuavo_sdk ~
-cd ~/sdk_doc
-catkin build
+catkin build kuavo_sdk
 ```
 
 ## 使用
 - source 环境变量
 ```sh
-source ~/kuavo_sdk/devel/setup.zsh # zsh还是bash根据使用终端环境选择
+source ~/devel/setup.zsh # zsh还是bash根据使用终端环境选择
 ```
-
 - 启动上下位机主程序
-  - 参考阅读[自定义启动](../4功能案例/通用案例/自定义启动案例.md)
+  - 上位机：
+  ```bash
+  roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 仿真
+  roslaunch humanoid_controllers load_kuavo_real.launch # 实物
+  ```
+  - 下位机：
+  ```
+  roslaunch dynamic_biped load_robot_head.launch
+  ```
 
 - 执行SDK示例程序
 ```sh
 python3 src/kuavo_sdk/sdk/01_use_music/playmusic.py # 音频播放示例
 ```
 
+- SDK接口文档：[接口使用文档](接口使用文档.md)
+- 调试参考：[快速调试](../5调试教程/快速调试.md)
+
 ## SDK版本
 - 版本：**1.0**
-- 发布时间：**2024-12-20**
+- 发布时间：**2024-12-28**
