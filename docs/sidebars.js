@@ -18,7 +18,8 @@ const sidebars = {
       type: 'category',
       label: '产品介绍',
       items: [
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
+        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4.1产品介绍',
+        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4pro产品介绍',
       ],
     },
     {
@@ -46,7 +47,6 @@ const sidebars = {
           type: 'category',
           label: '通用案例',
           items: [
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/自定义启动案例',
             'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/H12遥控器使用开发案例',
             'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/VR使用开发案例',
             'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/落足点规划案例',
@@ -67,6 +67,29 @@ const sidebars = {
           ],
         },
         'basic_usage/kuavo-ros-control/docs/4功能案例/案例目录',
+      ],
+    },
+    {
+      type: 'category',
+      label: '调试教程',
+      items: [
+        'basic_usage/kuavo-ros-control/docs/5调试教程/快速调试',
+        'basic_usage/kuavo-ros-control/docs/5调试教程/配置文件说明',
+      ],
+    },
+    {
+      type: 'category',
+      label: '常用工具',
+      items: [
+        'basic_usage/kuavo-ros-control/docs/6常用工具/日志工具',
+        'basic_usage/kuavo-ros-control/docs/6常用工具/硬件测试工具',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Q&A',
+      items: [
+        'basic_usage/kuavo-ros-control/docs/7常见问题与故障排查/故障排查',
       ],
     },
     {
