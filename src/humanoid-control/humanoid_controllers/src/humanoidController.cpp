@@ -286,7 +286,11 @@ namespace humanoid_controller
     }
     
     ros::param::set("mujoco_init_state", mujoco_init_state);
-  
+
+    auto initial_state_ =  drake_interface_->getInitialState();
+    std::cout << "controller initial_state_:" << initial_state_.transpose() << std::endl;
+    std::vector<double> initial_state_vector(initial_state_.data(), initial_state_.data() + initial_state_.size());
+    controllerNh_.setParam("/initial_state", initial_state_vector);
 
     joint_state_limit_.resize(actuatedDofNumReal_, 2);
 
