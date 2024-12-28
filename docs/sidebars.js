@@ -27,7 +27,6 @@ const sidebars = {
       label: '快速开始',
       items: [
         'basic_usage/kuavo-ros-control/docs/2快速开始/快速开始',
-        'basic_usage/kuavo-ros-control/docs/2快速开始/机器人关节标定'
       ],
     },
     {
@@ -37,6 +36,7 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/3调试教程/快速调试',
         'basic_usage/kuavo-ros-control/docs/3调试教程/配置文件说明',
         'basic_usage/kuavo-ros-control/docs/3调试教程/启动前准备',
+        'basic_usage/kuavo-ros-control/docs/3调试教程/机器人关节标定'
       ],
     },
     {

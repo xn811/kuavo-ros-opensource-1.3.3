@@ -3,6 +3,7 @@
 
 import rospy
 import numpy as np
+import time
 from kuavo_sdk.srv import twoArmHandPoseCmdSrv
 from kuavo_sdk.msg import twoArmHandPoseCmd, ikSolveParam
 

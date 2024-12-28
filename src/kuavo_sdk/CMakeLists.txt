@@ -64,6 +64,10 @@ add_message_files(
   endEffectorData.msg
   gestureTask.msg
   jointCmd.msg
+  armHandPose.msg
+  twoArmHandPose.msg
+  twoArmHandPoseCmd.msg
+  ikSolveParam.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -75,6 +79,8 @@ add_service_files(
   recordmusic.srv
   gestureExecute.srv
   gestureExecuteState.srv
+  twoArmHandPoseCmdSrv.srv
+  fkSrv.srv
 )
 
 ## Generate actions in the 'action' folder
