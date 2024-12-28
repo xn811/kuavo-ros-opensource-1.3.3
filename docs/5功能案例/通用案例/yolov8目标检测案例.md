@@ -11,7 +11,7 @@
   - [示例代码](#示例代码)
 
 ## 说明
-- 功能包：`yolo_box_object_detection` (位于上位机代码仓库)：`<代码仓库>/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection`
+- 功能包：`yolo_box_object_detection` (位于上位机代码仓库)：`<kuavo_ros_application>/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection`
 - 📦 箱子识别
 
 ## 🎯 针对于 YOLOv8 训练模型检测调用
@@ -20,9 +20,9 @@
 
 ## 📁 模型路径及说明
 
-- 📂 路径：`kuavo_ros_application/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection`
+- 📂 路径：`<kuavo_ros_application>/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection`
 - 📄 模型格式：`.pt`
-- 🗂️ 模型路径：`kuavo_ros_application/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection/scripts/models/`
+- 🗂️ 模型路径：`<kuavo_ros_application>/src/ros_vision/detection_industrial_yolo/yolo_box_object_detection/scripts/models/`
 - 🧪 识别测试程序：
   - `test_detect.py` (实时检测)
   - `test_image.py` (指定图片检测)
@@ -57,7 +57,7 @@
 
 ```bash
 # 进入工作目录
-cd ~/kuavo_ros_application
+cd <kuavo_ros_application>
 
 # 启动箱子识别
 roslaunch yolo_box_object_detection yolo_segment_detect.launch
@@ -68,5 +68,5 @@ roslaunch yolo_box_object_detection yolo_segment_detect.launch
 - 📄 查看 `yolo_box_transform_torso.py` 文件第 71-74 行，由于检测只获取检测目标中心点空间位置无姿态信息，四元数为固定值非实际值
 
 ## 示例代码
-- 路径：`<代码仓库>/src/demo/examples_code/yolo_detect/yolo_detect_info.py`
+- 路径：`<kuavo-ros-opensource>/src/demo/examples_code/yolo_detect/yolo_detect_info.py`
 - `yolo_detect_info.py`: 获取一次 `/object_yolo_box_tf2_torso_result` 检测结果基于机器人基座标系的位姿

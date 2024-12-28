@@ -19,7 +19,7 @@ const sidebars = {
       label: '产品介绍',
       items: [
         'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4pro产品介绍',
+        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4.1产品介绍',
       ],
     },
     {
@@ -32,11 +32,20 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: '调试教程',
+      items: [
+        'basic_usage/kuavo-ros-control/docs/3调试教程/快速调试',
+        'basic_usage/kuavo-ros-control/docs/3调试教程/配置文件说明',
+        'basic_usage/kuavo-ros-control/docs/3调试教程/启动前准备',
+      ],
+    },
+    {
+      type: 'category',
       label: '开发接口',
       items: [
-        'basic_usage/kuavo-ros-control/docs/3开发接口/仿真环境使用',
-        'basic_usage/kuavo-ros-control/docs/3开发接口/SDK介绍',
-        'basic_usage/kuavo-ros-control/docs/3开发接口/接口使用文档',
+        'basic_usage/kuavo-ros-control/docs/4开发接口/仿真环境使用',
+        'basic_usage/kuavo-ros-control/docs/4开发接口/SDK介绍',
+        'basic_usage/kuavo-ros-control/docs/4开发接口/接口使用文档',
       ],
     },
     {
@@ -47,35 +56,26 @@ const sidebars = {
           type: 'category',
           label: '通用案例',
           items: [
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/H12遥控器使用开发案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/VR使用开发案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/落足点规划案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/二维码检测使用案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/灵巧手手势使用案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/路径轨迹规划案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/数据采集案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/yolov8目标检测案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/通用案例/手臂逆运动学案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/H12遥控器使用开发案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/VR使用开发案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/落足点规划案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/二维码检测使用案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/灵巧手手势使用案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/路径轨迹规划案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/数据采集案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/yolov8目标检测案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂逆运动学案例',
           ],
         },
         {
           type: 'category',
           label: '扩展案例',
           items: [
-            'basic_usage/kuavo-ros-control/docs/4功能案例/拓展案例/大模型使用案例',
-            'basic_usage/kuavo-ros-control/docs/4功能案例/拓展案例/机器人导航案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/大模型使用案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人导航案例',
           ],
         },
-        'basic_usage/kuavo-ros-control/docs/4功能案例/案例目录',
-      ],
-    },
-    {
-      type: 'category',
-      label: '调试教程',
-      items: [
-        'basic_usage/kuavo-ros-control/docs/5调试教程/快速调试',
-        'basic_usage/kuavo-ros-control/docs/5调试教程/配置文件说明',
-        'basic_usage/kuavo-ros-control/docs/5调试教程/启动前准备',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/案例目录',
       ],
     },
     {
