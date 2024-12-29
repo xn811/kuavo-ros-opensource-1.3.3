@@ -24,6 +24,7 @@ sros1
 ./build.sh ROS1
 ```
 ## 配置文件修改
+- 配置文件路径：`livox_ros_driver2/config/MID360_config.json`
 - 将 `cmd_data_ip`、`push_msg_ip`、`point_data_ip`、`imu_data_ip` ip 改为 192.168.1.102
 - 将雷达ip改为：192.168.1.191
 
