@@ -36,7 +36,8 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/3调试教程/快速调试',
         'basic_usage/kuavo-ros-control/docs/3调试教程/配置文件说明',
         'basic_usage/kuavo-ros-control/docs/3调试教程/启动前准备',
-        'basic_usage/kuavo-ros-control/docs/3调试教程/机器人关节标定'
+        'basic_usage/kuavo-ros-control/docs/3调试教程/机器人关节标定',
+        'basic_usage/kuavo-ros-control/docs/3调试教程/上肢控制模式',
       ],
     },
     {
@@ -64,7 +65,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/路径轨迹规划案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/数据采集案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/yolov8目标检测案例',
-            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂逆运动学案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂正逆运动学案例',
           ],
         },
         {
@@ -84,6 +85,7 @@ const sidebars = {
       items: [
         'basic_usage/kuavo-ros-control/docs/6常用工具/日志工具',
         'basic_usage/kuavo-ros-control/docs/6常用工具/硬件测试工具',
+        'basic_usage/kuavo-ros-control/docs/6常用工具/热点工具',
       ],
     },
     {
