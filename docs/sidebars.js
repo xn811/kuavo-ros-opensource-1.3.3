@@ -20,6 +20,7 @@ const sidebars = {
       items: [
         'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
         'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4.1产品介绍',
+        'basic_usage/kuavo-ros-control/docs/1产品介绍/轮臂产品介绍',
       ],
     },
     {
@@ -76,6 +77,13 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人导航案例',
           ],
         },
+        {
+          type: 'category',
+          label: '轮臂案例',
+          items: [
+            'basic_usage/kuavo-ros-control/docs/5功能案例/轮臂案例/基础使用',
+          ],
+        },
         'basic_usage/kuavo-ros-control/docs/5功能案例/案例目录',
       ],
     },
@@ -99,7 +107,7 @@ const sidebars = {
       type: 'category',
       label: 'Changelog',
       items: [
-        'basic_usage/kuavo-ros-control/CHANGELOG'
+        'basic_usage/kuavo-ros-control/docs/kuavo更新日志'
       ],
     },
   ],
