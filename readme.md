@@ -49,7 +49,7 @@ git checkout dev
 - docker镜像可以自行根据后续章节使用`./docker/Dockerfile`构建，或者下载已经编译好的镜像：
 
 ```bash  
-容器下载链接：https://kuavo.lejurobot.com/docker_images/kuavo_opensource_ocs2_mpc_wbc_img_0_3.tar
+wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_ocs2_mpc_wbc_img_0_3.tar
 ```
 
 - 执行以下命令导入容器镜像：
@@ -103,6 +103,12 @@ roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 启动控制器、
 ```
 
 ##### 实物运行
+
+##### 末端执行器配置
+在运行实物之前, 您需要先修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`中EndEffectorType为您实物机器人的执行器类型:
+- `qiangnao` : 灵巧手, 默认值
+- `lejuclaw` : 二指夹爪
+
 - 实物运行时，开机第一次需要先在cali模式下运行一次，确认机器人姿态和位置正确(机器人所有关节回到零位)
 
 ```bash
@@ -167,6 +173,64 @@ source devel/setup.bash
 roslaunch humanoid_controllers load_kuavo_real.launch 
 ```
 - 运行程序之后，机器人会进入待站立阶段，确认无误之后，准备扶住机器人，然后按`o`启动机器人，机器人回开始运动到站立状态，并开启反馈控制。
+
+##### 实物运行-只使能上半身
+> 即不控制机器人的下肢关节, 只控制机器人的上半身(手臂和头部关节), 方便在只使用手臂和头部关节的场景快速开发和调试.
+
+1. 修改配置文件
+修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`配置文件中的`only_half_up_body`配置项, 将其设置为`true`.
+```json
+// 大约在 38 行
+"only_half_up_body":true, 
+```
+2. 确认一下胸部 NUC 的 CPU 型号, 可以执行以下命令查看:
+```bash
+lscpu |grep  Intel
+```
+如果输出如下所示, 说明 NUC 的 CPU 型号为`i9`:
+```bash
+Vendor ID:                            GenuineIntel
+Model name:                           13th Gen Intel(R) Core(TM) i9-13900H
+```
+如果输出如下所示, 说明 NUC 的 CPU 型号为`i7`:
+```bash
+厂商 ID：                             GenuineIntel
+型号名称：                            12th Gen Intel(R) Core(TM) i7-12700
+```
+3. 运行
+> 注意: 不同类型的 CPU 型号, launch 启动命令不同(性能有差异).
+
+对于`i9`型号的 CPU, 执行以下命令启动机器人:
+```bash
+source devel/setup.bash
+roslaunch humanoid_controllers load_kuavo_real.launch 
+```
+对于`i7`型号的 CPU, 执行以下命令启动机器人:
+```bash
+source devel/setup.bash
+roslaunch humanoid_controllers load_kuavo_real_half_up_body.launch
+```
+其他操作步骤和 **实物运行**章节一样, 您可阅读该章节进行操作.
+
+运行程序之后， 根据终端中的提示(会提示按`o`启动机器人)，然后按`o`启动机器人。
+
+##### 实物运行-轮臂机器人
+1. 修改配置文件
+修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`配置文件中的`only_half_up_body`配置项, 将其设置为`true`.
+```json
+// 大约在 38 行
+"only_half_up_body":true, 
+```
+修改配置文件中的 `MOTOR_TYPE` , 为前 12 个电机追加 _none 来屏蔽下肢关节(轮臂机器人无腿部关节), 如下图.
+```json
+ "MOTORS_TYPE":[
+        "PA100_18_none", "PA100_none", "PA100_none", "PA100_18_none", "CK_none", "CK_none",
+        "PA100_18_none", "PA100_none", "PA100_none", "PA100_18_none", "CK_none", "CK_none",
+        "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo",
+        "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo"],
+```
+2. 运行
+本步骤和 **实物运行-只使能上半身**章节一样, 您可阅读该章节进行操作.
 
 
 ## 手柄控制

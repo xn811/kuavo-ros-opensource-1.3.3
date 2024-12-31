@@ -85,6 +85,39 @@
   
   - 该服务用于查询是否有手势正在执行
 
+**`/control_robot_leju_claw`**
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`lejuclaw`时才会发布该话题.
+
+服务描述: 该服务用于控制二指夹爪
+
+消息类型: `kuavo_msgs/controlLejuClaw`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| data | kuavo_msgs/endEffectorData | 请求数据, 夹爪相关的消息 |
+| success | bool | 返回数据, 是否调用成功 |
+| message | string | 返回数据, 消息 |
+
+关于 data 字段, 其中 `kuavo_msgs/endEffectorData`的消息定义如下:
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| name | string[] | 必填项, 数组长度为2, 数据为"left_claw", "right_claw" |
+| position | float64[] | 必填项, 数组长度为2, 夹爪目标位置值, 范围为0 ~ 100, 表示行程占比, 0 为张开, 100 为闭合 |
+| velocity | float64[] | 选填项, 数组长度为2, 夹爪目标速度值, 0 ~ 100, 不填写时默认为50 |
+| effort | float64[] | 选填项, 数组长度为2, 夹爪目标电流, 单位 A, 不填写时默认为 1.0A |
+
+- `name`: 注意名称只能设置为"left_claw"或 "right_claw"
+  
+- `position`: 范围 0 ~100, 表示行程占比, 0 为张开, 100 为闭合
+  
+- `velocity` : 速度, 默认为 50,
+  
+- `effort` : 力距, 电机不会输出大于该值的电流, 如果给的过小，可能运动效果受限，推荐 1A~2A）, 默认为 1.0 A.
+
+示例代码: [leju_claw_client.py](../src/demo/control_lejuclaw/leju_claw_client.py)
+
 ### 订阅的 topics
 
 #### /cmd_vel
@@ -335,6 +368,56 @@ end_effector_data:
   velocity: []
   effort: []
 ---
+</pre>
+</details>
+
+#### /leju_claw_state
+
+先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`lejuclaw`时才会发布该话题.
+
+话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
+
+消息类型: `kuavo_msgs/lejuClawState`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| state | int8[] | 二指夹爪的状态, 数组长度为2, 第一个为左夹爪, 第二个为右夹爪 |
+| data | kuavo_msgs/endEffectorData | 二指夹爪的位置, 速度, 力距等信息 |
+
+state 状态值含义:
+
+- -1 : `Error`, 表示有执行时有错误,
+  
+- 0 : `Unknown`, 初始化时默认的状态,
+  
+- 1 : `Moving`, 表示夹爪正在执行, 移动中,
+  
+- 2 : `Reached`, 表示夹爪已经执行到达期望的位置,
+  
+- 3 : `Grabbed`, 表示夹爪抓取到物品.
+  
+
+关于 data 字段, 其中 `kuavo_msgs/endEffectorData`的消息定义如下:
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| name | string[] | 数组长度为2, 数据为"left_claw", "right_claw" |
+| position | float64[] | 数组长度为2, 当前夹爪的位置值, 范围为0 ~ 100, 表示行程占比, 0 为张开, 100 为闭合 |
+| velocity | float64[] | 数组长度为2, 当前夹爪的速度值, 0 ~ 100 |
+| effort | float64[] | 数组长度为2, 当前夹爪的电流, 单位 A |
+
+<details>
+<summary>点击展开查看该话题消息示例</summary>
+<pre>
+---
+state: [2, 2]
+data: 
+  name: 
+    - left_claw
+    - right_claw
+  position: [9.987484540626303, 10.596808042569597]
+  velocity: [-0.05616569519042969, -10.0]
+  effort: [0.061054229736328125, -0.08546829223632812]
 </pre>
 </details>
 

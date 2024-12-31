@@ -731,14 +731,7 @@ namespace humanoid_controller
         publishFeetTrajectory(target_trajectories);
       }
 
-      if (!only_half_up_body_) {
-        mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
-      }
-      else {
-        // Only half up body
-        mrtRosInterface_->evaluatePolicy(0.0, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
-      }
-      
+      mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
     }
     else
     {
