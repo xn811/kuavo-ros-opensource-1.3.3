@@ -67,6 +67,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/数据采集案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/yolov8目标检测案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂正逆运动学案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂轨迹规划案例',
           ],
         },
         {
