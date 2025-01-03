@@ -56,13 +56,6 @@ wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_ocs2_mpc_wbc_img
 ```bash
 docker load -i kuavo_opensource_ocs2_mpc_wbc_img_0_3.tar
 ```
-
-- 修改`docker/run.sh`文件中的容器名称和镜像版本：
-```bash
-CONTAINER_NAME="kuavo_container"   # 修改为你的容器名
-IMAGE_NAME="kuavo_opensource_mpc_wbc_img:0.3" # 修改为你的镜像版本
-```
-
 - 执行`./docker/run.sh`进入容器后，默认在仓库的映射目录`/root/kuavo_ws`，执行以下命令开始编译：
 
 ```bash
@@ -70,11 +63,6 @@ catkin config -DCMAKE_ASM_COMPILER=/usr/bin/as -DCMAKE_BUILD_TYPE=Release # Impo
 # -DCMAKE_ASM_COMPILER=/usr/bin/as 为配置了ccache必要操作，否则可能出现找不到编译器的情况
 source installed/setup.bash # 加载一些已经安装的ROS包依赖环境，包括硬件包等
 catkin build humanoid_controllers #会编译所有依赖项
-```
-
-> Note:如果没有安装pinocchio，则需要先安装：
-```bash
-sudo apt install ros-noetic-pinocchio -y
 ```
 
 ##### 实机环境
