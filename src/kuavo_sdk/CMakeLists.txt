@@ -52,6 +52,14 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  bezierCurveCubicPoint.msg
+  jointBezierTrajectory.msg
+  JointTrajectory.msg
+  JointTrajectoryPoint.msg
+  planArmState.msg
+  mpc_input.msg
+  mpc_state.msg
+  mpc_observation.msg
   armTargetPoses.msg
   robotHeadMotionData.msg
   footPose.msg
@@ -73,6 +81,8 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES 
+  planArmTrajectoryBezierCurve.srv
+  planArmTrajectoryCubicSpline.srv
   changeArmCtrlMode.srv
   playmusic.srv
   controlEndHand.srv
