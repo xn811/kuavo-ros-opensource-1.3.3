@@ -420,7 +420,7 @@ def main():
     call_change_arm_ctrl_mode_service(2)
     
     # 加载动作文件
-    file_path = rospy.get_param('~tact_file', '/home/lab/wt/kuavo-ros-control/src/humanoid-control/humanoid_plan_arm_trajectory/script/action_files/welcome.tact')
+    file_path = rospy.get_param('~tact_file', './action_files/welcome.tact')
     data = load_json_file(file_path)
     if not data:
         return
@@ -453,4 +453,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
