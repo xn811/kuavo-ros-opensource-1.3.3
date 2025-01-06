@@ -118,6 +118,7 @@
       "calibrate":["E_LEFT","F_RIGHT","D_PRESS"]
     },
     "calibrate":{
+      "cali_to_ready_stance":["E_LEFT","F_RIGHT","C_PRESS"],
       "stop": ["C_LONG_PRESS", "D_LONG_PRESS"]
     },
     "ready_stance":{
