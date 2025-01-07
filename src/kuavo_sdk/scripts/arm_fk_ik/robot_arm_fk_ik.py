@@ -121,6 +121,7 @@ if __name__ == "__main__":
          -1.25, 0.3, 1.0, -0.15, 0.37, -1.0, -1.0],
     }
 
+
     # 解析命令行参数  
     parser = argparse.ArgumentParser(description="选择不同的 joint_angles")
     parser.add_argument("--joint_angles_id", type=int, choices=[1, 2, 3], required=True, help="选择 joint_angles 的 ID (1-3)")
