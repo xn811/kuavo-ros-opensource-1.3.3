@@ -59,6 +59,9 @@ OCS2_DIR=/var/ocs2/full_v${ROBOT_VERSION}*
 # 确保配置目录存在
 mkdir -p ${CONFIG_DIR}
 
+# 定义MD5配置文件路径
+MD5_FILE=${CONFIG_DIR}/.urdf_md5_v${ROBOT_VERSION}
+
 # 如果totalMass不存在，创建文件
 if [ ! -f ${MASS_FILE} ]; then
     # 对每个URDF文件执行get_urdf_mass.sh
@@ -67,9 +70,11 @@ if [ ! -f ${MASS_FILE} ]; then
         echo $FULL_PATH
         if [ -f "$FULL_PATH" ]; then
             origin_mass=$(./get_urdf_mass.sh "$FULL_PATH")
+            origin_md5=$(md5sum "$FULL_PATH" | awk '{ print $1 }')
             echo "get total mass :$origin_mass"
             echo $origin_mass > ${MASS_FILE}
             echo $origin_mass > ${MASS_BAK}
+            echo $origin_md5 > ${MD5_FILE}
             break  # 只需要从第一个存在的URDF文件获取质量即可
         fi
     done
@@ -125,4 +130,28 @@ else
     echo "Warning: ${XML_FILE_PATH} not found" >&2
 fi
 
-chmod 0777 ${MASS_FILE} ${MASS_BAK}
+# 修改完成后检查MD5
+current_md5=""
+for URDF_FILE in "${URDF_FILES[@]}"; do
+    FULL_PATH="${BASE_URDF_PATH}/${URDF_FILE}"
+    if [ -f "$FULL_PATH" ]; then
+        current_md5=$(md5sum "$FULL_PATH" | awk '{ print $1 }')
+        break
+    fi
+done
+
+if [ -f ${MD5_FILE} ]; then
+    saved_md5=$(cat ${MD5_FILE})
+    if [ "$current_md5" != "$saved_md5" ]; then
+        rm -rf ${OCS2_DIR}
+        echo $current_md5 > ${MD5_FILE}
+        echo -e "\033[33m\nNote: URDF file changed, removing ${OCS2_DIR} cppad directory which will be rebuilt on next launch\033[0m" >&2
+    fi
+else
+    echo $current_md5 > ${MD5_FILE}
+    rm -rf ${OCS2_DIR} 
+    echo -e "\033[33m\nNote: MD5 file not found, removing ${OCS2_DIR} cppad directory which will be rebuilt on next launch\033[0m" >&2
+fi
+
+
+chmod 0666 ${MASS_FILE} ${MASS_BAK} ${MD5_FILE}

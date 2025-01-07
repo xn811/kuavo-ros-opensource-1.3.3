@@ -56,7 +56,7 @@
   - **linear.x**: 基于当前位置的 x 方向值，单位为米 (m)
   - **linear.y**: 基于当前位置的 y 方向值，单位为米 (m)
   - **linear.z**: 增量高度，单位为米 (m)
-  - **angular.z**: yaw 方向速度，单位为弧度每秒 (radian/s)
+  - **angular.z**: 基于当前位置旋转（偏航）的角度，单位为弧度 (radian)
   - **angular.x** 和 **angular.y**: 未使用，设置为 0
 
 #### 逻辑

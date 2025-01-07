@@ -19,7 +19,7 @@ def publish_cmd_pose():
     cmd_pose_msg.linear.x = 0.5  # 基于当前位置的 x 方向值 (m)
     cmd_pose_msg.linear.y = 0.0  # 基于当前位置的 y 方向值 (m)
     cmd_pose_msg.linear.z = 0.0  # 增量高度 (m)
-    cmd_pose_msg.angular.z = 0.0  # yaw方向速度 (radian/s)
+    cmd_pose_msg.angular.z = 0.0  # 基于当前位置旋转（偏航）的角度，单位为弧度 (radian)
 
     # 未使用的字段设置为0
     cmd_pose_msg.angular.x = 0.0

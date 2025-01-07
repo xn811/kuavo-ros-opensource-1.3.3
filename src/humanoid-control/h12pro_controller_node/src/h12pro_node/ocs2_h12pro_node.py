@@ -37,7 +37,7 @@ class Config:
     VALID_STATES = {"ready_stance", "stance", "walk", "trot"}
     TRIGGER_CHANNEL_MAP = {
         "stop": 8,
-        "ready_stance": 5,
+        # "ready_stance": 5,
         "stance": 9,
         "walk": 6,
         "trot": 7

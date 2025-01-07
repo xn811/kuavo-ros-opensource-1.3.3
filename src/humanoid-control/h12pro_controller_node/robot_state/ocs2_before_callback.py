@@ -10,6 +10,8 @@ import time
 import signal
 import datetime
 import json
+from std_srvs.srv import Trigger, TriggerRequest
+
 
 console = console.Console()
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -93,6 +95,20 @@ def plan_arm_trajectory_bezier_curve_client(req):
     except rospy.ServiceException as e:
         rospy.logerr(f"PlService call failed: {e}")
         return False
+
+def call_real_initialize_srv():
+    client = rospy.ServiceProxy('/humanoid_controller/real_initial_start', Trigger)
+    req = TriggerRequest()
+
+    try:
+        # Call the service
+        if client.call(req):
+            rospy.loginfo("[JoyControl] Service call successful")
+        else:
+            rospy.logerr("Failed to callRealInitializeSrv service")
+    except rospy.ServiceException as e:
+        rospy.logerr(f"Service call failed: {e}")
+
 
 def print_state_transition(trigger, source, target) -> None:
     console.print(
@@ -198,7 +214,13 @@ def calibrate_callback(event):
     
 def ready_stance_callback(event):
     source = event.kwargs.get("source")
+    call_real_initialize_srv()
     print_state_transition("ready_stance", source, "stance")
+
+def cali_to_ready_stance_callback(event):
+    source = event.kwargs.get("source")
+    call_real_initialize_srv()
+    print_state_transition("cali_to_ready_stance", source, "ready_stance")
 
 def stance_callback(event):
     source = event.kwargs.get("source")
