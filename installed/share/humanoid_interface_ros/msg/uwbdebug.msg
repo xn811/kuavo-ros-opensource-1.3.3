@@ -1,9 +1,0 @@
-# 机器人uwb x,y 轴滤波后的效果
-float32 robot_uwb_cur_x
-float32 robot_uwb_cur_y
-float32 robot_uwb_cur_angle
-float32 robot_uwb_fir_angle
-float32 robot_uwb_fir_x
-float32 robot_uwb_fir_y
-float32 robot_uwb_avr_x
-float32 robot_uwb_avr_y

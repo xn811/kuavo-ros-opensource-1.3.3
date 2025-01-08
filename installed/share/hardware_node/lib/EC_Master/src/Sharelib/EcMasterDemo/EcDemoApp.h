@@ -29,6 +29,7 @@
 #include <mutex>
 #include <functional>
 #include <vector>
+#include <atomic>
 /*-DEFINES-------------------------------------------------------------------*/
 #define EC_DEMO_APP_NAME (EC_T_CHAR *)"EcMasterDemoDc"
 
@@ -76,8 +77,10 @@ typedef struct
   int16_t torque_actual_value;
   uint16_t status_word;
   int16_t mode_of_opration_display;
+  int32_t position_demand_raw;
+  int32_t velocity_demand_raw;
   int32_t velocity_actual_value;
-  int16_t current_actual_value;
+  int16_t torque_demand_raw;
   uint16_t error_code;
 } ELMO_SlaveRead_t;
 
@@ -93,6 +96,7 @@ typedef struct
   int32_t velocit_offset;
   int16_t torque_offset;
 } ELMO_SlaveWrite_t;
+
 
 /* yd */
 typedef struct
@@ -118,6 +122,18 @@ typedef struct
   int8_t mode_of_opration;//选模式，例：CSP、CSV等。。。
 } YD_SlaveWrite_t;
 #pragma pack()
+
+// 定义input区结构
+struct SlaveBuffersIn {
+    ELMO_SlaveRead_t* elmo_slave_input;
+    YD_SlaveRead_t* yd_slave_input;
+};
+
+// 定义out结构
+struct SlaveBuffersOut {
+    ELMO_SlaveWrite_t* elmo_slave_output;
+    YD_SlaveWrite_t* yd_slave_output;
+};
 
 enum EcMasterType
 {

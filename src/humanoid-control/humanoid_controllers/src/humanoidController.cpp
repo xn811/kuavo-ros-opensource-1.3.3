@@ -911,14 +911,14 @@ namespace humanoid_controller
     vector_t velDes = centroidal_model::getJointVelocities(optimizedInput2WBC_mrt_, infoWBC);
 
     scalar_t dt = period.toSec();
-    // bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
-    // if (is_joint_acc_out_of_range)
-    // {
-    //   std::cerr << "wbc_planned_joint_acc is out of range, reset it to zero." << std::endl;
-    //   std::cerr << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
-    //   torque = output_tau_;
-    // }
-    // else
+    bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
+    if (is_joint_acc_out_of_range)
+    {
+      std::cerr << "wbc_planned_joint_acc is out of range, reset it to zero." << std::endl;
+      std::cerr << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
+      torque = output_tau_;
+    }
+    else
     {
       posDes = posDes + 0.5 * wbc_planned_joint_acc * dt * dt;
       velDes = velDes + wbc_planned_joint_acc * dt;

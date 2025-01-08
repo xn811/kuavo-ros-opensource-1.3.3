@@ -172,7 +172,7 @@
         </Send>
         <Recv>
           <BitStart>0</BitStart>
-          <BitLength>240</BitLength>
+          <BitLength>208</BitLength>
         </Recv>
         <Sm2>
           <Type>Outputs</Type>
@@ -200,7 +200,6 @@
           <Pdo>6672</Pdo>
           <Pdo>6673</Pdo>
           <Pdo>6674</Pdo>
-          <Pdo>6680</Pdo>
           <Pdo>6694</Pdo>
         </Sm3>
         <TxPdo Fixed="1">
@@ -557,7 +556,7 @@
             <DataType>DINT</DataType>
           </Entry>
         </TxPdo>
-        <TxPdo Fixed="1" Sm="3">
+        <TxPdo Fixed="1">
           <Index>#x1a18</Index>
           <Name>Inputs</Name>
           <Entry>
@@ -1409,15 +1408,6 @@
               <Ccs>1</Ccs>
               <Index>7187</Index>
               <SubIndex>6</SubIndex>
-              <Data>181a</Data>
-            </InitCmd>
-            <InitCmd Fixed="1">
-              <Transition>PS</Transition>
-              <Comment><![CDATA[download pdo 0x1C13:07 index]]></Comment>
-              <Timeout>0</Timeout>
-              <Ccs>1</Ccs>
-              <Index>7187</Index>
-              <SubIndex>7</SubIndex>
               <Data>261a</Data>
             </InitCmd>
             <InitCmd Fixed="1">
@@ -1427,7 +1417,7 @@
               <Ccs>1</Ccs>
               <Index>7187</Index>
               <SubIndex>0</SubIndex>
-              <Data>07</Data>
+              <Data>06</Data>
             </InitCmd>
             <InitCmd>
               <Transition>PS</Transition>
@@ -1804,7 +1794,7 @@
           <Cmd>5</Cmd>
           <Adp>1001</Adp>
           <Ado>2072</Ado>
-          <Data>80111e0020000100</Data>
+          <Data>80111a0020000100</Data>
           <Cnt>1</Cnt>
           <Retries>3</Retries>
         </InitCmd>
@@ -1824,7 +1814,7 @@
           <Cmd>5</Cmd>
           <Adp>1001</Adp>
           <Ado>1552</Ado>
-          <Data>000000101e0000078011000101000000</Data>
+          <Data>000800101a0000078011000101000000</Data>
           <Cnt>1</Cnt>
           <Retries>3</Retries>
         </InitCmd>
@@ -2073,12 +2063,12 @@
       </Info>
       <ProcessData>
         <Send>
-          <BitStart>240</BitStart>
+          <BitStart>208</BitStart>
           <BitLength>208</BitLength>
         </Send>
         <Recv>
-          <BitStart>240</BitStart>
-          <BitLength>240</BitLength>
+          <BitStart>208</BitStart>
+          <BitLength>208</BitLength>
         </Recv>
         <Sm2>
           <Type>Outputs</Type>
@@ -2106,7 +2096,6 @@
           <Pdo>6672</Pdo>
           <Pdo>6673</Pdo>
           <Pdo>6674</Pdo>
-          <Pdo>6680</Pdo>
           <Pdo>6694</Pdo>
         </Sm3>
         <TxPdo Fixed="1">
@@ -2463,7 +2452,7 @@
             <DataType>DINT</DataType>
           </Entry>
         </TxPdo>
-        <TxPdo Fixed="1" Sm="3">
+        <TxPdo Fixed="1">
           <Index>#x1a18</Index>
           <Name>Inputs</Name>
           <Entry>
@@ -3315,15 +3304,6 @@
               <Ccs>1</Ccs>
               <Index>7187</Index>
               <SubIndex>6</SubIndex>
-              <Data>181a</Data>
-            </InitCmd>
-            <InitCmd Fixed="1">
-              <Transition>PS</Transition>
-              <Comment><![CDATA[download pdo 0x1C13:07 index]]></Comment>
-              <Timeout>0</Timeout>
-              <Ccs>1</Ccs>
-              <Index>7187</Index>
-              <SubIndex>7</SubIndex>
               <Data>261a</Data>
             </InitCmd>
             <InitCmd Fixed="1">
@@ -3333,7 +3313,7 @@
               <Ccs>1</Ccs>
               <Index>7187</Index>
               <SubIndex>0</SubIndex>
-              <Data>07</Data>
+              <Data>06</Data>
             </InitCmd>
             <InitCmd>
               <Transition>PS</Transition>
@@ -3710,7 +3690,7 @@
           <Cmd>5</Cmd>
           <Adp>1002</Adp>
           <Ado>2072</Ado>
-          <Data>80111e0020000100</Data>
+          <Data>80111a0020000100</Data>
           <Cnt>1</Cnt>
           <Retries>3</Retries>
         </InitCmd>
@@ -3720,7 +3700,7 @@
           <Cmd>5</Cmd>
           <Adp>1002</Adp>
           <Ado>1536</Ado>
-          <Data>1e0000101a0000070011000201000000</Data>
+          <Data>1a0000101a0000070011000201000000</Data>
           <Cnt>1</Cnt>
           <Retries>3</Retries>
         </InitCmd>
@@ -3730,7 +3710,7 @@
           <Cmd>5</Cmd>
           <Adp>1002</Adp>
           <Ado>1552</Ado>
-          <Data>1e0000101e0000078011000101000000</Data>
+          <Data>1a0800101a0000078011000101000000</Data>
           <Cnt>1</Cnt>
           <Retries>3</Retries>
         </InitCmd>
@@ -3982,8 +3962,8 @@
           <Ado>304</Ado>
           <DataLength>2</DataLength>
           <Cnt>2</Cnt>
-          <InputOffs>60</InputOffs>
-          <OutputOffs>60</OutputOffs>
+          <InputOffs>52</InputOffs>
+          <OutputOffs>52</OutputOffs>
         </Cmd>
         <Cmd>
           <State>PREOP</State>
@@ -3994,8 +3974,8 @@
           <Adp>0</Adp>
           <Ado>2304</Ado>
           <DataLength>4</DataLength>
-          <InputOffs>62</InputOffs>
-          <OutputOffs>62</OutputOffs>
+          <InputOffs>54</InputOffs>
+          <OutputOffs>54</OutputOffs>
         </Cmd>
         <Cmd>
           <State>PREOP</State>
@@ -4006,8 +3986,8 @@
           <Adp>0</Adp>
           <Ado>2320</Ado>
           <DataLength>4</DataLength>
-          <InputOffs>66</InputOffs>
-          <OutputOffs>66</OutputOffs>
+          <InputOffs>58</InputOffs>
+          <OutputOffs>58</OutputOffs>
         </Cmd>
         <Cmd>
           <State>PREOP</State>
@@ -4018,17 +3998,28 @@
           <Adp>0</Adp>
           <Ado>2320</Ado>
           <DataLength>4</DataLength>
-          <InputOffs>70</InputOffs>
-          <OutputOffs>70</OutputOffs>
+          <InputOffs>62</InputOffs>
+          <OutputOffs>62</OutputOffs>
         </Cmd><!-- MSU Id 0: Task 0 -->
         <Cmd>
           <State>SAFEOP</State>
           <State>OP</State>
-          <Comment><![CDATA[PD; LRW;]]></Comment>
-          <Cmd>12</Cmd>
+          <Comment><![CDATA[PD; LWR;]]></Comment>
+          <Cmd>11</Cmd>
           <Addr>268435456</Addr>
-          <DataLength>60</DataLength>
-          <Cnt>6</Cnt>
+          <DataLength>52</DataLength>
+          <Cnt>2</Cnt>
+          <InputOffs>0</InputOffs>
+          <OutputOffs>0</OutputOffs>
+        </Cmd><!-- MSU Id 0: Task 0 -->
+        <Cmd>
+          <State>SAFEOP</State>
+          <State>OP</State>
+          <Comment><![CDATA[PD; LRD;]]></Comment>
+          <Cmd>10</Cmd>
+          <Addr>268437504</Addr>
+          <DataLength>52</DataLength>
+          <Cnt>2</Cnt>
           <InputOffs>0</InputOffs>
           <OutputOffs>0</OutputOffs>
         </Cmd>
@@ -4036,7 +4027,7 @@
     </Cyclic>
     <ProcessImage>
       <Inputs>
-        <ByteSize>74</ByteSize>
+        <ByteSize>66</ByteSize>
         <Variable>
           <Name>Slave_1001 [Elmo Drive ].Inputs.Position actual value</Name>
           <DataType>DINT</DataType>
@@ -4086,80 +4077,68 @@
           <BitOffs>176</BitOffs>
         </Variable>
         <Variable>
-          <Name>Slave_1001 [Elmo Drive ].Inputs.DC link circuit voltage</Name>
-          <DataType>UDINT</DataType>
-          <BitSize>32</BitSize>
-          <BitOffs>192</BitOffs>
-        </Variable>
-        <Variable>
           <Name>Slave_1001 [Elmo Drive ].Inputs.Error Code</Name>
           <DataType>UINT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>224</BitOffs>
+          <BitOffs>192</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Position actual value</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>240</BitOffs>
+          <BitOffs>208</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Torque actual value</Name>
           <DataType>INT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>272</BitOffs>
+          <BitOffs>240</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Status word</Name>
           <DataType>UINT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>288</BitOffs>
+          <BitOffs>256</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Mode of operation display</Name>
           <DataType>SINT</DataType>
           <BitSize>8</BitSize>
-          <BitOffs>304</BitOffs>
+          <BitOffs>272</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Position Demand [UU]</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>320</BitOffs>
+          <BitOffs>288</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Velocity demand [cnt/sec]</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>352</BitOffs>
+          <BitOffs>320</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Velocity actual value</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>384</BitOffs>
+          <BitOffs>352</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Torque demand value</Name>
           <DataType>INT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>416</BitOffs>
-        </Variable>
-        <Variable>
-          <Name>Slave_1002 [Elmo Drive ].Inputs.DC link circuit voltage</Name>
-          <DataType>UDINT</DataType>
-          <BitSize>32</BitSize>
-          <BitOffs>432</BitOffs>
+          <BitOffs>384</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Inputs.Error Code</Name>
           <DataType>UINT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>464</BitOffs>
+          <BitOffs>400</BitOffs>
         </Variable>
       </Inputs>
       <Outputs>
-        <ByteSize>74</ByteSize>
+        <ByteSize>66</ByteSize>
         <Variable>
           <Name>Slave_1001 [Elmo Drive ].Outputs.Target Position</Name>
           <DataType>DINT</DataType>
@@ -4218,55 +4197,55 @@
           <Name>Slave_1002 [Elmo Drive ].Outputs.Target Position</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>240</BitOffs>
+          <BitOffs>208</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Target Velocity</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>272</BitOffs>
+          <BitOffs>240</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Target Torque</Name>
           <DataType>INT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>304</BitOffs>
+          <BitOffs>272</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Max. Torque</Name>
           <DataType>UINT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>320</BitOffs>
+          <BitOffs>288</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Control word</Name>
           <DataType>UINT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>336</BitOffs>
+          <BitOffs>304</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Mode of operation</Name>
           <DataType>SINT</DataType>
           <BitSize>8</BitSize>
-          <BitOffs>352</BitOffs>
+          <BitOffs>320</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Position Offset</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>368</BitOffs>
+          <BitOffs>336</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Velocity Offset</Name>
           <DataType>DINT</DataType>
           <BitSize>32</BitSize>
-          <BitOffs>400</BitOffs>
+          <BitOffs>368</BitOffs>
         </Variable>
         <Variable>
           <Name>Slave_1002 [Elmo Drive ].Outputs.Torque Offset</Name>
           <DataType>INT</DataType>
           <BitSize>16</BitSize>
-          <BitOffs>432</BitOffs>
+          <BitOffs>400</BitOffs>
         </Variable>
       </Outputs>
     </ProcessImage>
