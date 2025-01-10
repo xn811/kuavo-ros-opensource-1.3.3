@@ -203,6 +203,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Publisher footContactPointPublisher_;
   ros::Publisher gaitTimeNamePublisher_;
   ros::Publisher armTargetCommandedPublisher_;
+  ros::Publisher singleStepModePublisher_;
   ros::ServiceServer change_arm_control_service_;
   ros::ServiceServer get_arm_control_mode_service_;
   ros::ServiceServer singleStepControlService_;
