@@ -4,25 +4,39 @@
 - 无
 
 ## 文档相关
+- Kuavo 文档中心新增轮臂机器人介绍, 导航案例, 正逆解案例使用说明
+- 更新 README 中全身控制器参数与 kuavo 配置参数的说明, [文档链接](./docs/info文件说明.md), [文档链接](./docs/kuavo_json文档说明.md)
+- 运动控制接口新增乐聚自研夹爪控制接口`/control_robot_leju_claw`, 使用方法见 [文档链接](./docs/运动控制API.md)
+- 新增 kuavo IK 正逆解模块使用说明, [文档链接](./src/manipulation_nodes/motion_capture_ik/how-to-use-kuavo-ik.md)
 - 补充`/joint_cmd`控制话题中 control_mode 参数详细描述 [文档链接](./docs/运动控制API.md)
 - 更新如何实时查看到 Quest3 投屏的屏幕使用文档, [文档链接](./docs/Quest3_VR_basic.md)
 - 🎉🎉🎉 : 新增 Kuavo 产品介绍, 快速开始, 开发接口,功能案例等文档, [内测版文档网站链接](https://kuavo.lejurobot.com/beta_manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html), [正式版文档网站链接](https://kuavo.lejurobot.com/manual/basic_usage/kuavo-ros-control/docs/1%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/%e4%ba%a7%e5%93%81%e4%bb%8b%e7%bb%8d/index.html)
 - 补充运动控制接口文档中`/sensor_data_raw`话题的详细说明和数据示例 [文档链接](./docs/运动控制API.md)
 
 ## 新增功能
+- 更新 kuavo_assets 包中机器人模型文件, 统一命名关节名称并添加关节限位, 扭矩限制, 速度限制等约束
+- kuavo_sdk 新增正逆解使用说明, 单步控制使用说明, 位姿控制使用说明
+- VR: Quest3 末端执行器支持乐聚自研夹爪, 可通过手柄上扳机或食指捏合控制夹爪
+- 末端执行器支持乐聚自研夹爪, 可通过修改 kuavo.json 配置生效, 控制接口`/control_robot_leju_claw`
+- 新增一些机器人校准动作方便在校准模式下检查电机是否正常
 - VR: 新增 Quest3/Vision Pro 视频流功能
 - 支持手柄控制头部运动, RT+左摇杆控制头部
 - 支持通过修改 kuavo.json 配置文件`only_half_up_body`为 true 只使能上半身电机, 并适配了半身轮臂机器人, 使用见 [REAME文档](./readme.md)
 - 工具: 添加支持同时开启热点和连接WIFI工具, WIFI名称`$ROBOT_NAME的热点`, 密码`kuavo123456`[使用文档链接](./tools/linux_wifi_hotspot/readme.md)
-- 工具: 添加开机语音播报 WIFI 工具 [使用文档链接](./tools/announce_wifi/readme.md)
 - IK 服务增加工作空间检查和可选打印求解信息提示
 
-## 修复问题 
+## 修复问题
+- 修复 URDF 更改未重新编译 cppad 导致异常不生效的问题, 已通过严格检查 URDF 文件的 MD5 校验来实现
+- 修复由于缺少 `lusb` 而导致的编译错误, 已通过在编译时先检查或安装`libusb-1.0-0-dev`来解决
+- 修复 h12pro 遥控器无法控制机器人站立, 行走等问题
+- 修复潜在的执行`sudo apt install ros-noetic-Pinocchio -y`而升级版本导致的函数接口不兼容编译报错问题
+- 修复程序结束后手臂电机未正常掉使能的问题
 - 修复由于`/humanoid_wbc_observation` 话题数据维度减少修改导致 h12 遥控器播放动作失败问题
 - 更正  biped_s42 机器人的 URDF 文件, 新增雷达的 TF, 调整 mesh，惯量和限位
 - 修复 biped_s42 机器人头部 yaw 电机方向问题, 已根据右手定更正
 
 ## 其他改进
+- 添加 hardware tools 用于硬件测试故障排查
 - 遥控器控制改进: 使用五阶低通滤波对 cmdVel 进行滤波，截止频率1hz
 - 头部 yaw 关节软限位修正, 放宽至 +- 80°
 
