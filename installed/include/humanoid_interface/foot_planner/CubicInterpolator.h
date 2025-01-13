@@ -59,8 +59,11 @@ private:
         }
 
         // 使用三次多项式生成平滑轨迹
-        pos_traj_ = drake::trajectories::PiecewisePolynomial<double>::CubicWithContinuousSecondDerivatives(
-            breaks, pos_samples, Eigen::VectorXd::Constant(1, start_vel_), Eigen::VectorXd::Constant(1, end_vel_));
+         pos_traj_ = drake::trajectories::PiecewisePolynomial<double>::CubicWithContinuousSecondDerivatives(
+             breaks, pos_samples, Eigen::VectorXd::Constant(1, start_vel_), Eigen::VectorXd::Constant(1, end_vel_));
+
+        //pos_traj_ = drake::trajectories::PiecewisePolynomial<double>::CubicShapePreserving(
+        //    breaks, pos_samples, true);
 
         // 计算速度和加速度轨迹
         vel_traj_ = pos_traj_.derivative();
