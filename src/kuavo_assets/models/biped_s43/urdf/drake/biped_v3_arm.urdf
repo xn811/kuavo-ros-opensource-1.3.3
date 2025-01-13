@@ -37,7 +37,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_arm_pitch.STL" />
+        <mesh filename="../../meshes/l_arm_pitch.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -64,7 +64,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_arm_roll.STL" />
+        <mesh filename="../../meshes/l_arm_roll.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -91,7 +91,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_arm_yaw.STL" />
+        <mesh filename="../../meshes/l_arm_yaw.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -118,7 +118,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_forearm.STL" />
+        <mesh filename="../../meshes/l_forearm.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -145,7 +145,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_hand_yaw.STL" />
+        <mesh filename="../../meshes/l_hand_yaw.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -172,7 +172,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_hand_roll.STL" />
+        <mesh filename="../../meshes/l_hand_roll.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -199,7 +199,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/l_hand_pitch.STL" />
+        <mesh filename="../../meshes/l_hand_pitch.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -227,7 +227,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_arm_pitch.STL" />
+        <mesh filename="../../meshes/r_arm_pitch.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -254,7 +254,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_arm_roll.STL" />
+        <mesh filename="../../meshes/r_arm_roll.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -281,7 +281,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_arm_yaw.STL" />
+        <mesh filename="../../meshes/r_arm_yaw.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -308,7 +308,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_forearm.STL" />
+        <mesh filename="../../meshes/r_forearm.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -335,7 +335,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_hand_yaw.STL" />
+        <mesh filename="../../meshes/r_hand_yaw.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -362,7 +362,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_hand_roll.STL" />
+        <mesh filename="../../meshes/r_hand_roll.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
@@ -389,7 +389,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://biped_s43/meshes/r_hand_pitch.STL" />
+        <mesh filename="../../meshes/r_hand_pitch.STL" />
       </geometry>
       <material name="">
         <color rgba="1 1 1 1" />
