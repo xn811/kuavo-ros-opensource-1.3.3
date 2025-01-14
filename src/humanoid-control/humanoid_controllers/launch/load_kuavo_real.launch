@@ -26,6 +26,7 @@
     <arg name="joystick_type"      default="bt2"/>
     <!-- The reference related config file of the robot -->
     <arg name="start_way"         default="manual"/>
+    <arg name="use_estimator_contact"   default="false"/>
     <arg name="only_half_up_body" default="false"/>
     <!-- The file defining gait definition -->
 
@@ -47,6 +48,7 @@
     <param name="only_half_up_body"   value="$(arg only_half_up_body)"/>
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
     <param name="start_way"  value="$(arg start_way)"/>
+    <param name="use_estimator_contact"  value="$(arg use_estimator_contact)"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">

@@ -83,6 +83,8 @@ add_service_files(
   gestureList.srv
   gestureExecuteState.srv
   controlLejuClaw.srv
+  setTagId.srv
+  footPoseTargetTrajectoriesSrv.srv
 )
 
 ## Generate actions in the 'action' folder

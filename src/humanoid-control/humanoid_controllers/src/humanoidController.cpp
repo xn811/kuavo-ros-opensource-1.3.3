@@ -149,6 +149,8 @@ namespace humanoid_controller
     is_nodelet_node_ = is_nodelet_node;
     drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(robot_version, true, 2e-3);
     kuavo_settings_ = drake_interface_->getKuavoSettings();
+    scalar_t comHeight = drake_interface_->getIntialHeight();
+    ros::param::set("/com_height", comHeight);
     auto &motor_info = kuavo_settings_.hardware_settings;
     headNum_ = motor_info.num_head_joints;
     armNumReal_ = motor_info.num_arm_joints;
@@ -174,6 +176,8 @@ namespace humanoid_controller
     controllerNh_.getParam("/use_external_mpc", use_external_mpc_);
     double controlFrequency = 500.0; // 1000Hz
     controllerNh_.getParam("/wbc_frequency", controlFrequency);
+    if(controllerNh_.hasParam("/visualize_humanoid"))
+      controllerNh_.getParam("/visualize_humanoid", visualizeHumanoid_);
     dt_ = 1.0 / controlFrequency;
     if (controllerNh_.hasParam("/real"))
     {
@@ -200,6 +204,10 @@ namespace humanoid_controller
     {
       controllerNh_.getParam("/use_joint_filter", use_joint_filter_);
     }
+    if (controllerNh_.hasParam("use_estimator_contact"))
+    {
+      controllerNh_.getParam("/use_estimator_contact", use_estimator_contact_);
+    }
 
     if (controllerNh_.hasParam("/only_half_up_body")) {
       controllerNh_.getParam("/only_half_up_body", only_half_up_body_);
@@ -223,6 +231,7 @@ namespace humanoid_controller
     setupMrt();
     // Visualization
     CentroidalModelPinocchioMapping pinocchioMapping(HumanoidInterface_->getCentroidalModelInfo());
+    robotMass_ = HumanoidInterface_->getCentroidalModelInfo().robotMass;
     std::cout << "HumanoidInterface_->getCentroidalModelInfo().robotMass:" << HumanoidInterface_->getCentroidalModelInfo().robotMass << std::endl;
 
     eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(HumanoidInterface_->getPinocchioInterface(), pinocchioMapping,
@@ -286,6 +295,7 @@ namespace humanoid_controller
     }
     
     ros::param::set("mujoco_init_state", mujoco_init_state);
+    ros::param::set("/humanoid/init_q", mujoco_init_state);
 
     auto initial_state_ =  drake_interface_->getInitialState();
     std::cout << "controller initial_state_:" << initial_state_.transpose() << std::endl;
@@ -341,6 +351,14 @@ namespace humanoid_controller
     jointPos_ = vector_t::Zero(info.actuatedDofNum);
     jointPos_.setZero();
     jointPos_.head(jointNum_) = drake_interface_->getDefaultJointState();
+
+    jointPosWBC_ = vector_t::Zero(armNumReal_ + jointNumReal_ );
+    // jointPosWBC_.setZero();
+    jointPosWBC_.head(jointNum_) = drake_interface_->getDefaultJointState();
+
+    jointVelWBC_ = vector_t::Zero(armNumReal_ + jointNumReal_);
+    jointAccWBC_ = vector_t::Zero(armNumReal_ + jointNumReal_);
+    jointCurrentWBC_ = vector_t::Zero(armNumReal_ + jointNumReal_);
 
     jointVel_ = vector_t::Zero(info.actuatedDofNum);
     jointAcc_ = vector_t::Zero(info.actuatedDofNum);
@@ -401,7 +419,14 @@ namespace humanoid_controller
               gaitManagerPtr_->add(current_gait_.startTime, current_gait_.name);
             std::cout << "[controller] receive current gait name: " << current_gait_.name << " start time: " << current_gait_.startTime << std::endl; });
       head_sub_ = controllerNh_.subscribe("/robot_head_motion_data", 10, &humanoidController::headCmdCallback, this);
-
+      hand_wrench_sub_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/hand_wrench_cmd", 10, [&](const std_msgs::Float64MultiArray::ConstPtr &msg)
+        {
+          if(msg->data.size() != 12)
+            ROS_ERROR("The dimensin of hand wrench cmd is NOT equal to 12!!");
+          for(int i = 0; i < 12; i++)
+            hand_wrench_cmd_(i) = msg->data[i];
+        }
+      );
       enableArmCtrlSrv_ = controllerNh_.advertiseService("/enable_wbc_arm_trajectory_control", &humanoidController::enableArmTrajectoryControlCallback, this);
       jointCmdPub_ = controllerNh_.advertise<kuavo_msgs::jointCmd>("/joint_cmd", 10);
       mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
@@ -410,7 +435,8 @@ namespace humanoid_controller
       wbcFrequencyPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/frequency/wbc", 10);
       wbcTimeCostPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/time_cost/wbc", 10);
       wbc_observation_publisher_ = controllerNh_.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_wbc_observation", 1);
-
+      lHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/left_hand", 10);
+      rHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/right_hand", 10);
 
       // State estimation
       setupStateEstimate(taskFile, verbose);
@@ -829,6 +855,25 @@ namespace humanoid_controller
     }
     currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
 
+    if(use_ros_arm_joint_trajectory_)
+    {
+      // TODO: feedback in planner
+      // auto arm_pos = currentObservation_.state.tail(armNum_); 
+      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
+      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
+      if (only_half_up_body_) 
+      {
+          optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
+          optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
+      }
+      else {
+          // 位置、速度
+          optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.pos;
+          // optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.vel;//TODO: 临时去除
+          // std::cout << "target_arm_joint_pos: " << arm_joint_trajectory_.pos.transpose() << std::endl;
+      }
+      // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
+    }
 
     // // use filter output
     optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
@@ -843,24 +888,7 @@ namespace humanoid_controller
     // optimizedInput2WBC_mrt_.tail(armNum_) = arm_joint_vel_filter_.update(filter_input_vel);
     // arm_joint_pos_cmd_prev_ = filtered_arm_pose;
   
-    if(use_ros_arm_joint_trajectory_)
-    {
-      // TODO: feedback in planner
-      // auto arm_pos = currentObservation_.state.tail(armNum_); 
-      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
-      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
-      if (only_half_up_body_) 
-      {
-          optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
-          optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
-      }
-      else {
-          //直接覆盖mpc每只手臂末3位角度
-          optimizedState2WBC_mrt_.segment<3>(24+4) = arm_joint_trajectory_.pos.segment<3>(4);
-          optimizedState2WBC_mrt_.segment<3>(24+7+4) = arm_joint_trajectory_.pos.segment<3>(7+4);
-      }
-      // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
-    }
+   
     // for(int i=0;i<info.actuatedDofNum;i++)
     // {
     //   optimizedState2WBC_mrt_(12+i) = std::max(joint_state_limit_(i, 0), std::min(optimizedState2WBC_mrt_[12+i], joint_state_limit_(i, 1)));
@@ -890,6 +918,19 @@ namespace humanoid_controller
     for(int i=0;i<infoWBC.numThreeDofContacts;i++)
     {
       ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/force_" + std::to_string(i+1), optimizedInput2WBC_mrt_.segment(3 * i, 3));
+    }
+    {
+      Eigen::Matrix3d R_ws = ocs2::getRotationMatrixFromZyxEulerAngles(Eigen::Vector3d(optimizedState2WBC_mrt_(9), 0, 0));
+      Eigen::VectorXd hand_wrench_cmd_tmp = hand_wrench_cmd_;
+      hand_wrench_cmd_tmp.segment<3>(0) = R_ws * hand_wrench_cmd_.segment<3>(0);
+      hand_wrench_cmd_tmp.segment<3>(6) = R_ws * hand_wrench_cmd_.segment<3>(6);
+      optimizedInput2WBC_mrt_.segment(3 * info.numThreeDofContacts, hand_wrench_cmd_.size()) = hand_wrench_cmd_tmp;
+    }
+    for(int i=0;i<info.numSixDofContacts;i++)
+    {
+      Eigen::VectorXd wrench = optimizedInput2WBC_mrt_.segment(3 * info.numThreeDofContacts + 6 * i, 6);
+      ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/wrench_" + std::to_string(i+1), wrench);
+      visualizeWrench(wrench, i==0);
     }
     ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/joint_vel", optimizedInput2WBC_mrt_.segment(3 * infoWBC.numThreeDofContacts, infoWBC.actuatedDofNum));
     
@@ -987,6 +1028,8 @@ namespace humanoid_controller
       jointCmdMsg.joint_kd.push_back(joint_kd_[i1]);
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[i1]);
       jointCmdMsg.control_modes.push_back(joint_control_modes_[i1]);
+
+      // jointCurrentWBC_(i1) = output_tau_(i1);
     }
 
     ModeSchedule current_mode_schedule = mrtRosInterface_->getCurrentModeSchedule();
@@ -1006,14 +1049,14 @@ namespace humanoid_controller
       return gait_name == "walk" || gait_name == "trot";
     };
 
-    bool is_stance_mode_ = is_SS_mode_after(current_mode_schedule);
+    is_stance_mode_ = is_SS_mode_after(current_mode_schedule);
 
     // 膝关节全程力控
 
     const auto &current_time = currentObservation_.time - dt_;
     size_t current_mode = currentObservation_.mode;
     size_t before_mode = current_mode_schedule.modeBefore(current_time);
-    size_t next_mode = current_mode_schedule.modeNext(current_time);
+    nextMode_ = current_mode_schedule.modeNext(current_time);
     double switch_time = current_mode_schedule.timeSwitch(current_time);
     double start_time = current_mode_schedule.timeBefore(current_time);
     size_t be_before_mode = current_mode_schedule.modeBefore(start_time - dt_); // 前前一个mode
@@ -1079,6 +1122,8 @@ namespace humanoid_controller
       jointCmdMsg.tau_ratio.push_back(1);
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNum_+i2]);
       jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNum_+i2]);
+
+      // jointCurrentWBC_(jointNum_+i2) = output_tau_(jointNum_+i2);
     }
 
     // 补充头部维度
@@ -1107,6 +1152,8 @@ namespace humanoid_controller
         jointCmdMsg.tau_ratio.push_back(1);
         jointCmdMsg.tau_max.push_back(10);
         jointCmdMsg.control_modes.push_back(2);
+
+        // jointCurrentWBC_(jointNum_ + armNumReal_ + i3) = get_head_pos(i3);
       }
       robotVisualizer_->updateHeadJointPositions(sensor_data_head_.jointPos_);
     }
@@ -1114,12 +1161,14 @@ namespace humanoid_controller
     jointCmdPub_.publish(jointCmdMsg);
     
     // Visualization
-    robotVisualizer_->updateSimplifiedArmPositions(simplifiedJointPos_);
-    if (use_external_mpc_)
-      robotVisualizer_->update(currentObservation_, mrtRosInterface_->getPolicy(), mrtRosInterface_->getCommand());
-    else
-      robotVisualizer_->update(currentObservation_, mpcMrtInterface_->getPolicy(), mpcMrtInterface_->getCommand());
-
+    if(visualizeHumanoid_)
+    {
+      robotVisualizer_->updateSimplifiedArmPositions(simplifiedJointPos_);
+      if (use_external_mpc_)
+        robotVisualizer_->update(currentObservation_, mrtRosInterface_->getPolicy(), mrtRosInterface_->getCommand());
+      else
+        robotVisualizer_->update(currentObservation_, mpcMrtInterface_->getPolicy(), mpcMrtInterface_->getCommand());
+    }
     // Publish the observation. Only needed for the command interface
     const auto t6 = Clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count() > 1000)
@@ -1187,6 +1236,11 @@ namespace humanoid_controller
       jointCurrent_ = data.jointCurrent_;
     }
 
+    jointPosWBC_ = data.jointPos_;
+    jointVelWBC_ = data.jointVel_;
+    jointAccWBC_ = data.jointAcc_;
+    jointCurrentWBC_ = data.jointCurrent_;
+
     quat_ = data.quat_;
     angularVel_ = data.angularVel_;
     linearAccel_ = data.linearAccel_;
@@ -1238,20 +1292,27 @@ namespace humanoid_controller
     }
     // last_time_ = current_time_ - ros::Duration(0.002);
     double diff_time = (current_time_ - last_time_).toSec();
-    auto est_mode = stateEstimate_->ContactDetection(plannedMode_, jointVel_, jointCurrent_, diff_time);
-    ros_logger_->publishValue("/state_estimate/mode", static_cast<double>(est_mode));
-    est_mode = plannedMode_;
+    // auto est_mode = stateEstimate_->ContactDetection(plannedMode_, jointVel_, jointCurrent_, diff_time);
+    // ros_logger_->publishValue("/state_estimate/mode", static_cast<double>(est_mode));
+    // est_mode = plannedMode_;
     // contactFlag = modeNumber2StanceLeg(est_mode);
     // std::cout << "mode: " << modeNumber2String(est_mode) << std::endl;
     last_time_ = current_time_;
     ros::Duration period = ros::Duration(diff_time);
 
-    vector_t activeTorque_ = (is_real_) ? jointCurrent_.cwiseProduct(motor_c2t_) : jointCurrent_;
+    vector_t activeTorque_ = jointCurrent_;
+    vector_t activeTorqueWBC_ =  jointCurrentWBC_;
     stateEstimate_->setCmdTorque(activeTorque_);
     stateEstimate_->estContactForce(period);
     auto est_contact_force = stateEstimate_->getEstContactForce();
-    ros_logger_->publishVector("/state_estimate/contact_force", est_contact_force);
-
+    ros_logger_->publishVector("/state_estimate/Contact_Detection/contactForce", est_contact_force);
+    auto est_mode = stateEstimate_->ContactDetection(nextMode_, is_stance_mode_, plannedMode_, robotMass_, est_contact_force(2), est_contact_force(8), diff_time);
+    ros_logger_->publishValue("/state_estimate/Contact_Detection/mode", static_cast<double>(est_mode));
+    if (!use_estimator_contact_)
+    {
+      est_mode = plannedMode_;
+    }
+    estPlannedMode_ = est_mode;
     stateEstimate_->updateMode(est_mode);
     stateEstimate_->updateGait(gaitManagerPtr_->getGaitName(currentObservation_.time));
     // rbdState_: Angular(zyx),pos(xyz),jointPos[info_.actuatedDofNum],angularVel(zyx),linervel(xyz),jointVel[info_.actuatedDofNum]
@@ -1288,7 +1349,7 @@ namespace humanoid_controller
     // std::cout << "currentObservation_.mode:" << currentObservation_.mode << std::endl;
     // TODO: 暂时用plannedMode_代替，需要在接触传感器可靠之后修改为stateEstimate_->getMode()
     // currentObservation_.mode = plannedMode_;
-    currentObservation_.mode = est_mode;
+    currentObservation_.mode = plannedMode_;
     if (is_simplified_model_)
     {
 
@@ -1347,6 +1408,10 @@ namespace humanoid_controller
     }
     wbc_observation_publisher_.publish(ros_msg_conversions::createObservationMsg(currentObservationWBC_));
 
+    // std::cout << "jointPosWBC_:" << jointPosWBC_.transpose() << std::endl;
+
+    auto est_arm_contact_force = stateEstimate_->getEstArmContactForce(jointPosWBC_, jointVelWBC_, activeTorqueWBC_, period);
+    ros_logger_->publishVector("/state_estimate/est_arm_contact_force", est_arm_contact_force);
   }
 
   humanoidController::~humanoidController()
@@ -1376,6 +1441,7 @@ namespace humanoid_controller
     // PinocchioInterface
     auto &modelSettings_ = HumanoidInterface_->modelSettings();
     pinocchioInterfaceWBCPtr_.reset(new PinocchioInterface(centroidal_model::createPinocchioInterface(urdfFile, modelSettings_.jointNamesReal)));
+    pinocchioInterfaceEstimatePtr_.reset(new PinocchioInterface(centroidal_model::createPinocchioInterface(urdfFile, modelSettings_.jointNamesReal)));
 
     vector_t defaultJointState(pinocchioInterfaceWBCPtr_->getModel().nq - 6);
     defaultJointState.setZero();
@@ -1392,6 +1458,12 @@ namespace humanoid_controller
                                                                     modelSettings_.contactNames3DoF);
     eeKinematicsWBCPtr_->setPinocchioInterface(*pinocchioInterfaceWBCPtr_);
   
+    centroidalModelInfoEstimate_ = centroidal_model::createCentroidalModelInfo(
+      *pinocchioInterfaceEstimatePtr_, centroidal_model::loadCentroidalType(taskFile), defaultJointState, modelSettings_.contactNames3DoF,
+      modelSettings_.contactNames6DoF);
+
+
+
   }
 
   void humanoidController::setupMpc()
@@ -1548,6 +1620,7 @@ namespace humanoid_controller
                                                             HumanoidInterface_->getCentroidalModelInfo(), *eeKinematicsPtr_);
     dynamic_cast<KalmanFilterEstimate &>(*stateEstimate_).loadSettings(taskFile, verbose);
     currentObservation_.time = 0;
+    stateEstimate_->initializeEstArmContactForce(*pinocchioInterfaceEstimatePtr_, centroidalModelInfoEstimate_);
   }
 
   void humanoidCheaterController::setupStateEstimate(const std::string & /*taskFile*/, bool /*verbose*/)
@@ -1568,6 +1641,33 @@ namespace humanoid_controller
                                                        ros_logger_);
     std::cout << "InEkfBaseFilter stateEstimate_ initialized" << std::endl;
 #endif
+  }
+
+  void humanoidController::visualizeWrench(const Eigen::VectorXd &wrench, bool is_left)
+  {
+    if(wrench.size() != 6)
+      ROS_ERROR_STREAM("wrench size is not 6");
+    // 创建并填充 WrenchStamped 消息
+    geometry_msgs::WrenchStamped wrench_msg;
+    wrench_msg.header.stamp = ros::Time::now();  // 设置时间戳
+    wrench_msg.header.frame_id = "zarm_r7_end_effector";
+    if(is_left)
+      wrench_msg.header.frame_id = "zarm_l7_end_effector";
+
+    // TODO: 转换到局部坐标系
+    // 将优化输入分割到力和力矩字段中
+    wrench_msg.wrench.force.x = wrench(0); // 力 x
+    wrench_msg.wrench.force.y = wrench(1); // 力 y
+    wrench_msg.wrench.force.z = wrench(2); // 力 z
+
+    wrench_msg.wrench.torque.x = wrench(3); // 力矩 x
+    wrench_msg.wrench.torque.y = wrench(4); // 力矩 y
+    wrench_msg.wrench.torque.z = wrench(5); // 力矩 z
+
+    if(is_left)
+      lHandWrenchPub_.publish(wrench_msg);
+    else
+      rHandWrenchPub_.publish(wrench_msg);
   }
 
 } // namespace humanoid_controller
