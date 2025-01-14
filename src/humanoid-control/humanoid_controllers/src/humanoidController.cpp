@@ -310,6 +310,21 @@ namespace humanoid_controller
     {
       loadData::loadEigenMatrix(referenceFile, "head_kp_", head_kp_);
       loadData::loadEigenMatrix(referenceFile, "head_kd_", head_kd_);
+      std::vector<std::string> head_joint_names_ = {"zhead_1_joint", "zhead_2_joint"};
+      const auto &model = HumanoidInterface_->getPinocchioInterface().getModel();
+
+      for (int i = 0; i < head_joint_names_.size(); i++)
+      {
+        std::string joint_name = head_joint_names_[i];
+        std::pair<double, double> limits = {head_joint_limits_[0].first, head_joint_limits_[0].second};
+        if (robotVisualizer_->getJointLimits(joint_name, limits))
+        {
+          limits.first *= 180.0 / M_PI;
+          limits.second *= 180.0 / M_PI;
+          head_joint_limits_[i] = limits;
+          std::cout << "Head joint " << joint_name << " lower_limit: " << limits.first << " upper_limit: " << limits.second << std::endl;
+        }
+      }
     }
     loadData::loadEigenMatrix(referenceFile, "acc_filter_cutoff_freq", acc_filter_params);
     loadData::loadEigenMatrix(referenceFile, "gyro_filter_cutoff_freq", gyro_filter_params);
@@ -423,9 +438,12 @@ namespace humanoid_controller
   {
       if (msg->joint_data.size() ==2)
       {
-          if (msg->joint_data[0] < -80 || msg->joint_data[0] > 80 || msg->joint_data[1] < -25 || msg->joint_data[1] > 25)
+          if (msg->joint_data[0] < head_joint_limits_[0].first || msg->joint_data[0] > head_joint_limits_[0].second 
+            || msg->joint_data[1] < head_joint_limits_[1].first || msg->joint_data[1] > head_joint_limits_[1].second)
           {
-              ROS_WARN("Invalid robot head motion data. Joint data must be in the range [-30, 30] and [-25, 25].");
+              std::cout << "\033[1;31m[headCmdCallback] Invalid robot head motion data. Head joints must be in the range [" 
+                << head_joint_limits_[0].first << ", " << head_joint_limits_[0].second << "] and [" 
+                << head_joint_limits_[1].first << ", " << head_joint_limits_[1].second << "].\033[0m" << std::endl;
               return;
           }
           head_mtx.lock();

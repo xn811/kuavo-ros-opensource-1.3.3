@@ -359,6 +359,9 @@ namespace humanoid_controller
     double ruiwo_motor_velocities_factor_{0.0};
     gaitTimeName current_gait_{"stance", 0.0}, last_gait_{"stance", 0.0};
     vector_t desire_arm_q, desire_arm_v;
+
+    std::vector<std::pair<double, double> > head_joint_limits_ = {{-80, 80}, {-25, 25}};
+
   };
 
   class humanoidCheaterController : public humanoidController
