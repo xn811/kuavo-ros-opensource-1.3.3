@@ -23,6 +23,8 @@ VR_REMOTE_CONTROL_SESSION_NAME = "vr_remote_control"
 LAUNCH_HUMANOID_ROBOT_SIM_CMD = "roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch joystick_type:=h12 start_way:=auto"
 LAUNCH_HUMANOID_ROBOT_REAL_CMD = "roslaunch humanoid_controllers load_kuavo_real.launch joystick_type:=h12 start_way:=auto"
 LAUNCH_VR_REMOTE_CONTROL_CMD = "roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch"
+ROS_MASTER_URI = os.getenv("ROS_MASTER_URI")
+ROS_IP = os.getenv("ROS_IP")
 kuavo_ros_control_ws_path = os.getenv("KUAVO_ROS_CONTROL_WS_PATH")
 record_topics_path = os.path.join(config_dir, "record_topics.json")
 with open(record_topics_path, "r") as f:
@@ -139,6 +141,8 @@ def launch_humanoid_robot(real_robot=True,calibrate=False):
         "-d",  
         f"source ~/.bashrc && \
             source {kuavo_ros_control_ws_path}/devel/setup.bash && \
+            export ROS_MASTER_URI={ROS_MASTER_URI} && \
+            export ROS_IP={ROS_IP} && \
             export ROBOT_VERSION={robot_version} && \
             {launch_cmd}; exec bash"
     ]
@@ -171,6 +175,8 @@ def start_vr_remote_control_callback(event):
         "-d",  
         f"bash -c -i 'source ~/.bashrc && \
           source {kuavo_ros_control_ws_path}/devel/setup.bash && \
+          export ROS_MASTER_URI={ROS_MASTER_URI} && \
+          export ROS_IP={ROS_IP} && \
           {LAUNCH_VR_REMOTE_CONTROL_CMD}; exec bash'"
     ]
     subprocess.run(["tmux", "kill-session", "-t", VR_REMOTE_CONTROL_SESSION_NAME], 
