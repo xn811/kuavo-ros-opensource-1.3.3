@@ -299,6 +299,7 @@ class IkRos:
             req = controlLejuClawRequest()
             req.data.name = ['left_claw', 'right_claw']
             req.data.position = pos
+            req.data.velocity = [90, 90]
             # print(f">>>>>>>>>>>>>>>> control_lejucalw_srv: {req}")
             control_lejucalw_srv(req)
         except rospy.ROSException:
