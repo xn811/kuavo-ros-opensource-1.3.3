@@ -108,8 +108,7 @@ if __name__ == "__main__":
     rospy.init_node("robot_arm_fk_ik_node", anonymous=True)
 
     # 设置手臂运动模式为外部控制
-    mode = 2
-    set_arm_control_mode(mode)
+    set_arm_control_mode(2)
 
     # 创建请求对象（单位：弧度）
     joint_angles_optiops = {
@@ -203,5 +202,7 @@ if __name__ == "__main__":
         # 回到初始位置
         publish_arm_target_poses([3], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        time.sleep(8)
+        set_arm_control_mode(0)
         print("测试程序结束")
 
