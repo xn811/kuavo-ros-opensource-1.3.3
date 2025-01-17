@@ -1,8 +1,8 @@
-from kuavo_sdk.srv import controlEndHand, controlEndHandRequest, controlEndHandResponse
 import rospy
+from kuavo_sdk.msg import robotHandPosition
 
 
-def srv_controlEndHand(hand_traj):
+def publish_controlEndHand(hand_traj):
     """
     控制机器人的手部动作。
 
@@ -13,19 +13,17 @@ def srv_controlEndHand(hand_traj):
     bool: 服务调用结果，成功返回True，失败返回False。
     """
     try:
-        # 初始化服务代理，用于控制机器人的手部
-        robot_control_hand_client = rospy.ServiceProxy("/control_end_hand", controlEndHand)
-        # 创建请求对象
-        request = controlEndHandRequest()
+        # 创建Publisher对象
+        pub = rospy.Publisher('control_robot_hand_position', robotHandPosition, queue_size=10)
+        rospy.sleep(0.5)  # 确保Publisher注册
+        # 创建消息对象
+        msg = robotHandPosition()
         # 设置左手和右手的位置
-        request.left_hand_position = hand_traj[0:6]
-        request.right_hand_position = hand_traj[6:]
+        msg.left_hand_position = hand_traj[0:6]
+        msg.right_hand_position = hand_traj[6:]
 
-        # 调用服务并获取响应
-        response = robot_control_hand_client(request)
-
-        # 返回结果
-        return response.result
+        # 发布消息
+        pub.publish(msg)
 
     except rospy.ServiceException as e:
         # 记录错误日志
@@ -40,14 +38,7 @@ def main():
     hand_traj = [0, 0, 0, 0, 0, 0,  # 左手位置
                  20, 20, 20, 20, 20, 20]  # 右手位置
 
-    # 调用服务函数
-    result = srv_controlEndHand(hand_traj)
-
-    # 输出结果
-    if result:
-        rospy.loginfo("手部控制成功")
-    else:
-        rospy.loginfo("手部控制失败")
+    publish_controlEndHand(hand_traj)
 
 
 if __name__ == "__main__":

@@ -76,6 +76,7 @@ add_message_files(
   twoArmHandPose.msg
   twoArmHandPoseCmd.msg
   ikSolveParam.msg
+  robotHandPosition.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -85,7 +86,6 @@ add_service_files(
   planArmTrajectoryCubicSpline.srv
   changeArmCtrlMode.srv
   playmusic.srv
-  controlEndHand.srv
   recordmusic.srv
   gestureExecute.srv
   gestureExecuteState.srv
