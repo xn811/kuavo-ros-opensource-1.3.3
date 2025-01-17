@@ -5,4 +5,4 @@ int8 kReached = 2
 int8 kGrabbed = 3         
 
 int8[] state # 0:; left; 1: right
-kuavo_msgs/endEffectorData data
+kuavo_sdk/endEffectorData data
