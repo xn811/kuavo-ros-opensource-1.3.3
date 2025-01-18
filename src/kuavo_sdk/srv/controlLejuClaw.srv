@@ -24,7 +24,7 @@
 # Response:
 # success: True/False, call service success or not.
 # message: 'success'
-kuavo_msgs/endEffectorData data
+kuavo_sdk/endEffectorData data
 ---
 bool success
 string message

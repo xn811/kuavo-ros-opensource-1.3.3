@@ -76,6 +76,7 @@ add_message_files(
   twoArmHandPose.msg
   twoArmHandPoseCmd.msg
   ikSolveParam.msg
+  lejuClawState.msg
   robotHandPosition.msg
 )
 
@@ -91,6 +92,7 @@ add_service_files(
   gestureExecuteState.srv
   twoArmHandPoseCmdSrv.srv
   fkSrv.srv
+  controlLejuClaw.srv
 )
 
 ## Generate actions in the 'action' folder
