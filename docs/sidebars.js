@@ -95,6 +95,7 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/6常用工具/日志工具',
         'basic_usage/kuavo-ros-control/docs/6常用工具/硬件测试工具',
         'basic_usage/kuavo-ros-control/docs/6常用工具/热点工具',
+        'basic_usage/kuavo-ros-control/docs/6常用工具/手臂动作编辑工具使用手册',
       ],
     },
     {
