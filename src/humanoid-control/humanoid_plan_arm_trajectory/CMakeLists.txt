@@ -18,6 +18,15 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   message_runtime
   trajectory_msgs
+
+  cv_bridge
+  robot_state_publisher
+  rospy
+  tf
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
+  vision_msgs
 )
 
 find_package(drake REQUIRED)
@@ -62,6 +71,13 @@ add_message_files(
   bezierCurveCubicPoint.msg
   jointBezierTrajectory.msg
   planArmState.msg
+
+  mpc_input.msg
+  mpc_observation.msg
+  mpc_state.msg
+  robotHandPosition.msg
+  robotHeadMotionData.msg
+  RobotActionState.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -69,6 +85,9 @@ add_service_files(
   FILES
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
+
+  ExecuteArmAction.srv
+  changeArmCtrlModeOcs2.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -85,6 +104,8 @@ generate_messages(
   geometry_msgs
   trajectory_msgs
   humanoid_plan_arm_trajectory
+
+  sensor_msgs
 )
 
 ################################################

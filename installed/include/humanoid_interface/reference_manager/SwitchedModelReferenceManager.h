@@ -214,6 +214,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   vector_t tempCmdPose_;
 
   scalar_t cmdHeight_;
+  scalar_t cmdPitch_;
   bool velCmdUpdated_ = false;
   bool PoseCmdUpdated_ = false;
   bool isCmdPoseCached = false;
@@ -241,7 +242,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   vector_t currentCmdVel_ = vector_t::Zero(6);
   vector_t currentCmdPose_ = vector_t::Zero(6);
 
-  ocs2::scalar_array_t c_relative_base_limit_{0.4, 0.15, 0.3, 0.4};
+  ocs2::scalar_array_t c_relative_base_limit_{0.4, 0.15, 0.3, 0.4, 0.4, 0.4};
   double cmd_threshold = 0.02;
 
   InverseKinematics inverseKinematics_;

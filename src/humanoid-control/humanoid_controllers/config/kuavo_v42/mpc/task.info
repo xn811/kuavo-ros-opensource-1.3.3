@@ -472,7 +472,7 @@ frictionConeSoftConstraint
 
 basePitchLimits
 {
-  enable                 true
+  enable                 false
   pos
   {
     mu      0.1       ; relaxed log barrier mu
