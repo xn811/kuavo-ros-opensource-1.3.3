@@ -9,7 +9,7 @@
   </include>
 
   <!-- Load URDF file -->
-  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/biped_s$(arg robot_version)_gazebo.urdf"/>
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/biped_s$(arg robot_version)_gazebo.xacro"/>
 
   <!-- Spawn URDF model into Gazebo -->
   <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" 
@@ -36,4 +36,6 @@
   <!-- <node name="sensor_data_publisher" pkg="gazebo_sim" type="sensor_data_publisher" output="screen"/>
 
   <node name="joint_cmd_publisher" pkg="gazebo_sim" type="joint_cmd_publisher" output="screen"/> -->
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="camera_to_robot_frame" args="0 0 0 0 0 0 camera camera_link" />
 </launch>

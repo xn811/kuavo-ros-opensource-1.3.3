@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(catkin REQUIRED
         COMPONENTS
         gazebo_sim
+        realsense_ros_gazebo
         roscpp
         controller_interface
         humanoid_common
