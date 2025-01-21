@@ -31,6 +31,7 @@
     <depend>hardware_node</depend>
     <depend>kuavo_assets</depend>
     <depend>ocs2_self_collision_visualization</depend>
+    <depend>gazebo_sim</depend>
     <!-- <depend>ocs2_biped_robot_ros</depend> -->
 
     <depend>angles</depend>

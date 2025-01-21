@@ -33,6 +33,7 @@ cd "$(dirname "$0")"
 # 定义URDF文件列表
 URDF_FILES=(
     "biped_s${ROBOT_VERSION}.urdf"
+    "biped_s${ROBOT_VERSION}_gazebo.urdf"
     "drake/biped_v3_all_joint.urdf"
     "drake/biped_v3.urdf"
     "drake/biped_v3_full.urdf"
@@ -41,6 +42,7 @@ URDF_FILES=(
 
 # 需要修改的link名称
 LINK_NAMES=(
+    "base_link"
     "base_link"
     "torso"
     "torso"

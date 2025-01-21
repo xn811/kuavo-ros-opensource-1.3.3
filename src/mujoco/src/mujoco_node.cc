@@ -792,14 +792,14 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
   std::cout << "[mujoco_node]: waiting for init qpos" << std::endl;
   while (ros::ok())
   {
-    if (g_nh_ptr->hasParam("mujoco_init_state"))
+    if (g_nh_ptr->hasParam("robot_init_state_param"))
     {
               std::cout << "qpos_init size: " << m->nq<< std::endl;
 
       qpos_init.resize(m->nq);
       std::vector<double> qpos_init_temp;
       qpos_init_temp.resize(50);
-      if (g_nh_ptr->getParam("mujoco_init_state", qpos_init_temp))
+      if (g_nh_ptr->getParam("robot_init_state_param", qpos_init_temp))
       {
         ROS_INFO("Get init qpos ");
         

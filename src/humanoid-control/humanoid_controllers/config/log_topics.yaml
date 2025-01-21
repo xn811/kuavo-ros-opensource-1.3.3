@@ -30,6 +30,9 @@ topics:
   - /SwitchedModelReferenceManager/.*
   - /motor_cmd/.*
   - /sensor_data_motor/.*
+  - /imu
+  - /joint_states
+  - /share_memory/.*
   - /mm_eef_poses
   - /mm_eef_poses_error
   - /humanoid_eef_poses

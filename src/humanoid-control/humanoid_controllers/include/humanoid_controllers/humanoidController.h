@@ -40,6 +40,7 @@
 #include "humanoid_controllers/LowPassFilter.h"
 #include "humanoid_interface/gait/GaitSchedule.h"
 #include "kuavo_msgs/robotHeadMotionData.h"
+#include "gazebo-sim/shm_manager.h"
 
 namespace humanoid_controller
 {
@@ -377,6 +378,14 @@ namespace humanoid_controller
     gaitTimeName current_gait_{"stance", 0.0}, last_gait_{"stance", 0.0};
     vector_t desire_arm_q, desire_arm_v;
 
+    // 共享内存通讯
+    std::unique_ptr<gazebo_shm::ShmManager> shm_manager_;
+    bool use_shm_communication_{false};  // 是否使用共享内存通讯
+    bool updateSensorDataFromShm();      // 从共享内存更新传感器数据
+    void publishJointCmdToShm(const kuavo_msgs::jointCmd& jointCmdMsg);         // 发布关节命令到共享内存
+    
+    // 传感器数据发布
+    ros::Publisher sensor_data_raw_pub_;
     feet_array_t<vector3_t> foot_pos_desired_;
     bool visualizeHumanoid_ = true;
 

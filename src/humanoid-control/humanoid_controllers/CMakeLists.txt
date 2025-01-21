@@ -6,6 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED
         COMPONENTS
+        gazebo_sim
         roscpp
         controller_interface
         humanoid_common
@@ -18,6 +19,7 @@ find_package(catkin REQUIRED
         angles
         kuavo_msgs
         humanoid_interface_drake
+        
         
         )
 find_package(drake REQUIRED)
@@ -51,6 +53,7 @@ catkin_package(
         humanoid_estimation
         kuavo_estimation
         ocs2_self_collision_visualization
+        
         # ocs2_biped_robot_ros
         angles
 )

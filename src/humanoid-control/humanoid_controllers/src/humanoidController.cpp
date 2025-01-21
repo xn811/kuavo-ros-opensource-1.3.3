@@ -42,13 +42,14 @@ namespace humanoid_controller
   std::mutex head_mtx;
 
 
-  static void mujocoSimStart(ros::NodeHandle &nh_)
+  static void callSimStartSrv(ros::NodeHandle &nh_)
   {
     std_srvs::SetBool srv;
     srv.request.data = true;
 
     // 等待服务可用
-    bool service_available = ros::service::waitForService("sim_start", ros::Duration(5.0)); // 5秒超时
+    std::cout << "Waiting for sim_start service..." << std::endl;
+    bool service_available = ros::service::waitForService("sim_start", ros::Duration(100.0)); // 5秒超时
 
     if (service_available)
     {
@@ -204,6 +205,18 @@ namespace humanoid_controller
     {
       controllerNh_.getParam("/use_joint_filter", use_joint_filter_);
     }
+
+    controllerNh_.param<bool>("/use_shm_communication", use_shm_communication_, false);
+    // 初始化共享内存通讯
+    if (use_shm_communication_) {
+        shm_manager_ = std::make_unique<gazebo_shm::ShmManager>();
+        if (!shm_manager_->initializeSensorsShm() || !shm_manager_->initializeCommandShm()) {
+            ROS_ERROR("Failed to initialize shared memory communication");
+            return false;
+        }
+        ROS_INFO("Shared memory communication initialized successfully");
+    }
+
     if (controllerNh_.hasParam("use_estimator_contact"))
     {
       controllerNh_.getParam("/use_estimator_contact", use_estimator_contact_);
@@ -288,14 +301,15 @@ namespace humanoid_controller
     vector_t drake_q = drake_interface_->getDrakeState();
     vector_t mujoco_q = vector_t::Zero(drake_q.size());
     mujoco_q << drake_q.segment(4, 3), drake_q.head(4), drake_q.tail(drake_q.size() - 7);
-    std::vector<double> mujoco_init_state;
+    std::vector<double> robot_init_state_param;
     for (int i = 0; i < drake_q.size(); i++)
     {
-      mujoco_init_state.push_back(mujoco_q(i));
+      robot_init_state_param.push_back(mujoco_q(i));
     }
     
-    ros::param::set("mujoco_init_state", mujoco_init_state);
-    ros::param::set("/humanoid/init_q", mujoco_init_state);
+    ros::param::set("robot_init_state_param", robot_init_state_param);
+  
+    ros::param::set("/humanoid/init_q", robot_init_state_param);
 
     auto initial_state_ =  drake_interface_->getInitialState();
     std::cout << "controller initial_state_:" << initial_state_.transpose() << std::endl;
@@ -435,12 +449,24 @@ namespace humanoid_controller
       wbcFrequencyPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/frequency/wbc", 10);
       wbcTimeCostPub_ = controllerNh_.advertise<std_msgs::Float64>("/monitor/time_cost/wbc", 10);
       wbc_observation_publisher_ = controllerNh_.advertise<ocs2_msgs::mpc_observation>(robotName_ + "_wbc_observation", 1);
+      sensor_data_raw_pub_ = controllerNh_.advertise<kuavo_msgs::sensorsData>("/share_memory/sensor_data_raw", 10);
       lHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/left_hand", 10);
       rHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/right_hand", 10);
 
       // State estimation
       setupStateEstimate(taskFile, verbose);
-      sensors_data_buffer_ptr_->waitForReady();
+      if (use_shm_communication_)
+      {
+        while (!sensors_data_buffer_ptr_->isReady())
+        {
+          updateSensorDataFromShm();
+          usleep(1000);
+          // std::cout << "update for sensors data from shm" << std::endl;
+        }
+        
+      }
+      else
+        sensors_data_buffer_ptr_->waitForReady();
       // std::cout << "waitForReady estimate ready" << std::endl;
       // Whole body control/HierarchicalWbc/WeightedWbc
       // wbc 中 eeKinematicsPtr_ 可能需要修改
@@ -457,6 +483,7 @@ namespace humanoid_controller
         std::cerr << "Failed to start keyboard thread" << std::endl;
         exit(1);
     }
+
 
     return true;
   }
@@ -554,6 +581,13 @@ namespace humanoid_controller
     sensor_data.linearAccel_ = acc_filter_.update(sensor_data.linearAccel_);
     // free_acc_filter_.update(sensor_data.linearAccel_);
     sensor_data.angularVel_ = gyro_filter_.update(sensor_data.angularVel_);
+    // std::cout << "sensor_data.linearAccel_: " << sensor_data.linearAccel_.transpose() << std::endl;
+    // std::cout << "sensor_data.angularVel_: " << sensor_data.angularVel_.transpose() << std::endl;
+    // std::cout << "sensor_data.quat_.coeffs(): " << sensor_data.quat_.coeffs().transpose() << std::endl;
+    // std::cout << "sensor_data.jointPos_: " << sensor_data.jointPos_.transpose() << std::endl;
+    // std::cout << "sensor_data.jointVel_: " << sensor_data.jointVel_.transpose() << std::endl;
+    // std::cout << "sensor_data.jointAcc_: " << sensor_data.jointAcc_.transpose() << std::endl;
+    // std::cout << "sensor_data.jointCurrent_: " << sensor_data.jointCurrent_.transpose() << std::endl;
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/linearAccel", sensor_data.linearAccel_);
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/angularVel", sensor_data.angularVel_);
     // END_EFFECTOR DATA
@@ -695,8 +729,8 @@ namespace humanoid_controller
     // }
     ROS_INFO_STREAM("Initial policy has been received.");
     // usleep(1000); // wait for 1s to ensure that the initial policy is received by the MPC node
-    if (!is_real_ && !is_play_back_mode_)
-      mujocoSimStart(controllerNh_);
+    if (!is_real_ && !is_play_back_mode_ && !use_shm_communication_)
+      callSimStartSrv(controllerNh_);
     // if (is_real_)
     // {
     //   SensorData_t intial_sensor_data;
@@ -732,6 +766,11 @@ namespace humanoid_controller
   void humanoidController::update(const ros::Time &time, const ros::Duration &dfd)
   {
     const auto t1 = Clock::now();
+
+    // 使用共享内存更新传感器数据
+    if (use_shm_communication_) {
+        updateSensorDataFromShm();
+    }
 
     if (reset_mpc_)// 重置mpc
     {
@@ -1158,6 +1197,9 @@ namespace humanoid_controller
       robotVisualizer_->updateHeadJointPositions(sensor_data_head_.jointPos_);
     }
 
+    // 发布控制命令
+    if (use_shm_communication_) 
+        publishJointCmdToShm(jointCmdMsg);
     jointCmdPub_.publish(jointCmdMsg);
     
     // Visualization
@@ -1299,6 +1341,7 @@ namespace humanoid_controller
     // std::cout << "mode: " << modeNumber2String(est_mode) << std::endl;
     last_time_ = current_time_;
     ros::Duration period = ros::Duration(diff_time);
+    // std::cout << "diff_time: " << diff_time << std::endl;
 
     vector_t activeTorque_ = jointCurrent_;
     vector_t activeTorqueWBC_ =  jointCurrentWBC_;
@@ -1643,6 +1686,137 @@ namespace humanoid_controller
 #endif
   }
 
+  bool humanoidController::updateSensorDataFromShm()
+  {
+    if (!use_shm_communication_ || !shm_manager_) {
+        return false;
+    }
+
+    gazebo_shm::SensorsData sensors_data;
+    if (shm_manager_->readSensorsData(sensors_data)) {
+        // std::cout << "sensors_data.sensor_time: "<< sensors_data.sensor_time << std::endl;
+        SensorData sensor_data;
+        sensor_data.resize_joint(jointNumReal_+armNumReal_);
+        
+        // 关节数据
+        for (size_t i = 0; i < jointNumReal_+armNumReal_; ++i) {
+            sensor_data.jointPos_(i) = sensors_data.joint_data[i].position;
+            sensor_data.jointVel_(i) = sensors_data.joint_data[i].velocity;
+            sensor_data.jointAcc_(i) = 0.0;  // 加速度在共享内存中未提供
+            sensor_data.jointCurrent_(i) = sensors_data.joint_data[i].effort;
+        }
+        
+        // IMU数据
+        sensor_data.quat_.coeffs() << sensors_data.imu_data.orientation[0],
+                                    sensors_data.imu_data.orientation[1],
+                                    sensors_data.imu_data.orientation[2],
+                                    sensors_data.imu_data.orientation[3];
+                                    
+        sensor_data.angularVel_ << sensors_data.imu_data.angular_velocity[0],
+                                  sensors_data.imu_data.angular_velocity[1],
+                                  sensors_data.imu_data.angular_velocity[2];
+                                  
+        sensor_data.linearAccel_ << sensors_data.imu_data.linear_acceleration[0],
+                                   sensors_data.imu_data.linear_acceleration[1],
+                                   sensors_data.imu_data.linear_acceleration[2];
+
+        // 填充IMU数据到ROS消息
+        kuavo_msgs::sensorsData msg;
+        msg.header.stamp = ros::Time(sensors_data.sensor_time);
+        msg.header.frame_id = "base_link";
+        
+        // 关节数据
+        for (size_t i = 0; i < jointNumReal_+armNumReal_; ++i) {
+            msg.joint_data.joint_q.push_back(sensors_data.joint_data[i].position);
+            msg.joint_data.joint_v.push_back(sensors_data.joint_data[i].velocity);
+            msg.joint_data.joint_vd.push_back(0.0);
+            msg.joint_data.joint_current.push_back(sensors_data.joint_data[i].effort);
+        }
+        
+        // IMU数据
+        msg.imu_data.quat.w = sensors_data.imu_data.orientation[3];
+        msg.imu_data.quat.x = sensors_data.imu_data.orientation[0];
+        msg.imu_data.quat.y = sensors_data.imu_data.orientation[1];
+        msg.imu_data.quat.z = sensors_data.imu_data.orientation[2];
+        
+        msg.imu_data.gyro.x = sensors_data.imu_data.angular_velocity[0];
+        msg.imu_data.gyro.y = sensors_data.imu_data.angular_velocity[1];
+        msg.imu_data.gyro.z = sensors_data.imu_data.angular_velocity[2];
+        
+        msg.imu_data.acc.x = sensors_data.imu_data.linear_acceleration[0];
+        msg.imu_data.acc.y = sensors_data.imu_data.linear_acceleration[1];
+        msg.imu_data.acc.z = sensors_data.imu_data.linear_acceleration[2];
+
+        // 设置协方差矩阵为零
+        sensor_data.orientationCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+        sensor_data.angularVelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+        sensor_data.linearAccelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+        
+        // 更新时间戳
+        sensor_data.timeStamp_ = ros::Time(sensors_data.sensor_time);
+        ros_logger_->publishVector("/state_estimate/imu_data_ori/linearAccel", sensor_data.linearAccel_);
+        ros_logger_->publishVector("/state_estimate/imu_data_ori/angularVel", sensor_data.angularVel_);
+        
+        // 应用滤波器
+        sensor_data.linearAccel_ = acc_filter_.update(sensor_data.linearAccel_);
+        sensor_data.angularVel_ = gyro_filter_.update(sensor_data.angularVel_);
+        
+        // 记录数据
+        ros_logger_->publishVector("/state_estimate/imu_data_filtered/linearAccel", sensor_data.linearAccel_);
+        ros_logger_->publishVector("/state_estimate/imu_data_filtered/angularVel", sensor_data.angularVel_);
+        
+        // 添加到数据缓冲区
+        sensors_data_buffer_ptr_->addData(sensor_data.timeStamp_.toSec(), sensor_data);
+        
+        // 处理头部关节数据（如果有）
+        if (headNum_ > 0 && sensors_data.num_joints == jointNumReal_+armNumReal_+headNum_) {
+            int head_start_index = sensors_data.num_joints - headNum_;
+            for (size_t i = 0; i < headNum_; ++i) {
+                sensor_data_head_.jointPos_(i) = sensors_data.joint_data[i + head_start_index].position;
+                sensor_data_head_.jointVel_(i) = sensors_data.joint_data[i + head_start_index].velocity;
+                sensor_data_head_.jointAcc_(i) = 0.0;
+                sensor_data_head_.jointCurrent_(i) = sensors_data.joint_data[i + head_start_index].effort;
+                
+                // 添加头部关节数据到ROS消息
+                msg.joint_data.joint_q.push_back(sensors_data.joint_data[i + head_start_index].position);
+                msg.joint_data.joint_v.push_back(sensors_data.joint_data[i + head_start_index].velocity);
+                msg.joint_data.joint_vd.push_back(0.0);
+                msg.joint_data.joint_current.push_back(sensors_data.joint_data[i + head_start_index].effort);
+            }
+        }
+        
+        if (!is_initialized_) {
+            is_initialized_ = true;
+        }
+        sensor_data_raw_pub_.publish(msg);
+        return true;
+    }
+    return false;
+  }
+
+  void humanoidController::publishJointCmdToShm(const kuavo_msgs::jointCmd& jointCmdMsg)
+  {
+    if (!use_shm_communication_ || !shm_manager_) {
+        return;
+    }
+
+    gazebo_shm::JointCommand joint_cmd;
+    joint_cmd.num_joints = jointNumReal_ + armNumReal_ + headNum_;
+
+    // 从jointCmdMsg中复制数据到共享内存结构
+    for (size_t i = 0; i < joint_cmd.num_joints; ++i) {
+        joint_cmd.joint_q[i] = jointCmdMsg.joint_q[i];
+        joint_cmd.joint_v[i] = jointCmdMsg.joint_v[i];
+        joint_cmd.tau[i] = jointCmdMsg.tau[i];
+        joint_cmd.tau_max[i] = jointCmdMsg.tau_max[i];
+        joint_cmd.joint_kp[i] = jointCmdMsg.joint_kp[i];
+        joint_cmd.joint_kd[i] = jointCmdMsg.joint_kd[i];
+        joint_cmd.control_modes[i] = jointCmdMsg.control_modes[i];
+    }
+
+    // 写入共享内存
+    shm_manager_->writeJointCommandNext(joint_cmd);
+  }
   void humanoidController::visualizeWrench(const Eigen::VectorXd &wrench, bool is_left)
   {
     if(wrench.size() != 6)

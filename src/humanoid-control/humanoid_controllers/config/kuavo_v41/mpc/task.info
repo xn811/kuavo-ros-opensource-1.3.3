@@ -123,7 +123,7 @@ swing_trajectory_config
   liftOffVelocity               0.065
   touchDownVelocity            -0.01
   swingHeight                   0.06
-  climbStageSwingHeight         0.08
+  climbStageSwingHeight         0.06
   swingTimeScale                0.15
 
   toeSwingHeight                0.03

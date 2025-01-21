@@ -4,7 +4,7 @@
     <node pkg="humanoid_interface_ros" type="joystickSimulator.py" name="joystickSimulator" output="screen" launch-prefix="gnome-terminal --disable-factory --"/>
     
     <param name="channel_map_path" value="$(find humanoid_controllers)/launch/joy/$(arg joystick_type).json"/>
-    <param name="joystick_sensitivity" value="1"/>
+    <param name="joystick_sensitivity" value="40"/>
     <node pkg="humanoid_interface_ros" type="humanoid_joy_control_auto_gait_with_vel" name="humanoid_joy_control_auto_gait_with_vel" output="screen">
     </node>
 </launch>
