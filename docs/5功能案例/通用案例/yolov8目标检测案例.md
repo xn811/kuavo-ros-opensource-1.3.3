@@ -27,9 +27,7 @@
   - `test_detect.py` (实时检测)
   - `test_image.py` (指定图片检测)
 
-<p align="center">
-  <img src="images/yolov8检测快递盒效果动图.gif" alt="yolov8目标检测案例" width="300" height="250" />
-</p>
+![yolov8目标检测案例](images/yolov8案例检测效果图.png)
 
 
 
