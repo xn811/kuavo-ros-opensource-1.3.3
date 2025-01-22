@@ -7,12 +7,14 @@ import time
 import threading
 import numpy as np
 from humanoid_plan_arm_trajectory.srv import planArmTrajectoryBezierCurve, planArmTrajectoryBezierCurveRequest
-from humanoid_plan_arm_trajectory.srv import ExecuteArmAction, ExecuteArmActionResponse  # Import new service type
-from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierTrajectory, robotHandPosition, robotHeadMotionData
+from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierTrajectory
+from kuavo_msgs.msg import robotHandPosition, robotHeadMotionData
+from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest
+from ocs2_msgs.msg import mpc_observation
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
-from humanoid_plan_arm_trajectory.srv import changeArmCtrlModeOcs2, changeArmCtrlModeOcs2Request
-from humanoid_plan_arm_trajectory.msg import mpc_observation, RobotActionState
+from humanoid_plan_arm_trajectory.msg import RobotActionState
+from humanoid_plan_arm_trajectory.srv import ExecuteArmAction, ExecuteArmActionResponse  # Import new service type
 
 class ArmTrajectoryBezierDemo:
     INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -51,7 +53,7 @@ class ArmTrajectoryBezierDemo:
         
         # Store the file path base directory for actions
         # self.action_files_path = "/home/lab/kuavo-ros-control/src/humanoid-control/humanoid_plan_arm_trajectory/script/action_files"
-        self.action_files_path = "/home/lab/kuavo-ros-control/src/humanoid-control/humanoid_plan_arm_trajectory/script/action_files"
+        self.action_files_path = "/home/lab/.config/lejuconfig/action_files"
         rospy.loginfo("arm_trajectory_bezier_process is ready.")
         rospy.loginfo("***************************arm_trajectory_bezier_process_end*****************************************")
 
@@ -103,7 +105,7 @@ class ArmTrajectoryBezierDemo:
         try:
             rospy.wait_for_service(service_name, timeout=0.5)
             change_arm_ctrl_mode = rospy.ServiceProxy(
-                "humanoid_change_arm_ctrl_mode", changeArmCtrlModeOcs2
+                "humanoid_change_arm_ctrl_mode", changeArmCtrlMode
             )
             change_arm_ctrl_mode(control_mode=arm_ctrl_mode)
             rospy.loginfo("Service call successful")
