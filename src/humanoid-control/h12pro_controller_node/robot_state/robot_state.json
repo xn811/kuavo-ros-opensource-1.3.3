@@ -215,6 +215,54 @@
         "before": "arm_pose_callback"
       },
       {
+        "trigger": "customize_action_RR_A",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_RR_B",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_RR_C",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_RR_D",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_LL_A",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_LL_B",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_LL_C",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
+        "trigger": "customize_action_LL_D",
+        "source": "stance",
+        "dest": "stance",
+        "before": "customize_action_callback"
+      },
+      {
         "trigger": "stop",
         "source": "ready_stance",
         "dest": "initial",
