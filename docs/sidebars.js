@@ -110,7 +110,7 @@ const sidebars = {
       type: 'category',
       label: 'Changelog',
       items: [
-        'basic_usage/kuavo-ros-control/docs/kuavo更新日志'
+        'basic_usage/kuavo-ros-control/docs/kuavo更新日志',
       ],
     },
   ],
