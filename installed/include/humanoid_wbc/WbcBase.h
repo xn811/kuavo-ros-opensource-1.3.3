@@ -151,6 +151,7 @@ namespace ocs2
       Task formulateCenterOfMassTask(const vector_t &stateDesired,const vector_t &inputDesired,scalar_t period);
       Task formulateContactForceTask(const vector_t &inputDesired) const;
       Task formulateArmJointAccelTask(const vector_t &stateDesied, const vector_t &inputDesired, scalar_t period);
+      Task formulateStandUpJointAccelTask(const vector_t &stateDesied, const vector_t &inputDesired, scalar_t period);
 
       void compensateFriction(vector_t &x);
 
@@ -180,6 +181,7 @@ namespace ocs2
       scalar_t baseHeightKp_{}, baseHeightKd_{};
       scalar_t baseAngularKp_{}, baseAngularKd_{};
       vector_t armJointKp_, armJointKd_;
+      scalar_t standUp_legKp_{}, standUp_legKd_{}, standUp_armKp_{}, standUp_armKd_{};
       vector3_t baseAngular3dKp_, baseAngular3dKd_;
 
       vector_t cmd_body_pos_;

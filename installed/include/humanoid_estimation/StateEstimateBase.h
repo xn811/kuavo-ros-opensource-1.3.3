@@ -62,6 +62,7 @@ namespace ocs2
       virtual void updateImu(const Eigen::Quaternion<scalar_t> &quat, const vector3_t &angularVelLocal,
                              const vector3_t &linearAccelLocal, const matrix3_t &orientationCovariance,
                              const matrix3_t &angularVelCovariance, const matrix3_t &linearAccelCovariance);
+      virtual void setFixFeetHeights(bool isFix) {};
 
       virtual Eigen::Quaternion<scalar_t> getImuOrientation()
       {

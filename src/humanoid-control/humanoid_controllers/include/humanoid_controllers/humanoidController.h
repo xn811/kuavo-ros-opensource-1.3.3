@@ -166,6 +166,8 @@ namespace humanoid_controller
     ~humanoidController();
     void keyboard_thread_func();
     bool init(HybridJointInterface *robot_hw, ros::NodeHandle &controller_nh, bool is_nodelet_node = false);
+    void preUpdate(const ros::Time &time);
+    bool preUpdateComplete() {return isPreUpdateComplete;}
     void update(const ros::Time &time, const ros::Duration &period);
     void starting(const ros::Time &time);
     void stopping(const ros::Time & /*time*/) { mpcRunning_ = false; }
@@ -236,6 +238,10 @@ namespace humanoid_controller
     std::shared_ptr<MPC_BASE> mpc_;
     std::shared_ptr<MPC_MRT_Interface> mpcMrtInterface_;
     std::shared_ptr<MRT_ROS_Interface> mrtRosInterface_;
+
+    // preUpdate, 介于蹲姿启动和进MPC之间的状态处理
+    bool isPreUpdateComplete{false};
+    std::shared_ptr<WbcBase> standUpWbc_;
 
     // Visualization
     std::shared_ptr<HumanoidVisualizer> robotVisualizer_;
