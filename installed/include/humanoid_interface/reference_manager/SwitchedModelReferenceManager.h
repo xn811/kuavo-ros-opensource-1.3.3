@@ -126,6 +126,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   void setMatrixQByGaitPair(const std::string &gait_name, const scalar_t &time);
   void setupSubscriptions(std::string nodeHandleName = "humanoid") override;
 
+  vector_t getLocalPlannerVel(double initTime, const TargetTrajectories& targetTraj);
+  vector_t getLocalPlannerVel(double initTime);
+
  private:
   double calTerrainHeight(const contact_flag_t& contact_flags, const feet_array_t<vector3_t>& feet_pos);
 
