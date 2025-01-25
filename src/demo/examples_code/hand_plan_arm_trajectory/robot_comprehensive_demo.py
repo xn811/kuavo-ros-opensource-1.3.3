@@ -84,10 +84,6 @@ class ComprehensiveRobotControl:
         self.joint_state.velocity = [math.degrees(vel) for vel in point.velocities[:14]]
         self.joint_state.effort = [0] * 14
 
-        # 修改手部和头部数据处理，与 test.py 保持一致
-        self.hand_state.left_hand_position = [max(0, int(math.degrees(pos))) for pos in point.positions[14:20]]  # 无符号整数
-        self.hand_state.right_hand_position = [max(0, int(math.degrees(pos))) for pos in point.positions[20:26]]  # 无符号整数
-        self.head_state.joint_data = [math.degrees(pos) for pos in point.positions[26:]]
 
     def plan_arm_trajectory(self, action_data):
         """规划手臂轨迹"""
@@ -145,7 +141,7 @@ class ComprehensiveRobotControl:
                 # 检查当前帧是否有对应的关键帧数据
                 current_time = frame_count / 100.0  # 将帧数转换为秒
                 for frame in frames:
-                    if abs(frame['keyframe']/50.0 - current_time) < 0.01:  # 允许0.01秒的误差
+                    if abs(frame['keyframe']/100.0 - current_time) < 0.01:  # 允许0.01秒的误差
                         # 处理当前帧的手指和头部数据
                         self.process_frame(frame)
                         # 发布手指和头部命令
@@ -182,9 +178,9 @@ class ComprehensiveRobotControl:
                     left_CP, right_CP = CP
                     
                     action_data[key].append([
-                        [round(keyframe/50, 1), math.radians(value)],
-                        [round((keyframe+left_CP[0])/50, 1), math.radians(value+left_CP[1])],
-                        [round((keyframe+right_CP[0])/50, 1), math.radians(value+right_CP[1])]
+                        [round(keyframe/100, 1), math.radians(value)],
+                        [round((keyframe+left_CP[0])/100, 1), math.radians(value+left_CP[1])],
+                        [round((keyframe+right_CP[0])/100, 1), math.radians(value+right_CP[1])]
                     ])
         
         return action_data
