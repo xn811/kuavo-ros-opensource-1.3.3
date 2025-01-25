@@ -958,19 +958,21 @@ namespace humanoid_controller
     {
       ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/force_" + std::to_string(i+1), optimizedInput2WBC_mrt_.segment(3 * i, 3));
     }
+    if (info.numSixDofContacts > 0)
     {
       Eigen::Matrix3d R_ws = ocs2::getRotationMatrixFromZyxEulerAngles(Eigen::Vector3d(optimizedState2WBC_mrt_(9), 0, 0));
       Eigen::VectorXd hand_wrench_cmd_tmp = hand_wrench_cmd_;
       hand_wrench_cmd_tmp.segment<3>(0) = R_ws * hand_wrench_cmd_.segment<3>(0);
       hand_wrench_cmd_tmp.segment<3>(6) = R_ws * hand_wrench_cmd_.segment<3>(6);
       optimizedInput2WBC_mrt_.segment(3 * info.numThreeDofContacts, hand_wrench_cmd_.size()) = hand_wrench_cmd_tmp;
+      for(int i=0;i<info.numSixDofContacts;i++)
+      {
+        Eigen::VectorXd wrench = optimizedInput2WBC_mrt_.segment(3 * info.numThreeDofContacts + 6 * i, 6);
+        ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/wrench_" + std::to_string(i+1), wrench);
+        visualizeWrench(wrench, i==0);
+      }
     }
-    for(int i=0;i<info.numSixDofContacts;i++)
-    {
-      Eigen::VectorXd wrench = optimizedInput2WBC_mrt_.segment(3 * info.numThreeDofContacts + 6 * i, 6);
-      ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/wrench_" + std::to_string(i+1), wrench);
-      visualizeWrench(wrench, i==0);
-    }
+    
     ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt/joint_vel", optimizedInput2WBC_mrt_.segment(3 * infoWBC.numThreeDofContacts, infoWBC.actuatedDofNum));
     
     ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/com/linear_vel_xyz", optimizedState2WBC_mrt_.head<3>());
