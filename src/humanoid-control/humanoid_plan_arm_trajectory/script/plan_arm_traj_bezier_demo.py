@@ -109,9 +109,9 @@ def add_init_frame(frames):
                 CP = attribute[str(key)]["CP"]
                 left_CP, right_CP = CP
                 action_data[key].append([
-                    [round(keyframe/50, 1), math.radians(value)],
-                    [round((keyframe+left_CP[0])/50, 1), math.radians(value+left_CP[1])],
-                    [round((keyframe+right_CP[0])/50, 1), math.radians(value+right_CP[1])],
+                    [round(keyframe/100, 1), math.radians(value)],
+                    [round((keyframe+left_CP[0])/100, 1), math.radians(value+left_CP[1])],
+                    [round((keyframe+right_CP[0])/100, 1), math.radians(value+right_CP[1])],
                 ])
     return action_data
 
@@ -134,9 +134,9 @@ def frames_to_custom_action_data(frames):
                 CP = attribute[str(key)]["CP"]
                 left_CP, right_CP = CP
                 action_data[key].append([
-                    [round(keyframe/50, 1) - x_shift, math.radians(value)],
-                    [round((keyframe+left_CP[0])/50, 1) - x_shift, math.radians(value+left_CP[1])],
-                    [round((keyframe+right_CP[0])/50, 1) - x_shift, math.radians(value+right_CP[1])],
+                    [round(keyframe/100, 1) - x_shift, math.radians(value)],
+                    [round((keyframe+left_CP[0])/100, 1) - x_shift, math.radians(value+left_CP[1])],
+                    [round((keyframe+right_CP[0])/100, 1) - x_shift, math.radians(value+right_CP[1])],
                 ])
     return action_data
 
