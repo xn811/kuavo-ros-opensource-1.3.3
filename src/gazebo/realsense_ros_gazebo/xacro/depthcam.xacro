@@ -146,15 +146,15 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>30</update_rate>
+        <update_rate>${rate}</update_rate>
         <visualize>1</visualize>
       </sensor>
       <sensor name="${sensor_name}_ired1" type="camera">
         <camera name="${sensor_name}">
           <horizontal_fov>${85.2*deg_to_rad}</horizontal_fov>
           <image>
-            <width>1280</width>
-            <height>720</height>
+            <width>640</width>
+            <height>480</height>
             <format>L_INT8</format>
           </image>
           <clip>
@@ -168,15 +168,15 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>90</update_rate>
+        <update_rate>${rate}</update_rate>
         <visualize>0</visualize>
       </sensor>
       <sensor name="${sensor_name}_ired2" type="camera">
         <camera name="${sensor_name}">
           <horizontal_fov>${85.2*deg_to_rad}</horizontal_fov>
           <image>
-            <width>1280</width>
-            <height>720</height>
+            <width>640</width>
+            <height>480</height>
             <format>L_INT8</format>
           </image>
           <clip>
@@ -190,15 +190,15 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>90</update_rate>
+        <update_rate>${rate}</update_rate>
         <visualize>0</visualize>
       </sensor>
       <sensor name="${sensor_name}_depth" type="depth">
         <camera name="${sensor_name}">
           <horizontal_fov>${85.2*deg_to_rad}</horizontal_fov>
           <image>
-            <width>1280</width>
-            <height>720</height>
+            <width>640</width>
+            <height>480</height>
           </image>
           <clip>
             <near>0.1</near>
@@ -211,7 +211,7 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>90</update_rate>
+        <update_rate>${rate}</update_rate>
         <visualize>0</visualize>
       </sensor>
     </gazebo>
@@ -222,13 +222,13 @@
         <depthUpdateRate>${rate}</depthUpdateRate>
         <colorUpdateRate>${rate}</colorUpdateRate>
         <infraredUpdateRate>${rate}</infraredUpdateRate>
-        <depthTopicName>depth/image_raw</depthTopicName>
+        <depthTopicName>depth/image_rect_raw</depthTopicName>
         <depthCameraInfoTopicName>depth/camera_info</depthCameraInfoTopicName>
         <colorTopicName>color/image_raw</colorTopicName>
         <colorCameraInfoTopicName>color/camera_info</colorCameraInfoTopicName>
-        <infrared1TopicName>infra1/image_raw</infrared1TopicName>
+        <infrared1TopicName>infra1/image_rect_raw</infrared1TopicName>
         <infrared1CameraInfoTopicName>infra1/camera_info</infrared1CameraInfoTopicName>
-        <infrared2TopicName>infra2/image_raw</infrared2TopicName>
+        <infrared2TopicName>infra2/image_rect_raw</infrared2TopicName>
         <infrared2CameraInfoTopicName>infra2/camera_info</infrared2CameraInfoTopicName>
         <colorOpticalframeName>${sensor_name}_color_optical_frame</colorOpticalframeName>
         <depthOpticalframeName>${sensor_name}_depth_optical_frame</depthOpticalframeName>
@@ -236,7 +236,7 @@
         <infrared2OpticalframeName>${sensor_name}_infrared2_optical_frame</infrared2OpticalframeName>
         <rangeMinDepth>0.2</rangeMinDepth>
         <rangeMaxDepth>10.0</rangeMaxDepth>
-        <pointCloud>false</pointCloud>
+        <pointCloud>true</pointCloud>
         <pointCloudTopicName>depth/color/points</pointCloudTopicName>
         <pointCloudCutoff>0.25</pointCloudCutoff>
         <pointCloudCutoffMax>9.0</pointCloudCutoffMax>
@@ -424,13 +424,13 @@
           <depthUpdateRate>${rate}</depthUpdateRate>
           <colorUpdateRate>${rate}</colorUpdateRate>
           <infraredUpdateRate>${rate}</infraredUpdateRate>
-          <depthTopicName>depth/image_raw</depthTopicName>
+          <depthTopicName>depth/image_rect_raw</depthTopicName>
           <depthCameraInfoTopicName>depth/camera_info</depthCameraInfoTopicName>
           <colorTopicName>color/image_raw</colorTopicName>
           <colorCameraInfoTopicName>color/camera_info</colorCameraInfoTopicName>
-          <infrared1TopicName>infra1/image_raw</infrared1TopicName>
+          <infrared1TopicName>infra1/image_rect_raw</infrared1TopicName>
           <infrared1CameraInfoTopicName>infra1/camera_info</infrared1CameraInfoTopicName>
-          <infrared2TopicName>infra2/image_raw</infrared2TopicName>
+          <infrared2TopicName>infra2/image_rect_raw</infrared2TopicName>
           <infrared2CameraInfoTopicName>infra2/camera_info</infrared2CameraInfoTopicName>
           <colorOpticalframeName>${sensor_name}_color_optical_frame</colorOpticalframeName>
           <depthOpticalframeName>${sensor_name}_depth_optical_frame</depthOpticalframeName>
@@ -438,7 +438,7 @@
           <infrared2OpticalframeName>${sensor_name}_infrared2_optical_frame</infrared2OpticalframeName>
           <rangeMinDepth>0.2</rangeMinDepth>
           <rangeMaxDepth>10.0</rangeMaxDepth>
-          <pointCloud>false</pointCloud>
+          <pointCloud>true</pointCloud>
           <pointCloudTopicName>depth/color/points</pointCloudTopicName>
           <pointCloudCutoff>0.25</pointCloudCutoff>
           <pointCloudCutoffMax>9.0</pointCloudCutoffMax>

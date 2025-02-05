@@ -8,6 +8,7 @@ find_package(catkin REQUIRED
         COMPONENTS
         gazebo_sim
         realsense_ros_gazebo
+        realsense_sim_metadata
         roscpp
         controller_interface
         humanoid_common
