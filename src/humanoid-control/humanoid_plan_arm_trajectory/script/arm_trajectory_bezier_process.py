@@ -34,7 +34,7 @@ class ArmTrajectoryBezierDemo:
 
 
         # Initialize ROS node
-        rospy.init_node('arm_trajectory_bezier_demo')
+        rospy.init_node('autostart_arm_trajectory_bezier_demo')
         
         # Subscribers and Publishers
         rospy.loginfo("***************************arm_trajectory_bezier_process_start*****************************************")
