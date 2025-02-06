@@ -132,14 +132,14 @@
                 <inertial pos="-0.00207 0.00018 -0.05079" quat="0.70482 0.0568167 0.0568167 0.70482" mass="0.61" diaginertia="0.00146 0.00107649 0.000823509" />
                 <joint name="zarm_l5_joint" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708" actuatorfrcrange="-12 12" damping="0.2" />
                 <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="l_hand_yaw" />
-                <body name="zarm_l6_link" pos="0.0002 0 -0.106463">
+                <body name="zarm_l7_link" pos="0.0002 0 -0.106463">
                   <inertial pos="-0.00110825 0.00329733 -0.0135974" quat="0.62329 0.333427 0.624343 0.332464" mass="0.331524" diaginertia="0.000284664 0.000278758 0.000233415" />
-                  <joint name="zarm_l6_joint" pos="0 0 0" axis="1 0 0" range="-1.309 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
+                  <joint name="zarm_l7_joint" pos="0 0 0" axis="1 0 0" range="-1.309 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
                   <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="l_hand_roll" />
                   <geom size="0.005" pos="0 -0.03 -0.17" />
-                  <body name="zarm_l7_link" pos="0 0 -0.0210005">
+                  <body name="zarm_l6_link" pos="0 0 -0.0210005">
                     <inertial pos="0.00186 0.01014 -0.09044" quat="0.958999 -0.0379968 -0.00699973 0.280763" mass="0.64" diaginertia="0.000716212 0.000697251 0.000116537" />
-                    <joint name="zarm_l7_joint" pos="0 0 0" axis="0 1 0" range="-0.698132 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
+                    <joint name="zarm_l6_joint" pos="0 0 0" axis="0 1 0" range="-0.698132 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
                     <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="l_hand_pitch" />
                   </body>
                 </body>
@@ -168,14 +168,14 @@
                 <inertial pos="-0.00207 -0.00018 -0.05079" quat="0.70482 0.0568167 0.0568167 0.70482" mass="0.61" diaginertia="0.00146 0.00107649 0.000823509" />
                 <joint name="zarm_r5_joint" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708" actuatorfrcrange="-12 12" damping="0.2" />
                 <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="r_hand_yaw" />
-                <body name="zarm_r6_link" pos="0 0 -0.106463">
+                <body name="zarm_r7_link" pos="0 0 -0.106463">
                   <inertial pos="-0.00110825 -0.00329733 -0.0135974" quat="0.332464 0.624343 0.333427 0.62329" mass="0.331524" diaginertia="0.000284664 0.000278758 0.000233415" />
-                  <joint name="zarm_r6_joint" pos="0 0 0" axis="1 0 0" range="-0.698132 1.309" actuatorfrcrange="-12 12" damping="0.2" />
+                  <joint name="zarm_r7_joint" pos="0 0 0" axis="1 0 0" range="-0.698132 1.309" actuatorfrcrange="-12 12" damping="0.2" />
                   <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="r_hand_roll" />
                   <geom size="0.005" pos="0 0.03 -0.17" />
-                  <body name="zarm_r7_link" pos="0 0 -0.021">
+                  <body name="zarm_r6_link" pos="0 0 -0.021">
                     <inertial pos="0.00186 -0.01014 -0.09044" quat="0.953823 0.047772 -0.00410104 -0.296518" mass="0.64" diaginertia="0.000696371 0.000678811 0.000114818" />
-                    <joint name="zarm_r7_joint" pos="0 0 0" axis="0 1 0" range="-0.698132 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
+                    <joint name="zarm_r6_joint" pos="0 0 0" axis="0 1 0" range="-0.698132 0.698132" actuatorfrcrange="-12 12" damping="0.2" />
                     <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="r_hand_pitch" />
                   </body>
                 </body>
@@ -215,15 +215,15 @@
     <motor gear="1" joint="zarm_l3_joint" name="zarm_l3_joint_motor" ctrllimited="true" ctrlrange="-39 39" />
     <motor gear="1" joint="zarm_l4_joint" name="zarm_l4_joint_motor" ctrllimited="true" ctrlrange="-50 50" />
     <motor gear="1" joint="zarm_l5_joint" name="zarm_l5_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
-    <motor gear="1" joint="zarm_l6_joint" name="zarm_l6_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
     <motor gear="1" joint="zarm_l7_joint" name="zarm_l7_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
+    <motor gear="1" joint="zarm_l6_joint" name="zarm_l6_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
     <motor gear="1" joint="zarm_r1_joint" name="zarm_r1_joint_motor" ctrllimited="true" ctrlrange="-100 100" />
     <motor gear="1" joint="zarm_r2_joint" name="zarm_r2_joint_motor" ctrllimited="true" ctrlrange="-50 50" />
     <motor gear="1" joint="zarm_r3_joint" name="zarm_r3_joint_motor" ctrllimited="true" ctrlrange="-39 39" />
     <motor gear="1" joint="zarm_r4_joint" name="zarm_r4_joint_motor" ctrllimited="true" ctrlrange="-50 50" />
     <motor gear="1" joint="zarm_r5_joint" name="zarm_r5_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
-    <motor gear="1" joint="zarm_r6_joint" name="zarm_r6_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
     <motor gear="1" joint="zarm_r7_joint" name="zarm_r7_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
+    <motor gear="1" joint="zarm_r6_joint" name="zarm_r6_joint_motor" ctrllimited="true" ctrlrange="-12 12" />
     <motor gear="1" joint="zhead_1_joint" name="zhead_1_joint_motor" ctrllimited="true" ctrlrange="-1.5 1.5" />
     <motor gear="1" joint="zhead_2_joint" name="zhead_2_joint_motor" ctrllimited="true" ctrlrange="-6 6" />
   </actuator>
@@ -250,15 +250,15 @@
     <jointpos name="zarm_l3_joint_pos" joint="zarm_l3_joint" />
     <jointpos name="zarm_l4_joint_pos" joint="zarm_l4_joint" />
     <jointpos name="zarm_l5_joint_pos" joint="zarm_l5_joint" />
-    <jointpos name="zarm_l6_joint_pos" joint="zarm_l6_joint" />
     <jointpos name="zarm_l7_joint_pos" joint="zarm_l7_joint" />
+    <jointpos name="zarm_l6_joint_pos" joint="zarm_l6_joint" />
     <jointpos name="zarm_r1_joint_pos" joint="zarm_r1_joint" />
     <jointpos name="zarm_r2_joint_pos" joint="zarm_r2_joint" />
     <jointpos name="zarm_r3_joint_pos" joint="zarm_r3_joint" />
     <jointpos name="zarm_r4_joint_pos" joint="zarm_r4_joint" />
     <jointpos name="zarm_r5_joint_pos" joint="zarm_r5_joint" />
-    <jointpos name="zarm_r6_joint_pos" joint="zarm_r6_joint" />
     <jointpos name="zarm_r7_joint_pos" joint="zarm_r7_joint" />
+    <jointpos name="zarm_r6_joint_pos" joint="zarm_r6_joint" />
     <jointpos name="zhead_1_joint_pos" joint="zhead_1_joint" />
     <jointpos name="zhead_2_joint_pos" joint="zhead_2_joint" />
     <jointvel name="leg_l1_joint_vel" joint="leg_l1_joint" />
@@ -285,8 +285,8 @@
     <jointvel name="zarm_r3_joint_vel" joint="zarm_r3_joint" />
     <jointvel name="zarm_r4_joint_vel" joint="zarm_r4_joint" />
     <jointvel name="zarm_r5_joint_vel" joint="zarm_r5_joint" />
-    <jointvel name="zarm_r6_joint_vel" joint="zarm_r6_joint" />
     <jointvel name="zarm_r7_joint_vel" joint="zarm_r7_joint" />
+    <jointvel name="zarm_r6_joint_vel" joint="zarm_r6_joint" />
     <jointvel name="zhead_1_joint_vel" joint="zhead_1_joint" />
     <jointvel name="zhead_2_joint_vel" joint="zhead_2_joint" />
   </sensor>

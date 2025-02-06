@@ -19,8 +19,7 @@
 
     "torsoP": 3.0,
     "StepH": 0.06,
-    "com_z": 0.86,
-    "squat_z": 0.673,
+    "com_z": 0.84,
     "com_z_jump": 0.62,
     "StepWith": 0.20,
     "StepDuration":0.35,
@@ -40,8 +39,8 @@
     "MOTORS_TYPE":[
         "PA100_18", "PA100", "PA100", "PA100_18", "CK", "CK",
         "PA100_18", "PA100", "PA100", "PA100_18", "CK", "CK",
-        "PA100", "ruiwoPA72", "ruiwoPA60", "ruiwoPA60", "ruiwoPA43", "ruiwoPA43", "ruiwoPA43",
-        "PA100", "ruiwoPA72", "ruiwoPA60", "ruiwoPA60", "ruiwoPA43", "ruiwoPA43", "ruiwoPA43", "ruiwo", "ruiwo"],
+        "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo",
+        "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo"],
     "EndEffectorType": ["qiangnao", "qiangnao"],
     "min_joint_position_limits":[
         -40, -60, -140, -8, -100, -100,

@@ -38,10 +38,6 @@ public:
   void set_intial_state(const vector_t& state) override;
   
   vector_t update(const ros::Time& time, const ros::Duration& period) override;
-  void setFixFeetHeights(bool isFix) 
-  {
-    isFixHeight_ = isFix;
-  }
 
   void loadSettings(const std::string& taskFile, bool verbose);
   void reset() override;
@@ -86,7 +82,6 @@ private:
   tf2::Transform world2odom_;
   std::string frameOdom_, frameGuess_;
   bool topicUpdated_;
-  bool isFixHeight_;
 };
 
 }  // namespace humanoid

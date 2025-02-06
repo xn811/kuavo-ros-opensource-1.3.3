@@ -63,7 +63,7 @@ class testEndEffectorConstraint : public ::testing::Test {
     referenceManagerPtr.reset(new ReferenceManager(TargetTrajectories({0.0}, {positionOrientation})));
 
     // initialize kinematics
-    eeKinematicsPtr.reset(new PinocchioEndEffectorKinematics(pinocchioInterface, pinocchioMapping, modelInfo.eeFrames));
+    eeKinematicsPtr.reset(new PinocchioEndEffectorKinematics(pinocchioInterface, pinocchioMapping, {modelInfo.eeFrame}));
     preComputationPtr.reset(new MobileManipulatorPreComputation(pinocchioInterface, modelInfo));
 
     x.resize(modelInfo.stateDim);
@@ -90,11 +90,10 @@ class testEndEffectorConstraint : public ::testing::Test {
     ManipulatorModelType modelType = mobile_manipulator::loadManipulatorType(taskFile, "model_information.manipulatorModelType");
     // read the frame names
     std::string baseFrame, eeFrame;
-    std::vector<std::string> eeFrames;
     loadData::loadPtreeValue<std::string>(pt, baseFrame, "model_information.baseFrame", false);
-    loadData::loadStdVector<std::string>(taskFile, "model_information.eeFrame", eeFrames, false);
+    loadData::loadPtreeValue<std::string>(pt, eeFrame, "model_information.eeFrame", false);
     // return model
-    return mobile_manipulator::createManipulatorModelInfo(pinocchioInterface, modelType, baseFrame, eeFrames);
+    return mobile_manipulator::createManipulatorModelInfo(pinocchioInterface, modelType, baseFrame, eeFrame);
   }
 
   PinocchioInterface createMobileManipulatorPinocchioInterface() {

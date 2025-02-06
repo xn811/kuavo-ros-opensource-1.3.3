@@ -42,8 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_ros_interfaces/visualization/VisualizationColors.h>
 
 #include "humanoid_interface/common/ModelSettings.h"
-#include <urdf/model.h>
-
 
 namespace ocs2
 {
@@ -109,13 +107,7 @@ namespace ocs2
       void updateHeadJointPositions(const vector_t &positions);
       
       void updateSimplifiedArmPositions(const vector_t &positions);
-      
-      bool getJointLimits(const std::string &joint_name, std::pair<double, double> &limits) const;
 
-      urdf::Model getURDFmodel(urdf::Model &model) const
-      {
-        return urdfModel_;
-      }
     private:
       HumanoidVisualizer(const HumanoidVisualizer &) = delete;
       void publishJointTransforms(ros::Time timeStamp, const vector_t &jointAngles) const;
@@ -150,8 +142,6 @@ namespace ocs2
       ModelSettings visualModeSettings_;
 
       ros::Publisher eePosePub_;
-      urdf::Model urdfModel_;
-
     };
 
   } // namespace humanoid

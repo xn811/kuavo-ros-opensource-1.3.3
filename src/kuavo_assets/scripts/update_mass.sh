@@ -17,7 +17,7 @@ if [ -z "${ROBOT_VERSION}" ]; then
 fi
 
 # 允许的机器人版本号列表
-allowed_versions=("30" "31" "32" "40" "41" "42" "43" "45")
+allowed_versions=("30" "31" "32" "40" "41" "42" "43")
 if ! [[ " ${allowed_versions[@]} " =~ " ${ROBOT_VERSION} " ]]; then
     echo -e "\033[31m\nError: 机器人版本号(环境变量中 ROBOT_VERSION 的值) = '${ROBOT_VERSION}' 无效 \033[0m" >&2
     echo -e "\033[31m请参考readme.md文档，确认你的机器人版本号\n目前可用的版本号有: \n[${allowed_versions[*]}] \033[0m\n" >&2
@@ -33,7 +33,6 @@ cd "$(dirname "$0")"
 # 定义URDF文件列表
 URDF_FILES=(
     "biped_s${ROBOT_VERSION}.urdf"
-    "biped_s${ROBOT_VERSION}_gazebo.urdf"
     "drake/biped_v3_all_joint.urdf"
     "drake/biped_v3.urdf"
     "drake/biped_v3_full.urdf"
@@ -42,7 +41,6 @@ URDF_FILES=(
 
 # 需要修改的link名称
 LINK_NAMES=(
-    "base_link"
     "base_link"
     "torso"
     "torso"

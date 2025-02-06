@@ -299,7 +299,6 @@ class IkRos:
             req = controlLejuClawRequest()
             req.data.name = ['left_claw', 'right_claw']
             req.data.position = pos
-            req.data.velocity = [90, 90]
             # print(f">>>>>>>>>>>>>>>> control_lejucalw_srv: {req}")
             control_lejucalw_srv(req)
         except rospy.ROSException:
@@ -826,7 +825,7 @@ if __name__ == "__main__":
 
     arm_min = np.array([-3.14, -0.70, -1.57, -1.57, -1.57, -1.57, -1.57, -3.14, -2.09, -1.57, -1.57, -1.57, -1.57, -1.57], dtype=float)
     arm_max = np.array([0.520, 2.09, 1.570, 0.000, 1.570, 1.570, 1.570, 0.7, 1.000, 1.570, 0.000, 1.570, 1.570, 1.570], dtype=float)
-    q_limit = None
+    q_limit = [arm_min, arm_max]
     if ik_type_idx == IkTypeIdx.DiffIK:        
         arm_ik = DiffIK(
             model_file, 

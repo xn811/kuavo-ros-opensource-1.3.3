@@ -29,8 +29,6 @@
     <arg name="joystick_type"      default="sim"/>
     <arg name="arm_move_spd"      default="3.0"/>
     <arg name="start_way"          default="manual"/>
-    <arg name="use_estimator_contact"   default="false"/>
-    <arg name="visualize_humanoid" default="true"/>
     <arg name="only_half_up_body" default="false"/>
 
     <!-- multiplot -->
@@ -51,11 +49,8 @@
     <param name="joystick_type"  value="$(arg joystick_type)"/>
     <param name="arm_move_spd"  value="$(arg arm_move_spd)"/>
     <param name="start_way"  value="$(arg start_way)"/>
-    <param name="use_estimator_contact"  value="$(arg use_estimator_contact)"/>
     <param name="only_half_up_body"   value="$(arg only_half_up_body)"/>
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
-    <param name="visualize_humanoid" value="$(arg visualize_humanoid)" />
-
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">
       <node pkg="humanoid_interface_ros" type="humanoid_sqp_mpc" name="humanoid_sqp_mpc" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh"/>
