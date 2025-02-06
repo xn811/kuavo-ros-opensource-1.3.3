@@ -154,7 +154,7 @@ class Quest3Node:
         if not self.freeze_finger:
             self.control_robot_hand_position_pub.publish(robot_hand_position)
 
-    def handle_lejuclaw(self, hand_finger_data, vel=[50, 50], tor = [1.0, 1.0]):
+    def handle_lejuclaw(self, hand_finger_data, vel=[90, 90], tor = [1.0, 1.0]):
         pos = [0.0, 0.0] 
         if hand_finger_data is not None:
             left_qpos = hand_finger_data[0]

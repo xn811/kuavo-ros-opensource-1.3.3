@@ -20,6 +20,7 @@
     "torsoP": 3.0,
     "StepH": 0.06,
     "com_z": 0.853,
+    "squat_z": 0.643,
     "com_z_jump": 0.63,
     "StepWith": 0.20,
     "StepDuration":0.35,
