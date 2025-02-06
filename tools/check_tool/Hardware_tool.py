@@ -147,10 +147,7 @@ def imu_software():
 
 def imu_test():
     # 定义要运行的命令
-    if(folder_path.startswith("/home/lab/kuavo_opensource/")):
-        command = "sudo /home/lab/kuavo_opensource/bin/imu_test"
-    else:
-        command = "sudo "+ folder_path +"/../../devel/lib/hardware_node/imu_test" 
+    command = "sudo "+ folder_path +"/bin/imu_test"
 
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
@@ -396,9 +393,18 @@ def hand_usb():
 
 def ruiwo_zero():
         
-    # 定义要运行的命令
-    command = "bash "+ folder_path +"/ruiwo_zero_set.sh" 
-        
+    kuavo_ros_file_path = folder_path +"/ruiwo_zero_set.sh" 
+    kuavo_open_file_path = folder_path +"../../installed/share/hardware_node/lib/ruiwo_controller/setZero.sh" 
+    
+
+    if os.path.exists(kuavo_ros_file_path):
+        command = "bash "+ kuavo_ros_file_path
+    elif os.path.exists(kuavo_open_file_path):
+        command = "bash "+ kuavo_open_file_path
+    else:
+        print(f"The file {file_path} does not exist.")
+        return
+
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 

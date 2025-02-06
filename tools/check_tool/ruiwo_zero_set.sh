@@ -17,7 +17,24 @@ current_script_dir=$(dirname "$(realpath "$0")")
 prefix="${current_script_dir%/tools/check_tool}"
 
 
-setZeroPath="$prefix/src/kuavo-ros-control-lejulib/hardware_node/lib/ruiwo_controller/"
+kuavo_ros_folder_path="$prefix/src/kuavo-ros-control-lejulib/hardware_node/lib/ruiwo_controller"
+kuavo_ros_file_path="$kuavo_ros_folder_path/setZero.sh"
+
+kuavo_open_folder_path="$prefix/installed/share/hardware_node/lib/ruiwo_controller"
+kuavo_open_file_path="$kuavo_ros_folder_path/setZero.sh"
+
+
+# 检查文件是否存在
+if [ -f "$kuavo_ros_file_path" ]; then
+    setZeroPath=$kuavo_ros_folder_path
+elif [ -f "$kuavo_open_file_path" ]; then
+    setZeroPath=$kuavo_open_folder_path
+else
+    echo "The file does not exist."
+    exit 1
+fi
+
+
 
 cd $setZeroPath
 
