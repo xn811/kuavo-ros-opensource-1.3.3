@@ -146,7 +146,7 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>${rate}</update_rate>
+        <update_rate>15</update_rate>
         <visualize>1</visualize>
       </sensor>
       <sensor name="${sensor_name}_ired1" type="camera">
@@ -220,7 +220,7 @@
       <plugin name="${sensor_name}" filename="librealsense_gazebo_plugin.so">
         <prefix>${sensor_name}_</prefix>
         <depthUpdateRate>${rate}</depthUpdateRate>
-        <colorUpdateRate>${rate}</colorUpdateRate>
+        <colorUpdateRate>15</colorUpdateRate>
         <infraredUpdateRate>${rate}</infraredUpdateRate>
         <depthTopicName>depth/image_rect_raw</depthTopicName>
         <depthCameraInfoTopicName>depth/camera_info</depthCameraInfoTopicName>
@@ -232,8 +232,8 @@
         <infrared2CameraInfoTopicName>infra2/camera_info</infrared2CameraInfoTopicName>
         <colorOpticalframeName>${sensor_name}_color_optical_frame</colorOpticalframeName>
         <depthOpticalframeName>${sensor_name}_depth_optical_frame</depthOpticalframeName>
-        <infrared1OpticalframeName>${sensor_name}_infrared1_optical_frame</infrared1OpticalframeName>
-        <infrared2OpticalframeName>${sensor_name}_infrared2_optical_frame</infrared2OpticalframeName>
+        <infrared1OpticalframeName>${sensor_name}_infra1_optical_frame</infrared1OpticalframeName>
+        <infrared2OpticalframeName>${sensor_name}_infra2_optical_frame</infrared2OpticalframeName>
         <rangeMinDepth>0.2</rangeMinDepth>
         <rangeMaxDepth>10.0</rangeMaxDepth>
         <pointCloud>true</pointCloud>
@@ -434,8 +434,8 @@
           <infrared2CameraInfoTopicName>infra2/camera_info</infrared2CameraInfoTopicName>
           <colorOpticalframeName>${sensor_name}_color_optical_frame</colorOpticalframeName>
           <depthOpticalframeName>${sensor_name}_depth_optical_frame</depthOpticalframeName>
-          <infrared1OpticalframeName>${sensor_name}_infrared1_optical_frame</infrared1OpticalframeName>
-          <infrared2OpticalframeName>${sensor_name}_infrared2_optical_frame</infrared2OpticalframeName>
+          <infrared1OpticalframeName>${sensor_name}_infra1_optical_frame</infrared1OpticalframeName>
+          <infrared2OpticalframeName>${sensor_name}_infra2_optical_frame</infrared2OpticalframeName>
           <rangeMinDepth>0.2</rangeMinDepth>
           <rangeMaxDepth>10.0</rangeMaxDepth>
           <pointCloud>true</pointCloud>

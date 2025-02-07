@@ -257,19 +257,27 @@ sensor_msgs::CameraInfo cameraInfo(const sensor_msgs::Image &image,
 
   float focal = 0.5 * image.width / tan(0.5 * horizontal_fov);
 
+  // 填充内参矩阵 K
   info_msg.K[0] = focal;
   info_msg.K[4] = focal;
   info_msg.K[2] = info_msg.width * 0.5;
   info_msg.K[5] = info_msg.height * 0.5;
   info_msg.K[8] = 1.;
 
+  // 填充投影矩阵 P
   info_msg.P[0] = info_msg.K[0];
   info_msg.P[5] = info_msg.K[4];
   info_msg.P[2] = info_msg.K[2];
   info_msg.P[6] = info_msg.K[5];
   info_msg.P[10] = info_msg.K[8];
 
-  //    info_msg.roi.do_rectify = true;
+  // 添加畸变参数 D
+  info_msg.D.resize(5, 0.0);  // 初始化5个畸变参数，全部设为0
+  
+  // 可选：填充旋转矩阵 R（如果需要的话）
+  info_msg.R[0] = 1.0;
+  info_msg.R[4] = 1.0;
+  info_msg.R[8] = 1.0;
 
   return info_msg;
 }
