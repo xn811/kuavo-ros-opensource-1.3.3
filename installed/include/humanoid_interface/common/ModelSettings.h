@@ -75,7 +75,7 @@ struct ModelSettings {
   humanoidModelInfo info;
 };
 
-ModelSettings loadModelSettings(const std::string& filename, const std::string& fieldName = "model_settings", bool verbose = false);
+ModelSettings loadModelSettings(const std::string& filename, const std::string& urdfFile = "default", const std::string& fieldName = "model_settings", bool verbose = false);
 
 }  // namespace humanoid
 }  // namespace ocs2

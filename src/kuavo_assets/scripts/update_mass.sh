@@ -56,7 +56,35 @@ BASE_URDF_PATH="${SRC_DIR}/models/biped_s${ROBOT_VERSION}/urdf"
 CONFIG_DIR=~/.config/lejuconfig
 MASS_FILE=${CONFIG_DIR}/TotalMassV${ROBOT_VERSION}
 MASS_BAK=${CONFIG_DIR}/.TotalMassV${ROBOT_VERSION}.bak
-OCS2_DIR=/var/ocs2/full_v${ROBOT_VERSION}*
+
+# 修改OCS2_DIR路径
+OCS2_DIR=/var/ocs2/kuavo_v${ROBOT_VERSION}
+
+# 清理旧的cppad缓存文件夹函数
+cleanup_old_cppad_cache() {
+    local cache_dir=$1
+    local keep_num=50
+
+    if [ ! -d "$cache_dir" ]; then
+        return
+    fi
+
+    # 获取文件夹列表，按照最后修改时间排序（包含子文件夹的修改时间）
+    # -t 按时间排序，-r 反向排序（最新的在前），-d 只列出目录
+    folders=$(find "$cache_dir" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
+    
+    # 计算文件夹总数
+    total_folders=$(echo "$folders" | wc -l)
+    
+    if [ "$total_folders" -gt "$keep_num" ]; then
+        # 删除旧的文件夹，保留最新的50个
+        echo -e "\033[33m\nNote: Cleaning up old cppad cache directories in ${cache_dir}, keeping newest ${keep_num} directories\033[0m" >&2
+        echo "$folders" | tail -n +$((keep_num + 1)) | while read folder; do
+            echo "Removing old cache: $folder"
+            rm -rf "$folder"
+        done
+    fi
+}
 
 # 确保配置目录存在
 mkdir -p ${CONFIG_DIR}
@@ -80,15 +108,13 @@ if [ ! -f ${MASS_FILE} ]; then
             break  # 只需要从第一个存在的URDF文件获取质量即可
         fi
     done
-    rm -rf ${OCS2_DIR}
     echo "Created new TotalMass file"
 fi
 
 # 检查备份文件
 if [ ! -f ${MASS_BAK} ]; then
-    # 没有备份文件，创建备份并删除ocs2目录
+    # 没有备份文件，创建备份
     cp ${MASS_FILE} ${MASS_BAK}
-    rm -rf ${OCS2_DIR}
     echo "Created backup mass file"
 else
     # 比较当前文件和备份文件
@@ -96,9 +122,8 @@ else
     BACKUP_MASS=$(cat ${MASS_BAK})
     
     if [ "$CURRENT_MASS" != "$BACKUP_MASS" ]; then
-        rm -rf ${OCS2_DIR}
         cp ${MASS_FILE} ${MASS_BAK}
-        echo -e "\033[33m\nNote: Total Mass changed, removing ${OCS2_DIR} cppad directory which will be rebuilt on next launch\033[0m" >&2
+        echo -e "\033[33m\nNote: Total Mass changed\033[0m" >&2
     fi
 fi
 
@@ -138,6 +163,7 @@ for URDF_FILE in "${URDF_FILES[@]}"; do
     FULL_PATH="${BASE_URDF_PATH}/${URDF_FILE}"
     if [ -f "$FULL_PATH" ]; then
         current_md5=$(md5sum "$FULL_PATH" | awk '{ print $1 }')
+        echo "URDF md5: $current_md5" >&2
         break
     fi
 done
@@ -145,15 +171,15 @@ done
 if [ -f ${MD5_FILE} ]; then
     saved_md5=$(cat ${MD5_FILE})
     if [ "$current_md5" != "$saved_md5" ]; then
-        rm -rf ${OCS2_DIR}
         echo $current_md5 > ${MD5_FILE}
-        echo -e "\033[33m\nNote: URDF file changed, removing ${OCS2_DIR} cppad directory which will be rebuilt on next launch\033[0m" >&2
+        echo -e "\033[33m\nNote: URDF file changed\033[0m" >&2
     fi
 else
     echo $current_md5 > ${MD5_FILE}
-    rm -rf ${OCS2_DIR} 
-    echo -e "\033[33m\nNote: MD5 file not found, removing ${OCS2_DIR} cppad directory which will be rebuilt on next launch\033[0m" >&2
+    echo -e "\033[33m\nNote: MD5 file not found, created new one\033[0m" >&2
 fi
 
+# 在脚本结束前清理旧的缓存文件夹
+cleanup_old_cppad_cache "${OCS2_DIR}"
 
 chmod 0666 ${MASS_FILE} ${MASS_BAK} ${MD5_FILE}
