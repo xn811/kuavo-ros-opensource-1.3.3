@@ -712,7 +712,7 @@ standUpJointAccelTask
 {
   leg
   {
-    kp    200
+    kp    600
     kd    10.2
     kp_sim    500
     kd_sim    10.2
