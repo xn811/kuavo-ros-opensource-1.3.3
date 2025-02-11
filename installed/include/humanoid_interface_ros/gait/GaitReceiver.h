@@ -141,6 +141,7 @@ namespace ocs2
       bool PoseCmdWorldUpdated_ = false;
       bool waitting_for_walk_ = false;
       bool single_step_yaw_computed_ = false;
+      double single_step_yaw_threshold_ = 0.5; // rad
     };
 
   } // namespace humanoid

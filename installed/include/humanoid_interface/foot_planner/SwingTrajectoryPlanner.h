@@ -260,7 +260,13 @@ class SwingTrajectoryPlanner {
   inline bool isSingleStepPhase() const { return is_single_step_phase_; }
   inline void setSingleStepPhase(bool is_single_step_phase) { is_single_step_phase_ = is_single_step_phase; }
   inline FootPoseSchedule getfootPoseSchedule() const { return footPoseSchedule_; }
-  bool planSingleStep(scalar_t initTime, const vector_t& cmd_pose);
+  bool planSingleStep(scalar_t initTime, const vector_t& cmd_pose, Eigen::Vector3d xyYawTh);
+  inline double getTargetYaw() const { return target_yaw_; }
+  inline void setTargetYaw(double target_yaw) { target_yaw_ = target_yaw; }
+
+  inline bool getFinalYawSingleStepMode() const { return final_yaw_single_step_mode_; }
+  inline void setFinalYawSingleStepMode(bool mode) { final_yaw_single_step_mode_ = mode; }
+  inline double getFinalYawSingleStepTime() const { return final_yaw_single_step_time_; }
 
  private:
   vector3_t calNextFootPos(int feet, scalar_t current_time, scalar_t stop_time,
@@ -350,6 +356,9 @@ class SwingTrajectoryPlanner {
   Eigen::Vector3d lf_normal_vector_, rf_normal_vector_;
   bool is_single_step_phase_ = false;
   FootPoseSchedule footPoseSchedule_;
+  double target_yaw_ = 0.0;
+  bool final_yaw_single_step_mode_ = false;
+  double final_yaw_single_step_time_ = 0.0;
 };
 
 SwingTrajectoryPlanner::Config loadSwingTrajectorySettings(const std::string& fileName,
