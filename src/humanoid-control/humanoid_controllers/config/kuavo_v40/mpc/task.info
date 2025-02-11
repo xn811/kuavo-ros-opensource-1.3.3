@@ -748,6 +748,7 @@ kalmanFilter
     footSensorNoisePosition     0.5
     footSensorNoiseVelocity     1.0
     footHeightSensorNoise       0.005
+    resetGroundHeight          true
 }
 
 contactForceEsimation
