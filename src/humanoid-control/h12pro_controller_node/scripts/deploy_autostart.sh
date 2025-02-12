@@ -73,6 +73,7 @@ fi
 
 if ! grep -q "set-option -g default-shell /bin/bash" ~/.tmux.conf; then
     echo "set-option -g default-shell /bin/bash" >> ~/.tmux.conf
+    echo "set-option -g mouse on" >> ~/.tmux.conf
 fi
 
 
