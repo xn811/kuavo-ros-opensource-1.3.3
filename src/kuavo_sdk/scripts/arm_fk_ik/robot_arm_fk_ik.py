@@ -28,6 +28,17 @@ ik_solve_param.oritation_constraint_tol= 1e-3
 ik_solve_param.pos_constraint_tol = 1e-3 
 ik_solve_param.pos_cost_weight = 0.0 
 
+# 获取机器人版本
+def get_parameter(param_name):
+    try:
+        # 获取参数值
+        param_value = rospy.get_param(param_name)
+        rospy.loginfo(f"参数 {param_name} 的值为: {param_value}")
+        return param_value
+    except rospy.ROSException:
+        rospy.logerr(f"参数 {param_name} 不存在！程序退出。")
+        rospy.signal_shutdown("参数获取失败") 
+        return None
 
 # FK正解服务
 def fk_srv_client(joint_angles):
@@ -107,20 +118,35 @@ if __name__ == "__main__":
     # 初始化ROS节点
     rospy.init_node("robot_arm_fk_ik_node", anonymous=True)
 
+    # 获取机器人版本
+    robot_version = get_parameter('robot_version')
     # 设置手臂运动模式为外部控制
     set_arm_control_mode(2)
 
     # 创建请求对象（单位：弧度）
-    joint_angles_optiops = {
-     1: [-1.0, 0.3, -1.0, 0.19, 1.0, -0.5, -0.3,
+    # 42
+    if robot_version == 42:
+        joint_angles_optiops = {
+        1: [-1.0, 0.3, -1.0, 0.19, 1.0, -0.5, -0.3,
         -1.38, -1.39, -0.29, -0.43, -0.5, -0.17, 0.75],
-     2: [-1.7, 0.8, -1.57, -1.4, 0.0, -0.8, 0.0,
+        2: [-1.7, 0.8, -1.57, -1.4, 0.0, -0.8, 0.0,
          -1.6, -0.8, 1.57, -1.4, 0.0, -0.8, 0.0],
-     3: [-1.1, -0.25, -1.0, -0.12, 0.59, 1.2, -0.5,
+        3: [-1.1, -0.25, -1.0, -0.12, 0.59, 1.2, -0.5,
          -1.25, 0.3, 1.0, -0.15, 0.37, -1.0, -1.0],
-    }
-
-
+        }
+    
+    # 45
+    if robot_version == 45:    
+        joint_angles_optiops = {
+        1: [-1.0, 1.0, -0.3, -1.2, 0.0, -0.5, -0.2,
+            -1.9, -0.5, -0.0, -1.0, -0.0, 0.5, 1.0],
+        2: [-1.8, 1.0, -1.5, -1.8, 0.0, -0.0, -0.8,
+            -1.8, -1.0, 1.5, -1.8, 0.0, -0.0, -0.8],
+        3: [0.4, 1.0, 1.2, -1.5, 1.0, 0.4, -0.75,
+            0.4, -0.5, -1.3, -1.5, -1.0, -0.7, -0.5],
+        }
+#0.6, 1.0, 1.2, -1.0, 1.0, 0.4, -0.75,
+#0.6, -0.5, -1.3, -1.0, -1.0, -0.7, -0.5
     # 解析命令行参数  
     parser = argparse.ArgumentParser(description="选择不同的 joint_angles")
     parser.add_argument("--joint_angles_id", type=int, choices=[1, 2, 3], required=True, help="选择 joint_angles 的 ID (1-3)")
@@ -203,6 +229,6 @@ if __name__ == "__main__":
         publish_arm_target_poses([3], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         time.sleep(8)
-        set_arm_control_mode(0)
+        set_arm_control_mode(1)
         print("测试程序结束")
 
