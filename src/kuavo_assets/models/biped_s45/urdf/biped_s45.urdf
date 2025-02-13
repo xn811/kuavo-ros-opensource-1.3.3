@@ -155,12 +155,6 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
-    <collision>
-      <origin xyz="0.057218 0.05 0.07" rpy="0 0 0"/>  <!-- 圆形的中心位置和旋转 -->
-      <geometry>
-        <cylinder radius="0.12" length="0.24"/>  <!-- 圆形的半径 -->
-      </geometry>
-    </collision>
   </link>
   <joint name="leg_l6_joint" type="revolute">
     <origin xyz="0 0 0" rpy="0 0 0" />
@@ -377,12 +371,6 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
-    <collision>
-      <origin xyz="0.048 -0.05 0.07" rpy="0 0 0"/>  <!-- 圆形的中心位置和旋转 -->
-      <geometry>
-        <cylinder radius="0.12" length="0.24"/>  <!-- 圆形的半径 -->
-      </geometry>
-    </collision>
   </link>
   <joint name="leg_r6_joint" type="revolute">
     <origin xyz="0 0 0" rpy="0 0 0" />

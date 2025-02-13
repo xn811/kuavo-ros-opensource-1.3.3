@@ -278,14 +278,14 @@ Q
   (11,11) 800.0    ; theta_base_x
 
   ;; Leg Joint Positions: [LF, LH, RF, RH] ;;
-  (12,12) 60.0     ; leg_l1_joint
-  (13,13) 60.0     ; leg_l2_joint
+  (12,12) 300.0     ; leg_l1_joint
+  (13,13) 300.0     ; leg_l2_joint
   (14,14) 10.0     ; leg_l3_joint
   (15,15) 10.0     ; leg_l4_joint
   (16,16) 10.0     ; leg_l5_joint
   (17,17) 10.0     ; leg_l6_joint
-  (18,18) 60.0     ; leg_r1_joint
-  (19,19) 60.0     ; leg_r2_joint
+  (18,18) 300.0     ; leg_r1_joint
+  (19,19) 300.0     ; leg_r2_joint
   (20,20) 10.0     ; leg_r3_joint
   (21,21) 10.0     ; leg_r4_joint
   (22,22) 10.0     ; leg_r5_joint
@@ -469,7 +469,7 @@ enableZeroSixDofForceConstraint  true ;
 
 frictionConeSoftConstraint
 {
-  frictionCoefficient    0.1
+  frictionCoefficient    0.5
   
   ; relaxed log barrier parameters
   mu                     0.1
@@ -520,37 +520,16 @@ selfCollision
   ; Self Collision pairs
   collisionLinkPairs
   {
-    [0] "leg_r6_link, leg_l6_link"
   }
 
-  minimumDistance  0.01
+  minimumDistance  0.02
 
   ; relaxed log barrier parameters
-  mu      0.9
-  delta   1e-4
+  mu      1e-2
+  delta   1e-3
 }
 
 ; Whole body control
-
-mutiTaskAccLimits
-{ 
-  stanceLeg       1000
-  SwingLeg        3000
-  accArm          2000
-  comPos
-  {
-    (0,0)  3.0 
-    (1,0)  3.0 
-    (2,0)  2000.0
-  }
-  angular
-  {
-    (0,0)  3000.0
-    (1,0)  3000.0
-    (2,0)  3000.0
-  }
-}
-
 torqueLimitsTask
 {
    (0,0)  120.0     ; motor 1
@@ -714,7 +693,7 @@ weight
     comPos          10.0
     contactForce    1.0
     stanceLeg       1000;0.05
-    accArm          3.0
+    accArm          9.0
   }
   walk
   {
@@ -725,7 +704,7 @@ weight
     comPos          1.0
     contactForce    1.0
     stanceLeg       1000;0.05
-    accArm          3.0
+    accArm          9.0
   }
 }
 
@@ -733,7 +712,7 @@ standUpJointAccelTask
 {
   leg
   {
-    kp    600
+    kp    200
     kd    10.2
     kp_sim    500
     kd_sim    10.2
@@ -747,7 +726,7 @@ standUpJointAccelTask
 
 standUpWeight
 {
-    Linear          3
+    Linear          1
     Angular         10
     JointAcc        20
     contactForce    0.1 

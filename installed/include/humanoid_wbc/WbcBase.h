@@ -170,9 +170,6 @@ namespace ocs2
       contact_flag_t contactFlag_{};
       size_t numContacts_{};
 
-      vector3_t linAccelLimit_;
-      vector3_t angAccelLimit_;
-      scalar_t stanceLegAccelLimit_, swingLegAccelLimit_, armAccelLimit_;
       vector_t torqueLimits_;
       matrix_t Wbc_rdd_K_;
       matrix_t Wbc_rdd_K_stance_;

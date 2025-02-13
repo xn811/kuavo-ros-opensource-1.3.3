@@ -134,9 +134,6 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   void modifyReferences(scalar_t initTime, scalar_t finalTime, const vector_t& initState, TargetTrajectories& targetTrajectories,
                         ModeSchedule& modeSchedule) override;
-  TargetTrajectories mergeSafeAndTargetTrajectories(TargetTrajectories &targetTrajectories, TargetTrajectories &safeTrajectories);
-  TargetTrajectories generateTargetwithCurVel(scalar_t initTime, scalar_t finalTime, const vector_t &initState,
-                                                                           TargetTrajectories &targetTrajectories);
   TargetTrajectories generateTargetwithVelcmd(scalar_t initTime, scalar_t finalTime, const vector_t &initState,
                                                                            TargetTrajectories &targetTrajectories, ModeSchedule &modeSchedule, const vector_t &cmdVel);
   TargetTrajectories generateTargetwithModeSchedule(scalar_t initTime, scalar_t finalTime, const vector_t &initState,
