@@ -382,7 +382,7 @@ enableZeroSixDofForceConstraint  false ;
 
 frictionConeSoftConstraint
 {
-  frictionCoefficient    0.5
+  frictionCoefficient    0.1
   
   ; relaxed log barrier parameters
   mu                     0.1
@@ -433,16 +433,37 @@ selfCollision
   ; Self Collision pairs
   collisionLinkPairs
   {
+    [0] "leg_r6_link, leg_l6_link"
   }
 
-  minimumDistance  0.02
+  minimumDistance  0.01
 
   ; relaxed log barrier parameters
-  mu      1e-2
-  delta   1e-3
+  mu      0.9
+  delta   1e-4
 }
 
 ; Whole body control
+
+mutiTaskAccLimits
+{ 
+  stanceLeg       1000
+  SwingLeg        3000
+  accArm          2000
+  comPos
+  {
+    (0,0)  3.0 
+    (1,0)  3.0 
+    (2,0)  2000.0
+  }
+  angular
+  {
+    (0,0)  300.0
+    (1,0)  300.0
+    (2,0)  300.0
+  }
+}
+
 torqueLimitsTask
 {
    (0,0)  200.0     ; motor 1
@@ -606,7 +627,7 @@ weight
     comPos          10.0
     contactForce    1.0
     stanceLeg       1000;0.05
-    accArm          9.0
+    accArm          3.0
   }
   walk
   {
@@ -617,7 +638,7 @@ weight
     comPos          1.0
     contactForce    1.0
     stanceLeg       1000;0.05
-    accArm          9.0
+    accArm          3.0
   }
 }
 
@@ -625,7 +646,7 @@ standUpJointAccelTask
 {
   leg
   {
-    kp    200
+    kp    600
     kd    10.2
     kp_sim    500
     kd_sim    10.2
@@ -639,7 +660,7 @@ standUpJointAccelTask
 
 standUpWeight
 {
-    Linear          1
+    Linear          3
     Angular         10
     JointAcc        20
     contactForce    0.1 
