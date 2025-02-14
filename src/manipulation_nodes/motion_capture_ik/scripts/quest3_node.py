@@ -26,6 +26,8 @@ def get_package_path(package_name):
         return None
 class Quest3Node:
     def __init__(self):
+        rospy.init_node('quest3_node')
+        
         self.model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path)
         self.use_custom_ik_param = True
@@ -41,7 +43,6 @@ class Quest3Node:
         self.button_y_last = False
         self.freeze_finger = False
 
-        rospy.init_node('quest3_node')
         kuavo_assests_path = get_package_path("kuavo_assets")
         robot_version = os.environ.get('ROBOT_VERSION', '40')
         model_config_file = kuavo_assests_path + f"/config/kuavo_v{robot_version}/kuavo.json"
