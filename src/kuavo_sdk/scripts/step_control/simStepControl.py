@@ -117,7 +117,7 @@ if __name__ == '__main__':
     collision_check = True  # 开启碰撞检测
 
     # body_poses基于局部坐标系给定，每一个身体姿态对应两步到达
-    dt = 0.8  # 迈一步的时间间隔，腾空相和支撑相时间占比各dt/2
+    dt = 0.4  # 迈一步的时间间隔，腾空相和支撑相时间占比各dt/2
 
     # 一次完整的步态Mode序列为:[SS FS SS SF SS]或者[SS SF SS FS SS]
     # body_pose： [x(m), y(m), z(m), yaw(deg)]

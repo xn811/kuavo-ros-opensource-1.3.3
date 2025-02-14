@@ -17,7 +17,7 @@ fi
 NODE_PID=""
 
 start_node() {
-    source $HOME_DIR/.bashrc
+    source $HOME/.bashrc
     $NODE_SCRIPT &
     NODE_PID=$!
     echo "Started h12pro node with PID: $NODE_PID"

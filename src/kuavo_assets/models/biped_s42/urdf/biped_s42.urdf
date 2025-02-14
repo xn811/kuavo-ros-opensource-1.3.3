@@ -7,7 +7,7 @@
   <link name="base_link">
     <inertial>
       <origin xyz="-0.0185005 0.00031952 0.1929569" rpy="0 0 0" />
-      <mass value="22.92233803" />
+      <mass value="26.30833803" />
       <inertia ixx="0.93103133" ixy="0.00011763" ixz="-0.07210993" iyy="0.82590532" iyz="6.88e-06" izz="0.27686612" />
     </inertial>
     <visual>
@@ -20,7 +20,7 @@
       </material>
     </visual>
   </link>
-  <joint name="dummy_to_base_link" type="floating">
+  <joint name="dummy_to_base_link" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <parent link="dummy_link" />
     <child link="base_link" />
@@ -872,6 +872,59 @@
     <parent link="zhead_2_link" />
     <child link="camera" />
   </joint>
+
+  <link
+    name="camera_base">
+    <inertial>
+      <origin
+        xyz="0.00354055659132058 0.00140392784997684 0.0124511787517705"
+        rpy="0 0 0" />
+      <mass
+        value="0.0170256015508834" />
+      <inertia
+        ixx="1.0918264029313E-05"
+        ixy="1.05354408167889E-07"
+        ixz="1.05871497323805E-08"
+        iyy="8.57178950734466E-07"
+        iyz="1.64018651463453E-08"
+        izz="1.02869893338382E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s42/meshes/camera_base.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s42/meshes/camera_base.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="camera_base"
+    type="fixed">
+    <origin
+      xyz="0.0828919080642966 0 0.119165137551254"
+      rpy="0 0.488692190558416 0" />
+    <parent
+      link="zhead_2_link" />
+    <child
+      link="camera_base" />
+  </joint>
+
   <link name="radar">
     <inertial>
       <origin xyz="-0.00018 1e-05 0.01777" rpy="0 0 0" />
