@@ -23,9 +23,7 @@
 ### 1. 运行脚本
 
 ```bash
-wget -qO /tmp/setup-kuavo-ros-control.sh https://kuavo.lejurobot.com/statics/setup-kuavo-ros-control.sh
-sudo chmod +x /tmp/setup-kuavo-ros-control.sh
-sudo /tmp/setup-kuavo-ros-control.sh
+wget -qO /tmp/setup-kuavo-ros-control.sh https://kuavo.lejurobot.com/statics/setup-kuavo-ros-control.sh; sudo chmod +x /tmp/setup-kuavo-ros-control.sh; /tmp/setup-kuavo-ros-control.sh
 ```
 
 ### 2. 交互式配置流程
