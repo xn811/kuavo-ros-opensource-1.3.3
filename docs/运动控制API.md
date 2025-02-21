@@ -91,6 +91,8 @@
 
 服务描述: 该服务用于控制二指夹爪
 
+**注意/警告**：如果当前夹爪处于运动状态，那么发送新的请求就会被丢弃处理，不会执行，望知悉。
+
 消息类型: `kuavo_msgs/controlLejuClaw`
 
 | 字段  | 类型  | 描述  |
@@ -297,6 +299,22 @@
 
 - 参考`src/humanoid-control/humanoid_interface_ros/scripts/simStepControl.py`,发布脚的步态位姿（xyz+yaw,后续会添加脚的pitch和yaw）指令
 - 事实上, 可以指定每一步的脚步态位姿, 以及对应时刻的躯干姿态, 但这一功能建议高级开发者使用
+
+#### `/leju_claw_command`
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`lejuclaw`时才会发布该话题.
+
+话题描述: 该话题用于控制二指夹爪
+
+**注意/警告**：如果当前夹爪处于运动状态，那么发送新的请求就会被丢弃处理，不会执行，望知悉。
+
+消息类型: `kuavo_msgs/lejuCalwCommand`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| data | kuavo_msgs/endEffectorData | 夹爪相关的消息 |
+
+关于 data 字段,详情见服务`control_robot_leju_claw`的描述。
 
 ### 发布的 topics
 

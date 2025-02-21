@@ -16,7 +16,7 @@ from motion_capture_ik.srv import changeArmCtrlMode
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
 from handcontrollerdemorosnode.msg import robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
-
+from kuavo_msgs.msg import lejuClawCommand
 def get_package_path(package_name):
     try:
         rospack = rospkg.RosPack()
@@ -57,6 +57,7 @@ class Quest3Node:
         
         self.control_robot_hand_position_pub = rospy.Publisher("control_robot_hand_position", robotHandPosition, queue_size=10)
         self.pub = rospy.Publisher('/ik/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
+        self.leju_claw_command_pub = rospy.Publisher("leju_claw_command", lejuClawCommand, queue_size=10)
 
         rospy.Subscriber("/leju_quest_bone_poses", PoseInfoList, self.quest_bone_poses_callback)
         rospy.Subscriber("/quest_joystick_data", JoySticks, self.joySticks_data_callback)
@@ -86,8 +87,16 @@ class Quest3Node:
         elif self.end_effector_type == "lejuclaw":
             self.handle_lejuclaw(hand_finger_data)
 
+    def pub_leju_claw_command(self, pos:list, vel:list, effort:list) -> None:
+        msg = lejuClawCommand()
+        msg.data.name = ['left_claw', 'right_claw']
+        msg.data.position = pos
+        msg.data.velocity = vel
+        msg.data.effort = effort
+        self.leju_claw_command_pub.publish(pos)
+
     @staticmethod
-    def control_lujuclaw(pos:list, vel:list, effort:list):
+    def control_lejuclaw(pos:list, vel:list, effort:list):
         service_name = "/control_robot_leju_claw"
         try:
             rospy.wait_for_service("/control_robot_leju_claw", timeout=1)
@@ -162,7 +171,7 @@ class Quest3Node:
             right_qpos = hand_finger_data[1]
             pos[0] = max(0, min(int(100.0 * left_qpos[2] / 1.70), 100))
             pos[1] = max(0, min(int(100.0 * right_qpos[2] / 1.70), 100))
-            self.control_lujuclaw(pos, vel, tor)
+            self.pub_leju_claw_command(pos, vel, tor)
         else:
             return
 

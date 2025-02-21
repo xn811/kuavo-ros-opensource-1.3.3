@@ -9,6 +9,7 @@ from std_msgs.msg import Float32, Float32MultiArray
 from sensor_msgs.msg import JointState
 from handcontrollerdemorosnode.msg import armPoseWithTimeStamp, robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
+from kuavo_msgs.msg import lejuClawCommand
 import time
 import math
 import sys
@@ -185,7 +186,9 @@ class IkRos:
         self.pub_ik_input_pos = rospy.Publisher(
             "/drake_ik/input_pos", Float32MultiArray, queue_size=10
         )
-        
+        self.leju_claw_command_pub = rospy.Publisher(
+            "leju_claw_command", lejuClawCommand, queue_size=10
+        )
         try:
             if end_effector_type:
                 self.end_effector_type = end_effector_type
@@ -288,8 +291,8 @@ class IkRos:
             rospy.logerr(f"Service {service_name} not available")
 
     @staticmethod
-    def control_lujuclaw(pos:list):
-        # print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> control_lujuclaw: {pos}")
+    def control_lejuclaw(pos:list):
+        # print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> control_lejuclaw: {pos}")
         service_name = "/control_robot_leju_claw"
         try:
             rospy.wait_for_service("/control_robot_leju_claw", timeout=1)
@@ -306,6 +309,14 @@ class IkRos:
             rospy.logerr(f"Service {service_name} not available")
         except Exception as e:
             rospy.logerr(f"Error: {e}")   
+
+    def pub_leju_claw_command(self, pos:list):
+        msg = lejuClawCommand()
+        msg.header.stamp = rospy.Time.now()
+        msg.data.name = ['left_claw', 'right_claw']
+        msg.data.position = pos
+        msg.data.velocity = [90, 90]
+        self.leju_claw_command_pub.publish(msg)
 
     def pub_solved_arm_eef_pose(self, q_robot, current_pose, current_pose_right):
         msg = twoArmHandPose()
@@ -744,13 +755,13 @@ class IkRos:
                 pos[1] = int(100.0 * joyStick_data.right_trigger)
                 pos[0] = limit_value(pos[0], 0, 100)
                 pos[1] = limit_value(pos[1], 0, 100)
-                self.control_lujuclaw(pos)
+                self.pub_leju_claw_command(pos)
             elif hand_finger_data is not None:
                 left_qpos = hand_finger_data[0]
                 right_qpos = hand_finger_data[1]
                 left_claw_pos = limit_value(int(100.0 * left_qpos[2] / 1.70), 0, 100)
                 right_claw_pos = limit_value(int(100.0 * right_qpos[2] / 1.70), 0, 100)
-                self.control_lujuclaw([left_claw_pos, right_claw_pos])
+                self.pub_leju_claw_command([left_claw_pos, right_claw_pos])
                 # print(f"left_claw_pos: {left_claw_pos}, right_claw_pos: {right_claw_pos}")
             else:
                 return

@@ -69,6 +69,7 @@ add_message_files(
   gestureTask.msg
   lejuClawState.msg
   Metadata.msg
+  lejuClawCommand.msg
 )
 
 ## Generate services in the 'srv' folder
