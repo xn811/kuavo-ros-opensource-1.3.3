@@ -17,7 +17,7 @@ from SimpleSDK import RUIWOTools
 current_path =os.path.dirname(os.path.abspath(__file__))
 sys.path.append('/usr/lib/python3/dist-packages')
 # 控制周期
-dt=0.003
+dt=0.01
 # 插值规划的速度
 max_speed = 4
 velocity_factor = 0.01
