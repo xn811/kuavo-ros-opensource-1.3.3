@@ -120,6 +120,17 @@
 
 示例代码: [leju_claw_client.py](../src/demo/control_lejuclaw/leju_claw_client.py)
 
+**`/humanoid_get_current_gait_name`**
+
+服务描述: 该服务用户获取机器人当前的步态名称，比如`stance`、`walk`等
+
+消息类型: `kuavo_msgs/getCurrentGaitName`
+
+| 字段 | 类型 | 描述 |
+| --- | --- | --- |
+| gait_name | string | 返回数据，机器人当前的步态名称 |
+| success | bool | 返回数据, 是否调用成功 |
+
 ### 订阅的 topics
 
 #### /cmd_vel

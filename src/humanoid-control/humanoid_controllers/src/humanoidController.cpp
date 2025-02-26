@@ -458,6 +458,8 @@ namespace humanoid_controller
       sensor_data_raw_pub_ = controllerNh_.advertise<kuavo_msgs::sensorsData>("/share_memory/sensor_data_raw", 10);
       lHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/left_hand", 10);
       rHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/right_hand", 10);
+      currentGaitNameSrv_ = controllerNh_.advertiseService(robotName_ + "_get_current_gait_name", 
+        &humanoidController::getCurrentGaitNameCallback, this);
 
       // State estimation
       setupStateEstimate(taskFile, verbose);
@@ -1953,6 +1955,17 @@ namespace humanoid_controller
       rHandWrenchPub_.publish(wrench_msg);
   }
 
+  bool humanoidController::getCurrentGaitNameCallback(kuavo_msgs::getCurrentGaitName::Request &req, kuavo_msgs::getCurrentGaitName::Response &res) {
+    if(gaitManagerPtr_) {
+      res.gait_name = gaitManagerPtr_->getGaitName(currentObservation_.time);
+      res.success = true;
+    }
+    else{
+      res.gait_name = "none";
+      res.success = false;
+    }
+    return true;
+  }
 } // namespace humanoid_controller
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidController)
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidCheaterController)

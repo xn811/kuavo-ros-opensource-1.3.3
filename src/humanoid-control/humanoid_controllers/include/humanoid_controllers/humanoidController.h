@@ -40,6 +40,7 @@
 #include "humanoid_controllers/LowPassFilter.h"
 #include "humanoid_interface/gait/GaitSchedule.h"
 #include "kuavo_msgs/robotHeadMotionData.h"
+#include "kuavo_msgs/getCurrentGaitName.h"
 #include "gazebo-sim/shm_manager.h"
 
 namespace humanoid_controller
@@ -190,7 +191,7 @@ namespace humanoid_controller
     void swingArmPlanner(double st, double current_time, double stepDuration, Eigen::VectorXd &desire_arm_q, Eigen::VectorXd &desire_arm_v);
     void headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg);
     void visualizeWrench(const Eigen::VectorXd &wrench, bool is_left);
-    
+    bool getCurrentGaitNameCallback(kuavo_msgs::getCurrentGaitName::Request &req, kuavo_msgs::getCurrentGaitName::Response &res);
     /**
      * Creates MPC Policy message.
      *
@@ -276,6 +277,7 @@ namespace humanoid_controller
     ros::Publisher mpcPolicyPublisher_;
 
     ros::ServiceServer enableArmCtrlSrv_;
+    ros::ServiceServer currentGaitNameSrv_;
     GaitManager *gaitManagerPtr_=nullptr;
 
     PinocchioInterface *pinocchioInterface_ptr_;

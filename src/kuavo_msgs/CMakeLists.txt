@@ -69,6 +69,7 @@ add_message_files(
   gestureTask.msg
   lejuClawState.msg
   Metadata.msg
+  switchGaitByName.msg
   lejuClawCommand.msg
 )
 
@@ -87,6 +88,7 @@ add_service_files(
   controlLejuClaw.srv
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
+  getCurrentGaitName.srv
 )
 
 ## Generate actions in the 'action' folder
