@@ -70,13 +70,14 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂轨迹规划案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/键盘控制案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/强化学习手柄控制案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/大模型使用案例',
           ],
         },
         {
           type: 'category',
           label: '扩展案例',
           items: [
-            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/大模型使用案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/展厅版大模型使用案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人导航案例',
           ],
         },
