@@ -4,6 +4,9 @@ A comprehensive Python SDK for controlling Kuavo humanoid robots. This SDK provi
 
 **Warning**: This SDK currently only supports **ROS1**. ROS2 support is not available.
 
+**Warning**: **This SDK can only be used on the onboard NUC computer located in the robot's torso.** 
+
+
 ![Kuavo 4Pro Robot](https://kuavo.lejurobot.com/manual/assets/images/kuavo_4pro-cf84d43f1c370666c6e810d2807ae3e4.png)
 
 ## Features

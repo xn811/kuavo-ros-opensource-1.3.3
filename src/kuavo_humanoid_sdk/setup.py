@@ -8,7 +8,7 @@ setup(
     license="MIT",
     author=["lejurobot"],
     author_email=["edu@lejurobot.com"],
-    version="0.1.1",
+    version=open("VERSION", "r").read().strip(),
     description="A Python SDK for kuavo humanoid robot.",
     long_description=long_description,
     long_description_content_type="text/markdown",

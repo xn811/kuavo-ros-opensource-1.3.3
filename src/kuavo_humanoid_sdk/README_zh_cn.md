@@ -47,7 +47,7 @@ ls -lh ./dist/
 
 首先，创建或编辑 `~/.pypirc` 并添加您的 API 令牌：
 ```
-[testpypi]
+[pypi]
 username = __token__
 password = pypi-<your-token>
 ```
@@ -57,5 +57,5 @@ password = pypi-<your-token>
 pip install --upgrade requests-toolbelt
 pip install "urllib3<=1.26.16" "twine<4.0.0" pyopenssl cryptography
 
-twine upload --repository testpypi dist/* --verbose
+twine upload --repository pypi dist/* --verbose
 ```
