@@ -70,7 +70,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/手臂轨迹规划案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/键盘控制案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/强化学习案例',
-            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/大模型使用案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/接入deepseek大模型语音交互案例',
           ],
         },
         {
