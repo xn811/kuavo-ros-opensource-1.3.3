@@ -1,8 +1,8 @@
-# 大模型使用案例
+# 接入deepseek大模型语音交互案例
 
 ## 描述
 
-  - 使用大模型接入语音对话，实现了一个语音交互系统，包括录音、语音转写、对话生成和语音播放功能。
+  - 接入deepseek大模型，实现了一个语音交互系统，包括录音、语音转写、对话生成和语音播放功能。
   
   - 示例代码路径:`<kuavo_ros_application>/src/kuavo_large_model/rtasr_python3_demo.py`
 
@@ -26,13 +26,13 @@
 
     - 录音数据保存为PCM文件。
 
-3. minimax 函数
+3. deepseek_chat 函数
 
-  - 作用：调用MiniMax的API进行对话，并将回复通过TTS转换为语音播放。
+  - 作用：调用deepseek_chat的API进行对话，并将回复通过TTS转换为语音播放。
 
   - 关键逻辑：
 
-    - 构造请求体，发送到MiniMax的API。
+    - 构造请求体，发送到deepseek_chat的API。
 
     - 解析API返回的回复内容。
 
@@ -60,12 +60,20 @@
 
     - 使用 Client 类将录音发送到RTASR服务。
 
-    - 调用 minimax 进行对话并播放回复。
+    - 调用 deepseek_chat 进行对话并播放回复。
 
 ## 说明
 
-   - 该案例所使用的对话模型为： https://api.minimax.chat/
    - 该案例所使用的语音，文字转换模型为： https://www.xfyun.cn/
+
+   - 该案例所使用的对话大模型为深度求索(deepseek)推出的deepseek-chat： https://www.deepseek.com/
+
+   - 获取DeepSeek API Key：
+     - https://platform.deepseek.com/usage
+     - 充值，获取API Key    
+     - 将程序第101行的api-key替换成获取到的即可
+
+   ⚠️ **注意: 使用该案例时，需要机器人上位机连接外网**
 
 ## 执行
 
