@@ -404,7 +404,7 @@ def ruiwo_zero():
     else:
         print(f"The file {file_path} does not exist.")
         return
-
+        
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
@@ -433,6 +433,20 @@ def update_kuavo():
     subprocess.run(command, shell=True)
 
 def license_sign():
+
+    FILE = "/home/lab/.config/lejuconfig/ec_master.key"
+    # 检查文件是否存在
+    if os.path.exists(FILE):
+        # 打开文件并读取内容
+        with open(FILE, 'r') as file:
+            content = file.read()
+            first_20_chars = content[:20]
+            print(f"license key 存在，内容为: {first_20_chars}")
+            print(bcolors.OKCYAN + "如需要重新设置key请继续，如不需要，请 Ctrl+C 退出" + bcolors.ENDC)
+    else:
+        print(bcolors.OKCYAN + "License key 不存在 " + bcolors.ENDC)
+        
+
     license_str = input("请输入提供的License：")
     # 定义要运行的命令
     command = "bash "+ folder_path +"/EtherCAT_license.sh "  + license_str
@@ -762,6 +776,15 @@ if __name__ == '__main__':
     robot_version = get_robot_version()
     if robot_version:
         print("ROBOT_VERSION={}".format(robot_version))
+        mass_file_path = os.path.expanduser(f"~/.config/lejuconfig/TotalMassV{robot_version}")
+        # 检查文件是否存在
+        if os.path.exists(mass_file_path):
+            # 读取文件内容
+            with open(mass_file_path, 'r') as file:
+                content = file.read()
+                print(f"Total MASS 质量为: {content}")
+        else:
+            print(bcolors.FAIL + "质量文件不存在 !!" + bcolors.ENDC)
     else:
         print("未找到 ROBOT_VERSION 变量")
 
