@@ -75,7 +75,8 @@ def get_robot_version():
     # 读取 .bashrc 文件
     try:
         with open(bashrc_path, 'r') as file:
-            for line in file:
+            lines = file.readlines()
+            for line in reversed(lines):
                 # 查找 export ROBOT_VERSION= 行
                 if line.startswith('export ROBOT_VERSION='):
                     # 提取变量值
