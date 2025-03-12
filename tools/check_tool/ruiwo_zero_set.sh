@@ -21,7 +21,7 @@ kuavo_ros_folder_path="$prefix/src/kuavo-ros-control-lejulib/hardware_node/lib/r
 kuavo_ros_file_path="$kuavo_ros_folder_path/setZero.sh"
 
 kuavo_open_folder_path="$prefix/installed/share/hardware_node/lib/ruiwo_controller"
-kuavo_open_file_path="$kuavo_ros_folder_path/setZero.sh"
+kuavo_open_file_path="$kuavo_open_folder_path/setZero.sh"
 
 
 # 检查文件是否存在
