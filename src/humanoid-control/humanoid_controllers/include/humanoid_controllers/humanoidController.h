@@ -167,7 +167,7 @@ namespace humanoid_controller
     ~humanoidController();
     void keyboard_thread_func();
     bool init(HybridJointInterface *robot_hw, ros::NodeHandle &controller_nh, bool is_nodelet_node = false);
-    void preUpdate(const ros::Time &time);
+    bool preUpdate(const ros::Time &time);
     bool preUpdateComplete() {return isPreUpdateComplete;}
     void update(const ros::Time &time, const ros::Duration &period);
     void starting(const ros::Time &time);
@@ -227,6 +227,7 @@ namespace humanoid_controller
     std::shared_ptr<StateEstimateBase> stateEstimate_;
     std::shared_ptr<CentroidalModelRbdConversions> rbdConversions_;
     bool is_initialized_ = false;
+    bool is_abnor_StandUp_{false};
     bool wbc_only_{false};
     bool reset_mpc_{false};
     int hardware_status_ = 0;
@@ -240,9 +241,18 @@ namespace humanoid_controller
     std::shared_ptr<MPC_MRT_Interface> mpcMrtInterface_;
     std::shared_ptr<MRT_ROS_Interface> mrtRosInterface_;
 
+    //waitStandUpInit
+    bool isRobotStandUpSuccess_;
+
     // preUpdate, 介于蹲姿启动和进MPC之间的状态处理
+    double robotStartSquatTime_{0.0};
+    double robotStartStandTime_{0.0};
+    double robotStandUpCompleteTime_{0.0};
+    bool is_robot_standup_complete_{false};
     bool isPreUpdateComplete{false};
+    bool isInitStandUpStartTime_{false};
     std::shared_ptr<WbcBase> standUpWbc_;
+    vector_t curRobotLegState_;
 
     // Visualization
     std::shared_ptr<HumanoidVisualizer> robotVisualizer_;
@@ -274,6 +284,7 @@ namespace humanoid_controller
     ros::Subscriber arm_target_traj_sub_;//最终的手臂目标位置
     ros::Subscriber foot_pos_des_sub_;
     ros::Subscriber hand_wrench_sub_;
+    ros::Subscriber contact_force_sub_;
     ros::Publisher mpcPolicyPublisher_;
 
     ros::ServiceServer enableArmCtrlSrv_;
@@ -284,6 +295,7 @@ namespace humanoid_controller
     CentroidalModelInfo centroidalModelInfo_;
     CentroidalModelInfo centroidalModelInfoWBC_;
     Eigen::VectorXd hand_wrench_cmd_ = Eigen::VectorXd::Zero(12);
+    Eigen::VectorXd contactForce_ = Eigen::VectorXd::Zero(16);
     CentroidalModelInfo centroidalModelInfoEstimate_;
 
     // Node Handle

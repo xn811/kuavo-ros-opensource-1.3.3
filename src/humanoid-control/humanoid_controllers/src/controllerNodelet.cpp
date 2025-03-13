@@ -88,7 +88,12 @@ private:
         uint64_t cycle_count = 0;
         while (ros::ok() && controller_ptr_->preUpdateComplete() != true)
         {
-            controller_ptr_->preUpdate(ros::Time::now());
+            bool preUpdateExeFlag = controller_ptr_->preUpdate(ros::Time::now());
+            if(!preUpdateExeFlag)
+            {
+                ROS_INFO_STREAM("re-squat state, waitting is_real signal...");
+                controller_ptr_->starting(startTimeROS);
+            }
         }
 
         while (ros::ok())

@@ -488,6 +488,9 @@ namespace humanoid_controller
       standUpWbc_->setArmNums(armNumReal_);
       standUpWbc_->loadTasksSetting(taskFile, verbose, is_real_);
 
+      // preupdate
+      curRobotLegState_ = vector_t::Zero(centroidalModelInfoWBC_.stateDim);
+
       // Safety Checker
       safetyChecker_ = std::make_shared<SafetyChecker>(HumanoidInterface_->getCentroidalModelInfo());
       keyboardThread_ = std::thread(&humanoidController::keyboard_thread_func, this);
@@ -778,10 +781,10 @@ namespace humanoid_controller
     
   }
 
-  void humanoidController::preUpdate(const ros::Time &time)
+  bool humanoidController::preUpdate(const ros::Time &time)
   {
     /*******************输入蹲姿和站姿**********************/
-    auto& infoWBC = centroidalModelInfoWBC_;
+    auto &infoWBC = centroidalModelInfoWBC_;
     vector_t squatState = vector_t::Zero(infoWBC.stateDim);
     squatState.head(12 + jointNum_) = drake_interface_->getSquatInitialState();
     vector_t standState = vector_t::Zero(infoWBC.stateDim);
@@ -790,24 +793,52 @@ namespace humanoid_controller
     stateEstimate_->setFixFeetHeights(true);
     updateStateEstimation(time, false);
 
-    static vector_t startObservation_state = currentObservationWBC_.state;
+    double startTime;
+    double endTime;
+    const double motionVel = 0.11;
+    if (!isInitStandUpStartTime_)
+    {
+      isInitStandUpStartTime_ = true;
+      robotStartStandTime_ = time.toSec();
+      // 站立的结束时间是依据开始时间确定的
+      startTime = robotStartStandTime_;
+      endTime = startTime + (standState[8] - squatState[8]) / motionVel; // 以 0.11m/s 速度起立
+      robotStandUpCompleteTime_ = endTime;
+      ROS_INFO_STREAM("Set standUp start time: " << robotStartStandTime_);
+    }
 
-    static double startTime = time.toSec();
-    double endTime = startTime + (standState[8] - squatState[8]) / 0.11;  // 以 0.11m/s 速度起立
-    
+    vector_t curState = vector_t::Zero(infoWBC.stateDim);
+    vector_t desiredState = vector_t::Zero(infoWBC.stateDim);
+    if (is_abnor_StandUp_)
+    {
+      // 机器人站立异常，恢复到蹲起姿态
+      curState = curRobotLegState_;
+      desiredState = squatState;
+      startTime = robotStartSquatTime_;
+      endTime = startTime + (curRobotLegState_[8] - squatState[8]) / motionVel; // 以 0.11m/s 速度挂起
+    }
+    else
+    {
+      curState = squatState;
+      curRobotLegState_ = standState;
+      desiredState = standState;
+    }
+
     scalar_array_t timeTrajectory;
     timeTrajectory.push_back(startTime);
     timeTrajectory.push_back(endTime);
     vector_array_t stateTrajectory;
-    stateTrajectory.push_back(startObservation_state);
-    stateTrajectory.push_back(standState);
-    vector_t standUpState = LinearInterpolation::interpolate(time.toSec(), timeTrajectory, stateTrajectory);
-    vector_t torque = standUpWbc_->update(standUpState, intail_input_, measuredRbdStateReal_, ModeNumber::SS, dt_, false).tail(infoWBC.actuatedDofNum);
+    stateTrajectory.push_back(curState);
+    stateTrajectory.push_back(desiredState);
+    vector_t curTargetState_wbc = LinearInterpolation::interpolate(time.toSec(), timeTrajectory, stateTrajectory);
+    vector_t torque = standUpWbc_->update(curTargetState_wbc, intail_input_, measuredRbdStateReal_, ModeNumber::SS, dt_, false).tail(infoWBC.actuatedDofNum);
+
+    is_robot_standup_complete_ = fabs(standState[8] - curTargetState_wbc[8]) < 0.002;
 
     kuavo_msgs::jointCmd jointCmdMsg;
     for (int i1 = 0; i1 < jointNumReal_; ++i1)
     {
-      jointCmdMsg.joint_q.push_back(standUpState(12 + i1));
+      jointCmdMsg.joint_q.push_back(curTargetState_wbc(12 + i1));
       jointCmdMsg.joint_v.push_back(0);
       jointCmdMsg.tau.push_back(torque(i1));
       jointCmdMsg.tau_ratio.push_back(1);
@@ -816,14 +847,14 @@ namespace humanoid_controller
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[i1]);
       jointCmdMsg.control_modes.push_back(2);
     }
-    for(int i2 = 0; i2 < armNumReal_; ++i2)
+    for (int i2 = 0; i2 < armNumReal_; ++i2)
     {
-      jointCmdMsg.joint_q.push_back(output_pos_(jointNumReal_+i2));
-      jointCmdMsg.joint_v.push_back(output_vel_(jointNumReal_+i2));
-      jointCmdMsg.tau.push_back(output_tau_(jointNumReal_+i2));
+      jointCmdMsg.joint_q.push_back(output_pos_(jointNumReal_ + i2));
+      jointCmdMsg.joint_v.push_back(output_vel_(jointNumReal_ + i2));
+      jointCmdMsg.tau.push_back(output_tau_(jointNumReal_ + i2));
       jointCmdMsg.tau_ratio.push_back(1);
-      jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNumReal_+i2]);
-      jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNumReal_+i2]);
+      jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNumReal_ + i2]);
+      jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNumReal_ + i2]);
     }
     for (int i3 = 0; i3 < headNum_; ++i3)
     {
@@ -835,9 +866,54 @@ namespace humanoid_controller
       jointCmdMsg.control_modes.push_back(2);
     }
     jointCmdPub_.publish(jointCmdMsg);
+
+    const double norSingleLegSupport = centroidalModelInfo_.robotMass * 9.8 / 4; //单脚支撑力只要达到重量的1/4的力即认为已落地成功
+    // const double norSingleLegSupport = 200.0;
+    bool bNotLanding = is_robot_standup_complete_ && (contactForce_[2] < norSingleLegSupport || contactForce_[8] < norSingleLegSupport);
+    bool bUneventForce = fabs(contactForce_[2] - contactForce_[8]) > norSingleLegSupport; //左右脚支撑立差值超过重量的1/4即判断为异常
+    if (bNotLanding || bUneventForce)
+    {
+      if (is_robot_standup_complete_)
+      {
+        ROS_INFO_STREAM("left feet force: " << contactForce_[2] << "less than " << norSingleLegSupport);
+        ROS_INFO_STREAM("left feet force: " << contactForce_[8] << "less than " << norSingleLegSupport);
+      }
+
+      if (!is_abnor_StandUp_ && (bUneventForce || (time.toSec() > robotStandUpCompleteTime_ + 0.5)))
+      {
+        ROS_WARN("Robot standing abnormal...!!");
+        is_abnor_StandUp_ = true;
+        is_robot_standup_complete_ = false;
+        curRobotLegState_ = currentObservationWBC_.state;
+        robotStartSquatTime_ = time.toSec();
+        ROS_INFO_STREAM("Set squat start time: " << robotStartSquatTime_);
+      }
+    }
+
+    // 等待机器人脚收回
+    if (is_abnor_StandUp_)
+    {
+      bool isReSquatComplete = fabs(squatState[8] - curTargetState_wbc[8]) < 0.002;
+      if (isReSquatComplete)
+      {
+        // 判断机器人的脚是否收回
+        ROS_WARN("The robot goes into a squat state, waiting for adjustment...");
+
+        // 将硬件准备状态位设置为0
+        ROS_INFO_STREAM("Set hardware/is_ready is 0.");
+        ros::param::set("/hardware/is_ready", 0);
+        hardware_status_ = 0;
+        isInitStandUpStartTime_ = false;
+        is_abnor_StandUp_ = false;
+        return false;
+      }
+      return true;
+    }
+
     /*******************超过设置时间，退出******************/
     // 延迟启动, 避免切换不稳定
-    if(time.toSec() > endTime + 0.3){
+    if (time.toSec() > robotStandUpCompleteTime_ + 0.8)
+    {
       SystemObservation initial_observation = currentObservation_;
       initial_observation.state = initial_status_;
       TargetTrajectories target_trajectories({initial_observation.time}, {initial_observation.state}, {initial_observation.input});
@@ -871,7 +947,9 @@ namespace humanoid_controller
       stateEstimate_->setFixFeetHeights(false);
       isPreUpdateComplete = true;
     }
+    return true;
   }
+
   void humanoidController::update(const ros::Time &time, const ros::Duration &dfd)
   {
     const auto t1 = Clock::now();
@@ -1459,6 +1537,7 @@ namespace humanoid_controller
     stateEstimate_->setCmdTorque(activeTorque_);
     stateEstimate_->estContactForce(period);
     auto est_contact_force = stateEstimate_->getEstContactForce();
+    contactForce_ = est_contact_force;
     ros_logger_->publishVector("/state_estimate/Contact_Detection/contactForce", est_contact_force);
     auto est_mode = stateEstimate_->ContactDetection(nextMode_, is_stance_mode_, plannedMode_, robotMass_, est_contact_force(2), est_contact_force(8), diff_time);
     ros_logger_->publishValue("/state_estimate/Contact_Detection/mode", static_cast<double>(est_mode));
