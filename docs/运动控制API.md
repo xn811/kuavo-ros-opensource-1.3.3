@@ -450,6 +450,43 @@ data:
 </pre>
 </details>
 
+#### dexhand/state
+
+先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`时才会发布该话题.
+
+话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
+
+消息类型: `sensor_msgs/JointState`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头, 包含时间戳等信息 |
+| name | string[] | 关节名称数组, 包含12个关节名称: ["l_thumb", "l_thumb_aux", "l_index", "l_middle", "l_ring", "l_pinky", "r_thumb", "r_thumb_aux", "r_index", "r_middle", "r_ring", "r_pinky"] |
+| position | float64[] | 关节位置数组, 长度为12, 前6个为左手关节位置, 后6个为右手关节位置 |
+| velocity | float64[] | 关节速度数组, 长度为12, 前6个为左手关节速度, 后6个为右手关节速度 (当前该字段无效) |
+| effort | float64[] | 关节电流数组, 长度为12, 前6个为左手关节电流, 后6个为右手关节电流 (当前该字段无效) |
+
+<details>
+<summary>点击展开查看该话题消息示例</summary>
+<pre>
+header: 
+  seq: 1234
+  stamp: 
+    secs: 1678234567
+    nsecs: 890123456
+  frame_id: ''
+name: ['l_thumb', 'l_thumb_aux', 'l_index', 'l_middle', 'l_ring', 'l_pinky',
+       'r_thumb', 'r_thumb_aux', 'r_index', 'r_middle', 'r_ring', 'r_pinky']
+position: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+           10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+velocity: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+effort: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+</pre>
+</details>
+
 #### /humanoid_controller/*
 
 与控制器相关的话题.
