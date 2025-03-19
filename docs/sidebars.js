@@ -48,6 +48,16 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/4开发接口/仿真环境使用',
         'basic_usage/kuavo-ros-control/docs/4开发接口/SDK介绍',
         'basic_usage/kuavo-ros-control/docs/4开发接口/接口使用文档',
+        {
+          type: 'category',
+          label: 'KUAVO Humanoid SDK接口',
+          items: [
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/kuavo-humanoid-sdk介绍',
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/头部以及手部控制接口',
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/机器人信息获取接口',
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/机器人移动以及步态接口',
+          ],
+        },
       ],
     },
     {
