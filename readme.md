@@ -96,6 +96,7 @@ roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 启动控制器、
 在运行实物之前, 您需要先修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`中EndEffectorType为您实物机器人的执行器类型:
 - `qiangnao` : 灵巧手, 默认值
 - `lejuclaw` : 二指夹爪
+- `qiangnao_touch` : 触觉灵巧手
 
 - 实物运行时，开机第一次需要先在cali模式下运行一次，确认机器人姿态和位置正确(机器人所有关节回到零位)
 

@@ -120,6 +120,23 @@
 
 示例代码: [leju_claw_client.py](../src/demo/control_lejuclaw/leju_claw_client.py)
 
+
+**`/dexhand/left/enable_touch_sensor` 和 `/dexhand/right/enable_touch_sensor`**
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao_touch`时才可被调用.
+
+服务描述: 该服务用于开启/关闭对应的手指触觉传感器.
+
+消息类型: `kuavo_msgs/enableHandTouchSensorw`
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| mask | uint8 | 用btis位来表示开启/关闭哪个传感器 |
+- THUMB_SENSOR 0x01
+- INDEX_SENSOR 0x02
+- MIDDLE_SENSOR 0x04
+- RING_SENSOR 0x08
+- PINKY_SENSOR 0x10
+
 **`/humanoid_get_current_gait_name`**
 
 服务描述: 该服务用户获取机器人当前的步态名称，比如`stance`、`walk`等
@@ -185,6 +202,8 @@
 - joint_data[1]：俯仰角度（pitch），范围：[-25°, 25°].
 
 #### /control_robot_hand_position
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`或`qiangnao_touch`时才会发布该话题.
 
 话题描述: 用于控制机器人双手(手指)的运动，通过发布手指目标关节位置来实现手部的精确控制。
 
@@ -327,6 +346,59 @@
 
 关于 data 字段,详情见服务`control_robot_leju_claw`的描述。
 
+
+#### `/dexhand/command`
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao_touch`时才可以使用该话题.
+
+话题描述: 该话题用于控制触觉灵巧手，**双手**.
+
+消息类型: `kuavo_msgs/dexhandCommand`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头，包括序列号、时间戳和帧ID |
+| control_mode | int8 | 控制模式，支持 POSITION_CONTROL 和 VELOCITY_CONTROL |
+| data | int16[] | 对应控制模式的数据, 长度为必须为 12，其中 前 6 个元素控制左手，后 6 个元素控制右手 |
+- 数据顺序为："l_thumb", "l_thumb_aux", "l_index", "l_middle", "l_ring", "l_pinky",
+                           "r_thumb", "r_thumb_aux", "r_index", "r_middle", "r_ring", "r_pinky"
+- 位置控制模式下，每个元素的数据的范围为[0, 100], 0 为完全打开，100 为完全关闭
+- 速度控制模式下，每个元素的数据的范围为[-100, 100] 负数表示打开，正数表示关闭
+
+#### `/dexhand/left/command`
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao_touch`时才可以使用该话题.
+
+话题描述: 该话题用于单独控制**左**触觉灵巧手.
+
+消息类型: `kuavo_msgs/dexhandCommand`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头，包括序列号、时间戳和帧ID |
+| control_mode | int8 | 控制模式，支持 POSITION_CONTROL 和 VELOCITY_CONTROL |
+| data | int16[] | 对应控制模式的数据, 长度为必须为 6 |
+- 数据顺序为："l_thumb", "l_thumb_aux", "l_index", "l_middle", "l_ring", "l_pinky"
+- 位置控制模式下，每个元素的数据的范围为[0, 100], 0 为完全打开，100 为完全关闭
+- 速度控制模式下，每个元素的数据的范围为[-100, 100] 负数表示打开，正数表示关闭
+
+#### `/dexhand/right/command`
+
+先决条件:只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao_touch`时才可以使用该话题.
+
+话题描述: 该话题用于单独控制**右**触觉灵巧手.
+
+消息类型: `kuavo_msgs/dexhandCommand`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头，包括序列号、时间戳和帧ID |
+| control_mode | int8 | 控制模式，支持 POSITION_CONTROL 和 VELOCITY_CONTROL |
+| data | int16[] | 对应控制模式的数据, 长度为必须为 6 |
+- "r_thumb", "r_thumb_aux", "r_index", "r_middle", "r_ring", "r_pinky"
+- 位置控制模式下，每个元素的数据的范围为[0, 100], 0 为完全打开，100 为完全关闭
+- 速度控制模式下，每个元素的数据的范围为[-100, 100] 负数表示打开，正数表示关闭
+
 ### 发布的 topics
 
 #### /sensors_data_raw
@@ -452,7 +524,7 @@ data:
 
 #### dexhand/state
 
-先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`时才会发布该话题.
+先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`或者`qiangnao_touch`时才会发布该话题.
 
 话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
 
@@ -463,8 +535,8 @@ data:
 | header | std_msgs/Header | 消息头, 包含时间戳等信息 |
 | name | string[] | 关节名称数组, 包含12个关节名称: ["l_thumb", "l_thumb_aux", "l_index", "l_middle", "l_ring", "l_pinky", "r_thumb", "r_thumb_aux", "r_index", "r_middle", "r_ring", "r_pinky"] |
 | position | float64[] | 关节位置数组, 长度为12, 前6个为左手关节位置, 后6个为右手关节位置 |
-| velocity | float64[] | 关节速度数组, 长度为12, 前6个为左手关节速度, 后6个为右手关节速度 (当前该字段无效) |
-| effort | float64[] | 关节电流数组, 长度为12, 前6个为左手关节电流, 后6个为右手关节电流 (当前该字段无效) |
+| velocity | float64[] | 关节速度数组, 长度为12, 前6个为左手关节速度, 后6个为右手关节速度 (类型为`qiangnao_touch`该字段才有效) |
+| effort | float64[] | 关节电流数组, 长度为12, 前6个为左手关节电流, 后6个为右手关节电流 (类型为`qiangnao_touch`该字段才有效) |
 
 <details>
 <summary>点击展开查看该话题消息示例</summary>
@@ -484,6 +556,62 @@ velocity: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 effort: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
          0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
+</pre>
+</details>
+
+
+#### dexhand/touch_state
+
+先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`或者`qiangnao_touch`时才会发布该话题.
+
+话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
+
+消息类型: `kuavo_msgs/dexhandTouchState`
+
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头, 包含时间戳等信息 |
+| left_hand | kuavo_msgs/touchSensorStatus[5] | 左手触觉传感器数据，一共5个，每个手指一个 |
+| right_hand | kuavo_msgs/touchSensorStatus[5] | 右手触觉传感器数据，一共5个，每个手指一个 |
+
+其中，`kuavo_msgs/touchSensorStatus`具体字段如下：
+| 字段  | 类型  | 描述  |
+| --- | --- | --- |
+| header | std_msgs/Header | 消息头, 包含时间戳等信息 |
+| normal_force1 | uint16 | 触觉传感器1的法向力 |
+| normal_force2 | uint16 | 触觉传感器2的法向力 |
+| normal_force3 | uint16 | 触觉传感器3的法向力 |
+| tangential_force1 | uint16 | 触觉传感器1的切向力 |
+| tangential_force2 | uint16 | 触觉传感器2的切向力 |
+| tangential_force3 | uint16 | 触觉传感器3的切向力 |
+| tangential_direction1 | uint16 | 触觉传感器1的切向力方向 |
+| tangential_direction2 | uint16 | 触觉传感器2的切向力方向 |
+| tangential_direction3 | uint16 | 触觉传感器3的切向力方向 |
+| self_proximity1 | uint32 | 触觉传感器1的自接近度 |
+| self_proximity2 | uint32 | 触觉传感器2的自接近度 |
+| mutual_proximity | uint32 | 触觉传感器的相互接近度 |
+| status | uint16 | 触觉传感器状态 |
+
+*建议使用plotjuggler观测数据会更加直观*
+<details>
+<summary>点击展开查看该话题消息示例</summary>
+<pre>
+  .....
+  - 
+    normal_force1: 0
+    normal_force2: 627
+    normal_force3: 0
+    tangential_force1: 0
+    tangential_force2: 324
+    tangential_force3: 0
+    tangential_direction1: 65535
+    tangential_direction2: 169
+    tangential_direction3: 0
+    self_proximity1: 253689856
+    self_proximity2: 0
+    mutual_proximity: 0
+    status: 0
+---
 </pre>
 </details>
 

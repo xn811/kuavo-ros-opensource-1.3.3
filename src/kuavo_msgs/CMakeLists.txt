@@ -71,6 +71,9 @@ add_message_files(
   Metadata.msg
   switchGaitByName.msg
   lejuClawCommand.msg
+  dexhandCommand.msg
+  touchSensorStatus.msg
+  dexhandTouchState.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -89,6 +92,8 @@ add_service_files(
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
   getCurrentGaitName.srv
+  handForceLevel.srv
+  enableHandTouchSensor.srv
 )
 
 ## Generate actions in the 'action' folder
