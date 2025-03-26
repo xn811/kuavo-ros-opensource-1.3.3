@@ -4,6 +4,9 @@
 - 无
 
 ## 文档相关
+- 新增上下位机 NUC DHCP 分配 IP配置说明文档，[文档链接](./docs/others/SET_HEAD_DHCP/头部%20NUC%20DHCP配置说明.md)
+- 新增 ROS_MASTER_URI 主从配置工具文档，[文档链接](./docs/others/CHANGE_ROS_MASTER_URI/修改ROS_MASTER_URI说明.md)
+- 更新运动控制接口文档，新增触觉灵巧手控制和状态话题，[文档链接](./docs/运动控制API.md)
 - 新增 kuavo-humanoid-sdk 文档， [文档链接](src/kuavo_humanoid_sdk/docs/markdown/index.md)
 - Kuavo 文档中心新增轮臂机器人介绍, 导航案例, 正逆解案例使用说明
 - 更新 README 中全身控制器参数与 kuavo 配置参数的说明, [文档链接](./docs/info文件说明.md), [文档链接](./docs/kuavo_json文档说明.md)
@@ -15,6 +18,9 @@
 - 补充运动控制接口文档中`/sensor_data_raw`话题的详细说明和数据示例 [文档链接](./docs/运动控制API.md)
 
 ## 新增功能
+- 新增触觉灵巧手控制话题`/dexhand/command`和左右单独控制话题`/dexhand/left_command`和`/dexhand/right_command`，以及 `/dexhand/touch_state`话题, 并兼容原先非触觉手的ROS接口
+- 新增触觉灵巧手硬件识别与测试工具，工具路径:`tools/check_tool/touch_dexhand_test.sh`
+- 新增触觉灵巧手功能，末端类型为`qiangnao_touch`，在kuavo.json中修改 EndEffectorType 字段即可使用
 - 新增灵巧手状态话题接口`/dexhand/state`
 - 新增机器人初始化站立时的检测保护功能，在一定情况下防止机器人在未站立或站立异常时的抽搐
 - 新增 kuavo-humanoid-sdk 应用层 SDK 用于控制机器人，pypi 项目：https://pypi.org/project/kuavo-humanoid-sdk
@@ -82,6 +88,7 @@
 - 修复 biped_s42 机器人头部 yaw 电机方向问题, 已根据右手定更正
 
 ## 其他改进
+- 新增 ROS_MASTER_URI 主从配置工具，[工具链接](./docs/others/CHANGE_ROS_MASTER_URI/修改ROS_MASTER_URI说明.md)
 - 修改遥控器头部控制快捷键为RT+右侧摇杆，可以同时走路
 - 优化graspBox案例，增加Move的运动类型，使用bt_config.yaml文件box_holdon_pose配置，用于规划抓取后手臂的运动，坐标系是机器人坐标系。
 - 限制 pitch limit 速度上下限，避免机器人弯腰时姿态调整过于剧烈
