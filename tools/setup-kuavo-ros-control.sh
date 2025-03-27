@@ -333,6 +333,19 @@ cleanup_code() {
     print_success "闭源代码清理完成"
 }
 
+
+# enable change wifi at vnc desktop
+enable_vnc_network_config() {
+
+    folder_path_="$HOME/kuavo_opensource/tools/check_tool"
+    # 检查脚本是否存在
+    if [ ! -f "$folder_path_/enable_vnc_network_config.sh" ]; then
+      print_error "未找到 enable_vnc_network_config.sh 文件"
+      return 1
+    fi
+    sudo -E su -c "$folder_path_/enable_vnc_network_config.sh"
+}
+
 # Main execution
 main() {
     print_info "开始KUAVO-ROS-CONTROL安装配置脚本..."
@@ -347,6 +360,7 @@ main() {
     install_vr_deps
     build_project
     setup_h12pro
+    enable_vnc_network_config
     cleanup_code
     
     print_success "KUAVO-ROS-CONTROL安装配置成功完成!"

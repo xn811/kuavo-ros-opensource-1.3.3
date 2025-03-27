@@ -100,6 +100,7 @@ def set_thread_priority(thread, policy, priority):
 QIANGNAO = "qiangnao"
 JODELL = "jodell"
 LEJUCLAW = "lejuclaw"
+QIANGNAO_TOUCH = "qiangnao_touch"
 control_finger_type = 0
 control_torso = 0
 
@@ -190,23 +191,23 @@ class IkRos:
             "leju_claw_command", lejuClawCommand, queue_size=10
         )
         try:
-            if end_effector_type:
-                self.end_effector_type = end_effector_type
+            end_effector_mapping = {
+                QIANGNAO: QIANGNAO,
+                JODELL: JODELL,
+                LEJUCLAW: LEJUCLAW,
+                QIANGNAO_TOUCH:QIANGNAO_TOUCH
+            }
+            if end_effector_type in end_effector_mapping:
+                self.end_effector_type = end_effector_mapping[end_effector_type]
             else:
-                ros_end_effector_type_param = rospy.get_param("/end_effector_type")
-                # TODO should compatible more ee types
-                end_effector_mapping = {
-                    QIANGNAO: QIANGNAO,
-                    JODELL: JODELL,
-                    LEJUCLAW: LEJUCLAW
-                }
-                if ros_end_effector_type_param in end_effector_mapping:
-                    self.end_effector_type = end_effector_mapping[ros_end_effector_type_param]
-                else:
-                    self.end_effector_type = QIANGNAO
-        except KeyError:
+                self.end_effector_type = QIANGNAO
+        except Exception as e:
+            print(f"get end effector type error: {e}, use default qiangnao")
             self.end_effector_type = QIANGNAO
-        print(f"\033[93mEnd effector type: {self.end_effector_type}\033[0m")        
+        print(f"\033[93m--------------------------------------------------\033[0m")        
+        print(f"\033[93m- End effector type: {self.end_effector_type} \033[0m")
+        print(f"\033[93m--------------------------------------------------\033[0m")        
+
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
         self.stop_event = threading.Event()
@@ -696,7 +697,7 @@ class IkRos:
         right_hand_position = [0 for i in range(6)]
         robot_hand_position = robotHandPosition()
         robot_hand_position.header.stamp = rospy.Time.now()
-        if self.end_effector_type == QIANGNAO:
+        if self.end_effector_type == QIANGNAO or self.end_effector_type == QIANGNAO_TOUCH:
             if joyStick_data is not None:
                 if joyStick_data.left_second_button_pressed and self.__button_y_last is False:
                     print(f"\033[91mButton Y is pressed.\033[0m")
@@ -789,7 +790,17 @@ if __name__ == "__main__":
     parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
 
     args, unknown = parser.parse_known_args()
-    end_effector_type = args.end_effector_type
+    # ee_type
+    end_effector_type=""
+    try:
+        if rospy.has_param("/end_effector_type"):
+            end_effector_type = rospy.get_param("/end_effector_type")
+            print(f"\033[92mend_effector_type from rosparm: {end_effector_type}\033[0m")
+        else:
+            print(f"\033[92mend_effector_type from args: {end_effector_type}\033[0m")
+            end_effector_type = args.end_effector_type
+    except Exception as e:
+        print(e)
     ctrl_arm_idx = ArmIdx(args.ctrl_arm_idx)
     ik_type_idx = IkTypeIdx(args.ik_type_idx)
     print(type(args.send_srv))
