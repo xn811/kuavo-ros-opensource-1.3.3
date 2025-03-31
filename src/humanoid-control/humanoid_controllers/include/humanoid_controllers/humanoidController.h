@@ -203,6 +203,8 @@ namespace humanoid_controller
     static ocs2_msgs::mpc_flattened_controller createMpcPolicyMsg(const PrimalSolution &primalSolution, const CommandData &commandData,
                                                                   const PerformanceIndex &performanceIndices);
 
+    void dexhandStateCallback(const sensor_msgs::JointState::ConstPtr &msg);
+
     ros::Time last_time_;
     ros::Time current_time_;
     std::queue<SensorData> sensorDataQueue;
@@ -286,6 +288,7 @@ namespace humanoid_controller
     ros::Subscriber hand_wrench_sub_;
     ros::Subscriber contact_force_sub_;
     ros::Publisher mpcPolicyPublisher_;
+    ros::Subscriber dexhand_state_sub_;
 
     ros::ServiceServer enableArmCtrlSrv_;
     ros::ServiceServer currentGaitNameSrv_;
@@ -340,6 +343,7 @@ namespace humanoid_controller
     vector_t jointPos_, jointVel_;
     vector_t jointAcc_;
     vector_t jointCurrent_;
+    vector_t dexhand_joint_pos_ = vector_t::Zero(12);
 
     vector_t jointPosWBC_, jointVelWBC_;
     vector_t jointAccWBC_;

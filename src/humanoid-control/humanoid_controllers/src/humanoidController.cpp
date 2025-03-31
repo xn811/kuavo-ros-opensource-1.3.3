@@ -460,7 +460,10 @@ namespace humanoid_controller
       rHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/right_hand", 10);
       currentGaitNameSrv_ = controllerNh_.advertiseService(robotName_ + "_get_current_gait_name", 
         &humanoidController::getCurrentGaitNameCallback, this);
-
+      
+      // dexhand state
+      dexhand_state_sub_ = controllerNh_.subscribe("/dexhand/state", 10, &humanoidController::dexhandStateCallback, this);
+      
       // State estimation
       setupStateEstimate(taskFile, verbose);
       if (use_shm_communication_)
@@ -1399,6 +1402,9 @@ namespace humanoid_controller
         robotVisualizer_->update(currentObservation_, mrtRosInterface_->getPolicy(), mrtRosInterface_->getCommand());
       else
         robotVisualizer_->update(currentObservation_, mpcMrtInterface_->getPolicy(), mpcMrtInterface_->getCommand());
+
+      // 更新灵巧手可视化
+      robotVisualizer_->updateHandJointPositions(dexhand_joint_pos_);
     }
     // Publish the observation. Only needed for the command interface
     const auto t6 = Clock::now();
@@ -2045,6 +2051,15 @@ namespace humanoid_controller
     }
     return true;
   }
+
+  void humanoidController::dexhandStateCallback(const sensor_msgs::JointState::ConstPtr &msg)
+  {
+    if(msg->name.size() != dexhand_joint_pos_.size())
+      return;
+    for(size_t i = 0; i < dexhand_joint_pos_.size(); ++i)  
+      dexhand_joint_pos_(i) = msg->position[i];
+  }
+
 } // namespace humanoid_controller
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidController)
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidCheaterController)

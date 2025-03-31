@@ -1225,7 +1225,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -1344,7 +1344,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -1463,7 +1463,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -1582,7 +1582,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -1854,7 +1854,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -1970,7 +1970,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -2086,7 +2086,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
@@ -2202,7 +2202,7 @@
       xyz="1 0 0" />
     <limit
       lower="0"
-      upper="2.0944"
+      upper="1.25"
       effort="0"
       velocity="0" />
   </joint>
