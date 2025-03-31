@@ -24,6 +24,12 @@ if [ -z "$IP" ]; then
     fi
 else
     # 如果有传入参数，检查 /etc/hosts 中是否有 'kuavo_master'
+     if [[ "$IP" == "192.168.26.12" ]]; then
+        echo "IP 匹配成功: $IP"
+    else
+        echo "IP 匹配失败！请联系技术支持检查上位机 DHCP 配置！"
+        return 1
+    fi
     if grep -q "kuavo_master" /etc/hosts; then
         # 如果有 'kuavo_master'，修改其对应的 IP 地址
         sudo sed -i "s/^[^#]*kuavo_master.*$/$IP  kuavo_master/" /etc/hosts

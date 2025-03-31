@@ -300,6 +300,32 @@ build_project() {
     print_success "项目编译完成"
 }
 
+#Check hosts ip
+check_ip(){
+    print_info "检查下位机连接ip..."
+    cd ~/kuavo-ros-opensource/docs/others/CHANGE_ROS_MASTER_URI/
+    output=$(./get_ip.sh)
+    if [[ "$output" == "192.168.26.12" ]]; then
+        echo "IP 匹配成功: $output"
+    else
+        echo "IP 匹配失败！请联系技术支持检查上位机 DHCP 配置！"
+        return 1
+    fi
+}
+#Change hosts mapping
+modify_hosts_mapping(){
+    print_info "修改hosts映射关系..."
+    cd ~/kuavo-ros-opensource/docs/others/CHANGE_ROS_MASTER_URI/
+    sudo -E su -c "./add_ros_master_hosts.sh"
+}
+
+#Change ROS_MASTER_URI
+modiyf_ros_master_uri(){
+    print_info "修改 ROS_MASTER_URI 和 ROS_HOSTNAME 配置..."
+    cd ~/kuavo-ros-opensource/docs/others/CHANGE_ROS_MASTER_URI/
+    sudo -E su -c "./add_ros_master_uri.sh body"
+}
+
 
 # Setup H12PRO controller
 setup_h12pro() {
@@ -359,6 +385,9 @@ main() {
     setup_end_effector
     install_vr_deps
     build_project
+    check_ip
+    modify_hosts_mapping
+    modiyf_ros_master_uri
     setup_h12pro
     enable_vnc_network_config
     cleanup_code

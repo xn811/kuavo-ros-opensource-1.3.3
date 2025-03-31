@@ -1,7 +1,10 @@
 # 修改 ROS_MASTER_URI 配置：
 
 ## 1. 修改躯干 NUC 配置：
-1. ssh 远程进入躯干 NUC
+1. ssh 远程进入躯干 NUC ,并进入 root 用户模式:
+```bash
+    sudo su
+```
 2. 获取当前与头部 NUC 连接的网口的 ip:
 - 执行以下命令:
 ```bash
@@ -19,7 +22,7 @@
 ```
 4. 修改环境变量，执行以下命令：
 ```bash
-    ./add_ros_master_uri.sh body  && source ~/.bashrc
+    ./add_ros_master_uri.sh body  &&  source ~/.bashrc
 ```
 5. 查看当前的 ROS_MASTER_URI 是否正确：
 ```bash
@@ -31,7 +34,7 @@
 
 ```
 ## 2. 修改头部 NUC 配置：
-1. ssh 远程进入头部 NUC
+1. ssh 远程进入头部 NUC，在 kuavo 用户下执行下列命令。
 2. 修改 hosts 文件，执行以下脚本：
 ```bash
     ./add_ros_master_hosts.sh 192.168.26.12 #后面的参数 IP 由躯干操作的第二步获取。
