@@ -26,4 +26,15 @@ if [ "$PARAM" == "body" ]; then
         echo "export ROS_HOSTNAME=kuavo_master" >> ~/.bashrc
         echo "ROS_HOSTNAME 已添加到 ~/.bashrc"
     fi
+
+    # 检查 ~/.bashrc 是否包含 ROS_IP
+    if grep -q "^export ROS_IP=" ~/.bashrc; then
+        # 如果已经存在，则修改它的值
+        sed -i 's|^export ROS_IP=.*|export ROS_IP=kuavo_master|' ~/.bashrc
+        echo "ROS_IP 已更新为 kuavo_master"
+    else
+        # 如果不存在，则添加新的变量
+        echo "export ROS_IP=kuavo_master" >> ~/.bashrc
+        echo "ROS_IP 已添加到 ~/.bashrc"
+    fi
 fi

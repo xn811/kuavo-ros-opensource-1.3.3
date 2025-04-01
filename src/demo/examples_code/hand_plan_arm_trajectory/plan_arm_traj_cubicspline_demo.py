@@ -187,6 +187,10 @@ def main():
     else:
         rospy.logerr("手臂轨迹规划失败")
 
+    while kuavo_arm_traj_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+        rospy.loginfo("Waiting for kuavo_arm_traj_pub subscriber...")
+        rospy.sleep(0.1)
+
     # 设置发布频率为100Hz
     rate = 100
     # 主循环

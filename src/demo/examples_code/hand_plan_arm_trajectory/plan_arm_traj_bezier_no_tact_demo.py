@@ -425,6 +425,10 @@ def main():
     else:
         rospy.logerr("Failed to plan arm trajectory")
 
+    while kuavo_arm_traj_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+        rospy.loginfo("Waiting for kuavo_arm_traj_pub subscriber...")
+        rospy.sleep(0.1)
+
     # 以100Hz的频率发布轨迹数据
     rate = 100
     while not rospy.is_shutdown():

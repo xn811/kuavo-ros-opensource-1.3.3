@@ -161,4 +161,11 @@ if __name__ == '__main__':
 
     # 生成步态消息并发布
     msg = get_multiple_steps_msg(body_poses, dt, is_left_first_default, collision_check)
+
+    # 等待订阅者连接
+    rate = rospy.Rate(10)  # 10Hz
+    while pub.get_num_connections() == 0 and not rospy.is_shutdown():
+        rospy.loginfo("等待订阅者连接...")
+        rate.sleep()
+
     pub.publish(msg)

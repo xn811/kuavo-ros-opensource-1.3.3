@@ -4,8 +4,8 @@ import json
 import os
 from utils import calculate_file_md5
 
-# Expand the tilde to the full home directory path
-action_file_path = os.path.expanduser("~/.config/lejuconfig/action_files/welcome.tact")
+# Expand the tilde to the full home directory path, 使用前请确认路径是否正确
+action_file_path = os.path.expanduser("~/kuavo_ws/src/manipulation_nodes/planarmwebsocketservice/action_files/hand_up_tag_right.tact")
 md5 = calculate_file_md5(action_file_path)
 
 class WebSocketClient:
@@ -57,9 +57,10 @@ async def send_test_message():
     try:
         await client.connect()
 
+        # action_filename 发给 server, 要和 action_file_path 一致
         message = {
             "cmd": "preview_action",
-            "data": {"action_filename": "welcome.tact", "action_file_MD5": md5},
+            "data": {"action_filename": "hand_up_tag_right.tact", "action_file_MD5": md5},
         }
         await client.send_message(message)
         print("Message sent, now listening for responses...")

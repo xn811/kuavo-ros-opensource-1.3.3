@@ -24,6 +24,10 @@ if __name__ == '__main__':
     claw_state_sub = rospy.Subscriber('/leju_claw_state', lejuClawState, leju_calw_state_callback)
     time.sleep(1)
 
+    while pub.get_num_connections() == 0 and not rospy.is_shutdown():
+        rospy.loginfo("Waiting for pub subscriber...")
+        rospy.sleep(0.1)
+
     pub_leju_claw_comand([10.0, 10.0], [90, 90], [1.0, 1.0]) 
 
     option_open = False

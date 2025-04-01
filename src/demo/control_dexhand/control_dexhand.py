@@ -31,7 +31,8 @@ if __name__ == '__main__':
     
     # Publisher for hand commands
     hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)
-    while hand_pub.get_num_connections() == 0:
+    while hand_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+        rospy.loginfo("Waiting for hand_pub subscriber...")
         rospy.sleep(0.1)
     
     # Subscriber for hand state

@@ -8,6 +8,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
+
 from utils import get_wifi_ip, get_wifi, get_mac_address
 import json
 import websockets
@@ -18,7 +19,6 @@ import argparse
 from queue import Empty
 from typing import Set
 
-from utils import get_wifi_ip, get_wifi, get_mac_address
 from handler import (
     response_queue,
     websocket_message_handler,
@@ -41,7 +41,7 @@ BROADCAST_IP = f"{ROBOT_IP.rsplit('.', 1)[0]}.255"
 BROADCAST_PORT = 8443
 ROBOT_MAC_ADDRESS = get_mac_address()
 ROBOT_USERNAME = "lab"
-ROBOT_ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
+ROBOT_ACTION_FILE_FOLDER = "~/kuavo_ws/src/manipulation_nodes/planarmwebsocketservice/action_files"  # 在运行之前确认文件的位置
 
 robot_info = {
     "data": {

@@ -22,7 +22,7 @@ plan_arm_state_progress = 0
 plan_arm_state_status = False
 response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
-ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
+ACTION_FILE_FOLDER = "~/kuavo_ws/src/manipulation_nodes/planarmwebsocketservice/action_files"    # 在运行之前确认文件的位置
 g_robot_type = ""
 ocs2_current_joint_state = []
 joint_names = [
@@ -145,7 +145,7 @@ def create_bezier_request(action_data, start_frame_time, end_frame_time):
     return req
 
 def plan_arm_trajectory_bezier_curve_client(req):
-    service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]
+    service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]  # TODO: 这个服务没有开启，在 rosservice list 中找不到
     rospy.wait_for_service(service_name)
     try:
         plan_service = rospy.ServiceProxy(service_name, planArmTrajectoryBezierCurve)
@@ -257,7 +257,8 @@ async def preview_action_handler(
     )
 
     data = data["data"]
-    print(data)
+    print(f"received message data: {data}")
+
     action_filename = data["action_filename"]
     action_file_path = os.path.expanduser(f"{ACTION_FILE_FOLDER}/{action_filename}")
     if not os.path.exists(action_file_path):
@@ -274,8 +275,9 @@ async def preview_action_handler(
         response_queue.put(response)
         return
 
-
+    print("2222")  # 下面的代码中有一个位置卡住了
     start_frame_time, end_frame_time = get_start_end_frame_time(action_file_path)
+
     if g_robot_type == "ocs2":
         action_frames = frames_to_custom_action_data_ocs2(action_file_path, start_frame_time, current_arm_joint_state)
         end_frame_time += 1
@@ -283,23 +285,31 @@ async def preview_action_handler(
     else:
         action_frames = frames_to_custom_action_data(action_file_path)
 
+    print("3333")
+
     req = create_bezier_request(action_frames, start_frame_time, end_frame_time)
-    plan_arm_trajectory_bezier_curve_client(req)
+    print("4444")
+    plan_arm_trajectory_bezier_curve_client(req)    # TODO: 这里会卡住
+    print("5555")
     time.sleep(0.5)
     # If valid, create initial response
     response = Response(
         payload=payload,
         target=websocket,
     )
+    print("6666")   # TODO: 还没有执行到此处
 
     # Create a new stop event for this thread
     stop_event = threading.Event()
     active_threads[websocket] = stop_event
 
+    print("7777")
+
     # Start a thread to update the progress
     thread = threading.Thread(
         target=update_preview_progress, args=(response, stop_event)
     )
+    print("Starting thread to update progress")
     thread.start()
 
 
