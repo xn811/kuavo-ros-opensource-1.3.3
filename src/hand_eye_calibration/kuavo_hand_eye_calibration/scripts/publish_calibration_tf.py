@@ -3,10 +3,20 @@
 import rospy
 import tf2_ros
 import geometry_msgs.msg
-from tf.transformations import quaternion_matrix, translation_matrix, concatenate_matrices, inverse_matrix, translation_from_matrix, quaternion_from_matrix
+from tf.transformations import quaternion_matrix, translation_matrix, concatenate_matrices, inverse_matrix, translation_from_matrix, quaternion_from_matrix, euler_from_quaternion
 import yaml
 import os
 import numpy as np
+from argparse import ArgumentParser
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('--camera_type', type=str, default='realsense', choices=['realsense', 'zed'])
+    parser.add_argument('--namespace_prefix', type=str, default='head', choices=['head', 'left_wrist', 'right_wrist'])
+    parser.add_argument('--handeye_cali_eye_on_hand', type=str, default='false')
+    parser.add_argument('--parent_frame', type=str, default="camera_link")
+    parser.add_argument('--child_frame', type=str, default="camera_color_optical_frame")
+    return parser.parse_known_args()
 
 def from_yaml(yaml_file):
     with open(yaml_file, 'r') as f:
@@ -55,13 +65,21 @@ def transform_from_matrix(matrix, parent_frame, child_frame, stamp=None):
     transform.transform.rotation.y = quaternion[1]
     transform.transform.rotation.z = quaternion[2]
     transform.transform.rotation.w = quaternion[3]
-    
+    rpy = euler_from_quaternion([transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z, transform.transform.rotation.w])
+    print(f"POSITION: {transform.transform.translation.x}, {transform.transform.translation.y}, {transform.transform.translation.z}")
+    print(f"ROTATION: {rpy[0]}, {rpy[1]}, {rpy[2]}")
     return transform
 
 if __name__ == '__main__':
-    rospy.init_node('publish_calibration_tf')
+    args, unknown = parse_args()
+    camera_type = args.camera_type
+    parent_frame = args.parent_frame
+    child_frame = args.child_frame
     
-    cali_file = rospy.get_param('~calibration_file', '~/.ros/easy_handeye/humanoid_eye_on_base.yaml')
+    rospy.init_node('publish_calibration_tf', anonymous=True)
+    
+    file_suffix = "eye_on_base" if args.handeye_cali_eye_on_hand == "false" else "eye_on_hand"
+    cali_file = rospy.get_param('~calibration_file', f'~/.ros/easy_handeye/{args.namespace_prefix}_{file_suffix}.yaml')
     cali_file = os.path.expanduser(cali_file)
 
     try:
@@ -77,8 +95,8 @@ if __name__ == '__main__':
         # wait for the transform between camera_color_optical_frame and camera_link to be available
         try:
             rospy.loginfo("Waiting for transform between camera_color_optical_frame and camera_link...")
-            optical_to_link = tfBuffer.lookup_transform('camera_color_optical_frame', 'camera_link', rospy.Time(0), rospy.Duration(5.0))
-            rospy.loginfo("Got transform from camera_color_optical_frame to camera_link")
+            optical_to_link = tfBuffer.lookup_transform(child_frame, parent_frame, rospy.Time(0), rospy.Duration(5.0))
+            rospy.loginfo(f"Got transform from {child_frame} to {parent_frame}")
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             rospy.logerr(f"Failed to lookup transform: {e}")
             exit(1)
@@ -100,8 +118,8 @@ if __name__ == '__main__':
         # create and fill the new TransformStamped message
         static_transform = transform_from_matrix(
             base_to_link, 
-            param['robot_base_frame'], 
-            'camera_link'
+            param['robot_base_frame'] if param["eye_on_hand"] == False else param["robot_effector_frame"],
+            parent_frame
         )
         
         # create a static transform broadcaster

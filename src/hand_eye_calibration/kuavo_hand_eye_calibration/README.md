@@ -26,21 +26,33 @@ catkin build kuavo_hand_eye_calibration
 
 ### 准备标定设置
 
+- 相机在头上
 1. 按指定大小（默认为10厘米）打印正确ID的ArUco标记（默认ID为777），标定文件在 ![aruco-marker](./assets/aruco-777.pdf)
 2. 将标记安装标定板上，并且将标定板安装在机器人末端执行器上
 3. 确保相机正确安装并连接
 
 ![setup](./assets/how_to_setup_calibrate_board.jpg)
 
+- 相机在手腕
+1. 按指定大小（默认为10厘米）打印正确ID的ArUco标记（默认ID为777），标定文件在 ![aruco-marker](./assets/aruco-777.pdf)
+2. 将标记固定在机器人视野前方
+
 
 ### 启动标定过程
 
 1. 启动机器人, 直到机器人站立
 
-2. 在**上位机**启动相机节点
+2. 在**上位机**启动相机节点，执行以下命令其中之一
 
 ```bash
-roslaunch realsense2_camera rs_camera.launch
+# 头部相机
+roslaunch realsense2_camera rs_camera.launch camera:=head_camera 
+
+# 右手手腕
+roslaunch realsense2_camera rs_camera.launch camera:=right_wrist_camera
+
+# 左手手腕
+roslaunch realsense2_camera rs_camera.launch camera:=left_wrist_camera
 ```
 
 3. 启动标定节点
@@ -48,7 +60,10 @@ roslaunch realsense2_camera rs_camera.launch
 ```bash
 export DISPLAY=:1.0 # 在机器人实物需要设置 DISPLAY
 source <kuavo-ros-control>/devel/setup.bash
-roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_calibration.launch
+roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_calibration.launch handeye_cali_eye_on_hand:=false namespace_prefix:=head
+
+# 如果需要标定眼在手，则使用以下命令
+roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_calibration.launch handeye_cali_eye_on_hand:=true namespace_prefix:=right_wrist
 ```
 
 ### 标定程序
@@ -66,8 +81,10 @@ roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_calibration.launch
 ![gui_usage](./assets/gui_usage.png)
 
 标定结果保存在：
-```
-~/.ros/easy_handeye/humanoid_eye_on_base.yaml
+```bash
+~/.ros/easy_handeye/head_eye_on_base.yaml
+# or ~/.ros/easy_handeye/right_wrist_eye_on_hand.yaml
+# or ~/.ros/easy_handeye/left_wrist_eye_on_hand.yaml
 ```
 
 ### 评估标定结果
@@ -83,7 +100,15 @@ roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_calibration.launch
 ```bash
 export DISPLAY=:1.0 # 在机器人实物需要设置 DISPLAY
 source <kuavo-ros-control>/devel/setup.bash
-roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_evaluate.launch --repeats_per_position 10 # 每个末端位置重复运动测量10次
+
+# 如果标定眼在头上
+roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_evaluate.launch namespace_prefix:=head handeye_cali_eye_on_hand:=false
+
+# 如果标定眼在右手腕
+roslaunch **kuavo_hand_eye_calibration** kuavo_hand_eye_evaluate.launch namespace_prefix:=right_wrist handeye_cali_eye_on_hand:=true
+
+# 如果标定眼在左手腕
+roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_evaluate.launch namespace_prefix:=left_wrist handeye_cali_eye_on_hand:=true
 ```
 
 这将启动评估工具，该工具会执行以下操作：
@@ -109,8 +134,6 @@ roslaunch kuavo_hand_eye_calibration kuavo_hand_eye_evaluate.launch --repeats_pe
 4. 在每个位置，程序会多次测量标记与末端执行器之间的变换关系
 5. 计算并显示变换的统计数据（平均值、标准差、最大差异等）
 6. 评估结果将保存在 `~/.ros/easy_handeye/calibration_evaluation/` 目录下
-
-Tips: 评估程序已经为 **ROBOT_VERSION** 为 45 预置了多个右手末端位置，可以直接按 `S` 开始评估
 
 #### 评估指标
 

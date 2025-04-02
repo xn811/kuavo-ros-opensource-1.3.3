@@ -1,17 +1,18 @@
 <launch>
+    <arg name="namespace_prefix" default="head" />
     <arg name="aruco_marker_id" default="777" />                                      <!-- TODO: Your marker id (Original ArUco) -->
     <arg name="aruco_marker_size" default="0.1" />                                    <!-- TODO: Your marker side length in m -->
-    <arg name="aruco_camera_frame" default="camera_color_optical_frame" />            <!-- TODO: Your rgb camera optical frame -->
-    <arg name="aruco_ref_frame" default="camera_link" />                              <!-- TODO: Frame in which the marker pose will be refered, empty means (parent frame of optical camera frame) -->
-    <arg name="aruco_camera_image_topic" default="/camera/color/image_raw" />         <!-- TODO: Your rgb image raw topic -->
-    <arg name="aruco_camera_info_topic" default="/camera/color/camera_info" />        <!-- TODO: Your rgb camera info topic -->
+    <arg name="aruco_camera_frame" default="$(arg namespace_prefix)_camera_color_optical_frame" />            <!-- TODO: Your rgb camera optical frame -->
+    <arg name="aruco_ref_frame" default="$(arg namespace_prefix)_camera_link" />                              <!-- TODO: Frame in which the marker pose will be refered, empty means (parent frame of optical camera frame) -->
+    <arg name="aruco_camera_image_topic" default="/$(arg namespace_prefix)_camera/color/image_raw" />         <!-- TODO: Your rgb image raw topic -->
+    <arg name="aruco_camera_info_topic" default="/$(arg namespace_prefix)_camera/color/camera_info" />        <!-- TODO: Your rgb camera info topic -->
     <arg name="aruco_marker_frame" default="aruco_marker_frame" />                    <!-- Set marker frame name -->
 
     <arg name="handeye_cali_eye_on_hand" default="false" />                            <!-- TODO: True for eye on hand, false for eye on base -->
     <arg name="handeye_cali_robot_base_frame" default="base_link" />                  <!-- TODO: Your robot base frame -->
     <arg name="handeye_cali_robot_effector_frame" default="zarm_r7_end_effector" />                  <!-- TODO: Your end effector frame -->
-    <arg name="handeye_tracking_base_frame" default="camera_color_optical_frame" />                  <!-- TODO: Your tracking system base frame -->
-    <arg name="handeye_tracking_marker_frame" default="$(arg aruco_marker_frame)" />  <!-- TODO: Your tracking marker frame -->
+    <arg name="handeye_tracking_base_frame" default="$(arg aruco_camera_frame)" />                  <!-- TODO: Your tracking system base frame -->
+    <arg name="handeye_tracking_marker_frame" default="aruco_marker_frame" />  <!-- TODO: Your tracking marker frame -->
 
     <arg name="camera_startup_delay" default="3" />
 
@@ -41,7 +42,7 @@
                         
     <include file="$(find easy_handeye)/launch/calibrate.launch">
       <arg name="eye_on_hand" value="$(arg handeye_cali_eye_on_hand)"/>
-      <arg name="namespace_prefix" value="humanoid" />
+      <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
       <arg name="freehand_robot_movement" value="true" />
 
       <arg name="robot_base_frame" value="$(arg handeye_cali_robot_base_frame)"/>

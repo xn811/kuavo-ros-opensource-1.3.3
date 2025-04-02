@@ -218,54 +218,49 @@ def angular_distance(rot1, rot2, in_degrees=True):
         return np.degrees(angle_rad)
     return angle_rad
 
-def calculate_statistics(transforms):
-    """Calculate statistics for a set of transforms."""
-    # Extract translations from transforms
-    translations = np.array([transform[:3, 3] for transform in transforms])
+def calculate_statistics_for_poses(poses, reference_pose=None):
+    """Calculate statistics for a set of poses relative to a reference pose.
     
-    # Extract rotations (Euler angles)
-    rotations = np.array([extract_rotation_euler(transform) for transform in transforms])
-    rotation_matrices = [transform[:3, :3] for transform in transforms]
+    Args:
+        poses: List of 4x4 transformation matrices
+        reference_pose: Optional reference pose (4x4 matrix). If None, mean pose is used
+    """
+    # Extract translations and rotations
+    translations = np.array([pose[:3, 3] for pose in poses])
+    rotation_matrices = [pose[:3, :3] for pose in poses]
     
-    # Translation statistics
-    mean_translation = np.mean(translations, axis=0)
-    std_translation = np.std(translations, axis=0)
-    var_translation = np.var(translations, axis=0)
-    max_diff_translation = np.max(np.abs(translations - mean_translation), axis=0)
-    rmse_translation = calculate_rmse(translations, mean_translation)
+    # Calculate reference values
+    if reference_pose is None:
+        mean_translation = np.mean(translations, axis=0)
+        # Orthogonalize mean rotation matrix
+        mean_rotation_matrix = np.mean(rotation_matrices, axis=0)
+        U, _, Vt = np.linalg.svd(mean_rotation_matrix, full_matrices=False)
+        reference_rotation = np.dot(U, Vt)
+    else:
+        mean_translation = reference_pose[:3, 3]
+        reference_rotation = reference_pose[:3, :3]
     
-    # Rotation statistics (Euler angles)
-    mean_rotation = np.mean(rotations, axis=0)
-    std_rotation = np.std(rotations, axis=0)
-    var_rotation = np.var(rotations, axis=0)
-    max_diff_rotation = np.max(np.abs(rotations - mean_rotation), axis=0)
-    rmse_rotation = calculate_rmse(rotations, mean_rotation)
+    # Calculate statistics
+    translation_errors = translations - mean_translation
+    translation_rmse = np.sqrt(np.mean(np.sum(translation_errors**2, axis=1)))
+    translation_std = np.std(translations, axis=0)
+    translation_max_error = np.max(np.abs(translation_errors), axis=0)
     
-    # Angular difference statistics
-    mean_rotation_matrix = np.mean(rotation_matrices, axis=0)
-    # Need to orthogonalize the mean rotation matrix
-    U, _, Vt = np.linalg.svd(mean_rotation_matrix, full_matrices=False)
-    mean_rotation_matrix = np.dot(U, Vt)
-    
-    angular_differences = [angular_distance(mean_rotation_matrix, rot) for rot in rotation_matrices]
-    mean_angular_diff = np.mean(angular_differences)
-    max_angular_diff = np.max(angular_differences)
-    std_angular_diff = np.std(angular_differences)
+    # Calculate angular errors
+    angular_errors = [angular_distance(reference_rotation, rot) for rot in rotation_matrices]
+    angular_rmse = np.sqrt(np.mean(np.array(angular_errors)**2))
+    angular_std = np.std(angular_errors)
+    angular_max_error = np.max(angular_errors)
     
     return {
+        'translation_rmse': translation_rmse,
+        'translation_std': translation_std,
+        'translation_max_error': translation_max_error,
+        'angular_rmse': angular_rmse,
+        'angular_std': angular_std,
+        'angular_max_error': angular_max_error,
         'mean_translation': mean_translation,
-        'std_translation': std_translation,
-        'var_translation': var_translation,
-        'max_diff_translation': max_diff_translation,
-        'rmse_translation': rmse_translation,
-        'mean_rotation': mean_rotation,
-        'std_rotation': std_rotation,
-        'var_rotation': var_rotation,
-        'max_diff_rotation': max_diff_rotation,
-        'rmse_rotation': rmse_rotation,
-        'mean_angular_diff': mean_angular_diff,
-        'max_angular_diff': max_angular_diff,
-        'std_angular_diff': std_angular_diff
+        'reference_rotation': reference_rotation
     }
 
 def plot_results(statistics, output_dir):
@@ -419,6 +414,16 @@ class SensorDataHandler:
         
         return True
 
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in ('true', '1', 't', 'y', 'yes'):
+        return True
+    if value.lower() in ('false', '0', 'f', 'n', 'no'):
+        return False
+    raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def main():
     output_dir = os.path.expanduser(f'~/.ros/easy_handeye/calibration_evaluation/{datetime.now().strftime("%Y%m%d_%H%M%S")}')
     parser = argparse.ArgumentParser(description='Evaluate hand-eye calibration accuracy')
@@ -427,6 +432,8 @@ def main():
     parser.add_argument('--robot_base_frame', type=str, default='base_link', help='Robot base frame')
     parser.add_argument('--robot_effector_frame', type=str, default='zarm_r7_end_effector', help='Robot effector frame')
     parser.add_argument('--aruco_marker_frame', type=str, default='aruco_marker_frame', help='Aruco marker frame')
+    parser.add_argument('--handeye_cali_eye_on_hand', type=parse_bool, default=False, 
+                       help='Whether the camera is mounted on the robot hand (eye-on-hand)')
     
     # Use parse_known_args instead of parse_args to ignore unrecognized parameters
     args, unknown = parser.parse_known_args()
@@ -575,128 +582,111 @@ def main():
         
         # Execute evaluation process
         if evaluate_mode:
-            # All transforms for all positions
-            all_marker_to_effector_transforms = []
-            # Transform list for each position
-            position_transforms = []
+            # Lists to store poses
+            base_to_marker_poses = []    # Marker poses in base frame
+            base_to_effector_poses = []  # End-effector poses in base frame
+            marker_to_effector_poses = [] # Relative transforms
             
             for i, joint_positions in enumerate(saved_joint_positions):
-                rospy.loginfo(f"Processing saved position {i+1}/{len(saved_joint_positions)}")
+                position_marker_poses = []      # Marker poses for current position
+                position_effector_poses = []    # Effector poses for current position
+                position_relative_poses = []    # Relative transforms for current position
                 
-                # Transform list for current position
-                current_transforms = []
-                
-                # Repeat measurement N times for each position
                 for repeat in range(args.repeats_per_position):
                     enable_control()
-
-                    rospy.loginfo(f"  Repeating measurement {repeat+1}/{args.repeats_per_position}")
                     
-                    # Set joint position
+                    # Move to position
                     publish_arm_joints(arm_pub, joint_names, joint_positions, sensor_handler.current_joint_positions)
-                    
-                    # Wait for the robot to reach the position
                     rospy.sleep(1.0)
                     
-                    # Calculate the relative transform from marker to end effector
-                    marker_to_effector_transform = get_transform(tf_buffer, aruco_marker_frame, robot_effector_frame)
-
-                    marker_to_effector_matrix = matrix_from_transform(marker_to_effector_transform)
+                    # Get transforms
+                    if args.handeye_cali_eye_on_hand:
+                        # For eye-on-hand: relative transform is from effector to marker
+                        marker_transform = get_transform(tf_buffer, robot_base_frame, aruco_marker_frame)
+                        effector_transform = get_transform(tf_buffer, robot_base_frame, args.robot_effector_frame)
+                        relative_transform = get_transform(tf_buffer, args.robot_effector_frame, aruco_marker_frame)
+                    else:
+                        # For eye-on-base: relative transform is from marker to effector
+                        marker_transform = get_transform(tf_buffer, robot_base_frame, aruco_marker_frame)
+                        effector_transform = get_transform(tf_buffer, robot_base_frame, robot_effector_frame)
+                        relative_transform = get_transform(tf_buffer, aruco_marker_frame, robot_effector_frame)
                     
-                    # Save transform to current position list
-                    current_transforms.append(marker_to_effector_matrix)
-                    
-                    # Also save to global list
-                    all_marker_to_effector_transforms.append(marker_to_effector_matrix)
+                    if all([marker_transform, effector_transform, relative_transform]):
+                        # Convert to matrices
+                        marker_matrix = matrix_from_transform(marker_transform)
+                        effector_matrix = matrix_from_transform(effector_transform)
+                        relative_matrix = matrix_from_transform(relative_transform)
+                        
+                        # Store poses
+                        position_marker_poses.append(marker_matrix)
+                        position_effector_poses.append(effector_matrix)
+                        position_relative_poses.append(relative_matrix)
                     
                     disable_control()
-
                     rospy.sleep(2.0)
-                    
                 
-                # If there are valid transforms for the current position, calculate statistics
-                if current_transforms:
-                    position_transforms.append(current_transforms)
-                    stats = calculate_statistics(current_transforms)
+                # Calculate statistics for this position
+                if position_marker_poses:
+                    marker_stats = calculate_statistics_for_poses(position_marker_poses)
+                    effector_stats = calculate_statistics_for_poses(position_effector_poses)
+                    relative_stats = calculate_statistics_for_poses(position_relative_poses)
                     
-                    rospy.loginfo(f"=== Evaluation Results for Position {i+1} ===")
-                    rospy.loginfo("   Translation Statistics:")
-                    rospy.loginfo(f"  Mean Translation: {format_array(stats['mean_translation'])}")
-                    rospy.loginfo(f"  Translation Standard Deviation: {format_array(stats['std_translation'])}")
-                    rospy.loginfo(f"  Translation Variance: {format_array(stats['var_translation'])}")
-                    rospy.loginfo(f"  Maximum Translation Difference: {format_array(stats['max_diff_translation'])}")
-                    rospy.loginfo(f"  Translation RMSE: {format_array(stats['rmse_translation'])}")
+                    rospy.loginfo(f"\n=== Position {i+1} Statistics ===")
+                    rospy.loginfo("\nMarker Pose Repeatability:")
+                    rospy.loginfo(f"Translation RMSE: {format_array(marker_stats['translation_rmse'])} m")
+                    rospy.loginfo(f"Angular RMSE: {format_array(marker_stats['angular_rmse'])} deg")
                     
-                    rospy.loginfo("   Rotation Statistics:")
-                    rospy.loginfo(f"  Mean Rotation: {format_array(stats['mean_rotation'])}")
-                    rospy.loginfo(f"  Rotation Standard Deviation: {format_array(stats['std_rotation'])}")
-                    rospy.loginfo(f"  Rotation Variance: {format_array(stats['var_rotation'])}")
-                    rospy.loginfo(f"  Maximum Rotation Difference: {format_array(stats['max_diff_rotation'])}")
-                    rospy.loginfo(f"  Rotation RMSE: {format_array(stats['rmse_rotation'])}")
+                    rospy.loginfo("\nEnd-effector Pose Repeatability:")
+                    rospy.loginfo(f"Translation RMSE: {format_array(effector_stats['translation_rmse'])} m")
+                    rospy.loginfo(f"Angular RMSE: {format_array(effector_stats['angular_rmse'])} deg")
                     
-                else:
-                    rospy.logwarn(f"No valid transforms collected for position {i+1}")
+                    transform_type = "Effector-to-Marker" if args.handeye_cali_eye_on_hand else "Marker-to-Effector"
+                    rospy.loginfo(f"\n{transform_type} Transform Stability:")
+                    rospy.loginfo(f"Translation RMSE: {format_array(relative_stats['translation_rmse'])} m")
+                    rospy.loginfo(f"Angular RMSE: {format_array(relative_stats['angular_rmse'])} deg")
+                    
+                    # Store poses for overall statistics
+                    base_to_marker_poses.extend(position_marker_poses)
+                    base_to_effector_poses.extend(position_effector_poses)
+                    marker_to_effector_poses.extend(position_relative_poses)
             
-            # Calculate overall statistics for all positions
-            if not all_marker_to_effector_transforms:
-                rospy.logerr("No valid transforms collected. Check TF frames and robot movement.")
-                return
+            # Calculate overall statistics
+            overall_marker_stats = calculate_statistics_for_poses(base_to_marker_poses)
+            overall_effector_stats = calculate_statistics_for_poses(base_to_effector_poses)
+            overall_relative_stats = calculate_statistics_for_poses(marker_to_effector_poses)
             
-            overall_statistics = calculate_statistics(all_marker_to_effector_transforms)
+            # Save detailed results
+            results = {
+                'marker_pose': {
+                    'translation_rmse': float(overall_marker_stats['translation_rmse']),
+                    'translation_std': overall_marker_stats['translation_std'].tolist(),
+                    'translation_max_error': overall_marker_stats['translation_max_error'].tolist(),
+                    'angular_rmse': float(overall_marker_stats['angular_rmse']),
+                    'angular_std': float(overall_marker_stats['angular_std']),
+                    'angular_max_error': float(overall_marker_stats['angular_max_error'])
+                },
+                'effector_pose': {
+                    'translation_rmse': float(overall_effector_stats['translation_rmse']),
+                    'translation_std': overall_effector_stats['translation_std'].tolist(),
+                    'translation_max_error': overall_effector_stats['translation_max_error'].tolist(),
+                    'angular_rmse': float(overall_effector_stats['angular_rmse']),
+                    'angular_std': float(overall_effector_stats['angular_std']),
+                    'angular_max_error': float(overall_effector_stats['angular_max_error'])
+                },
+                'relative_transform': {
+                    'translation_rmse': float(overall_relative_stats['translation_rmse']),
+                    'translation_std': overall_relative_stats['translation_std'].tolist(),
+                    'translation_max_error': overall_relative_stats['translation_max_error'].tolist(),
+                    'angular_rmse': float(overall_relative_stats['angular_rmse']),
+                    'angular_std': float(overall_relative_stats['angular_std']),
+                    'angular_max_error': float(overall_relative_stats['angular_max_error'])
+                }
+            }
             
-            # Print overall statistics
-            rospy.loginfo("")
-            rospy.loginfo("")
-            rospy.loginfo("")
-            rospy.loginfo("#######################################################")
-            rospy.loginfo("### Overall Hand-Eye Calibration Evaluation Results ###")
-            rospy.loginfo("#######################################################")
-            rospy.loginfo(f"Mean Translation: {format_array(overall_statistics['mean_translation'])}")
-            rospy.loginfo(f"Translation Standard Deviation: {format_array(overall_statistics['std_translation'])}")
-            rospy.loginfo(f"Translation Variance: {format_array(overall_statistics['var_translation'])}")
-            rospy.loginfo(f"Maximum Translation Difference: {format_array(overall_statistics['max_diff_translation'])}")
-            rospy.loginfo(f"Translation RMSE: {format_array(overall_statistics['rmse_translation'])}")
-            
-            # Add rotation statistics output
-            rospy.loginfo(f"Mean Rotation (Euler Angles): {format_array(overall_statistics['mean_rotation'])}")
-            rospy.loginfo(f"Rotation Standard Deviation: {format_array(overall_statistics['std_rotation'])}")
-            rospy.loginfo(f"Mean Angular Difference: {format_array(overall_statistics['mean_angular_diff'])} degrees")
-            rospy.loginfo(f"Maximum Angular Difference: {format_array(overall_statistics['max_angular_diff'])} degrees")
-            rospy.loginfo(f"Rotation RMSE: {format_array(overall_statistics['rmse_rotation'])}")
-            
-            
-            # Save results for each position
-            for i, pos_transforms in enumerate(position_transforms):
-                pos_stats = calculate_statistics(pos_transforms)
-                pos_dir = os.path.join(output_dir, f"position_{i+1}")
-
-                if not os.path.exists(pos_dir):
-                    os.makedirs(pos_dir)
-                
-                # Save statistics for this position to CSV
-                df = pd.DataFrame({
-                    'Statistic': ['Mean', 'Std Dev', 'Variance', 'Max Diff', 'RMSE'],
-                    'X': [pos_stats['mean_translation'][0], 
-                        pos_stats['std_translation'][0], 
-                        pos_stats['var_translation'][0], 
-                        pos_stats['max_diff_translation'][0],
-                        pos_stats['rmse_translation']],
-                    'Y': [pos_stats['mean_translation'][1], 
-                        pos_stats['std_translation'][1], 
-                        pos_stats['var_translation'][1], 
-                        pos_stats['max_diff_translation'][1],
-                        pos_stats['rmse_translation']],
-                    'Z': [pos_stats['mean_translation'][2], 
-                        pos_stats['std_translation'][2], 
-                        pos_stats['var_translation'][2], 
-                        pos_stats['max_diff_translation'][2],
-                        pos_stats['rmse_translation']]
-                })
-                
-                df.to_csv(f"{pos_dir}/position_{i+1}_statistics.csv", index=False)
-            
-            # Plot and save overall results
-            plot_results(overall_statistics, output_dir)
+            # Save results to JSON
+            import json
+            with open(f"{output_dir}/detailed_results.json", 'w') as f:
+                json.dump(results, f, indent=4)
             
             os.system(f"cp {args.calibration_file} {output_dir}/calibration.yaml")
     

@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 新增 NVIDIA Jetson AGX Orin 镜像备份和还原指南文档， [文档链接](./docs_internal/NVIDIA_Jetson_AGX_Orin_backup_restore_tutor/NVIDIA%20Jetson%20AGX%20Orin%20backup%20restore%20tutor.md)
 - 新增上下位机 NUC DHCP 分配 IP配置说明文档，[文档链接](./docs/others/SET_HEAD_DHCP/头部%20NUC%20DHCP配置说明.md)
 - 新增 ROS_MASTER_URI 主从配置工具文档，[文档链接](./docs/others/CHANGE_ROS_MASTER_URI/修改ROS_MASTER_URI说明.md)
 - 更新运动控制接口文档，新增触觉灵巧手控制和状态话题，[文档链接](./docs/运动控制API.md)
@@ -52,6 +53,9 @@
 - IK 服务增加工作空间检查和可选打印求解信息提示
 
 ## 修复问题
+- 修复 VNC 无法切换 WIFI 问题，解决方法见[文档](./docs/6常用工具/修复VNC无法切换wifi的问题.md)
+- 修复播报 WIFI IP 地址工具安装脚本的提示消息错误
+- 修复使用 VR 时需要额外添加末端执行器类型的冗余操作
 - 修复 system info 节点未初始化就发布话题数据的问题
 - 修复手臂电机CAN通信频率为250Hz
 - 修复手臂控制硬件层存在问题，降低控制频率防止手臂指令阻塞

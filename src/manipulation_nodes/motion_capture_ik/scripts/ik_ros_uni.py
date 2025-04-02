@@ -149,6 +149,7 @@ class IkRos:
         self.kf_left = KalmanFilter3D(initial_state, initial_covariance, process_noise, measurement_noise)
         initial_state[0:3] = self.arm_ik.right_hand_pose(self.arm_ik.q0())[0]
         self.kf_right = KalmanFilter3D(initial_state, initial_covariance, process_noise, measurement_noise)
+        self.external_q0 = None
         # TO-DO(matthew): subscribe to joint states
         # update joint states
         self.joint_sub = rospy.Subscriber(
@@ -364,7 +365,7 @@ class IkRos:
             print("\033[92m[ik]: Recied start signal response, Start teleoperation.\033[0m")
         if self.__as_mc_ik:
             print("[ik]: If you want to stop teleoperation, please make a Shot-guesture(hold on for 1-2 seconds).")
-        q_last = self.arm_ik.q0()
+        q_last = self.arm_ik.q0() if self.external_q0 is None else self.external_q0
         # q_last[-14:] = self.__joint_states  # two arm joint states
         # q_last[7:14] = [0.1084,  0.0478 , 0.1954 ,-0.0801 , 0.1966 ,-0.5861 , 0.0755]
         q_now = q_last
@@ -518,6 +519,8 @@ class IkRos:
 
     def two_arm_hand_pose_target_callback(self, msg_ori):
         msg = msg_ori.hand_poses
+        if msg_ori.use_custom_ik_param:
+            self.external_q0 = list(msg.left_pose.joint_angles) + list(msg.right_pose.joint_angles)
         self.__target_pose = (msg.left_pose.pos_xyz, msg.left_pose.quat_xyzw)
         self.__target_pose_right = (msg.right_pose.pos_xyz, msg.right_pose.quat_xyzw)
         if(abs(msg.left_pose.elbow_pos_xyz[0]) <= 1e-5 
@@ -788,7 +791,7 @@ if __name__ == "__main__":
     parser.add_argument("--control_finger_type", type=int, default=0, help="0: control all fingers by upper-gripper. 1: control thumb and index fingers by upper-gripper, control other fingers by lower-gripper.")
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
     parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
-
+    parser.add_argument("--eef_z_bias", type=float, default=-0.0, help="End effector z-axis bias distance.")
     args, unknown = parser.parse_known_args()
     # ee_type
     end_effector_type=""
@@ -803,6 +806,7 @@ if __name__ == "__main__":
         print(e)
     ctrl_arm_idx = ArmIdx(args.ctrl_arm_idx)
     ik_type_idx = IkTypeIdx(args.ik_type_idx)
+    eef_z_bias = args.eef_z_bias
     print(type(args.send_srv))
     send_srv = args.send_srv
     control_finger_type = args.control_finger_type
