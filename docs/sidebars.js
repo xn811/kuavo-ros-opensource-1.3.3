@@ -126,6 +126,7 @@ const sidebars = {
       label: 'Changelog',
       items: [
         'basic_usage/kuavo-ros-control/docs/kuavo更新日志',
+        'basic_usage/kuavo-ros-control/docs/更新说明',
       ],
     },
   ],
