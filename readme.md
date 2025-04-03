@@ -84,10 +84,22 @@ catkin build  humanoid_controllers
 ## 运行
 
 ##### 仿真运行
-
+* 使用mujoco仿真器
 ```bash
 source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
 roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 启动控制器、mpc、wbc、mujoco仿真器
+```
+* 使用gazebo仿真器
+```bash
+catkin build humanoid_controllers gazebo_sim # 需要编译gazebo_sim包
+source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
+roslaunch humanoid_controllers load_kuavo_gazebo_sim.launch # 启动控制器、mpc、wbc、gazebo仿真器
+```
+* 使用isaac-sim仿真器
+```bash
+catkin build humanoid_controllers isaac_sim # 需要编译isaac_sim包
+source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
+roslaunch humanoid_controllers load_kuavo_isaac_sim.launch  # 启动控制器、mpc、wbc、isaac_sim仿真器
 ```
 
 ##### 实物运行
