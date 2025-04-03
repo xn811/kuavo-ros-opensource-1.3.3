@@ -485,6 +485,9 @@ namespace humanoid_controller
                                            *eeKinematicsWBCPtr_);
       wbc_->setArmNums(armNumReal_);
       wbc_->loadTasksSetting(taskFile, verbose, is_real_);
+      if (only_half_up_body_) {
+        wbc_->setHalfBodyMode(true);
+      }
 
       standUpWbc_ = std::make_shared<StandUpWbc>(*pinocchioInterfaceWBCPtr_, centroidalModelInfoWBC_,
                                                  *eeKinematicsWBCPtr_);
@@ -856,8 +859,10 @@ namespace humanoid_controller
       jointCmdMsg.joint_v.push_back(output_vel_(jointNumReal_ + i2));
       jointCmdMsg.tau.push_back(output_tau_(jointNumReal_ + i2));
       jointCmdMsg.tau_ratio.push_back(1);
-      jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNumReal_ + i2]);
-      jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNumReal_ + i2]);
+      jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNumReal_+i2]);
+      jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNumReal_+i2]);
+      jointCmdMsg.joint_kp.push_back(0);
+      jointCmdMsg.joint_kd.push_back(0);
     }
     for (int i3 = 0; i3 < headNum_; ++i3)
     {
@@ -867,6 +872,8 @@ namespace humanoid_controller
       jointCmdMsg.tau_ratio.push_back(1);
       jointCmdMsg.tau_max.push_back(10);
       jointCmdMsg.control_modes.push_back(2);
+      jointCmdMsg.joint_kp.push_back(0);
+      jointCmdMsg.joint_kd.push_back(0);
     }
     jointCmdPub_.publish(jointCmdMsg);
 
@@ -935,6 +942,9 @@ namespace humanoid_controller
           mrtRosInterface_->setCurrentObservation(initial_observation);
           ros::Rate(HumanoidInterface_->mpcSettings().mrtDesiredFrequency_).sleep();
         }
+        mrtRosInterface_->updatePolicy();
+        vector_t optimizedState_mrt, optimizedInput_mrt;
+        mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
       }
       else
       {
@@ -987,9 +997,9 @@ namespace humanoid_controller
     {
       // Only use halfup_body doesn't work well.
       if (!only_half_up_body_) {
-        // Update the current state of the system
-        mrtRosInterface_->setCurrentObservation(currentObservation_);
-      }
+      // Update the current state of the system
+      mrtRosInterface_->setCurrentObservation(currentObservation_);
+      
       // Trigger MRT callbacks
       mrtRosInterface_->spinMRT();
       // Update the policy if a new on was received
@@ -1005,6 +1015,7 @@ namespace humanoid_controller
       }
 
       mrtRosInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState_mrt, optimizedInput_mrt, plannedMode_);
+      }
     }
     else
     {
@@ -1035,7 +1046,7 @@ namespace humanoid_controller
     // std::cout << "optimizedState_mrt:" << optimizedState_mrt.transpose() << " \noptimizedInput_mrt:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
     ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt_origin", optimizedState_mrt);
     ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_origin", optimizedInput_mrt);
-    if (wbc_only_)
+    if (wbc_only_ || only_half_up_body_)
     {
       optimizedState_mrt = initial_status_;
       optimizedInput_mrt = intail_input_;
@@ -1353,7 +1364,8 @@ namespace humanoid_controller
       jointCmdMsg.tau_ratio.push_back(1);
       jointCmdMsg.tau_max.push_back(kuavo_settings_.hardware_settings.max_current[jointNum_+i2]);
       jointCmdMsg.control_modes.push_back(joint_control_modes_[jointNum_+i2]);
-
+      jointCmdMsg.joint_kp.push_back(0);
+      jointCmdMsg.joint_kd.push_back(0);
       // jointCurrentWBC_(jointNum_+i2) = output_tau_(jointNum_+i2);
     }
 
@@ -1383,7 +1395,8 @@ namespace humanoid_controller
         jointCmdMsg.tau_ratio.push_back(1);
         jointCmdMsg.tau_max.push_back(10);
         jointCmdMsg.control_modes.push_back(2);
-
+        jointCmdMsg.joint_kp.push_back(0);
+        jointCmdMsg.joint_kd.push_back(0);
         // jointCurrentWBC_(jointNum_ + armNumReal_ + i3) = get_head_pos(i3);
       }
       robotVisualizer_->updateHeadJointPositions(sensor_data_head_.jointPos_);
