@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import rospy
-from kuavo_sdk.srv import fkSrv
-from kuavo_sdk.msg import armTargetPoses
-from kuavo_sdk.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
-from kuavo_sdk.srv import twoArmHandPoseCmdSrv
-from kuavo_sdk.msg import twoArmHandPoseCmd, ikSolveParam
+# from ....manipulation_nodes.motion_capture_ik.srv import fkSrv
+from motion_capture_ik.srv import fkSrv
+# from kuavo_msgs.srv import fkSrv
+from kuavo_msgs.msg import armTargetPoses
+from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
+from motion_capture_ik.srv import twoArmHandPoseCmdSrv
+from motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
 import math
 import argparse
 import numpy as np

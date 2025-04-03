@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import rospy
-from kuavo_sdk.msg import footPose, footPoseTargetTrajectories  # 导入自定义消息类型
+from kuavo_msgs.msg import footPose, footPoseTargetTrajectories  # 导入自定义消息类型
 import numpy as np
 from sat import RotatingRectangle  # 导入用于碰撞检测的工具类
 import argparse
