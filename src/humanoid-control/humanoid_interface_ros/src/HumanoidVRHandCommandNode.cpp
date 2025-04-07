@@ -76,7 +76,7 @@ class VRHandCommandNode {
       {
         {
           // wait for parameters
-          while (!nh_.hasParam("/mpc/mpcArmsDof")&&!nh_.hasParam("/armRealDof"))
+          while (!nh_.hasParam("/mpc/mpcArmsDof") || !nh_.hasParam("/armRealDof"))
           {
             sleep(1);
           }
@@ -329,6 +329,10 @@ class VRHandCommandNode {
       //   ROS_ERROR("Arm control is not enabled, can NOT response to vr command.");
       //   return;
       // }
+      if (!get_observation_){
+        ROS_ERROR("[VRHandCommandNode]: Can NOT response to vr command before first observation.");
+        return;
+      }
       if(armCtlMode_ != ArmCtlMode::JointSpace){
         ROS_ERROR("[VRHandCommandNode]: Arm control mode is not joint space, can NOT response to joint state target.");
         return;
@@ -378,6 +382,10 @@ class VRHandCommandNode {
     }
     bool changeArmCtlModeCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
     {
+        if (!get_observation_){
+          ROS_ERROR("[VRHandCommandNode]: Arm control mode can NOT be changed before first observation.");
+          return false;
+        }
         int control_mode = req.control_mode;
         enable_ctrl_ = control_mode;
         res.result = true;
