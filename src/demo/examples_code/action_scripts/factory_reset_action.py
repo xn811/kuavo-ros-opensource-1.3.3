@@ -27,7 +27,7 @@ ENCODED_BASE_URL = urllib.parse.quote("http://rustdesk.lejurobot.cn:8080/示例�
 
 # 文件路径配置
 LOWER_ACTION_PATH = "/home/lab/.config/lejuconfig/action_files"
-UPPER_VOICE_PATH = "/home/kuavo/.config/lejuconfig/voice_files"
+UPPER_VOICE_PATH = "/home/kuavo/.config/lejuconfig/music"
 CONFIG_JSON_PATH = "/home/lab/kuavo-ros-opensource/src/humanoid-control/h12pro_controller_node/config/customize_config.json"
 
 # 机器人版本映射
@@ -130,7 +130,7 @@ def download_config_and_actions(version_dir):
     
     return success
 
-def download_voice_files():
+def download_music():
     """下载语音文件"""
     success = True
     
@@ -235,7 +235,7 @@ def main():
         
         # 下载语音文件
         print("开始下载语音文件...")
-        if not download_voice_files():
+        if not download_music():
             logger.warning("部分语音文件下载失败，但将继续执行")
             print("警告: 部分语音文件下载失败，但将继续执行")
         
