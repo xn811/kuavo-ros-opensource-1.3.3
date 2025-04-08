@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # 文件路径配置
 LOWER_ACTION_PATH = "/home/lab/.config/lejuconfig/action_files"
-UPPER_VOICE_PATH = "/home/kuavo/.config/lejuconfig/voice_files"
+UPPER_VOICE_PATH = "/home/kuavo/.config/lejuconfig/music"
 CONFIG_JSON_PATH = "/home/lab/kuavo-ros-opensource/src/humanoid-control/h12pro_controller_node/config/customize_config.json"
 
 def check_user():
@@ -204,7 +204,7 @@ def main():
             print("""
 {
   "action_file_path": "/home/lab/.config/lejuconfig/action_files",
-  "voice_file_path": "/home/kuavo/.config/lejuconfig/voice_files",
+  "voice_file_path": "/home/kuavo/.config/lejuconfig/music",
   "actions": [
     {
       "name": "挥手",
