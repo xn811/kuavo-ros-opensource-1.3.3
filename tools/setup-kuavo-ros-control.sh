@@ -323,7 +323,7 @@ modify_hosts_mapping(){
 modiyf_ros_master_uri(){
     print_info "修改 ROS_MASTER_URI 和 ROS_HOSTNAME 配置..."
     cd ~/kuavo-ros-opensource/docs/others/CHANGE_ROS_MASTER_URI/
-    sudo -E su -c "./add_ros_master_uri.sh body"
+    source ./add_ros_master_uri.sh body
 }
 
 
