@@ -1,4 +1,5 @@
 import rospy
+import rospkg
 import os
 import asyncio
 import json
@@ -9,6 +10,7 @@ import websockets
 import threading
 import time
 import math
+import subprocess
 from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2
 
 from kuavo_ros_interfaces.srv import planArmTrajectoryBezierCurve, stopPlanArmTrajectory, planArmTrajectoryBezierCurveRequest, ocs2ChangeArmCtrlMode
@@ -20,9 +22,15 @@ from kuavo_msgs.msg import sensorsData
 # Replace multiprocessing values with simple variables
 plan_arm_state_progress = 0
 plan_arm_state_status = False
+should_stop = False
+process = None
 response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
-ACTION_FILE_FOLDER = "~/kuavo_ws/src/manipulation_nodes/planarmwebsocketservice/action_files"    # 在运行之前确认文件的位置
+package_name = 'planarmwebsocketservice'
+package_path = rospkg.RosPack().get_path(package_name)
+PYTHON_FILE_FOLDER = package_path + "/scripts"
+ACTION_FILE_FOLDER = package_path + "/action_files"
+MODEL_FOLDER = package_path + "/models"
 g_robot_type = ""
 ocs2_current_joint_state = []
 joint_names = [
@@ -145,7 +153,7 @@ def create_bezier_request(action_data, start_frame_time, end_frame_time):
     return req
 
 def plan_arm_trajectory_bezier_curve_client(req):
-    service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]  # TODO: 这个服务没有开启，在 rosservice list 中找不到
+    service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]
     rospy.wait_for_service(service_name)
     try:
         plan_service = rospy.ServiceProxy(service_name, planArmTrajectoryBezierCurve)
@@ -174,7 +182,6 @@ class Payload:
     cmd: str
     data: dict
 
-
 @dataclass
 class Response:
     payload: Any
@@ -184,7 +191,6 @@ def plan_arm_state_callback(msg: planArmState):
     global plan_arm_state_progress, plan_arm_state_status
     plan_arm_state_progress = msg.progress
     plan_arm_state_status = msg.is_finished
-
 
 
 def update_preview_progress(response: Response, stop_event: threading.Event):
@@ -210,8 +216,6 @@ def update_preview_progress(response: Response, stop_event: threading.Event):
                 return
         
         time.sleep(update_interval)
-
-
 
 async def websocket_message_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
@@ -275,7 +279,6 @@ async def preview_action_handler(
         response_queue.put(response)
         return
 
-    print("2222")  # 下面的代码中有一个位置卡住了
     start_frame_time, end_frame_time = get_start_end_frame_time(action_file_path)
 
     if g_robot_type == "ocs2":
@@ -285,25 +288,18 @@ async def preview_action_handler(
     else:
         action_frames = frames_to_custom_action_data(action_file_path)
 
-    print("3333")
-
     req = create_bezier_request(action_frames, start_frame_time, end_frame_time)
-    print("4444")
-    plan_arm_trajectory_bezier_curve_client(req)    # TODO: 这里会卡住
-    print("5555")
+    plan_arm_trajectory_bezier_curve_client(req)
     time.sleep(0.5)
     # If valid, create initial response
     response = Response(
         payload=payload,
         target=websocket,
     )
-    print("6666")   # TODO: 还没有执行到此处
 
     # Create a new stop event for this thread
     stop_event = threading.Event()
     active_threads[websocket] = stop_event
-
-    print("7777")
 
     # Start a thread to update the progress
     thread = threading.Thread(
@@ -313,7 +309,9 @@ async def preview_action_handler(
     thread.start()
 
 
-async def stop_preview_action_handler(websocket: websockets.WebSocketServerProtocol, data: dict):
+async def stop_preview_action_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -326,6 +324,144 @@ async def stop_preview_action_handler(websocket: websockets.WebSocketServerProto
         target=websocket,
     )
     stop_plan_arm_trajectory_client()
+    response_queue.put(response)
+
+
+async def get_robot_info_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+
+    payload = Payload(
+        cmd="get_robot_info", data={"code": 0, "upload_python_path": PYTHON_FILE_FOLDER, "upload_model_path": MODEL_FOLDER}
+    )
+
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+
+async def get_robot_status_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="get_robot_status", data={"code": 0, "isrun": True}
+    )
+
+    if not active_threads:
+        payload.data["isrun"] = False
+        print("No activate threads")
+    else:
+        for key, value in active_threads.items():
+            print(f"Key: {key}, Value: {value}")
+
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+
+async def run_node_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    if websocket in active_threads:
+        active_threads[websocket].set()
+        del active_threads[websocket]
+
+    payload = Payload(
+        cmd="run_node", data={"code": 0, "msg": "msg"}
+    )
+
+    data = data["data"]
+    print(f"received message data: {data}")
+    main_path = PYTHON_FILE_FOLDER + data["main_path"]
+    model_path = MODEL_FOLDER + data["model_path"]
+
+    if not os.path.exists(main_path) or not os.path.exists(model_path):
+        print(f"main.py or model.pt not found: {main_path} or {model_path}")
+        payload.data["code"] = 1
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+
+    # Create a new stop event for this thread
+    stop_event = threading.Event()
+    active_threads[websocket] = stop_event
+
+    # Start a thread to update the progress
+    thread = threading.Thread(
+        target=execute_command_progress, args=(response, stop_event, main_path, model_path)
+    )
+    print("Starting thread to update progress")
+    thread.start()
+
+
+def execute_command_progress(response: Response, stop_event: threading.Event, main_path, model_path):
+    payload = response.payload
+    update_interval = 0.001 
+
+    execute_command = ["python3", main_path, "--model_path", model_path]
+    print(f"Executing command: {execute_command}")
+    global process
+    try: 
+        process = subprocess.Popen(execute_command)
+    except Exception as e:
+        print("An error occurred while trying to execute the command:")
+        print(e)
+        payload.data["code"] = 1
+        payload.data["msg"] = "Command execution failed."
+        response_queue.put(response)
+        print("Command execution failed.")   
+    else:
+        payload.data["code"] = 0
+        payload.data["msg"] = "Command executed successfully."
+        response_queue.put(response)
+        
+    while not stop_event.is_set():
+        time.sleep(update_interval)
+
+def monitor_and_stop(process):
+    global should_stop
+    while True:
+        time.sleep(1)
+        if should_stop:
+            print("Kill the target process")
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                print("Forced kill the target process")
+                process.kill()
+            break
+
+async def stop_run_code_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    if websocket in active_threads:
+        active_threads[websocket].set()
+        del active_threads[websocket]
+    
+    payload = Payload(
+        cmd="stop_run_code", data={"code":0}
+    )
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+
+    global process, should_stop
+    monitor_thread = threading.Thread(target=monitor_and_stop, args=(process,))
+    monitor_thread.start()
+    should_stop = True
+    monitor_thread.join()
+
     response_queue.put(response)
 
 # Add a function to clean up when a websocket connection is closed

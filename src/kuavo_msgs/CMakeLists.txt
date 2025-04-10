@@ -74,6 +74,8 @@ add_message_files(
   dexhandCommand.msg
   touchSensorStatus.msg
   dexhandTouchState.msg
+  yoloOutputData.msg
+  yoloDetection.msg
 )
 
 ## Generate services in the 'srv' folder

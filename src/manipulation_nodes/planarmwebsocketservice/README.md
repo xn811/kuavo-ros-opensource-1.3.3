@@ -62,12 +62,104 @@
         "robot_ip": ROBOT_IP,
         "robot_connect_wifi": ROBOT_CONNECT_WIFI,
         "robot_ws_address": ROBOT_WS_ADDRESS,
+        "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
         "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
+        "robot_python_file_folder": ROBOT_PYTHON_FILE_FOLDER,
+        "robot_model_file_folder": ROBOT_MODEL_FILE_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
     }
 }
 ```
+
+### 获取机器人信息
+
+request:
+
+```json
+{
+    "cmd": "get_robot_info"
+}
+```
+
+response:
+
+```json
+{
+    "cmd": "get_robot_info",
+    "data": {
+        "code": 0,
+        "upload_dir": "upload_path"
+    }
+}
+```
+
+| 名称         | 类型     | 描述             |
+| ---------- | ------ | -------------- |
+| code       | int    | 错误码 0: 成功      |
+| upload_dir | string | 机器人存储执行脚本路径文件夹 |
+
+### 获取机器人状态
+
+request:
+
+```json
+{
+    "cmd": "get_robot_status"
+}
+```
+
+response:
+
+```json
+{
+    "cmd": "get_robot_status",
+    "data": {
+        "code": 0,
+        "is_run": True
+    }
+}
+```
+
+| 名称     | 类型   | 描述        |
+| ------ | ---- | --------- |
+| code   | int  | 错误码 0: 成功 |
+| is_run | bool | 机器人当前运行状态 |
+
+### 执行脚本命令
+
+request:
+
+```json
+{
+    "cmd": "run_node",
+    "data": {
+        "main_path": "/main.py",
+        "model_path": "/best.pt"
+    }
+}
+```
+
+| 名称   | 类型     | 描述                      |
+| ---- | ------ | ----------------------- |
+| path | string | 脚本路径，仅需`"/" + 文件名.文件类型` |
+
+response:
+
+```json
+{
+    "cmd": "run_node",
+    "data": {
+        "code": 0,
+        "msg": "msg"
+    }
+}
+```
+
+| 名称   | 类型     | 描述                 |
+| ---- | ------ | ------------------ |
+| code | int    | 错误码 0: 成功 1: 文件不存在 |
+| msg  | string | 信息                 |
 
 ### 预览动作
 
@@ -131,6 +223,62 @@ response:
 | 名称   | 类型  | 描述        |
 | ---- | --- | --------- |
 | code | int | 错误码 0: 成功 |
+
+### logger 日志 websocket
+
+这是一个用于实时获取机器人日志的 websocket 服务。服务器会在启动时广播 `robot_ws_logger_address` 地址，客户端可以通过该地址连接获取实时日志。
+
+#### 连接日志服务
+
+客户端可以通过以下地址连接日志服务：
+
+```
+ws://{robot_ws_logger_address}
+```
+
+#### 日志消息格式
+
+日志消息格式如下：
+
+```json
+{
+    "level": "LEVEL",
+    "timestamp": "TIMESTAMP",
+    "message": "MESSAGE",
+    "module": "MODULE",
+    "function": "FUNCTION"
+}
+```
+
+| 名称        | 类型     | 描述                                       |
+| --------- | ------ | ---------------------------------------- |
+| level     | string | 日志级别 (DEBUG/INFO/WARNING/ERROR/CRITICAL) |
+| timestamp | string | 时间戳，格式：YYYY-MM-DD HH:MM:SS.mmm           |
+| message   | string | 日志消息内容                                   |
+| module    | string | 产生日志的模块名                                 |
+| function  | string | 产生日志的函数名                                 |
+
+#### 日志级别说明
+
+| 级别       | 描述              |
+| -------- | --------------- |
+| DEBUG    | 调试信息，用于开发调试     |
+| INFO     | 一般信息，用于记录程序运行状态 |
+| WARNING  | 警告信息，表示可能的问题    |
+| ERROR    | 错误信息，表示程序错误     |
+| CRITICAL | 严重错误，表示程序无法继续运行 |
+
+#### 示例
+
+```json
+{
+    "level": "INFO",
+    "timestamp": "2024-03-21 14:30:45.123",
+    "message": "running finish",
+    "module": "robot_control",
+    "function": "start_robot"
+}
+```
 
 ## Rosbag 到 Tact 文件转换工具
 

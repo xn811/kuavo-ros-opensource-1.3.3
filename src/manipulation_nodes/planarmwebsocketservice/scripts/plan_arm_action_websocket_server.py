@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import os
-
+import rospkg
 import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +37,16 @@ ROBOT_NAME = os.getenv("ROBOT_NAME", "KUAVO")
 ROBOT_IP = get_wifi_ip()
 ROBOT_CONNECT_WIFI = get_wifi()
 ROBOT_WS_ADDRESS = f"ws://{ROBOT_IP}:8888"
+ROBOT_WS_LOGGER_ADDRESS = f"ws://{ROBOT_IP}:8889"
 BROADCAST_IP = f"{ROBOT_IP.rsplit('.', 1)[0]}.255"
 BROADCAST_PORT = 8443
 ROBOT_MAC_ADDRESS = get_mac_address()
 ROBOT_USERNAME = "lab"
-ROBOT_ACTION_FILE_FOLDER = "~/kuavo_ws/src/manipulation_nodes/planarmwebsocketservice/action_files"  # 在运行之前确认文件的位置
+package_name = 'planarmwebsocketservice'
+package_path = rospkg.RosPack().get_path(package_name)
+ROBOT_ACTION_FILE_FOLDER = package_path + "/action_files" 
+ROBOT_MODEL_FILE_FOLDER = package_path + "/models" 
+ROBOT_PYTHON_FILE_FOLDER = package_path + "/scripts"
 
 robot_info = {
     "data": {
@@ -49,7 +54,10 @@ robot_info = {
         "robot_ip": ROBOT_IP,
         "robot_connect_wifi": ROBOT_CONNECT_WIFI,
         "robot_ws_address": ROBOT_WS_ADDRESS,
+        "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
         "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
+        "robot_python_file_folder": ROBOT_PYTHON_FILE_FOLDER,
+        "robot_model_file_folder": ROBOT_MODEL_FILE_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
     }
@@ -110,19 +118,20 @@ async def process_responses():
             response: Response = await asyncio.get_event_loop().run_in_executor(None, response_queue.get, True, 0.1)
             current_message = json.dumps(response.payload.__dict__)
             
-            if current_message != last_sent_message:
+            cmd = json.loads(current_message)["cmd"]
+            if current_message == last_sent_message and cmd == "preview_action":
+                print("Skipped sending duplicate message")
+            else:
                 await send_to_websockets(response)
                 last_sent_message = current_message
-            else:
-                print("Skipped sending duplicate message")
         except Empty:
             await asyncio.sleep(0.001)
+
 
 async def websocket_server():
     server = await websockets.serve(handle_websocket, "0.0.0.0", 8888)
     print("WebSocket server started on ws://0.0.0.0:8888")
     await server.wait_closed()
-
 
 async def main(robot_type):
     set_robot_type(robot_type)
@@ -133,6 +142,7 @@ async def main(robot_type):
     broadcast_task = asyncio.create_task(broadcast_robot_info())
     print("Starting WebSocket server task")
     websocket_server_task = asyncio.create_task(websocket_server())
+
     print("Starting response processing task")
     process_responses_task = asyncio.create_task(process_responses())
 
