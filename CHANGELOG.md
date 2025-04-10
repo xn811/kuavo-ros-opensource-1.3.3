@@ -19,6 +19,7 @@
 - 补充运动控制接口文档中`/sensor_data_raw`话题的详细说明和数据示例 [文档链接](./docs/运动控制API.md)
 
 ## 新增功能
+- 新增 isaac-sim 仿真环境, 使用说明请参考[文档链接](./src/kuavo-isaac-sim/README.md)
 - 新增触觉灵巧手控制话题`/dexhand/command`和左右单独控制话题`/dexhand/left_command`和`/dexhand/right_command`，以及 `/dexhand/touch_state`话题, 并兼容原先非触觉手的ROS接口
 - 新增触觉灵巧手硬件识别与测试工具，工具路径:`tools/check_tool/touch_dexhand_test.sh`
 - 新增触觉灵巧手功能，末端类型为`qiangnao_touch`，在kuavo.json中修改 EndEffectorType 字段即可使用
@@ -53,6 +54,8 @@
 - IK 服务增加工作空间检查和可选打印求解信息提示
 
 ## 修复问题
+- 修复潜在的内存非法访问导致的段错误程序崩溃问题
+- 修复只使用上半身和轮臂机器人手抖问题
 - 修复 VNC 无法切换 WIFI 问题，解决方法见[文档](./docs/6常用工具/修复VNC无法切换wifi的问题.md)
 - 修复播报 WIFI IP 地址工具安装脚本的提示消息错误
 - 修复使用 VR 时需要额外添加末端执行器类型的冗余操作
@@ -92,6 +95,7 @@
 - 修复 biped_s42 机器人头部 yaw 电机方向问题, 已根据右手定更正
 
 ## 其他改进
+- ROS_MASTER_URI 主从配置工具给所有用户都配置ROS环境
 - 新增 ROS_MASTER_URI 主从配置工具，[工具链接](./docs/others/CHANGE_ROS_MASTER_URI/修改ROS_MASTER_URI说明.md)
 - 修改遥控器头部控制快捷键为RT+右侧摇杆，可以同时走路
 - 优化graspBox案例，增加Move的运动类型，使用bt_config.yaml文件box_holdon_pose配置，用于规划抓取后手臂的运动，坐标系是机器人坐标系。
@@ -182,6 +186,7 @@
 - 修复头部动作执行时不断读取 json 降低效率问题
 
 ## 其他改进
+- 程序启动时自动清除日志文件, 避免磁盘被占满
 - kuavo_assets 更新各个版本机器人的模型快照
 - 增加遥控器topic维度不对时进行提示, 防止自动触发开始发生危险
 - trot步态去除SS相
