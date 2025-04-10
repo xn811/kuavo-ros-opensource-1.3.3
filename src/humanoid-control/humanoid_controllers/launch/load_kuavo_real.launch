@@ -28,6 +28,7 @@
     <arg name="start_way"         default="manual"/>
     <arg name="use_estimator_contact"   default="false"/>
     <arg name="only_half_up_body" default="false"/>
+    <arg name="stand_up_protect" default="true"/>
     <!-- The file defining gait definition -->
 
     <!-- multiplot -->
@@ -49,6 +50,7 @@
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
     <param name="start_way"  value="$(arg start_way)"/>
     <param name="use_estimator_contact"  value="$(arg use_estimator_contact)"/>
+    <param name="stand_up_protect" value="$(arg stand_up_protect)"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">

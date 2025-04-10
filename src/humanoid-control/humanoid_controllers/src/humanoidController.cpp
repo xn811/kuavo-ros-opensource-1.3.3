@@ -227,7 +227,15 @@ namespace humanoid_controller
     if (controllerNh_.hasParam("/only_half_up_body")) {
       controllerNh_.getParam("/only_half_up_body", only_half_up_body_);
     }
+
+    if (controllerNh_.hasParam("/stand_up_protect"))
+    {
+      controllerNh_.getParam("/stand_up_protect", stand_up_protect_);
+      std::cout << "get stand up protect param: " << stand_up_protect_ << std::endl;
+    }
     // trajectory_publisher_ = new TrajectoryPublisher(controller_nh, 0.001);
+
+    wheel_arm_robot_ = drake_interface_->getKuavoSettings().running_settings.only_half_up_body;
     
     size_t buffer_size = (is_play_back_mode_) ? 20 : 5;
     sensors_data_buffer_ptr_ = new KuavoDataBuffer<SensorData>("humanoid_sensors_data_buffer", buffer_size, dt_);
@@ -877,47 +885,61 @@ namespace humanoid_controller
     }
     jointCmdPub_.publish(jointCmdMsg);
 
-    const double norSingleLegSupport = centroidalModelInfo_.robotMass * 9.8 / 4; //单脚支撑力只要达到重量的1/4的力即认为已落地成功
-    // const double norSingleLegSupport = 200.0;
-    bool bNotLanding = is_robot_standup_complete_ && (contactForce_[2] < norSingleLegSupport || contactForce_[8] < norSingleLegSupport);
-    bool bUneventForce = fabs(contactForce_[2] - contactForce_[8]) > norSingleLegSupport; //左右脚支撑立差值超过重量的1/4即判断为异常
-    if (bNotLanding || bUneventForce)
+    if (!wheel_arm_robot_ && stand_up_protect_ && is_real_)
     {
-      if (is_robot_standup_complete_)
+      const double norSingleLegSupport = centroidalModelInfo_.robotMass * 9.8 / 4; // 单脚支撑力只要达到重量的1/4的力即认为已落地成功
+      bool bNotLanding = is_robot_standup_complete_ && (contactForce_[2] < norSingleLegSupport || contactForce_[8] < norSingleLegSupport);
+      bool bUneventForce = fabs(contactForce_[2] - contactForce_[8]) > (norSingleLegSupport * 2.0); // 左右脚支撑立差值超过重量的1/2即判断为异常/*  */
+      if (bNotLanding || bUneventForce)
       {
-        ROS_INFO_STREAM("left feet force: " << contactForce_[2] << "less than " << norSingleLegSupport);
-        ROS_INFO_STREAM("left feet force: " << contactForce_[8] << "less than " << norSingleLegSupport);
+        if (is_robot_standup_complete_)
+        {
+          ROS_INFO_STREAM("left feet force: " << contactForce_[2] << "less than " << norSingleLegSupport);
+          ROS_INFO_STREAM("right feet force: " << contactForce_[8] << "less than " << norSingleLegSupport);
+        }
+
+        if (!is_abnor_StandUp_ && (bUneventForce || (time.toSec() > robotStandUpCompleteTime_ + 0.5)))
+        {
+          ROS_WARN("Robot standing abnormal...!!");
+          if(bNotLanding)
+          {
+            ROS_WARN("Single-foot contact force that does not reach one-quarter of body weight");
+            ROS_INFO_STREAM("left feet force: " << contactForce_[2] << "less than " << norSingleLegSupport);
+            ROS_INFO_STREAM("right feet force: " << contactForce_[8] << "less than " << norSingleLegSupport);
+          }
+          if(bUneventForce)
+          {
+            ROS_WARN("Abnormal contact force difference between left and right foot");
+            ROS_INFO_STREAM("left feet force: " << contactForce_[2]);
+            ROS_INFO_STREAM("right feet force: " << contactForce_[8]);
+          }
+          is_abnor_StandUp_ = true;
+          is_robot_standup_complete_ = false;
+          curRobotLegState_ = currentObservationWBC_.state;
+          robotStartSquatTime_ = time.toSec();
+          ROS_INFO_STREAM("Set squat start time: " << robotStartSquatTime_);
+        }
       }
 
-      if (!is_abnor_StandUp_ && (bUneventForce || (time.toSec() > robotStandUpCompleteTime_ + 0.5)))
+      // 等待机器人脚收回
+      if (is_abnor_StandUp_)
       {
-        ROS_WARN("Robot standing abnormal...!!");
-        is_abnor_StandUp_ = true;
-        is_robot_standup_complete_ = false;
-        curRobotLegState_ = currentObservationWBC_.state;
-        robotStartSquatTime_ = time.toSec();
-        ROS_INFO_STREAM("Set squat start time: " << robotStartSquatTime_);
-      }
-    }
+        bool isReSquatComplete = fabs(squatState[8] - curTargetState_wbc[8]) < 0.002;
+        if (isReSquatComplete)
+        {
+          // 判断机器人的脚是否收回
+          ROS_WARN("The robot goes into a squat state, waiting for adjustment...");
 
-    // 等待机器人脚收回
-    if (is_abnor_StandUp_)
-    {
-      bool isReSquatComplete = fabs(squatState[8] - curTargetState_wbc[8]) < 0.002;
-      if (isReSquatComplete)
-      {
-        // 判断机器人的脚是否收回
-        ROS_WARN("The robot goes into a squat state, waiting for adjustment...");
-
-        // 将硬件准备状态位设置为0
-        ROS_INFO_STREAM("Set hardware/is_ready is 0.");
-        ros::param::set("/hardware/is_ready", 0);
-        hardware_status_ = 0;
-        isInitStandUpStartTime_ = false;
-        is_abnor_StandUp_ = false;
-        return false;
+          // 将硬件准备状态位设置为0
+          ROS_INFO_STREAM("Set hardware/is_ready is 0.");
+          ros::param::set("/hardware/is_ready", 0);
+          hardware_status_ = 0;
+          isInitStandUpStartTime_ = false;
+          is_abnor_StandUp_ = false;
+          return false;
+        }
+        return true;
       }
-      return true;
     }
 
     /*******************超过设置时间，退出******************/
