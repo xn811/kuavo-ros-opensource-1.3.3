@@ -526,7 +526,7 @@ data:
 
 先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`或者`qiangnao_touch`时才会发布该话题.
 
-话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
+话题描述: 发布灵巧手的状态数据.
 
 消息类型: `sensor_msgs/JointState`
 
@@ -562,9 +562,9 @@ effort: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 
 #### dexhand/touch_state
 
-先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao`或者`qiangnao_touch`时才会发布该话题.
+先决条件: 只有在`kuavo.json`中配置`EndEffectorType`为`qiangnao_touch`时才会发布该话题.
 
-话题描述: 发布二指夹抓的状态, 位置, 速度, 力距等信息
+话题描述: 发布触觉灵巧手的触觉状态数据
 
 消息类型: `kuavo_msgs/dexhandTouchState`
 
@@ -591,6 +591,11 @@ effort: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 | self_proximity2 | uint32 | 触觉传感器2的自接近度 |
 | mutual_proximity | uint32 | 触觉传感器的相互接近度 |
 | status | uint16 | 触觉传感器状态 |
+
+其中，
+- 法向力，切向力数值单位是 100 * N， 例如切向力 1000 表示 1000 / 100 N, 即 10 N。法向力，切向力的测量范围是 0 ~ 25 N
+- 切向力方向单位是角度，数值范围为 0 ~ 359 度。靠近指尖的方向为 0 度，按顺时针旋转最大到 359 度，当数值为 65535 (0xFFFF) 时，表示切向力方向无效
+- 自接近和互接近都是 32 位的无符号数据，自接近即自电容接近, 互接近即互电容接近
 
 *建议使用plotjuggler观测数据会更加直观*
 <details>
