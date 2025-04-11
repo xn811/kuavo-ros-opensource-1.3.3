@@ -152,7 +152,6 @@ setup_drive_board() {
 }
 
 # Configure arm motor config
-# Configure arm motor config
 setup_arm_motor() {
     print_info "配置手臂电机配置文件"
 
@@ -162,12 +161,26 @@ setup_arm_motor() {
     # Determine config file name
     if [[ "$is_long_arm" == "y" || "$is_long_arm" == "Y" ]]; then
         config_file="long_arm_config.yaml"
+
+
+        cd ~/kuavo-ros-opensource/src/demo/examples_code/hand_plan_arm_trajectory/action_files
+
+        # 检查是否有*_45.tact文件
+        tact_files_count=$(find . -name "*_45.tact" | wc -l)
+        if [ $tact_files_count -eq 0 ]; then
+            print_error "未找到长手臂动作 tact 动作文件"
+            print_info "将继续执行，但可能缺少长手臂动作文件"
+        else
+            print_info "找到 $tact_files_count 个长手臂动作 tact 动作文件"
+            mkdir -p ~/.config/lejuconfig/action_files/
+            cp -r ./*_45.tact ~/.config/lejuconfig/action_files/
+        fi
     else
         config_file="config.yaml"
     fi
 
     # Find config.yaml or long_arm_config.yaml in ruiwo_controller directory
-    src_config=$(find ~/kuavo-ros-opensource -type f -path "*/ruiwo_controller/${config_file}" 2>/dev/null)
+    src_config=$(find ~/kuavo-ros-opensource -type f -path "*/ruiwo_controller/long_arm_config.yaml" 2>/dev/null)
 
     if [ -z "$src_config" ]; then
         print_error "未找到 ruiwo_controller/${config_file} 文件"
@@ -305,7 +318,7 @@ check_ip(){
     print_info "检查下位机连接ip..."
     cd ~/kuavo-ros-opensource/docs/others/CHANGE_ROS_MASTER_URI/
     output=$(./get_ip.sh)
-    if [[ "$output" == "192.168.26.12" ]]; then
+    if [[ "$output" == "192.168.26.12" || "$output" == "192.168.26.1" ]]; then
         echo "IP 匹配成功: $output"
     else
         echo "IP 匹配失败！请联系技术支持检查上位机 DHCP 配置！"
