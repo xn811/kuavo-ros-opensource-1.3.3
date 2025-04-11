@@ -33,6 +33,9 @@
     <arg name="visualize_humanoid" default="true"/>
     <arg name="only_half_up_body" default="false"/>
 
+    <!-- teach_pendant -->
+    <arg name="teach_pendant" default="0"/>
+
     <!-- multiplot -->
     <group if="$(arg multiplot)">
       <include file="$(find humanoid_interface_ros)/launch/multiplot.launch"/>
@@ -55,6 +58,8 @@
     <param name="only_half_up_body"   value="$(arg only_half_up_body)"/>
     <param name="build_cppad_state"   value="0"/>  <!-- build_cppad_state is set to 0(waiting), 1(building), 2(done) -->
     <param name="visualize_humanoid" value="$(arg visualize_humanoid)" />
+
+    <param name="teach_pendant"  value="$(arg teach_pendant)"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">
@@ -115,4 +120,5 @@
     <group if="$(arg vr_remote_control)">
       <include file="$(find noitom_hi5_hand_udp_python)/launch/launch_quest3_ik.launch"/>
     </group>
+
 </launch>

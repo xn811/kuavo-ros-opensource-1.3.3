@@ -4,7 +4,8 @@ RuiWoActuator::RuiWoActuator(std::string pymodule_path, bool is_cali) : is_cali_
                                                                 pEnableMethod(nullptr), pDisableMethod(nullptr),
                                                                 pSetPositionMethod(nullptr), pSetTorqueMethod(nullptr), pSetVelocityMethod(nullptr), 
                                                                 pGetPositionMethod(nullptr), pGetTorqueMethod(nullptr), pGetVelocityMethod(nullptr),
-                                                                pymodule_path(pymodule_path), pGetJointStateMethod(nullptr),pCheckStateMethod(nullptr)
+                                                                pymodule_path(pymodule_path), pGetJointStateMethod(nullptr),pCheckStateMethod(nullptr),
+                                                                pSetTeachPendantModeMethod(nullptr)
 {
 }
 
@@ -29,6 +30,7 @@ RuiWoActuator::~RuiWoActuator()
     Py_XDECREF(pSetZeroMethod);
     Py_XDECREF(pChangEncoderMethod);
     Py_XDECREF(pSaveZerosMethod);
+    Py_XDECREF(pSetTeachPendantModeMethod);
 
     // 关闭 Python 解释器
     Py_Finalize();
@@ -144,11 +146,12 @@ int RuiWoActuator::initialize()
     pSetZeroMethod = PyObject_GetAttrString(ActuatorInstance, "set_as_zero");
     pChangEncoderMethod = PyObject_GetAttrString(ActuatorInstance, "change_encoder_zero_round");
     pSaveZerosMethod = PyObject_GetAttrString(ActuatorInstance, "save_zero_position");
+    pSetTeachPendantModeMethod = PyObject_GetAttrString(ActuatorInstance, "set_teach_pendant_mode");
 
     // 检查获取方法是否成功
     if (!pEnableMethod || !pCloseMethod || !pDisableMethod || !pSetPositionMethod || !pSetTorqueMethod || !pSetVelocityMethod ||
         !pGetPositionMethod || !pGetTorqueMethod|| !pGetVelocityMethod || !pGetJointStateMethod || !RuiWo_pJoinMethod ||
-        !pCheckStateMethod || !pSetZeroMethod || !pChangEncoderMethod || !pSaveZerosMethod)
+        !pCheckStateMethod || !pSetZeroMethod || !pChangEncoderMethod || !pSaveZerosMethod || !pSetTeachPendantModeMethod)
     {
         PyErr_Print();
         Py_DECREF(ActuatorInstance); // 释放已获取的对象
@@ -286,12 +289,30 @@ void RuiWoActuator::close()
         Py_XDECREF(pSetZeroMethod);
         Py_XDECREF(pChangEncoderMethod);
         Py_XDECREF(pSaveZerosMethod);
+        Py_XDECREF(pSetTeachPendantModeMethod);
     }
     else
     {
         PyErr_Print();
     }
     PyGILState_Release(gstate);
+}
+
+void RuiWoActuator::set_teach_pendant_mode(int mode_){
+
+    if (pSetTeachPendantModeMethod)
+    {
+        gstate = PyGILState_Ensure();
+        PyObject *args = PyTuple_Pack(1, Py_BuildValue("i", mode_));
+        PyObject_CallObject(pSetTeachPendantModeMethod, args);
+        Py_DECREF(args);
+        PyGILState_Release(gstate);
+    }
+    else
+    {
+        PyErr_Print();
+    }
+
 }
 // void RuiWoActuator::join()
 // {
