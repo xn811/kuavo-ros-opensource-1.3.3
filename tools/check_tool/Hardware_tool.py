@@ -433,8 +433,21 @@ def update_kuavo():
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
-def license_sign():
+def arm_setzero():
+    # 构建要执行的 bash 脚本命令
+    command = "bash "+ folder_path + "/arm_setzero.sh"
 
+    # 使用 subprocess.run() 运行命令
+    subprocess.run(command, shell=True)
+
+def arm_breakin():
+    # 构建要执行的 bash 脚本命令
+    command = "bash "+ folder_path + "/arm_breakin.sh"
+
+    # 使用 subprocess.run() 运行命令
+    subprocess.run(command, shell=True)
+
+def license_sign():
     FILE = "/home/lab/.config/lejuconfig/ec_master.key"
     # 检查文件是否存在
     if os.path.exists(FILE):
@@ -668,6 +681,7 @@ def secondary_menu():
         print("k. 更新当前目录程序(注意：会重置文件内容，建议备份文件)")
         # print("m. MAC 地址")
         print("l. license导入")
+        print("m. 执行手臂磨线")
         print("u. 配置robot上线提醒")
         print("t. 恢复出厂文件夹")
 
@@ -755,7 +769,28 @@ def secondary_menu():
             print(bcolors.HEADER + "###开始，license导入###" + bcolors.ENDC)
             license_sign()
             print(bcolors.HEADER + "###结束，license已导入，请确认验证###" + bcolors.ENDC)   
-            break  
+            break
+        elif option == "m":
+            print(bcolors.HEADER + "###在执行手臂磨线之前，请先确保完成手臂电机零点设置###" + bcolors.ENDC)
+            print("请摆正手臂，按 d 执行电机零点校准，并执行手臂磨线。")
+            print("按 q 退出程序")
+            while True:
+                option = input("请输入你的选择：")
+                if option == 'q':
+                    print("\n*-------------退出程序-------------*")
+                    exit()
+                elif option == 'd':
+                    print(bcolors.HEADER + "###开始，执行手臂零点校准###" + bcolors.ENDC)
+                    arm_setzero()
+                    ruiwo_zero()
+                    print(bcolors.HEADER + "###结束，执行手臂零点校准###" + bcolors.ENDC)
+                    print(bcolors.HEADER + "###开始，执行手臂磨线###" + bcolors.ENDC)
+                    arm_breakin()
+                    print(bcolors.HEADER + "###结束，执行手臂磨线###" + bcolors.ENDC)
+                    break
+                else:
+                    print(bcolors.FAIL + "无效的选项编号，请重新输入！\n" + bcolors.ENDC)
+            break
         elif option == "u":
             print(bcolors.HEADER + "###开始，robot上线提醒配置###" + bcolors.ENDC)
             robot_login()
