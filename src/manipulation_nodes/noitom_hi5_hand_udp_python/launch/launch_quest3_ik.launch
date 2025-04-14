@@ -10,7 +10,7 @@
     <arg name="ee_type" default="qiangnao"/>
 
     <!-- motion_capture_ik -->
-    <node pkg="motion_capture_ik" type="ik_ros_uni.py" name="ik_ros_uni" args=" --version $(arg version) --ctrl_arm_idx $(arg ctrl_arm_idx) --ik_type_idx $(arg ik_type_idx) --control_torso=$(arg control_torso) --control_finger_type=$(arg control_finger_type) --predict_gesture=$(arg predict_gesture) --ee_type=$(arg ee_type)" output="screen">
+    <node pkg="c" type="ik_ros_uni.py" name="ik_ros_uni" args=" --version $(arg version) --ctrl_arm_idx $(arg ctrl_arm_idx) --ik_type_idx $(arg ik_type_idx) --control_torso=$(arg control_torso) --control_finger_type=$(arg control_finger_type) --predict_gesture=$(arg predict_gesture) --ee_type=$(arg ee_type)" output="screen">
     </node>
 
     <!-- noitom_hi5_hand_udp_python -->
