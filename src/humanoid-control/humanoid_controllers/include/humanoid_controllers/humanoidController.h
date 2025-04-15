@@ -41,7 +41,7 @@
 #include "humanoid_interface/gait/GaitSchedule.h"
 #include "kuavo_msgs/robotHeadMotionData.h"
 #include "kuavo_msgs/getCurrentGaitName.h"
-#include "gazebo-sim/shm_manager.h"
+#include "humanoid_controllers/shm_manager.h"
 
 namespace humanoid_controller
 {
@@ -58,7 +58,7 @@ namespace humanoid_controller
     vector_t jointPos_;
     vector_t jointVel_;
     vector_t jointAcc_;
-    vector_t jointCurrent_;
+    vector_t jointTorque_;
     vector3_t angularVel_;
     vector3_t linearAccel_;
     Eigen::Quaternion<scalar_t> quat_;
@@ -70,7 +70,7 @@ namespace humanoid_controller
       jointPos_.resize(num);
       jointVel_.resize(num);
       jointAcc_.resize(num);
-      jointCurrent_.resize(num);
+      jointTorque_.resize(num);
     }
   };
   class TrajectoryPublisher
@@ -308,7 +308,6 @@ namespace humanoid_controller
     HighlyDynamic::JointFilter *joint_filter_ptr_{nullptr};
 #endif
     HighlyDynamic::KuavoSettings kuavo_settings_;
-    KuavoHardwareInterface *hardware_interface_ptr_{nullptr};
     bool is_nodelet_node_{false};
 
     void publishFeetTrajectory(const TargetTrajectories &targetTrajectories);
@@ -342,7 +341,7 @@ namespace humanoid_controller
     vector_t desire_arm_q_prev_;
     vector_t jointPos_, jointVel_;
     vector_t jointAcc_;
-    vector_t jointCurrent_;
+    vector_t jointTorque_;
     vector_t dexhand_joint_pos_ = vector_t::Zero(12);
 
     vector_t jointPosWBC_, jointVelWBC_;

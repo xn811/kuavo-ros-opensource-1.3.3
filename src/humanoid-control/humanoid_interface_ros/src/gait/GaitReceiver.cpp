@@ -309,8 +309,8 @@ namespace ocs2
         swingTrajectoryPlannerPtr_->updateConfig(cfg);
         bool walk_on_slope = swingTrajectoryPlannerPtr_->isWalkingOnSlope();
         auto feet_normal_vectors = swingTrajectoryPlannerPtr_->getFeetNormalVectors();
-        ros_logger_->publishVector("/gait_receiver/lf_normal_vector", feet_normal_vectors.first);
-        ros_logger_->publishVector("/gait_receiver/rf_normal_vector", feet_normal_vectors.second);
+        // ros_logger_->publishVector("/gait_receiver/lf_normal_vector", feet_normal_vectors.first);
+        // ros_logger_->publishVector("/gait_receiver/rf_normal_vector", feet_normal_vectors.second);
         double slope_threshold = 0.05;
         walk_on_slope = feet_normal_vectors.first.head(2).norm() > slope_threshold || feet_normal_vectors.second.head(2).norm() > slope_threshold;
         ros_logger_->publishValue("/gait_receiver/walk_on_slope", static_cast<double>(walk_on_slope));
@@ -447,7 +447,7 @@ namespace ocs2
             gaitSchedulePtr_->modifyWalkModeSequenceTemplate(gaitSchedulePtr_->getGaitMap().at("stance"), initTime, timeHorizon,"stance");
             pusblishGaittime();
 
-            std::cout << "[GaitReceiver]: auto gait: stop" << std::endl;
+            ROS_INFO_STREAM("[GaitReceiver]: auto gait: stop");
             if(PoseCmdWorldUpdated_ && swingTrajectoryPlannerPtr_->getFinalYawSingleStepMode())
             {
               std::cout << "cmd_vector: " << cmd_vector.transpose() << std::endl;
@@ -492,7 +492,6 @@ namespace ocs2
         && !gaitSchedulePtr_->isWalkingGait(last_gait_name))
         {
           auto new_gait = walkModeSequenceTemplate_;
-          std::cout << "[GaitReceiver]: new_gait temp get" << std::endl;
           if (cmd_vector[0] < 0.1)
             new_gait.replaceModes(mode_to_scale, ModeNumber::SS); // 先移除T H
           mode_scale_enabled_ = true;// 自动切换mode
@@ -500,7 +499,7 @@ namespace ocs2
           gaitSchedulePtr_->modifyWalkModeSequenceTemplate(new_gait, initTime, timeHorizon, "walk");
           // pub msg
           pusblishGaittime();
-          std::cout << "[GaitReceiver]: auto gait: start" << std::endl;
+          ROS_INFO_STREAM("[GaitReceiver]: auto gait: start");
         }
         velCmdUpdated_ = false;
         // 非walk步态且cmd_pose较小时，更新update变量

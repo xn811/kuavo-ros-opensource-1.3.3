@@ -417,7 +417,7 @@ namespace
             // add joint velocity, acceleration, force
             joint_data.joint_v.push_back(d->qvel[*iter]);
             joint_data.joint_vd.push_back(d->qacc[*iter]);
-            joint_data.joint_current.push_back(d->qfrc_actuator[*iter]);
+            joint_data.joint_torque.push_back(d->qfrc_actuator[*iter]);
         }
     };
 

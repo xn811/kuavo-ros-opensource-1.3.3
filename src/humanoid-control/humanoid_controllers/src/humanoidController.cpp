@@ -186,12 +186,7 @@ namespace humanoid_controller
     {
       controllerNh_.getParam("/real", is_real_);
       controllerNh_.getParam("/cali", is_cali_);
-      if (is_real_)
-      {
-        std::cout << "real robot controller" << std::endl;
-        ros::NodeHandlePtr nh_ptr = boost::make_shared<ros::NodeHandle>(controllerNh_);
-        hardware_interface_ptr_ = new KuavoHardwareInterface(nh_ptr, jointNum_);
-      }
+
     }
     if (controllerNh_.hasParam("wbc_only"))
     {
@@ -390,7 +385,7 @@ namespace humanoid_controller
 
     jointVel_ = vector_t::Zero(info.actuatedDofNum);
     jointAcc_ = vector_t::Zero(info.actuatedDofNum);
-    jointCurrent_ = vector_t::Zero(info.actuatedDofNum);
+    jointTorque_ = vector_t::Zero(info.actuatedDofNum);
     quat_ = Eigen::Quaternion<scalar_t>(1, 0, 0, 0);
     arm_joint_pos_cmd_prev_ = vector_t::Zero(armNumReal_);
     arm_joint_pos_filter_.setParams(dt_, Eigen::VectorXd::Constant(armNumReal_, arm_joint_pos_filter_cutoff_freq));
@@ -590,7 +585,7 @@ namespace humanoid_controller
       sensor_data.jointPos_(i) = joint_data.joint_q[i];
       sensor_data.jointVel_(i) = joint_data.joint_v[i];
       sensor_data.jointAcc_(i) = joint_data.joint_vd[i];
-      sensor_data.jointCurrent_(i) = joint_data.joint_current[i];
+      sensor_data.jointTorque_(i) = joint_data.joint_torque[i];
     }
     // std::cout << "received joint data: " << jointPos_.transpose() << std::endl;
     ros::Time ros_time = msg->header.stamp;
@@ -617,7 +612,7 @@ namespace humanoid_controller
     // std::cout << "sensor_data.jointPos_: " << sensor_data.jointPos_.transpose() << std::endl;
     // std::cout << "sensor_data.jointVel_: " << sensor_data.jointVel_.transpose() << std::endl;
     // std::cout << "sensor_data.jointAcc_: " << sensor_data.jointAcc_.transpose() << std::endl;
-    // std::cout << "sensor_data.jointCurrent_: " << sensor_data.jointCurrent_.transpose() << std::endl;
+    // std::cout << "sensor_data.jointTorque_: " << sensor_data.jointTorque_.transpose() << std::endl;
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/linearAccel", sensor_data.linearAccel_);
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/angularVel", sensor_data.angularVel_);
     // END_EFFECTOR DATA
@@ -635,7 +630,7 @@ namespace humanoid_controller
         sensor_data_head_.jointPos_(i) = joint_data.joint_q[i + head_start_index];
         sensor_data_head_.jointVel_(i) = joint_data.joint_v[i + head_start_index];
         sensor_data_head_.jointAcc_(i) = joint_data.joint_vd[i + head_start_index];
-        sensor_data_head_.jointCurrent_(i) = joint_data.joint_current[i + head_start_index];
+        sensor_data_head_.jointTorque_(i) = joint_data.joint_torque[i + head_start_index];
       }
     }
     if (!is_initialized_)
@@ -670,9 +665,7 @@ namespace humanoid_controller
     std::cout << "sensor data received" << std::endl;
     if (is_real_)
     {
-      SensorData_t intial_sensor_data;
-      hardware_interface_ptr_->init(intial_sensor_data);
-      std::cout << "real robot controller starting\n";
+      std::cout << "wait for real robot controller starting\n";
       real_init_wait();
       std::cout << "real_init_wait done\n";
     }
@@ -764,8 +757,6 @@ namespace humanoid_controller
       callSimStartSrv(controllerNh_);
     // if (is_real_)
     // {
-    //   SensorData_t intial_sensor_data;
-    //   hardware_interface_ptr_->init(intial_sensor_data);
     //   std::cout << "real robot controller starting\n";
     //   real_init_wait();
     //   std::cout << "real_init_wait done\n";
@@ -1237,8 +1228,8 @@ namespace humanoid_controller
     bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
     if (is_joint_acc_out_of_range)
     {
-      std::cerr << "wbc_planned_joint_acc is out of range, reset it to zero." << std::endl;
-      std::cerr << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
+      ROS_INFO_STREAM("wbc_planned_joint_acc is out of range, reset it to zero.");
+      std::cout << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
       torque = output_tau_;
     }
     else
@@ -1488,7 +1479,7 @@ namespace humanoid_controller
       jointPos_.head(jointNum_) = data.jointPos_.head(jointNum_);
       jointVel_.head(jointNum_) = data.jointVel_.head(jointNum_);
       jointAcc_.head(jointNum_) = data.jointAcc_.head(jointNum_);
-      jointCurrent_.head(jointNum_) = data.jointCurrent_.head(jointNum_);
+      jointTorque_.head(jointNum_) = data.jointTorque_.head(jointNum_);
 
       for (int i = 0; i < 2; i++)
       {
@@ -1496,7 +1487,7 @@ namespace humanoid_controller
         jointPos_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointPos_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
         jointVel_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointVel_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
         jointAcc_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointAcc_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
-        jointCurrent_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointCurrent_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
+        jointTorque_.segment(jointNum_ + armDofMPC_ * i, armDofMPC_) = data.jointTorque_.segment(jointNum_ + armDofReal_ * i, armDofMPC_);
         simplifiedJointPos_.segment(armDofDiff_ * i, armDofDiff_) = data.jointPos_.segment(jointNum_ + armDofReal_ * i + armDofMPC_, armDofDiff_);
       }
     }
@@ -1505,13 +1496,13 @@ namespace humanoid_controller
       jointPos_ = data.jointPos_;
       jointVel_ = data.jointVel_;
       jointAcc_ = data.jointAcc_;
-      jointCurrent_ = data.jointCurrent_;
+      jointTorque_ = data.jointTorque_;
     }
 
     jointPosWBC_ = data.jointPos_;
     jointVelWBC_ = data.jointVel_;
     jointAccWBC_ = data.jointAcc_;
-    jointCurrentWBC_ = data.jointCurrent_;
+    jointCurrentWBC_ = data.jointTorque_;
 
     quat_ = data.quat_;
     angularVel_ = data.angularVel_;
@@ -1564,7 +1555,7 @@ namespace humanoid_controller
     }
     // last_time_ = current_time_ - ros::Duration(0.002);
     double diff_time = (current_time_ - last_time_).toSec();
-    // auto est_mode = stateEstimate_->ContactDetection(plannedMode_, jointVel_, jointCurrent_, diff_time);
+    // auto est_mode = stateEstimate_->ContactDetection(plannedMode_, jointVel_, jointTorque_, diff_time);
     // ros_logger_->publishValue("/state_estimate/mode", static_cast<double>(est_mode));
     // est_mode = plannedMode_;
     // contactFlag = modeNumber2StanceLeg(est_mode);
@@ -1573,7 +1564,7 @@ namespace humanoid_controller
     ros::Duration period = ros::Duration(diff_time);
     // std::cout << "diff_time: " << diff_time << std::endl;
 
-    vector_t activeTorque_ = jointCurrent_;
+    vector_t activeTorque_ = jointTorque_;
     vector_t activeTorqueWBC_ =  jointCurrentWBC_;
     stateEstimate_->setCmdTorque(activeTorque_);
     stateEstimate_->estContactForce(period);
@@ -1594,11 +1585,11 @@ namespace humanoid_controller
     {
       Eigen::VectorXd updated_joint_pos = jointPos_;
       Eigen::VectorXd updated_joint_vel = jointVel_;
-      Eigen::VectorXd updated_joint_current = jointCurrent_;
+      Eigen::VectorXd updated_joint_torque = jointTorque_;
 #ifdef KUAVO_CONTROL_LIB_FOUND
       if (use_joint_filter_)
       {
-        joint_filter_ptr_->update(measuredRbdState_, updated_joint_pos, updated_joint_vel, updated_joint_current, output_tau_, est_mode);
+        joint_filter_ptr_->update(measuredRbdState_, updated_joint_pos, updated_joint_vel, updated_joint_torque, output_tau_, est_mode);
       }
 #endif
       stateEstimate_->updateJointStates(updated_joint_pos, updated_joint_vel); // 使用关节滤波之后的jointPos和jointVel更新状态估计器
@@ -1934,7 +1925,7 @@ namespace humanoid_controller
             sensor_data.jointPos_(i) = sensors_data.joint_data[i].position;
             sensor_data.jointVel_(i) = sensors_data.joint_data[i].velocity;
             sensor_data.jointAcc_(i) = 0.0;  // 加速度在共享内存中未提供
-            sensor_data.jointCurrent_(i) = sensors_data.joint_data[i].effort;
+            sensor_data.jointTorque_(i) = sensors_data.joint_data[i].effort;
         }
         
         // IMU数据
@@ -1961,7 +1952,7 @@ namespace humanoid_controller
             msg.joint_data.joint_q.push_back(sensors_data.joint_data[i].position);
             msg.joint_data.joint_v.push_back(sensors_data.joint_data[i].velocity);
             msg.joint_data.joint_vd.push_back(0.0);
-            msg.joint_data.joint_current.push_back(sensors_data.joint_data[i].effort);
+            msg.joint_data.joint_torque.push_back(sensors_data.joint_data[i].effort);
         }
         
         // IMU数据
@@ -2006,13 +1997,13 @@ namespace humanoid_controller
                 sensor_data_head_.jointPos_(i) = sensors_data.joint_data[i + head_start_index].position;
                 sensor_data_head_.jointVel_(i) = sensors_data.joint_data[i + head_start_index].velocity;
                 sensor_data_head_.jointAcc_(i) = 0.0;
-                sensor_data_head_.jointCurrent_(i) = sensors_data.joint_data[i + head_start_index].effort;
+                sensor_data_head_.jointTorque_(i) = sensors_data.joint_data[i + head_start_index].effort;
                 
                 // 添加头部关节数据到ROS消息
                 msg.joint_data.joint_q.push_back(sensors_data.joint_data[i + head_start_index].position);
                 msg.joint_data.joint_v.push_back(sensors_data.joint_data[i + head_start_index].velocity);
                 msg.joint_data.joint_vd.push_back(0.0);
-                msg.joint_data.joint_current.push_back(sensors_data.joint_data[i + head_start_index].effort);
+                msg.joint_data.joint_torque.push_back(sensors_data.joint_data[i + head_start_index].effort);
             }
         }
         
