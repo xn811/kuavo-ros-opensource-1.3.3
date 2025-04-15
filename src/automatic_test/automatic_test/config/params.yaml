@@ -1,0 +1,34 @@
+mpc_path_tracer_node:
+  # 全局帧参数
+  world_frame: "mocap_frame"
+  robot_frame: "mocap_robot"
+  home_frame: "mocap_base"
+
+  # 全局运动参数
+  dt: 0.1     # s
+  v_max_linear: 0.2   # m/s
+  v_max_angular: 0.4  # rad/s
+
+
+  # 路径生成器参数
+  path_generators:
+    # 圆形路径参数
+    circle:
+      radius: 2.0  # m
+
+    # 方形路径参数
+    square:
+      side_length: 2.0  # m
+      yaw_offset: -0.785  # rad
+
+    # S形路径参数
+    scurve:
+      length: 1.5      # m
+      amplitude: 1    # m
+
+robot_manager_node:
+  sim: true
+  robot_ready: false
+
+test_robot_walk:
+  round: 10
