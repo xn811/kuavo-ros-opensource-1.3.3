@@ -22,7 +22,11 @@ if [ -f "$RULES_FILE" ]; then
 else
     log "规则文件不存在，正在创建..."
     sudo tee "$RULES_FILE" > /dev/null <<EOF
-ACTION=="add", SUBSYSTEM=="net", ENV{ID_VENDOR_ID}=="2c7c", ENV{ID_MODEL_ID}=="0801", ENV{SYSTEMD_WANTS}="check_5G_up.service"
+ACTION=="add", SUBSYSTEM=="net", \
+  ENV{ID_VENDOR_ID}=="2c7c", ENV{ID_MODEL_ID}=="0801", \
+  ATTRS{manufacturer}=="Quectel", ATTRS{product}=="RM530N-GL", \
+  NAME="wwan0", \
+  ENV{SYSTEMD_WANTS}="check_5G_up.service"
 EOF
     log "规则文件已创建：$RULES_FILE"
 fi

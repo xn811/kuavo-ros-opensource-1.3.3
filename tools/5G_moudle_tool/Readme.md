@@ -17,17 +17,13 @@
 ## DHCP 主机变更
 - 当搭载 5G 模块后，应当使得下位机作为 DHCP 主机，作为网关，给上位机进行网络分配，上位机通过网口走 5G 模块上网。
 - 配置 DHCP 服务：
-1. 进入**上位机**，并关闭上位机 DHCP 服务：
+1. 配置**下位机**作为 DHCP 的主机：
 ```bash
-    sudo systemctl stop isc-dhcp-server  
-    sudo systemctl disable isc-dhcp-server
-    sudo reboot
-```
-2. 配置**下位机**作为 DHCP 的主机：
-```bash
-    chmod -R -X ./* 
+    chmod -R +X ./* 
     ./dhcp_setting/set_dhcp_server.sh
 ```
+2. 进入**上位机**，执行脚本取消固定IP：详情可参考文档：[head_setting](./dhcp_setting/head_dhcp_setting.md)
+
 3. 重启机器，进入下位机检查 DHCP 服务是否正常启动：
 ```bash
     输入以下指令：
