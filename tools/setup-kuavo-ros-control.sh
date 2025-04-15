@@ -27,7 +27,12 @@ setup_pip() {
 # Clone repositories
 clone_repos() {
     print_info "克隆代码仓库..."
-    
+    # 检查是否为root用户
+    if [ "$(id -u)" -eq 0 ]; then
+        print_error "请不要以root用户运行此脚本！"
+        print_error "请使用普通用户权限运行，需要时脚本会通过sudo请求权限。"
+        exit 1
+    fi
     cd ~
     print_info "请输入分支名称（直接回车则使用默认 master 分支)"
     read -r branch
@@ -36,6 +41,14 @@ clone_repos() {
 
     print_info "请输入仓库commit(直接回车则使用最新 commit)"
     read -r commit
+    # 清理 /root 下的 kuavo-ros-opensource 文件夹
+    if [ -d "/root/kuavo-ros-opensource" ]; then
+        print_info "清理 /root 下的 kuavo-ros-opensource 文件夹..."
+        sudo rm -rf /root/kuavo-ros-opensource
+        print_success "/root/kuavo-ros-opensource 清理完成"
+    else
+        print_info "/root 下不存在 kuavo-ros-opensource 文件夹，无需清理"
+    fi
 
     # 检查 kuavo-ros-opensource 目录和远程仓库
     if [ -d "kuavo-ros-opensource" ] && [ -d "kuavo-ros-opensource/.git" ]; then
@@ -67,27 +80,7 @@ clone_repos() {
     else
         git pull
     fi
-    
-    # 检查 kuavo_opensource 目录和远程仓库
-    cd ~
-    if [ -d "kuavo_opensource" ] && [ -d "kuavo_opensource/.git" ]; then
-        cd kuavo_opensource
-        REMOTE_URL=$(git remote get-url origin 2>/dev/null)
-        if [ "$REMOTE_URL" = "https://gitee.com/leju-robot/kuavo_opensource.git" ]; then
-            print_info "kuavo_opensource 目录已存在且远程仓库正确，清理工作区..."
-            git reset --hard HEAD
-            git clean -fd
-            git pull origin master
-        else
-            print_info "kuavo_opensource 目录存在但远程仓库不匹配，重新克隆..."
-            cd ~
-            sudo rm -rf kuavo_opensource
-            git clone https://gitee.com/leju-robot/kuavo_opensource.git --branch master --depth 1
-        fi
-    else
-        git clone https://gitee.com/leju-robot/kuavo_opensource.git --branch master --depth 1
-    fi
-    
+ 
     print_success "代码仓库克隆/更新完成"
 }
 
@@ -236,7 +229,7 @@ setup_hand_usb() {
   fi
 
   if [[ ${#device_list[@]} -eq 2 ]]; then
-    folder_path="$HOME/kuavo_opensource/tools/check_tool"
+    folder_path="$HOME/kuavo-ros-opensource/tools/check_tool"
     
     # 检查脚本是否存在
     if [ ! -f "$folder_path/generate_serial.sh" ]; then
@@ -376,7 +369,7 @@ cleanup_code() {
 # enable change wifi at vnc desktop
 enable_vnc_network_config() {
 
-    folder_path_="$HOME/kuavo_opensource/tools/check_tool"
+    folder_path_="$HOME/kuavo-ros-opensource/tools"
     # 检查脚本是否存在
     if [ ! -f "$folder_path_/enable_vnc_network_config.sh" ]; then
       print_error "未找到 enable_vnc_network_config.sh 文件"
