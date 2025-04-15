@@ -192,6 +192,9 @@ namespace humanoid_controller
     void headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg);
     void visualizeWrench(const Eigen::VectorXd &wrench, bool is_left);
     bool getCurrentGaitNameCallback(kuavo_msgs::getCurrentGaitName::Request &req, kuavo_msgs::getCurrentGaitName::Response &res);
+    void getEnableMpcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
+    void getEnableWbcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
+    
     /**
      * Creates MPC Policy message.
      *
@@ -232,7 +235,12 @@ namespace humanoid_controller
     bool is_abnor_StandUp_{false};
     bool wbc_only_{false};
     bool reset_mpc_{false};
+    bool disable_mpc_{false};
+    bool disable_wbc_{false};
     int hardware_status_ = 0;
+
+    std::mutex disable_mpc_srv_mtx_;
+    std::mutex disable_wbc_srv_mtx_;
 
     // Whole Body Control
     std::shared_ptr<WbcBase> wbc_;
@@ -288,7 +296,10 @@ namespace humanoid_controller
     ros::Subscriber hand_wrench_sub_;
     ros::Subscriber contact_force_sub_;
     ros::Publisher mpcPolicyPublisher_;
+
     ros::Subscriber dexhand_state_sub_;
+    ros::Subscriber enable_mpc_sub_;
+    ros::Subscriber enable_wbc_sub_;
 
     ros::ServiceServer enableArmCtrlSrv_;
     ros::ServiceServer currentGaitNameSrv_;
@@ -360,6 +371,8 @@ namespace humanoid_controller
     vector_t defalutJointPos_;
     vector_t initial_status_;
     vector_t intail_input_;
+    vector_t cur_status_;
+    vector_t cur_input_;
     vector_t joint_kp_, joint_kd_, joint_kp_walking_, joint_kd_walking_, head_kp_, head_kd_;
     vector_t output_tau_, output_pos_, output_vel_;
     Eigen::MatrixXd joint_state_limit_; // 26x2, lower and upper limit

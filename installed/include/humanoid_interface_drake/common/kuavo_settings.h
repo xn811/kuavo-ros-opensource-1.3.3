@@ -13,6 +13,7 @@ namespace HighlyDynamic
 #define MOTOR_CONTROL_MODE_TORQUE 0
 #define MOTOR_CONTROL_MODE_VELOCITY 1
 #define MOTOR_CONTROL_MODE_POSITION 2
+
 #define BIT_17 (1 << 17)
 #define BIT_17_9 (BIT_17 * 9)
 #define BIT_17_10 (BIT_17 * 10)
@@ -125,6 +126,7 @@ namespace HighlyDynamic
         std::vector<double> min_joint_position_limits;
         std::vector<double> max_joint_position_limits;
         std::vector<double> joint_velocity_limits;
+        std::vector<double> joint_current_limits;
         std::vector<EndEffectorType> end_effector_type;
 
         std::vector<bool> motors_exist;
@@ -140,6 +142,7 @@ namespace HighlyDynamic
             min_joint_position_limits.resize(num_joints);
             max_joint_position_limits.resize(num_joints);
             joint_velocity_limits.resize(num_joints);
+            joint_current_limits.resize(num_joints);
             motors_exist.resize(num_joints);
             motors_disable.resize(num_joints);
         }

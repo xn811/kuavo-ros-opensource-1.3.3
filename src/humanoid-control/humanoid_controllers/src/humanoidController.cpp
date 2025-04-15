@@ -466,7 +466,9 @@ namespace humanoid_controller
       
       // dexhand state
       dexhand_state_sub_ = controllerNh_.subscribe("/dexhand/state", 10, &humanoidController::dexhandStateCallback, this);
-      
+      enable_mpc_sub_ = controllerNh_.subscribe("/enable_mpc_flag", 10, &humanoidController::getEnableMpcFlagCallback, this);
+      enable_wbc_sub_ = controllerNh_.subscribe("/enable_wbc_flag", 10, &humanoidController::getEnableWbcFlagCallback, this);
+
       // State estimation
       setupStateEstimate(taskFile, verbose);
       if (use_shm_communication_)
@@ -653,6 +655,7 @@ namespace humanoid_controller
     // currentObservation_.state(8) = 0.78626;
     // currentObservation_.state.segment(6 + 6, jointNum_) = defalutJointPos_;
     initial_status_ = HumanoidInterface_->getInitialState();
+    cur_status_ = initial_status_;
     currentObservation_.state = initial_status_;
     std::cout << "intial state:" << currentObservation_.state.transpose() << std::endl;
     std::cout << "waitign for the first sensor data" << std::endl;
@@ -723,6 +726,7 @@ namespace humanoid_controller
     // }
 
     intail_input_ = vector_t::Zero(centroidalModelInfoWBC_.inputDim);
+    cur_input_ = vector_t::Zero(centroidalModelInfoWBC_.inputDim);
     for (int i = 0; i < 8; i++)
       intail_input_(3 * i + 2) = centroidalModelInfoWBC_.robotMass * 9.81 / 8; // 48.7*g/8
     optimizedInput2WBC_mrt_ = intail_input_;
@@ -769,6 +773,7 @@ namespace humanoid_controller
     std::cout << "starting the controller" << std::endl;
     mpcRunning_ = true;
   }
+  
   void humanoidController::real_init_wait()
   {
     while (ros::ok())
@@ -984,14 +989,13 @@ namespace humanoid_controller
     if (use_shm_communication_) {
         updateSensorDataFromShm();
     }
-
-    if (reset_mpc_)// 重置mpc
+    if (reset_mpc_) // 重置mpc
     {
       currentObservation_.input.setZero(HumanoidInterface_->getCentroidalModelInfo().inputDim);
       auto target_trajectories = TargetTrajectories({currentObservation_.time}, {currentObservation_.state}, {currentObservation_.input});
       mrtRosInterface_->resetMpcNode(target_trajectories);
       reset_mpc_ = false;
-      std::cout << "reset MPC node at "<<currentObservation_.time << "\n";
+      std::cout << "reset MPC node at " << currentObservation_.time << "\n";
     }
     // kuavo_msgs::sensorsData msg = sensors_data_buffer_ptr_->getNextData();
     // // kuavo_msgs::sensorsData msg = sensors_data_buffer_ptr_->getData(ros::Time::now().toSec());
@@ -1059,10 +1063,27 @@ namespace humanoid_controller
     // std::cout << "optimizedState_mrt:" << optimizedState_mrt.transpose() << " \noptimizedInput_mrt:" << optimizedInput_mrt.transpose() << " plannedMode_:" << plannedMode_ << std::endl;
     ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt_origin", optimizedState_mrt);
     ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_origin", optimizedInput_mrt);
+
+    bool enable_mpc{true};
+    {
+      std::lock_guard<std::mutex> lk(disable_mpc_srv_mtx_);
+      enable_mpc = !disable_mpc_;
+    }
     if (wbc_only_ || only_half_up_body_)
     {
       optimizedState_mrt = initial_status_;
       optimizedInput_mrt = intail_input_;
+    }
+    else if (!enable_mpc)
+    {
+      optimizedState_mrt = cur_status_;
+      optimizedInput_mrt = cur_input_;
+      plannedMode_ = ModeNumber::SS;
+    }
+    else
+    {
+      cur_status_ = optimizedState_mrt;
+      cur_input_ = optimizedInput_mrt;
     }
 
     if (is_simplified_model_)
@@ -1083,19 +1104,22 @@ namespace humanoid_controller
       }
 
       // 手臂target后半部分，从arm_joint_trajectory_获取
+
       auto target_arm_pos = currentArmTargetTrajectories_.getDesiredState(currentObservation_.time);
       if (target_arm_pos.size() == armNumReal_)
       {
         for (int i = 0; i < 2; i++)
         {
           // 只使用上半身模式, 此时 MPC 求解未开启, 直接使用 target_arm_pos
-          if (only_half_up_body_) {
+          if (only_half_up_body_)
+          {
             optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_, armDofReal_) =
-              target_arm_pos.segment(i * armDofReal_, armDofDiff_);
+                target_arm_pos.segment(i * armDofReal_, armDofDiff_);
           }
-          else {
+          else
+          {
             optimizedState2WBC_mrt_.tail(armNumReal_).segment(i * armDofReal_ + armDofMPC_, armDofDiff_) =
-              target_arm_pos.segment(i * armDofReal_ + armDofMPC_, armDofDiff_);
+                target_arm_pos.segment(i * armDofReal_ + armDofMPC_, armDofDiff_);
           }
         }
       }
@@ -1108,7 +1132,7 @@ namespace humanoid_controller
     }
     currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
 
-    if(use_ros_arm_joint_trajectory_)
+    if (use_ros_arm_joint_trajectory_)
     {
       // TODO: feedback in planner
       // auto arm_pos = currentObservation_.state.tail(armNum_); 
@@ -1196,70 +1220,81 @@ namespace humanoid_controller
     ros_logger_->publishVector("/humanoid_controller/optimizedState_mrt/joint_pos", optimizedState2WBC_mrt_.segment(12, infoWBC.actuatedDofNum));
     ros_logger_->publishValue("/humanoid_controller/optimized_mode", static_cast<double>(optimized_mode_));
 
-
-    
+    ros_logger_->publishVector("/humanoid_controller/optimizedState_wbc_mrt_origin", optimizedState2WBC_mrt_);
+    ros_logger_->publishVector("/humanoid_controller/optimizedInput_wbc_mrt_origin", optimizedInput2WBC_mrt_);
     // *************************** WBC **********************************
-    vector_t x = wbc_->update(optimizedState2WBC_mrt_, optimizedInput2WBC_mrt_, measuredRbdStateReal_, plannedMode_, period.toSec(), is_mpc_updated);
-    // wbc_->updateVd(jointAcc_);
-    const auto t4 = Clock::now();
-    wbcTimer_.endTimer();
 
-    // 决策变量, 6*body_acc + 12*joint_acc + 3x4*contact_force + 12*torque = 42
-    vector_t torque = x.tail(infoWBC.actuatedDofNum);
-    const vector_t &wbc_planned_joint_acc = x.segment(6, infoWBC.actuatedDofNum);
-    const vector_t &wbc_planned_body_acc = x.head(6);
-    // std::cout << "wbc_planned_joint_acc:" << wbc_planned_joint_acc.transpose() << std::endl;
-    // std::cout << "wbc_planned_body_acc:" << wbc_planned_body_acc.transpose() << std::endl;
-    const vector_t &wbc_planned_contact_force = x.segment(6 + infoWBC.actuatedDofNum, wbc_->getContactForceSize());
-    // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
-    // std::cout << "torque:" << torque.transpose() << std::endl;
-    ros_logger_->publishVector("/humanoid_controller/torque", torque);
-    ros_logger_->publishVector("/humanoid_controller/wbc_planned_joint_acc", wbc_planned_joint_acc);
-    ros_logger_->publishVector("/humanoid_controller/wbc_planned_body_acc/linear", wbc_planned_body_acc.head<3>());
-    ros_logger_->publishVector("/humanoid_controller/wbc_planned_body_acc/angular", wbc_planned_body_acc.tail<3>());
-    ros_logger_->publishVector("/humanoid_controller/wbc_planned_contact_force/left_foot", wbc_planned_contact_force.head<12>());
-    ros_logger_->publishVector("/humanoid_controller/wbc_planned_contact_force/right_foot", wbc_planned_contact_force.tail<12>());
-    // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
-
-    vector_t posDes = centroidal_model::getJointAngles(optimizedState2WBC_mrt_, infoWBC);
-    vector_t velDes = centroidal_model::getJointVelocities(optimizedInput2WBC_mrt_, infoWBC);
-
-    scalar_t dt = period.toSec();
-    bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
-    if (is_joint_acc_out_of_range)
+    bool enable_wbc{true};
     {
-      ROS_INFO_STREAM("wbc_planned_joint_acc is out of range, reset it to zero.");
-      std::cout << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
-      torque = output_tau_;
-    }
-    else
-    {
-      posDes = posDes + 0.5 * wbc_planned_joint_acc * dt * dt;
-      velDes = velDes + wbc_planned_joint_acc * dt;
-    }
-    // ros_logger_->publishVector("/humanoid_controller/posDes", posDes);
-    // ros_logger_->publishVector("/humanoid_controller/velDes", velDes);
-    // ***************************** WBC END **********************************
-
-
-    // Safety check, if failed, stop the controller
-    if (!safetyChecker_->check(currentObservation_, optimizedState_mrt, optimizedInput_mrt))
-    {
-      ROS_ERROR_STREAM("[humanoid Controller] Safety check failed, stopping the controller.");
-      std_msgs::Bool stop_msg;
-      stop_msg.data = true;
-      stop_pub_.publish(stop_msg);
-      usleep(100000);
-      // TODO: send the stop command to hardware interface
-      return;
+      std::lock_guard<std::mutex> lk(disable_wbc_srv_mtx_);
+      enable_wbc = !disable_wbc_;
     }
 
-
+    std::chrono::time_point<std::chrono::high_resolution_clock> t4;
+    if (enable_wbc)
     {
-      output_pos_ = posDes;
-      output_vel_ = velDes;
-      output_tau_ = torque;
+      vector_t x = wbc_->update(optimizedState2WBC_mrt_, optimizedInput2WBC_mrt_, measuredRbdStateReal_, plannedMode_, period.toSec(), is_mpc_updated);
+
+      // wbc_->updateVd(jointAcc_);
+      t4 = Clock::now();
+      wbcTimer_.endTimer();
+
+      // 决策变量, 6*body_acc + 12*joint_acc + 3x4*contact_force + 12*torque = 42
+      vector_t torque = x.tail(infoWBC.actuatedDofNum);
+      const vector_t &wbc_planned_joint_acc = x.segment(6, infoWBC.actuatedDofNum);
+      const vector_t &wbc_planned_body_acc = x.head(6);
+      // std::cout << "wbc_planned_joint_acc:" << wbc_planned_joint_acc.transpose() << std::endl;
+      // std::cout << "wbc_planned_body_acc:" << wbc_planned_body_acc.transpose() << std::endl;
+      const vector_t &wbc_planned_contact_force = x.segment(6 + infoWBC.actuatedDofNum, wbc_->getContactForceSize());
+      // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
+      // std::cout << "torque:" << torque.transpose() << std::endl;
+      ros_logger_->publishVector("/humanoid_controller/torque", torque);
+      ros_logger_->publishVector("/humanoid_controller/wbc_planned_joint_acc", wbc_planned_joint_acc);
+      ros_logger_->publishVector("/humanoid_controller/wbc_planned_body_acc/linear", wbc_planned_body_acc.head<3>());
+      ros_logger_->publishVector("/humanoid_controller/wbc_planned_body_acc/angular", wbc_planned_body_acc.tail<3>());
+      ros_logger_->publishVector("/humanoid_controller/wbc_planned_contact_force/left_foot", wbc_planned_contact_force.head<12>());
+      ros_logger_->publishVector("/humanoid_controller/wbc_planned_contact_force/right_foot", wbc_planned_contact_force.tail<12>());
+      // std::cout << "wbc_planned_contact_force:" << wbc_planned_contact_force.transpose() << std::endl;
+
+      vector_t posDes = centroidal_model::getJointAngles(optimizedState2WBC_mrt_, infoWBC);
+      vector_t velDes = centroidal_model::getJointVelocities(optimizedInput2WBC_mrt_, infoWBC);
+
+      scalar_t dt = period.toSec();
+      bool is_joint_acc_out_of_range = wbc_planned_joint_acc.array().abs().maxCoeff() > 2000;
+      if (is_joint_acc_out_of_range)
+      {
+        ROS_INFO_STREAM("wbc_planned_joint_acc is out of range!");
+        std::cerr << "wbc_planned_joint_acc: " << wbc_planned_joint_acc.transpose() << std::endl;
+        torque = output_tau_;
+      }
+      else
+      {
+        posDes = posDes + 0.5 * wbc_planned_joint_acc * dt * dt;
+        velDes = velDes + wbc_planned_joint_acc * dt;
+      }
+      // ros_logger_->publishVector("/humanoid_controller/posDes", posDes);
+      // ros_logger_->publishVector("/humanoid_controller/velDes", velDes);
+      // ***************************** WBC END **********************************
+
+      // Safety check, if failed, stop the controller
+      if (!safetyChecker_->check(currentObservation_, optimizedState_mrt, optimizedInput_mrt))
+      {
+        ROS_ERROR_STREAM("[humanoid Controller] Safety check failed, stopping the controller.");
+        std_msgs::Bool stop_msg;
+        stop_msg.data = true;
+        stop_pub_.publish(stop_msg);
+        usleep(100000);
+        // TODO: send the stop command to hardware interface
+        return;
+      }
+
+      {
+        output_pos_ = posDes;
+        output_vel_ = velDes;
+        output_tau_ = torque;
+      }
     }
+
     vector_t kp_ = joint_kp_, kd_ = joint_kd_;
     if (currentObservation_.mode != ModeNumber::SS)
     {
@@ -1421,7 +1456,7 @@ namespace humanoid_controller
     jointCmdPub_.publish(jointCmdMsg);
     
     // Visualization
-    if(visualizeHumanoid_)
+    if (visualizeHumanoid_)
     {
       robotVisualizer_->updateSimplifiedArmPositions(simplifiedJointPos_);
       if (use_external_mpc_)
@@ -1432,7 +1467,8 @@ namespace humanoid_controller
       // 更新灵巧手可视化
       robotVisualizer_->updateHandJointPositions(dexhand_joint_pos_);
     }
-    // Publish the observation. Only needed for the command interface
+
+    //Publish the observation. Only needed for the command interface
     const auto t6 = Clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count() > 1000)
     {
@@ -1442,6 +1478,7 @@ namespace humanoid_controller
       std::cout << "t4-t5: " << std::chrono::duration_cast<std::chrono::milliseconds>(t5 - t4).count() << " ms" << std::endl;
       std::cout << "t5-t6: " << std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t5).count() << " ms" << std::endl;
     }
+
     // publish time cost
     std_msgs::Float64 msg;
     msg.data = wbcTimer_.getFrequencyInHz();
@@ -1454,6 +1491,7 @@ namespace humanoid_controller
     last_ros_time = ros::Time::now().toSec();
     lastObservation_ = currentObservation_;
   }
+
   void humanoidController::applySensorData()
   {
     if (!sensorDataQueue.empty())
@@ -2084,6 +2122,30 @@ namespace humanoid_controller
       return;
     for(size_t i = 0; i < dexhand_joint_pos_.size(); ++i)  
       dexhand_joint_pos_(i) = msg->position[i];
+  }
+
+  void humanoidController::getEnableMpcFlagCallback(const std_msgs::Bool::ConstPtr &msg)
+  {
+    if(msg->data == disable_mpc_)
+    {
+      ROS_INFO("Received enable mpc value: %s", msg->data ? "true" : "false");
+      disable_mpc_ = !msg->data;
+    }
+    
+    if(false == disable_mpc_)
+    {
+      ROS_INFO("reset Mpc controller");
+      reset_mpc_ = true;
+    }
+  }
+
+  void humanoidController::getEnableWbcFlagCallback(const std_msgs::Bool::ConstPtr &msg)
+  {
+    if(msg->data == disable_wbc_)
+    {
+      ROS_INFO("Received enable wbc value: %s", msg->data ? "true" : "false");
+      disable_wbc_ = !msg->data;
+    }
   }
 
 } // namespace humanoid_controller
