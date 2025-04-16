@@ -195,7 +195,8 @@ namespace humanoid_controller
     bool getCurrentGaitNameCallback(kuavo_msgs::getCurrentGaitName::Request &req, kuavo_msgs::getCurrentGaitName::Response &res);
     void getEnableMpcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
     void getEnableWbcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
-    
+    void checkMpcPullUp(double current_time, vector_t & current_state, const TargetTrajectories& planner_target_trajectories);
+
     /**
      * Creates MPC Policy message.
      *
@@ -262,6 +263,9 @@ namespace humanoid_controller
     bool is_robot_standup_complete_{false};
     bool isPreUpdateComplete{false};
     bool isInitStandUpStartTime_{false};
+    bool isPullUp_{false};
+    bool setPullUpState_{false};
+    double standupTime_{0.0};
     std::shared_ptr<WbcBase> standUpWbc_;
     vector_t curRobotLegState_;
 
@@ -373,6 +377,8 @@ namespace humanoid_controller
     vector_t defalutJointPos_;
     vector_t initial_status_;
     vector_t intail_input_;
+    vector_t pull_up_status_;
+    vector_t pull_up_input_;
     vector_t cur_status_;
     vector_t cur_input_;
     vector_t joint_kp_, joint_kd_, joint_kp_walking_, joint_kd_walking_, head_kp_, head_kd_;

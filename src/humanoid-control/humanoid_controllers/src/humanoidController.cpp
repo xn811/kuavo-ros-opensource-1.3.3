@@ -658,6 +658,7 @@ namespace humanoid_controller
     // currentObservation_.state(8) = 0.78626;
     // currentObservation_.state.segment(6 + 6, jointNum_) = defalutJointPos_;
     initial_status_ = HumanoidInterface_->getInitialState();
+    pull_up_status_ = initial_status_;
     cur_status_ = initial_status_;
     currentObservation_.state = initial_status_;
     std::cout << "intial state:" << currentObservation_.state.transpose() << std::endl;
@@ -733,7 +734,7 @@ namespace humanoid_controller
     for (int i = 0; i < 8; i++)
       intail_input_(3 * i + 2) = centroidalModelInfoWBC_.robotMass * 9.81 / 8; // 48.7*g/8
     optimizedInput2WBC_mrt_ = intail_input_;
-
+    pull_up_input_ = intail_input_;
     if (is_simplified_model_)
     {
       optimizedState2WBC_mrt_.head(centroidalModelInfo_.stateDim) = currentObservation_.state;
@@ -978,6 +979,7 @@ namespace humanoid_controller
       }
       stateEstimate_->setFixFeetHeights(false);
       isPreUpdateComplete = true;
+      standupTime_ = currentObservation_.time;
 
       std_msgs::Int8 bot_stand_up_complete;
       bot_stand_up_complete.data = 1;
@@ -985,7 +987,34 @@ namespace humanoid_controller
     }
     return true;
   }
+  void humanoidController::checkMpcPullUp(double current_time, vector_t & current_state, const TargetTrajectories& planner_target_trajectories)
+  {
+    if (!is_stance_mode_)
+      return;
 
+    // 检查高度轨迹是否为水平直线的lambda函数
+    auto isHeightTrajectoryHorizontal = [](const vector_array_t& stateTrajectory) -> bool {
+      if (stateTrajectory.empty()) return true;
+      
+      // 获取第一个点的高度作为参考值
+      const double reference_height = stateTrajectory.front()[8];
+      
+      // 检查所有点的高度是否与参考高度相同
+      return std::all_of(stateTrajectory.begin(), stateTrajectory.end(),
+                        [reference_height](const vector_t& state) {
+                          return std::abs(state[8] - reference_height) < 1e-3;
+                        });
+    };
+
+    auto planner_state = planner_target_trajectories.getDesiredState(current_time);
+    bool is_fixed_height = isHeightTrajectoryHorizontal(planner_target_trajectories.stateTrajectory);
+
+    if (is_fixed_height && current_state[8] - planner_state[8] > 0.02)// 期望高度差很大
+    {
+      ROS_WARN("Mpc pull up detected, current height: %f, planner height: %f", current_state[8], planner_state[8]);
+      isPullUp_ = true;
+    }
+  }
   void humanoidController::update(const ros::Time &time, const ros::Duration &dfd)
   {
     const auto t1 = Clock::now();
@@ -1030,6 +1059,8 @@ namespace humanoid_controller
         is_mpc_updated = true;
         auto &policy = mrtRosInterface_->getPolicy();
         auto &state_trajectory = policy.stateTrajectory_;
+        auto &command = mrtRosInterface_->getCommand();
+        // checkMpcPullUp(currentObservation_.time, currentObservation_.state, command.mpcTargetTrajectories_);
         // trajectory_publisher_->publishTrajectory(state_trajectory);
         TargetTrajectories target_trajectories(policy.timeTrajectory_, policy.stateTrajectory_, policy.inputTrajectory_);
 
@@ -1074,10 +1105,23 @@ namespace humanoid_controller
       std::lock_guard<std::mutex> lk(disable_mpc_srv_mtx_);
       enable_mpc = !disable_mpc_;
     }
+
+    wbc_->setPullUpState(isPullUp_);
+    if (setPullUpState_)
+    {
+      pull_up_status_ = optimizedState_mrt;
+      setPullUpState_ = false;
+    }
     if (wbc_only_ || only_half_up_body_)
     {
       optimizedState_mrt = initial_status_;
       optimizedInput_mrt = intail_input_;
+    }
+    else if (isPullUp_)
+    {
+      optimizedState_mrt = pull_up_status_;
+      optimizedInput_mrt = intail_input_;
+      plannedMode_ = ModeNumber::SS;
     }
     else if (!enable_mpc)
     {
@@ -1376,6 +1420,21 @@ namespace humanoid_controller
     jointCmdMsg.control_modes[5] = 0;
     jointCmdMsg.control_modes[10] = 0;
     jointCmdMsg.control_modes[11] = 0;
+    if (isPullUp_)
+    {
+      for (int i = 0; i < jointNumReal_; i++)
+      {
+        if (i == 4 || i == 5 || i == 10 || i == 11) // 踝关节
+        {
+          jointCmdMsg.control_modes[i] = 0;
+          jointCmdMsg.tau[i] = 0;
+          jointCmdMsg.joint_kp[i] = 0;
+          jointCmdMsg.joint_kd[i] = 0;
+        }
+        else
+          jointCmdMsg.control_modes[i] = 2;
+      }
+    }
     if (!is_stance_mode_)
     {
       if (std::any_of(contactFlag_.begin(), contactFlag_.begin() + 4, [](int flag)
@@ -1639,6 +1698,21 @@ namespace humanoid_controller
       measuredRbdState_ = stateEstimate_->update(time, period);                // angle(zyx),pos(xyz),jointPos[info_.actuatedDofNum],angularVel(zyx),linervel(xyz),jointVel[info_.actuatedDofNum]
       currentObservation_.time += period.toSec();
     }
+    bool new_pull_up_state = false;
+    if (isPreUpdateComplete && is_stance_mode_ && currentObservation_.time - standupTime_ > 4) // 只有站立状态&&站起来稳定之后进行保护
+      new_pull_up_state = stateEstimate_->checkPullUp();
+    ros_logger_->publishValue("/state_estimate/pull_up_state", new_pull_up_state);
+    if (new_pull_up_state && !isPullUp_)
+    {
+      ROS_WARN_STREAM("Pull up detected");
+      isPullUp_ = true;
+      setPullUpState_=true;
+    }
+    // else if (!new_pull_up_state && isPullUp_)// TODO:拉起之后重新站立
+    // {
+    //   ROS_WARN_STREAM("Pull up end");
+    //   isPullUp_ = false;
+    // }
     ros_logger_->publishVector("/state_estimate/measuredRbdState", measuredRbdState_);
     auto &info = HumanoidInterface_->getCentroidalModelInfo();
 
