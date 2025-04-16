@@ -434,19 +434,37 @@ def update_kuavo():
     subprocess.run(command, shell=True)
 
 def arm_setzero():
-    # 构建要执行的 bash 脚本命令
-    command = "bash "+ folder_path + "/arm_setzero.sh"
 
+    kuavo_ros_file_path = folder_path +"/arm_setzero.sh" 
+    kuavo_open_file_path = folder_path +"../../installed/share/hardware_node/lib/ruiwo_controller/arm_setzero.sh" 
+    
+    if os.path.exists(kuavo_ros_file_path):
+        command = "bash "+ kuavo_ros_file_path
+    elif os.path.exists(kuavo_open_file_path):
+        command = "bash "+ kuavo_open_file_path
+    else:
+        print(f"The file {file_path} does not exist.")
+        return
+        
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
 def arm_breakin():
-    # 构建要执行的 bash 脚本命令
-    command = "bash "+ folder_path + "/arm_breakin.sh"
 
+    kuavo_ros_file_path = folder_path + "/arm_breakin.sh" 
+    kuavo_open_file_path = folder_path + "../../installed/share/hardware_node/lib/ruiwo_controller/arm_breakin.sh" 
+    
+    if os.path.exists(kuavo_ros_file_path):
+        command = "bash "+ kuavo_ros_file_path
+    elif os.path.exists(kuavo_open_file_path):
+        command = "bash "+ kuavo_open_file_path
+    else:
+        print(f"The file {file_path} does not exist.")
+        return
+        
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
-
+    
 def license_sign():
     FILE = "/home/lab/.config/lejuconfig/ec_master.key"
     # 检查文件是否存在
