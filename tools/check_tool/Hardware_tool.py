@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
 '''
 Author: dongdongmingming
@@ -537,6 +537,7 @@ def reset_folder():
         "wifi",
         "rosbag",
         "craic_code_repo",
+        "kuavo-ros-opensource",
         "Documents",
         "Downloads",
         "xfolder"
@@ -656,28 +657,34 @@ def robot_login():
     
     # sudo systemctl start report_robot_network_info.service
 
-def get_git_info():
+def get_git_info():# 获取最新 commit 的 hash、日期和提交信息（title）
     try:
-        # 获取当前的 commit hash
-        commit_hash = subprocess.run(['git', 'rev-parse', 'HEAD'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        commit_hash = commit_hash.stdout.decode('utf-8').strip()
+        result = subprocess.run(
+            ['git', 'log', '-1', '--format=%H%n%ci%n%s'],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5
+        )
+        output = result.stdout.decode('utf-8').strip().split('\n')
 
-        # 获取当前 commit 的提交日期
-        commit_date = subprocess.run(['git', 'show', '-s', '--format=%ci', commit_hash], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        commit_date = commit_date.stdout.decode('utf-8').strip()
-
-        # 获取当前 commit 的提交信息
-        commit_message = subprocess.run(['git', 'show', '-s', '--format=%s', commit_hash], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        commit_message = commit_message.stdout.decode('utf-8').strip()
+        if len(output) < 3:
+            raise ValueError("Unexpected git output: " + repr(output))
 
         return {
-            'commit_hash': commit_hash,
-            'commit_date': commit_date,
-            'commit_message': commit_message
+            'commit_hash': output[0],
+            'commit_date': output[1],
+            'commit_message': output[2]
         }
+
+    except subprocess.TimeoutExpired:
+        print("⚠️ Git command timed out.")
     except subprocess.CalledProcessError as e:
-        print(f"Error getting Git information: {e.stderr.decode('utf-8')}")
-        return None
+        print("❌ Git command failed:", e.stderr.decode('utf-8').strip())
+    except FileNotFoundError:
+        print("❌ Git is not installed or not in PATH.")
+    except Exception as e:
+        print("❌ Unexpected error:", str(e))
 
 def secondary_menu():
     while True:
@@ -787,7 +794,7 @@ def secondary_menu():
             print(bcolors.HEADER + "###开始，license导入###" + bcolors.ENDC)
             license_sign()
             print(bcolors.HEADER + "###结束，license已导入，请确认验证###" + bcolors.ENDC)   
-            break
+            break  
         elif option == "m":
             print(bcolors.HEADER + "###在执行手臂磨线之前，请先确保完成手臂电机零点设置###" + bcolors.ENDC)
             print("请摆正手臂，按 d 执行电机零点校准，并执行手臂磨线。")
