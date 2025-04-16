@@ -4,7 +4,9 @@
 
 ## 概述
 
-automatic_test 包旨在对机器人系统进行自动化测试。
+automatic_test 包旨在对机器人系统进行自动化测试。目前支持以下测试类型：
+- 机器人行走测试
+- 单步控制测试（精确步态控制）
 
 ## 配置
 
@@ -37,7 +39,6 @@ ROBOT_SERIAL_NUMBER=<机器人编号>
 #### 路径跟踪节点配置 (mpc_path_tracer_node)
 
 1. 运动控制参数
-   - `speed`: 默认运动速度 (0.4 m/s)
    - `dt`: 控制周期 (0.1 秒)
    - `v_max_linear`: 最大线速度 (0.4 m/s)
    - `v_max_angular`: 最大角速度 (0.6 rad/s)
@@ -57,21 +58,52 @@ ROBOT_SERIAL_NUMBER=<机器人编号>
 #### 行走测试节点配置 (test_robot_walk)
 
 - `round`: 测试轮数 (默认: 10)
+- `path_type`: 测试路径类型 (默认: [circle, square, scurve])
+
+#### 单步控制测试配置 (test_single_step_control)
+
+- `round`: 测试轮数 (默认: 10)
+- `forward_step_size`: 前进步态的步长 (默认: 0.08 米)
+- `backward_step_size`: 后退步态的步长 (默认: -0.08 米)
+- `left_move_step_size`: 左移步态的步长 (默认: 0.05 米)
+- `right_move_step_size`: 右移步态的步长 (默认: -0.05 米)
+- `rotate_left_step_size`: 左转步态的步长 (默认: 45 度)
+- `rotate_right_step_size`: 右转步态的步长 (默认: -45 度)
 
 > 注意：这些参数可以根据实际测试需求进行调整。在修改参数时，请确保值在合理范围内，以确保机器人的安全运行。
 
-## 启动参数
+## 启动测试
 
-自动化测试通过命令行启动：
+自动化测试提供了多种启动方式，可以根据需要选择不同的测试类型：
+
+### 1. 机器人行走测试
 
 ```bash
-roslaunch automatic_test automatic_test.launch
+roslaunch automatic_test test_robot_walk.launch sim:=false
 ```
 
-### 参数说明
+这个测试会执行预定义的路径（圆形、方形、S形），测试机器人的行走能力。
 
-- `walk` (默认值: true): 行走测试
+### 2. 单步控制测试
+
+```bash
+roslaunch automatic_test test_single_step_control.launch sim:=false
+```
+
+这个测试会执行一系列精确的单步动作，包括前进、后退、左右移动和转向，并评估每个步态的执行精度。
+
+### 3. 完整测试套件
+
+```bash
+roslaunch automatic_test automatic_test.launch sim:=false
+```
+
+这将运行所有可用的测试用例。
+
+### 启动参数说明
+
 - `sim` (默认值: true)：启用/禁用仿真模式
+- `log_level` (默认值: INFO)：日志级别设置
 
 ## 测试流程
 
@@ -125,4 +157,18 @@ source devel/setup.bash
 roslaunch automatic_test automatic_test.launch sim:=false
 ```
 
-8. 测试结束后，机器人会自动回到测试起点，并且会发送测试结果到企业微信通知群
+8. 测试结束后：
+   - 对于行走测试：机器人会自动回到测试起点
+   - 对于单步控制测试：系统会输出每个步态的执行精度评估结果
+   - 所有测试结果都会发送到企业微信通知群
+
+## 测试结果说明
+
+### 行走测试结果
+- 路径跟踪完成情况
+- 执行轮数统计
+
+### 单步控制测试结果
+- 每个步态的位置误差（米）
+- 每个步态的偏航角误差（度）
+- 多轮测试的平均误差统计

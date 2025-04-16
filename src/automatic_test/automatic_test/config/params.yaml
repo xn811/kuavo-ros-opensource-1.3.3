@@ -6,7 +6,7 @@ mpc_path_tracer_node:
 
   # 全局运动参数
   dt: 0.1     # s
-  v_max_linear: 0.2   # m/s
+  v_max_linear: 0.6   # m/s
   v_max_angular: 0.4  # rad/s
 
 
@@ -32,3 +32,16 @@ robot_manager_node:
 
 test_robot_walk:
   round: 10
+  path_types: [circle, square, scurve]
+
+test_single_step_control:
+  world_frame: "mocap_frame"
+  robot_frame: "mocap_robot"
+  home_frame: "mocap_base"
+  round: 10
+  forward_step_size: 0.08
+  backward_step_size: -0.08
+  left_move_step_size: 0.05
+  right_move_step_size: -0.05
+  rotate_left_step_size: 45
+  rotate_right_step_size: -45

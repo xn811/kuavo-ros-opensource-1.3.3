@@ -1,5 +1,5 @@
+from enum import Enum
 from datetime import datetime
-from imp import new_module
 import pytest
 from types import SimpleNamespace
 import time
@@ -12,20 +12,21 @@ from trace_path.mpc_path_tracer import MpcPathTracer
 from multiprocessing import Process
 import requests
 from .constant import test_project_cn_name_dict
+from std_msgs.msg import Int8
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "walk: mark test as a walk test")
+    config.addinivalue_line("markers", "single_step_control: mark test as a single step control test")
 
 
 @pytest.fixture(scope="class")
 def ros_setup():
     """Initialize a ROS node for testing.
-    Using session scope to ensure the node is only initialized once for all tests.
+    Using class scope to ensure the node is only initialized once for each test class.
     """
     rospy.init_node('test_node', anonymous=True)
     yield
-    # cleanup happens automatically when the session ends
-    rospy.signal_shutdown("Test complete")
+
 
 
 def mpc_tracer():
@@ -283,3 +284,34 @@ def notify_wecom_bot(str):
         },
     }
     requests.post(webhook_url, json=data)
+
+class AutoTrackingStats(Enum):
+    NOT_FOLLOWING = 0
+    FOLLOWING = 1
+
+global auto_tracking_stats
+
+class AutoTrackingMonitor:
+    def __init__(self):
+        self._status = AutoTrackingStats.FOLLOWING
+        self.lock = threading.Lock()
+        
+    def callback(self, msg):
+        with self.lock:
+            if msg.data == AutoTrackingStats.FOLLOWING.value:
+                self._status = AutoTrackingStats.FOLLOWING
+            else:
+                self._status = AutoTrackingStats.NOT_FOLLOWING
+            print(f"Status updated: {self._status}")
+    
+    @property
+    def status(self):
+        with self.lock:
+            return self._status
+
+@pytest.fixture(scope="function")
+def auto_tracking_stats():
+    monitor = AutoTrackingMonitor()
+    auto_tracking_stats_sub = rospy.Subscriber('/auto_tracking_stats', Int8, monitor.callback)
+    yield monitor
+    auto_tracking_stats_sub.unregister()

@@ -12,6 +12,8 @@ function show_help {
     echo "  --log-level LEVEL    Set log level (DEBUG|INFO|WARNING|ERROR|CRITICAL)"
     echo "  --walk              Enable walk tests"
     echo "  --no-walk           Disable walk tests"
+    echo "  --single-step-control Enable single step control tests"
+    echo "  --no-single-step-control Disable single step control tests"
     echo "  -h, --help          Show this help message"
     echo "  -- ...              Pass remaining arguments directly to pytest"
 }
@@ -29,6 +31,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-walk)
             MARKERS+=("not walk")
+            shift
+            ;;
+        --single-step-control)
+            MARKERS+=("single_step_control")
+            shift
+            ;;
+        --no-single-step-control)
+            MARKERS+=("not single_step_control")
             shift
             ;;
         -h|--help)
@@ -54,8 +64,15 @@ done
 # 构建 marker 表达式
 MARKER_EXPR=""
 if [ ${#MARKERS[@]} -gt 0 ]; then
-    MARKER_EXPR=$(IFS=" and "; echo "${MARKERS[*]}")
+    # 将所有标记用引号括起来并用 or 连接
+    MARKER_EXPR="${MARKERS[0]}"
+    for ((i=1; i<${#MARKERS[@]}; i++)); do
+        MARKER_EXPR="$MARKER_EXPR or ${MARKERS[$i]}"
+    done
 fi
+
+# 输出 marker 表达式用于调试
+echo "Marker expression: $MARKER_EXPR"
 
 ENV_PATH="$(rospack find automatic_test)/env/automatic_test.env"
 source $ENV_PATH

@@ -34,8 +34,10 @@
    # server 如果是ocs2，请使用参数 robot_type:=ocs2
    roslaunch planarmwebsocketservice plan_arm_action_websocket_server.launch robot_type:=kuavo
    # client 成功后可以在 RViz 和 Gazebo 中看到动作
-   python3 ./src/manipulation_nodes/planarmwebsocketservice/scripts/websocket_client_demo.py
+   python3 ./src/manipulation_nodes/planarmwebsocketservice/scripts/websocket_client_demo.py --action_file_path src/manipulation_nodes/planarmwebsocketservice/action_files/wave_hand.tact
    ```
+
+   action_file_path为保存动作的tact文件名，该文件需要事先保存在manipulation_nodes/planarmwebsocketservice/action_files文件夹中
 
 ## 注意事项
 
