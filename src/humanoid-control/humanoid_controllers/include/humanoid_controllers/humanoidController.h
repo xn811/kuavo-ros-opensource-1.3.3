@@ -42,6 +42,7 @@
 #include "kuavo_msgs/robotHeadMotionData.h"
 #include "kuavo_msgs/getCurrentGaitName.h"
 #include "humanoid_controllers/shm_manager.h"
+#include <std_msgs/Int8.h> 
 
 namespace humanoid_controller
 {
@@ -282,6 +283,7 @@ namespace humanoid_controller
     ros::Publisher stop_pub_;
     ros::Publisher lHandWrenchPub_;
     ros::Publisher rHandWrenchPub_;
+    ros::Publisher standUpCompletePub_;
     ros::Subscriber jointPosVelSub_;
     ros::Subscriber sensorsDataSub_;
     ros::Subscriber jointAccSub_;

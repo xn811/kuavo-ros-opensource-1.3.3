@@ -466,6 +466,9 @@ namespace humanoid_controller
       
       // dexhand state
       dexhand_state_sub_ = controllerNh_.subscribe("/dexhand/state", 10, &humanoidController::dexhandStateCallback, this);
+
+      standUpCompletePub_ = controllerNh_.advertise<std_msgs::Int8>("/bot_stand_up_complete", 10);
+      
       enable_mpc_sub_ = controllerNh_.subscribe("/enable_mpc_flag", 10, &humanoidController::getEnableMpcFlagCallback, this);
       enable_wbc_sub_ = controllerNh_.subscribe("/enable_wbc_flag", 10, &humanoidController::getEnableWbcFlagCallback, this);
 
@@ -888,12 +891,6 @@ namespace humanoid_controller
       bool bUneventForce = fabs(contactForce_[2] - contactForce_[8]) > (norSingleLegSupport * 2.0); // 左右脚支撑立差值超过重量的1/2即判断为异常/*  */
       if (bNotLanding || bUneventForce)
       {
-        if (is_robot_standup_complete_)
-        {
-          ROS_INFO_STREAM("left feet force: " << contactForce_[2] << "less than " << norSingleLegSupport);
-          ROS_INFO_STREAM("right feet force: " << contactForce_[8] << "less than " << norSingleLegSupport);
-        }
-
         if (!is_abnor_StandUp_ && (bUneventForce || (time.toSec() > robotStandUpCompleteTime_ + 0.5)))
         {
           ROS_WARN("Robot standing abnormal...!!");
@@ -932,6 +929,10 @@ namespace humanoid_controller
           hardware_status_ = 0;
           isInitStandUpStartTime_ = false;
           is_abnor_StandUp_ = false;
+
+          std_msgs::Int8 bot_stand_up_failed;
+          bot_stand_up_failed.data = -1;
+          standUpCompletePub_.publish(bot_stand_up_failed);
           return false;
         }
         return true;
@@ -977,6 +978,10 @@ namespace humanoid_controller
       }
       stateEstimate_->setFixFeetHeights(false);
       isPreUpdateComplete = true;
+
+      std_msgs::Int8 bot_stand_up_complete;
+      bot_stand_up_complete.data = 1;
+      standUpCompletePub_.publish(bot_stand_up_complete);
     }
     return true;
   }
