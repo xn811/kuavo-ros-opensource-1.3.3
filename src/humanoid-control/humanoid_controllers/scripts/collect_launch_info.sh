@@ -43,7 +43,7 @@ echo "date: $TIMESTAMP" >> "${LAUNCH_INDO_DIR}/info.txt"
 echo "remote: $GIT_REMOTE" >> "${LAUNCH_INDO_DIR}/info.txt"
 echo "branch: $GIT_BRANCH" >> "${LAUNCH_INDO_DIR}/info.txt"
 echo "sync_commit: $SYNC_COMMIT" >> "${LAUNCH_INDO_DIR}/info.txt"
-echo "commit: $GIT_COMMIT" >> "${LAUNCH_INDO_DIR}/info.txt"
+echo "crash_commit: $GIT_COMMIT" >> "${LAUNCH_INDO_DIR}/info.txt"
 if [ -n "$ROBOT_SERIAL_NUMBER" ]; then
     echo "ROBOT_NAME: $ROBOT_SERIAL_NUMBER" >> "${LAUNCH_INDO_DIR}/info.txt"
 fi
