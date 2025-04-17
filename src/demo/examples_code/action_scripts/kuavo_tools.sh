@@ -69,6 +69,7 @@ fi
 
 # 功能选择菜单
 show_menu() {
+echo -e "${BLUE}\n重要提示: 确保遥控器服务已经启动在执行本脚本，遥控器服务参考:${NC}https://kuavo.lejurobot.com/manual/basic_usage/kuavo-ros-control/docs/5%E5%8A%9F%E8%83%BD%E6%A1%88%E4%BE%8B/%E9%80%9A%E7%94%A8%E6%A1%88%E4%BE%8B/H12%E9%81%A5%E6%8E%A7%E5%99%A8%E4%BD%BF%E7%94%A8%E5%BC%80%E5%8F%91%E6%A1%88%E4%BE%8B/${NC}"
     echo -e "\n${YELLOW}功能选择:${NC}"
     echo -e "${BLUE}1. 动作语音出厂化设置${NC}"
     echo -e "${BLUE}2. 自定义动作文件设置${NC}"
