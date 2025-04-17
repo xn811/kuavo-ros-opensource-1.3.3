@@ -24,7 +24,7 @@ def follow_state_callback(msg):
 class TestRobotWalk:
     def setup_class(self):
         self.follow_state_sub = rospy.Subscriber('trace_path/follow_state', Int8, follow_state_callback)
-        self.available_path_types = ['circle', 'square', 'scurve']
+        self.available_path_types = ['triangle', 'line', 'circle', 'square', 'scurve']
         self.ros_namespace = 'test_robot_walk'
     
     def wait_for_completion(self, check_robot_alive, auto_tracking_stats, description=""):
@@ -45,15 +45,37 @@ class TestRobotWalk:
     
     @pytest.mark.walk
     def test_robot_walk(self, check_robot_ready, check_robot_alive, mpc_tracer_process, auto_tracking_stats, test_timer):
+        if not rospy.get_param(f'/{self.ros_namespace}/test_cmd_vel', False):
+            rospy.loginfo("cmd_vel 测试未启用")
+            return
         round = rospy.get_param(f'/{self.ros_namespace}/round', 10)
         rospy.loginfo(f"Test Robot Walk Round: {round}")
         path_types = rospy.get_param(f'/{self.ros_namespace}/path_types', ['circle', 'square', 'scurve'])
-
+        rospy.set_param(f'/mpc_path_tracer_node/motion_interface', '/cmd_vel')
         while round > 0:
             for path_type in path_types:
                 if path_type not in self.available_path_types:
                     rospy.logerr(f"路径类型 {path_type} 不存在")
                     continue
                 self.execute_path(path_type, check_robot_alive, auto_tracking_stats)
+            round -= 1
+            rospy.loginfo(f"剩余轮数: {round}")
+
+    @pytest.mark.walk
+    def test_robot_walk_cmd_pose(self, check_robot_ready, check_robot_alive, mpc_tracer_process, auto_tracking_stats, test_timer):
+        if not rospy.get_param(f'/{self.ros_namespace}/test_cmd_pose', False):
+            rospy.loginfo("cmd_pose 测试未启用")
+            return
+        round = rospy.get_param(f'/{self.ros_namespace}/round', 10)
+        rospy.loginfo(f"Test Robot Walk Round: {round}")
+        path_types = rospy.get_param(f'/{self.ros_namespace}/path_types', ['circle', 'square', 'scurve'])
+        rospy.set_param(f'/mpc_path_tracer_node/motion_interface', '/cmd_pose')
+        while round > 0:
+            for path_type in path_types:
+                if path_type not in self.available_path_types:
+                    rospy.logerr(f"路径类型 {path_type} 不存在")
+                    continue
+                self.execute_path(path_type, check_robot_alive, auto_tracking_stats)
+
             round -= 1
             rospy.loginfo(f"剩余轮数: {round}")

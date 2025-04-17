@@ -24,13 +24,25 @@ class SquareParams(BaseParams):
     def __init__(self, side_length=4.0, v_max_linear=0.3, dt=0.1, yaw_offset=0.0):
         super().__init__(v_max_linear, dt)
         self.side_length = side_length
-        self.yaw_offset = yaw_offset  # 额外的yaw偏转角度（弧度）
+        self.yaw_offset = yaw_offset  
 
 class SCurveParams(BaseParams):
     def __init__(self, length=4.0, amplitude=2.0, v_max_linear=0.3, dt=0.1):
         super().__init__(v_max_linear, dt)
         self.length = length      # S形曲线的长度
         self.amplitude = amplitude  # S形曲线的振幅
+
+class TriangleParams(BaseParams):
+    def __init__(self, side_length=2.0, v_max_linear=0.3, dt=0.1, yaw_offset=0.0):
+        super().__init__(v_max_linear, dt)
+        self.side_length = side_length
+        self.yaw_offset = yaw_offset  
+
+class LineParams(BaseParams):
+    def __init__(self, length=2.0, v_max_linear=0.3, dt=0.1, yaw_offset=0.0):
+        super().__init__(v_max_linear, dt)
+        self.length = length        # 直线长度
+        self.yaw_offset = yaw_offset  
 
 class PathGenerator:
     def __init__(self, world_frame='odom', robot_frame='base_link', home_frame='home'):
@@ -305,43 +317,262 @@ class PathGenerator:
 
         return path
 
+    def create_triangle_path(self, params=None):
+        """Create an equilateral triangle path starting from robot's current position"""
+        if params is None:
+            params = TriangleParams()
+            
+        path = Path()
+        path.header.frame_id = self.world_frame
+        path.header.stamp = rospy.Time.now()
+        
+        # Get robot's current pose
+        trans, rot = self.get_robot_pose()
+        if trans is None:
+            rospy.logerr("Could not get robot pose")
+            return None
+            
+        current_x, current_y = trans[0], trans[1]
+        current_yaw = tf.transformations.euler_from_quaternion(rot)[2]  # 当前朝向角
+        total_yaw = current_yaw + params.yaw_offset  # 总偏转角度 = 当前yaw + 额外偏转
+        
+        # 计算每一步的距离
+        step_distance = params.v_max_linear * params.dt
+        
+        # 计算等边三角形的顶点（相对于起始点）
+        # 等边三角形的高 = 边长 * sqrt(3)/2
+        height = params.side_length * math.sqrt(3) / 2
+        
+        # 定义三角形的顶点（相对于起始点）
+        triangle_points_local = [
+            (0, 0),                                    # 起点
+            (params.side_length, 0),                   # 右
+            (params.side_length/2, height),            # 顶点
+            (0, 0)                                     # 回到起点
+        ]
+        
+        # 将局部坐标点旋转并平移到世界坐标系
+        triangle_points = []
+        for point in triangle_points_local:
+            # 应用旋转变换
+            x_rot = point[0] * math.cos(total_yaw) - point[1] * math.sin(total_yaw)
+            y_rot = point[0] * math.sin(total_yaw) + point[1] * math.cos(total_yaw)
+            # 平移到世界坐标系
+            x_world = x_rot + current_x
+            y_world = y_rot + current_y
+            triangle_points.append((x_world, y_world))
+        
+        # 生成路径点
+        for i in range(1, len(triangle_points)):
+            prev_point = triangle_points[i - 1]
+            next_point = triangle_points[i]
+            
+            # 计算当前边的向量
+            dx = next_point[0] - prev_point[0]
+            dy = next_point[1] - prev_point[1]
+            distance = math.sqrt(dx * dx + dy * dy)
+            yaw = math.atan2(dy, dx)  # 计算当前边的朝向
+            
+            # 计算需要插入的点数
+            num_steps = max(int(distance / step_distance), 1)
+            
+            # 在两个顶点之间插入点
+            for j in range(num_steps + 1):
+                t = j / float(num_steps)
+                x = prev_point[0] + t * dx
+                y = prev_point[1] + t * dy
+                
+                # 创建路径点
+                pose_stamped = PoseStamped()
+                pose_stamped.header = path.header
+                pose_stamped.pose.position.x = x
+                pose_stamped.pose.position.y = y
+                pose_stamped.pose.position.z = 0.0
+                
+                # 设置朝向（考虑当前边的朝向）
+                q = tf.transformations.quaternion_from_euler(0, 0, yaw)
+                pose_stamped.pose.orientation.x = q[0]
+                pose_stamped.pose.orientation.y = q[1]
+                pose_stamped.pose.orientation.z = q[2]
+                pose_stamped.pose.orientation.w = q[3]
+                
+                path.poses.append(pose_stamped)
+        
+        return path
+
+    def create_line_path(self, params=None):
+        """Create a straight line path starting from robot's current position"""
+        if params is None:
+            params = LineParams()
+        
+        path = Path()
+        path.header.frame_id = self.world_frame
+        path.header.stamp = rospy.Time.now()
+        
+        # Get robot's current pose
+        trans, rot = self.get_robot_pose()
+        if trans is None:
+            rospy.logerr("Could not get robot pose")
+            return None
+        
+        current_x, current_y = trans[0], trans[1]
+        current_yaw = tf.transformations.euler_from_quaternion(rot)[2]  # 当前朝向角
+        total_yaw = current_yaw + params.yaw_offset  # 总偏转角度 = 当前yaw + 额外偏转
+        
+        # 计算每一步的距离
+        step_distance = params.v_max_linear * params.dt
+        
+        # 计算直线终点（在机器人当前朝向的基础上）
+        end_x = current_x + params.length * math.cos(total_yaw)
+        end_y = current_y + params.length * math.sin(total_yaw)
+        
+        # 计算需要插入的点数
+        distance = params.length
+        num_steps = max(int(distance / step_distance), 1)
+        
+        # 生成路径点
+        for i in range(num_steps + 1):
+            t = i / float(num_steps)
+            # 线性插值计算位置
+            x = current_x + t * (end_x - current_x)
+            y = current_y + t * (end_y - current_y)
+            
+            # 创建路径点
+            pose_stamped = PoseStamped()
+            pose_stamped.header = path.header
+            pose_stamped.pose.position.x = x
+            pose_stamped.pose.position.y = y
+            pose_stamped.pose.position.z = 0.0
+            
+            # 设置朝向（保持恒定）
+            q = tf.transformations.quaternion_from_euler(0, 0, total_yaw)
+            pose_stamped.pose.orientation.x = q[0]
+            pose_stamped.pose.orientation.y = q[1]
+            pose_stamped.pose.orientation.z = q[2]
+            pose_stamped.pose.orientation.w = q[3]
+            
+            path.poses.append(pose_stamped)
+        
+        return path
+
+class PathGeneratorFactory:
+    """路径生成器工厂类"""
+    
+    @staticmethod
+    def get_params_config():
+        """获取各类型路径的参数配置"""
+        return {
+            'line': {
+                'params_class': LineParams,
+                'create_method': 'create_line_path',
+                'params': {
+                    'length': ('length', 2.0),
+                    'yaw_offset': ('yaw_offset', 0.0, math.radians)
+                }
+            },
+            'circle': {
+                'params_class': CircleParams,
+                'create_method': 'create_test_path',
+                'params': {
+                    'radius': ('radius', 2.0)
+                }
+            },
+            'square': {
+                'params_class': SquareParams,
+                'create_method': 'create_square_path',
+                'params': {
+                    'side_length': ('side_length', 4.0),
+                    'yaw_offset': ('yaw_offset', 0.0, math.radians)
+                }
+            },
+            'triangle': {
+                'params_class': TriangleParams,
+                'create_method': 'create_triangle_path',
+                'params': {
+                    'side_length': ('side_length', 2.0),
+                    'yaw_offset': ('yaw_offset', 0.0, math.radians)
+                }
+            },
+            'scurve': {
+                'params_class': SCurveParams,
+                'create_method': 'create_scurve_path',
+                'params': {
+                    'length': ('length', 4.0),
+                    'amplitude': ('amplitude', 2.0)
+                }
+            }
+        }
+
+    @staticmethod
+    def create_path(path_type, path_generator, dt):
+        """
+        创建指定类型的路径
+        
+        Args:
+            path_type (str): 路径类型
+            path_generator (PathGenerator): 路径生成器实例
+            dt (float): 时间步长
+            
+        Returns:
+            Path: 生成的路径对象
+        """
+        configs = PathGeneratorFactory.get_params_config()
+        
+        if path_type not in configs:
+            rospy.logerr(f"Unknown path type: {path_type}")
+            return None
+            
+        # get the max linear velocity of the path type from the ROS parameter server
+        v_max_linear = rospy.get_param(f'/mpc_path_tracer_node/path_velocities/{path_type}',0.2) 
+        rospy.set_param('/mpc_path_tracer_node/v_max_linear', v_max_linear)
+        config = configs[path_type]
+        param_values = {}
+        
+        # get the parameters from the ROS parameter server
+        for param_name, param_config in config['params'].items():
+            ros_param_name = f'/mpc_path_tracer_node/path_generators/{path_type}/{param_config[0]}'
+            value = rospy.get_param(ros_param_name, param_config[1])
+            
+            # if there is a conversion function (like math.radians), apply it
+            if len(param_config) > 2:
+                value = param_config[2](value)
+                
+            param_values[param_name] = value
+        
+        # create the parameter object
+        params = config['params_class'](
+            v_max_linear=v_max_linear,
+            dt=dt,
+            **param_values
+        )
+        
+        # generate the path
+        create_method = getattr(path_generator, config['create_method'])
+        path = create_method(params)
+        
+        return path
+
 def start_mpc_tracer(path_type='circle'):
     """Start the MPC path tracer with a given path type"""
     
-    # Get frame ID and parameters from ROS parameter server
+    # get the frame ID and parameters from the ROS parameter server
     world_frame = rospy.get_param('/mpc_path_tracer_node/world_frame', 'odom')
     robot_frame = rospy.get_param('/mpc_path_tracer_node/robot_frame', 'base_link')
     home_frame = rospy.get_param('/mpc_path_tracer_node/home_frame', 'home')
-    v_max_linear = rospy.get_param('/mpc_path_tracer_node/v_max_linear', 0.4)  # default v_max_linear 0.3 m/s
-    dt = rospy.get_param('/mpc_path_tracer_node/dt', 0.1)       # default dt 0.1 s
+    dt = rospy.get_param('/mpc_path_tracer_node/dt', 0.1)
     
-    rospy.loginfo(f"Using world frame: '{world_frame}', robot frame: '{robot_frame}', v_max_linear: {v_max_linear} m/s, dt: {dt} s")
+    rospy.loginfo(f"Using world frame: '{world_frame}', robot frame: '{robot_frame}', "
+                  f"dt: {dt} s")
     
-    # Create path generator
+    # create the path generator
     path_generator = PathGenerator(world_frame, robot_frame, home_frame)
     global home_pose
     if home_pose is None:
         home_pose = path_generator.set_home_pose()
     
-    # Create path parameters based on type
-    if path_type == 'circle':
-        radius = rospy.get_param('/mpc_path_tracer_node/path_generators/circle/radius', 2.0)
-        params = CircleParams(radius=radius, v_max_linear=v_max_linear, dt=dt)
-        path = path_generator.create_test_path(params)
-    elif path_type == 'square':
-        side_length = rospy.get_param('/mpc_path_tracer_node/path_generators/square/side_length', 4.0)
-        yaw_offset = rospy.get_param('/mpc_path_tracer_node/path_generators/square/yaw_offset', 0.0)
-        params = SquareParams(side_length=side_length, v_max_linear=v_max_linear, dt=dt, yaw_offset=yaw_offset)
-        path = path_generator.create_square_path(params)
-    elif path_type == 'scurve':
-        length = rospy.get_param('/mpc_path_tracer_node/path_generators/scurve/length', 4.0)
-        amplitude = rospy.get_param('/mpc_path_tracer_node/path_generators/scurve/amplitude', 2.0)
-        params = SCurveParams(length=length, amplitude=amplitude, v_max_linear=v_max_linear, dt=dt)
-        path = path_generator.create_scurve_path(params)
-    else:
-        rospy.logerr(f"Unknown path type: {path_type}")
-        return
-        
+    # use the factory class to generate the path
+    path = PathGeneratorFactory.create_path(path_type, path_generator, dt)
+    
     if path is None:
         rospy.logerr("Failed to generate path")
         return
@@ -523,7 +754,7 @@ if __name__ == '__main__':
         elif command == 'stop':
             stop_mpc_tracer()
         else:
-            print("Usage: mpc_client_example.py [start|stop] [circle|square|scurve]")
+            print("Usage: mpc_client_example.py [start|stop] [line|circle|square|triangle|scurve]")
     
     except rospy.ROSInterruptException:
         pass 

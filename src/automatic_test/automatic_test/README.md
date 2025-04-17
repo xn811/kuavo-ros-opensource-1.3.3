@@ -40,25 +40,41 @@ ROBOT_SERIAL_NUMBER=<机器人编号>
 
 1. 运动控制参数
    - `dt`: 控制周期 (0.1 秒)
-   - `v_max_linear`: 最大线速度 (0.4 m/s)
-   - `v_max_angular`: 最大角速度 (0.6 rad/s)
+   - `v_max_linear`: 默认最大线速度 (0.2 m/s)
+   - `v_max_angular`: 最大角速度 (0.4 rad/s)
 
-2. 测试路径参数
+2. 不同路径类型的最大线速度配置
+   - `path_velocities`: 针对不同路径类型设置的最大线速度
+     - `line`: 直线路径最大速度 (0.6 m/s)
+     - `circle`: 圆形路径最大速度 (0.4 m/s)
+     - `square`: 方形路径最大速度 (0.4 m/s)
+     - `triangle`: 三角形路径最大速度 (0.4 m/s)
+     - `scurve`: S形路径最大速度 (0.4 m/s)
+
+3. 测试路径参数
    - 圆形路径 (circle)
      - `radius`: 圆形路径半径 (2.0 米)
    
    - 方形路径 (square)
      - `side_length`: 边长 (2.0 米)
-     - `yaw_offset`: 偏航角偏移 (-0.785 弧度，约-45度)
+     - `yaw_offset`: 偏航角偏移 (-45.0 度)
    
    - S形路径 (scurve)
      - `length`: 路径长度 (1.5 米)
-     - `amplitude`: 波动幅度 (1.0 米)
+     - `amplitude`: 波动幅度 (0.5 米)
+   
+   - 直线路径 (line)
+     - `length`: 路径长度 (2.0 米)
+     - `yaw_offset`: 偏航角偏移 (0.0 度)
+   
+   - 三角形路径 (triangle)
+     - `length`: 边长 (1.0 米)
+     - `yaw_offset`: 偏航角偏移 (-30.0 度)
 
 #### 行走测试节点配置 (test_robot_walk)
 
-- `round`: 测试轮数 (默认: 10)
-- `path_type`: 测试路径类型 (默认: [circle, square, scurve])
+- `round`: 测试轮数 (默认: 1)
+- `path_types`: 测试路径类型列表 (默认: [triangle, line, circle, square, scurve])
 
 #### 单步控制测试配置 (test_single_step_control)
 
@@ -78,11 +94,19 @@ ROBOT_SERIAL_NUMBER=<机器人编号>
 
 ### 1. 机器人行走测试
 
+`cmd_vel` 模式
+
 ```bash
-roslaunch automatic_test test_robot_walk.launch sim:=false
+roslaunch automatic_test test_robot_walk.launch sim:=false test_cmd_vel:=true test_cmd_pose:=false
 ```
 
-这个测试会执行预定义的路径（圆形、方形、S形），测试机器人的行走能力。
+`cmd_pose` 模式
+
+```bash
+roslaunch automatic_test test_robot_walk.launch sim:=false test_cmd_vel:=false test_cmd_pose:=true
+```
+
+这个测试会执行预定义的路径（圆形、方形、S形, 三角形, 直线路径），测试机器人的行走能力。
 
 ### 2. 单步控制测试
 
@@ -167,6 +191,16 @@ roslaunch automatic_test automatic_test.launch sim:=false
 ### 行走测试结果
 - 路径跟踪完成情况
 - 执行轮数统计
+- 轨迹跟踪性能评估：
+  - 总跟踪时间：从开始跟踪到完成的总时间
+  - 总行驶距离：机器人实际行走的总距离
+  - 平均速度：总距离除以总时间
+  - 距离误差统计：
+    - 平均误差：所有采样点的平均距离误差
+    - 最大误差：所有采样点中的最大距离误差
+    - 最小误差：所有采样点中的最小距离误差
+    - RMSE（均方根误差）：反映整体误差大小，对较大误差更敏感
+    - 标准差：反映误差的离散程度，值越小表示跟踪越稳定
 
 ### 单步控制测试结果
 - 每个步态的位置误差（米）

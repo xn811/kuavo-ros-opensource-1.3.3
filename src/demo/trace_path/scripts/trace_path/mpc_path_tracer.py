@@ -78,6 +78,7 @@ class PathTracerBase:
         
         # ROS publishers
         self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.cmd_pose_pub = rospy.Publisher('/cmd_pose', Twist, queue_size=10)
         self.path_pub = rospy.Publisher('trace_path/path', Path, queue_size=10)
         self.realtime_path_pub = rospy.Publisher('trace_path/realtime_path', Path, queue_size=10)
         self.follow_state_pub = rospy.Publisher('trace_path/follow_state', Int8, queue_size=10)
@@ -100,6 +101,8 @@ class PathTracerBase:
 
     def tf_polling(self):
         """Thread function to continuously poll for robot's pose from TF"""
+        last_publish_time = rospy.Time.now()
+        
         while not rospy.is_shutdown():
             try:
                 self.tf_listener.waitForTransform(self.world_frame, self.robot_frame, rospy.Time(0), rospy.Duration(1.0))
@@ -128,12 +131,24 @@ class PathTracerBase:
                     rospy.loginfo(f"Start point initialized at: [{trans[0]:.2f}, {trans[1]:.2f}, {trans[2]:.2f}]")
                 
                 # Publish realtime motion trajectory
-                pose_stamped = PoseStamped()
-                pose_stamped.header.frame_id = self.path.header.frame_id
-                pose_stamped.header.stamp = rospy.Time.now()
-                pose_stamped.pose = self.current_pose
-                self.path.poses.append(pose_stamped)
-                self.realtime_path_pub.publish(self.path)
+                current_time = rospy.Time.now()
+                if (current_time - last_publish_time).to_sec() >= 0.1:  # publish path every 1 second
+                    path_pose = Pose()
+                    path_pose.position.x = trans[0]
+                    path_pose.position.y = trans[1]
+                    path_pose.position.z = 0.0
+                    path_pose.orientation.x = rot[0]
+                    path_pose.orientation.y = rot[1]
+                    path_pose.orientation.z = rot[2]
+                    path_pose.orientation.w = rot[3]
+                    
+                    pose_stamped = PoseStamped()
+                    pose_stamped.header.frame_id = self.path.header.frame_id
+                    pose_stamped.header.stamp = current_time
+                    pose_stamped.pose = path_pose
+                    self.path.poses.append(pose_stamped)
+                    self.realtime_path_pub.publish(self.path)
+                    last_publish_time = current_time
                 
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf2_ros.TransformException) as e:
                 # rospy.logwarn(f"TF Error: {e}")
@@ -163,6 +178,15 @@ class PathTracerBase:
         cmd_vel.linear.x = linear_velocity
         cmd_vel.angular.z = angular_velocity
         self.cmd_vel_pub.publish(cmd_vel)
+
+    def publish_cmd_pose(self, x, y, yaw):
+        """Publish pose command"""
+        cmd_pose = Twist()
+        cmd_pose.linear.x = x
+        cmd_pose.linear.y = y
+        cmd_pose.angular.z = yaw
+        self.cmd_pose_pub.publish(cmd_pose)
+    
 
 def transform_to_base_link(current_pose, global_point):
     """
@@ -194,6 +218,227 @@ def transform_to_base_link(current_pose, global_point):
     
     return local_point
 
+class TrajectoryAnalyzer:
+    def __init__(self):
+        # initialize basic performance metrics
+        self.total_distance_error = 0.0
+        self.max_distance_error = 0.0
+        self.min_distance_error = float('inf')
+        self.duration = 0.0
+        self.avg_speed = 0.0
+        self.total_distance = 0.0
+        
+        # initialize advanced performance metrics
+        self.distance_errors = []  # store all distance errors for calculating standard deviation
+        
+        # resample parameter
+        self.resample_distance = 0.1  # resample interval (meter)
+        
+    def resample_path(self, path):
+        """将路径重新参数化为等距点
+        
+        Args:
+            path (nav_msgs.msg.Path): 输入路径
+            
+        Returns:
+            nav_msgs.msg.Path: 重新参数化后的路径
+        """
+        if len(path.poses) < 2:
+            return path
+            
+        # 创建新的路径消息
+        resampled_path = Path()
+        resampled_path.header = path.header
+        
+        # 计算路径总长度
+        total_length = 0.0
+        segment_lengths = []
+        for i in range(1, len(path.poses)):
+            length = Utils.calculate_distance(
+                path.poses[i].pose.position,
+                path.poses[i-1].pose.position
+            )
+            total_length += length
+            segment_lengths.append(length)
+            
+        # 计算需要采样的点数
+        num_points = int(total_length / self.resample_distance) + 1
+        if num_points < 2:
+            num_points = 2
+            
+        # 计算每个采样点的距离
+        sample_distances = np.linspace(0, total_length, num_points)
+        
+        # 重新采样路径
+        current_segment = 0
+        accumulated_length = 0.0
+        
+        for sample_dist in sample_distances:
+            # 找到当前采样点所在的段
+            while (current_segment < len(segment_lengths) and 
+                   accumulated_length + segment_lengths[current_segment] < sample_dist):
+                accumulated_length += segment_lengths[current_segment]
+                current_segment += 1
+                
+            if current_segment >= len(segment_lengths):
+                # 如果超出范围，使用最后一个点
+                resampled_path.poses.append(path.poses[-1])
+                continue
+                
+            # 计算在当前段中的位置
+            segment_start = path.poses[current_segment]
+            segment_end = path.poses[current_segment + 1]
+            segment_progress = (sample_dist - accumulated_length) / segment_lengths[current_segment]
+            
+            # 线性插值位置
+            new_pose = PoseStamped()
+            new_pose.header = path.header
+            new_pose.pose.position.x = (segment_end.pose.position.x - segment_start.pose.position.x) * segment_progress + segment_start.pose.position.x
+            new_pose.pose.position.y = (segment_end.pose.position.y - segment_start.pose.position.y) * segment_progress + segment_start.pose.position.y
+            new_pose.pose.position.z = (segment_end.pose.position.z - segment_start.pose.position.z) * segment_progress + segment_start.pose.position.z
+            
+            # 保持原始朝向
+            new_pose.pose.orientation = segment_start.pose.orientation
+            
+            resampled_path.poses.append(new_pose)
+            
+        return resampled_path
+        
+    def analyze(self, actual_path, target_path):
+        """分析实际轨迹与目标路径的差异
+        
+        分析过程说明：
+        1. 首先对实际路径和目标路径进行重新参数化，确保点分布均匀，消除采样不均匀带来的偏差
+        2. 计算轨迹跟踪的时间相关指标（总时间、总距离、平均速度）
+        3. 对每个实际轨迹点，找到最近的目标点，计算位置误差
+        4. 统计所有误差数据，计算各种统计指标
+        
+        分析目的：
+        1. 评估轨迹跟踪的准确性：通过位置误差反映跟踪精度
+        2. 评估轨迹跟踪的效率：通过时间相关指标反映跟踪速度
+        3. 评估轨迹跟踪的稳定性：通过误差的统计分布反映跟踪的稳定性
+        
+        Args:
+            actual_path (nav_msgs.msg.Path): 实际轨迹，机器人实际行走的路径
+            target_path (nav_msgs.msg.Path): 目标路径，期望机器人行走的路径
+        """
+        if len(actual_path.poses) == 0 or len(target_path.poses) == 0:
+            rospy.logwarn("无法分析轨迹性能：实际轨迹或目标路径为空")
+            return
+        
+        # reset performance metrics, ensure each analysis is independent
+        self._reset_metrics()
+        
+        # resample path to ensure uniform point distribution, eliminate the bias caused by uneven sampling
+        resampled_actual = self.resample_path(actual_path)
+        resampled_target = self.resample_path(target_path)
+        
+        # calculate completion time
+        # purpose: evaluate the efficiency of trajectory tracking
+        # meaning: the total time used from the start of tracking to the end
+        start_time = actual_path.poses[0].header.stamp
+        end_time = actual_path.poses[-1].header.stamp
+        self.duration = (end_time - start_time).to_sec()
+        
+        # calculate the total distance of the actual path
+        # purpose: evaluate the completeness of trajectory tracking
+        # meaning: the total distance that the robot actually walks
+        for i in range(1, len(resampled_actual.poses)):
+            self.total_distance += Utils.calculate_distance(
+                resampled_actual.poses[i].pose.position,
+                resampled_actual.poses[i-1].pose.position
+            )
+        # calculate the average speed
+        # purpose: evaluate the efficiency of trajectory tracking
+        # meaning: the distance the robot walks per unit time
+        self.avg_speed = self.total_distance / self.duration if self.duration > 0 else 0.0
+        
+        # analyze the error of each actual trajectory point and the nearest target point
+        # purpose: evaluate the accuracy of trajectory tracking
+        for actual_pose in resampled_actual.poses:
+            # find the nearest target point
+            # purpose: establish the correspondence between the actual point and the target point
+            min_dist = float('inf')
+            closest_goal_pose = None
+            
+            for goal_pose in resampled_target.poses:
+                dist = Utils.calculate_distance(
+                    actual_pose.pose.position,
+                    goal_pose.pose.position
+                )
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_goal_pose = goal_pose
+            
+            if closest_goal_pose is not None:
+                # calculate the distance error
+                # purpose: evaluate the accuracy of position tracking
+                # meaning: the Euclidean distance between the actual position and the nearest target position
+                distance_error = min_dist
+                self.total_distance_error += distance_error
+                self.max_distance_error = max(self.max_distance_error, distance_error)
+                self.min_distance_error = min(self.min_distance_error, distance_error)
+                self.distance_errors.append(distance_error)  # 存储距离误差用于计算统计指标
+        
+        # calculate the average error
+        # purpose: evaluate the overall tracking accuracy
+        # meaning: reflect the average deviation of trajectory tracking
+        avg_distance_error = self.total_distance_error / len(resampled_actual.poses)
+        
+        # calculate the advanced statistical metrics
+        # purpose: evaluate the stability and consistency of tracking
+        # RMSE: reflect the overall size of the error, more sensitive to larger errors
+        # standard deviation: reflect the dispersion of the error, the smaller the value, the more stable the tracking
+        rmse_distance = self._calculate_rmse(self.distance_errors)
+        std_distance = self._calculate_std(self.distance_errors)
+        
+        # output the performance analysis results
+        # purpose: provide a complete performance evaluation report
+        # meaning: help understand the overall performance of trajectory tracking
+        self._print_analysis_results(avg_distance_error, rmse_distance, std_distance)
+        
+    def _reset_metrics(self):
+        """重置所有性能指标"""
+        self.total_distance_error = 0.0
+        self.max_distance_error = 0.0
+        self.min_distance_error = float('inf')
+        self.duration = 0.0
+        self.avg_speed = 0.0
+        self.total_distance = 0.0
+        self.distance_errors = []
+        
+    def _calculate_rmse(self, errors):
+        """计算均方根误差 (RMSE)"""
+        if not errors:
+            return 0.0
+        squared_errors = [e * e for e in errors]
+        mean_squared_error = sum(squared_errors) / len(errors)
+        return math.sqrt(mean_squared_error)
+        
+    def _calculate_std(self, errors):
+        """计算标准差"""
+        if not errors:
+            return 0.0
+        mean = sum(errors) / len(errors)
+        squared_diffs = [(e - mean) ** 2 for e in errors]
+        variance = sum(squared_diffs) / len(errors)
+        return math.sqrt(variance)
+        
+    def _print_analysis_results(self, avg_distance_error, rmse_distance, std_distance):
+        """输出性能分析结果"""
+        rospy.loginfo("=============================================")
+        rospy.loginfo("轨迹跟踪性能分析:")
+        rospy.loginfo(f"总跟踪时间: {self.duration:.2f} 秒")
+        rospy.loginfo(f"总行驶距离: {self.total_distance:.2f} 米")
+        rospy.loginfo(f"平均速度: {self.avg_speed:.2f} m/s")
+        rospy.loginfo("距离误差:")
+        rospy.loginfo(f"  平均误差: {avg_distance_error:.3f} m")
+        rospy.loginfo(f"  最大误差: {self.max_distance_error:.3f} m")
+        rospy.loginfo(f"  最小误差: {self.min_distance_error:.3f} m")
+        rospy.loginfo(f"  RMSE: {rmse_distance:.3f} m")
+        rospy.loginfo(f"  标准差: {std_distance:.3f} m")
+        rospy.loginfo("=============================================")
+
 class MpcPathTracer(PathTracerBase):
     def __init__(self, node_name='mpc_path_tracer_node'):
         super().__init__(node_name)
@@ -213,6 +458,8 @@ class MpcPathTracer(PathTracerBase):
         self.stop_sub = rospy.Subscriber('~stop', Bool, self.stop_callback)
         
         rospy.loginfo("MPC Path Tracer initialized. Waiting for path on ~path topic.")
+        
+        self.trajectory_analyzer = TrajectoryAnalyzer()
     
     def path_callback(self, path_msg):
         """Callback for receiving a path"""
@@ -238,10 +485,26 @@ class MpcPathTracer(PathTracerBase):
                 rospy.logwarn("No path available. Load a path before starting.")
                 return
             
+            # update the max linear velocity from the ROS parameter server
+            try:
+                v_max_linear = rospy.get_param('~v_max_linear', 0.2)
+                # verify the velocity value is in a reasonable range
+                if v_max_linear <= 0 or v_max_linear > 1.0:
+                    rospy.logwarn(f"Invalid max linear velocity: {v_max_linear} m/s, using default value 0.2 m/s")
+                    v_max_linear = 0.2
+                self.set_max_linear_velocity(v_max_linear)
+                rospy.loginfo(f"Updated max linear velocity: {v_max_linear} m/s")
+            except Exception as e:
+                rospy.logerr(f"Failed to update max linear velocity: {e}, using default value 0.2 m/s")
+                self.set_max_linear_velocity(0.2)
+            
             # Start following in a separate thread to avoid blocking
             self.stop_requested = False
             self.follow_state = FollowState.FOLLOWING
+            self.path.poses = []
             import threading
+            self.motion_interface = rospy.get_param('~motion_interface', '/cmd_vel')
+            rospy.loginfo(f"Motion interface: {self.motion_interface}")
             self.follow_thread = threading.Thread(target=self.follow, args=(self.global_path,))
             self.follow_thread.start()
             rospy.loginfo("Path following started.")
@@ -385,8 +648,13 @@ class MpcPathTracer(PathTracerBase):
 
             # Velocity constraints
             for i in range(self.NUM_KNOTS):
-                prog.AddBoundingBoxConstraint(-self.v_max_linear, self.v_max_linear, v[i])
-                prog.AddBoundingBoxConstraint(-self.v_max_angular, self.v_max_angular, yaw_dot[i])
+                if self.motion_interface == '/cmd_vel':
+                    prog.AddBoundingBoxConstraint(-self.v_max_linear, self.v_max_linear, v[i])
+                    prog.AddBoundingBoxConstraint(-self.v_max_angular, self.v_max_angular, yaw_dot[i])
+                elif self.motion_interface == '/cmd_pose':
+                    # told by wangzhengtao@lejurobot.com
+                    prog.AddBoundingBoxConstraint(-0.4, 0.4, v[i])
+                    prog.AddBoundingBoxConstraint(-0.4, 0.4, yaw_dot[i])
 
             # Dynamic constraints
             dt = 0.1  # Time step
@@ -418,7 +686,10 @@ class MpcPathTracer(PathTracerBase):
                 scaled_yaw_dot = optimal_yaw_dot[0] * angular_velocity_scale
 
                 # Publish control commands
-                self.publish_cmd_vel(scaled_v, scaled_yaw_dot)
+                if self.motion_interface == '/cmd_vel':
+                    self.publish_cmd_vel(scaled_v, scaled_yaw_dot)
+                elif self.motion_interface == '/cmd_pose':
+                    self.publish_cmd_pose(optimal_x[3], optimal_y[3], optimal_yaw[3])
 
                 # Publish MPC path for visualization
                 self.publish_mpc_path(optimal_x, optimal_y, optimal_yaw)
@@ -449,6 +720,10 @@ class MpcPathTracer(PathTracerBase):
                 self.follow_state = FollowState.FINISHED
             else:
                 self.follow_state = FollowState.NOT_FOLLOWING
+
+        # Analyze trajectory performance
+        if self.follow_state == FollowState.FINISHED or self.stop_requested:
+            self.trajectory_analyzer.analyze(self.path, global_path)
 
     def publish_mpc_path(self, x, y, yaw):
         # Create a path message
