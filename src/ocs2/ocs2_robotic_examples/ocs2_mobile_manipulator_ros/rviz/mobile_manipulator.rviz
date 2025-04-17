@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 555
@@ -76,11 +75,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        head:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         l_foot_heel:
           Alpha: 1
           Show Axes: false
@@ -167,11 +161,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         lr_foot_toe:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        neck_motor:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -291,6 +280,16 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        zhead_1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        zhead_2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -311,8 +310,6 @@ Visualization Manager:
         command:
           Value: true
         dummy_link:
-          Value: false
-        head:
           Value: false
         l_foot_heel:
           Value: false
@@ -352,8 +349,6 @@ Visualization Manager:
           Value: false
         mm/base_link:
           Value: true
-        mm/head:
-          Value: false
         mm/leg_l1_link:
           Value: false
         mm/leg_l2_link:
@@ -377,8 +372,6 @@ Visualization Manager:
         mm/leg_r5_link:
           Value: false
         mm/leg_r6_link:
-          Value: false
-        mm/neck_motor:
           Value: false
         mm/zarm_l1_link:
           Value: false
@@ -410,8 +403,10 @@ Visualization Manager:
           Value: false
         mm/zarm_r7_link:
           Value: false
-        neck_motor:
-          Value: false
+        mm/zhead_1_link:
+          Value: true
+        mm/zhead_2_link:
+          Value: true
         odom:
           Value: true
         r_foot_heel:
@@ -462,6 +457,10 @@ Visualization Manager:
           Value: false
         zarm_r7_link:
           Value: true
+        zhead_1_link:
+          Value: true
+        zhead_2_link:
+          Value: true
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -509,12 +508,6 @@ Visualization Manager:
                           {}
                         rr_foot_toe:
                           {}
-            neck_motor:
-              head:
-                camera:
-                  {}
-                radar:
-                  {}
             zarm_l1_link:
               zarm_l2_link:
                 zarm_l3_link:
@@ -533,6 +526,12 @@ Visualization Manager:
                         zarm_r7_link:
                           zarm_r7_end_effector:
                             {}
+            zhead_1_link:
+              zhead_2_link:
+                camera:
+                  {}
+                radar:
+                  {}
           world:
             command:
               {}
@@ -551,9 +550,6 @@ Visualization Manager:
                       mm/leg_r5_link:
                         mm/leg_r6_link:
                           {}
-              mm/neck_motor:
-                mm/head:
-                  {}
               mm/zarm_l1_link:
                 mm/zarm_l2_link:
                   mm/zarm_l3_link:
@@ -571,6 +567,9 @@ Visualization Manager:
                         mm/zarm_r6_link:
                           mm/zarm_r7_link:
                             {}
+              mm/zhead_1_link:
+                mm/zhead_2_link:
+                  {}
       Update Interval: 0
       Value: true
     - Class: rviz/MarkerArray
@@ -621,7 +620,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/planed_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -659,7 +658,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/exec_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -667,7 +666,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/solved_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -679,8 +678,8 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
+      Axes Length: 0.20000000298023224
+      Axes Radius: 0.019999999552965164
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -690,7 +689,7 @@ Visualization Manager:
       Queue Size: 10
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
-      Shape: Arrow
+      Shape: Axes
       Topic: /tag_world_pose
       Unreliable: false
       Value: true
@@ -710,7 +709,6 @@ Visualization Manager:
         "": true
         CoM Trajectory: true
         Feet Trajectories: true
-        Future footholds: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -757,9 +755,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.18039977550506592
+      Pitch: 0.3053995370864868
       Target Frame: <Fixed Frame>
-      Yaw: 5.518611431121826
+      Yaw: 5.943611145019531
     Saved: ~
 Window Geometry:
   Displays:
@@ -778,4 +776,4 @@ Window Geometry:
     collapsed: true
   Width: 1200
   X: 720
-  Y: 27
+  Y: 0

@@ -39,7 +39,7 @@ class WrenchPublisher:
         # Initialize Wrench messages
         self.left_wrench = Wrench()
         self.left_wrench.force.x = 0.0
-        self.left_wrench.force.y = -10.0
+        self.left_wrench.force.y = -15.0
         self.left_wrench.force.z = 0.0
         self.left_wrench.torque.x = 0.0
         self.left_wrench.torque.y = 0.0
@@ -47,7 +47,7 @@ class WrenchPublisher:
         
         self.right_wrench = Wrench()
         self.right_wrench.force.x = 0.0
-        self.right_wrench.force.y = 10.0
+        self.right_wrench.force.y = 15.0
         self.right_wrench.force.z = 0.0
         self.right_wrench.torque.x = 0.0
         self.right_wrench.torque.y = 0.0

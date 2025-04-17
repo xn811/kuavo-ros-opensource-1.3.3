@@ -148,7 +148,10 @@ def imu_software():
 
 def imu_test():
     # 定义要运行的命令
-    command = "sudo "+ folder_path +"/bin/imu_test"
+    if(folder_path.startswith("/home/lab/kuavo_opensource/")):
+        command = "sudo /home/lab/kuavo_opensource/bin/imu_test"
+    else:
+        command = "sudo "+ folder_path +"/../../devel/lib/hardware_node/imu_test" 
 
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)

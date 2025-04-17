@@ -36,7 +36,7 @@
 #include "nav_msgs/Odometry.h"
 #include "std_srvs/SetBool.h"
 #include "std_msgs/Float64.h"
-#include "std_msgs/Float64.h"
+#include "std_msgs/Float64MultiArray.h"
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Core>
 #include <csignal>
@@ -974,6 +974,24 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
       }
     );
 
+  // 添加对/hand_wrench_cmd的订阅
+  ros::Subscriber handWrenchCmdSub = g_nh_ptr->subscribe<std_msgs::Float64MultiArray>("/hand_wrench_cmd_mujoco", 10, [&](const std_msgs::Float64MultiArray::ConstPtr &msg)
+      {
+        if(msg->data.size() != 12) {
+          ROS_WARN("Invalid hand_wrench_cmd size, expected 12 but got %zu", msg->data.size());
+          return;
+        }
+        // 左手力和力矩
+        mjtNum left_force[3] = {msg->data[0], msg->data[1], msg->data[2]};
+        mjtNum left_torque[3] = {msg->data[3], msg->data[4], msg->data[5]};
+        // 右手力和力矩
+        mjtNum right_force[3] = {msg->data[6], msg->data[7], msg->data[8]};
+        mjtNum right_torque[3] = {msg->data[9], msg->data[10], msg->data[11]};
+        
+        apply_wrench_to_link(m, d, "zarm_l7_link", left_force, left_torque);
+        apply_wrench_to_link(m, d, "zarm_r7_link", right_force, right_torque);
+      }
+    );
 
   if (is_spin_thread)
   {

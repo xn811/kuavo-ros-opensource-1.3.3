@@ -21,6 +21,7 @@
   </include>
   
   <node pkg="grab_box" type="tag_tracker_node" name="tag_tracker_node" output="screen"/>
+  <node pkg="grab_box" type="grab_box_demo" name="grab_box_demo" output="screen"/>
   <node pkg="handcontrollerdemorosnode" type="box_pose_pub_test.py" name="box_pose_pub_test" output="screen"/>
 
   <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_7link_to_eef" args="0.0, -0.030, -0.170 0 0 0 mm/zarm_l7_link mm/zarm_l7_end_effector 100" />

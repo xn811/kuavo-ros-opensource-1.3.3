@@ -214,7 +214,7 @@ namespace mobile_manipulator_controller
   {
     while(!recievedObservation_)
     {
-      ROS_WARN("No observation received yet. Keep waiting...");
+      // ROS_WARN("No observation received yet. Keep waiting...");
       ros::Duration(0.1).sleep();
       ros::spinOnce();
     }
@@ -293,15 +293,15 @@ namespace mobile_manipulator_controller
       case ControlType::BaseArm:
         // 最高优先级
         // if((ros::Time::now() - basePoseCmdUpdatedTime_) < ros::Duration(0.1))// check if base pose command is updated within 0.1 seconds
-        {
-          if(baseDim != basePoseCmd_.size())
-          {
-            ROS_ERROR_STREAM("baseDim != basePoseCmd_.size(): " << baseDim << " != " << basePoseCmd_.size());
-            return;
-          }
-          mmObservationDummy_.state.head(baseDim) = basePoseCmd_;
-          std::cout << "Base Pose Command: " << basePoseCmd_.transpose() << std::endl;
-        }
+        // {
+        //   if(baseDim != basePoseCmd_.size())
+        //   {
+        //     ROS_ERROR_STREAM("baseDim != basePoseCmd_.size(): " << baseDim << " != " << basePoseCmd_.size());
+        //     return;
+        //   }
+        //   mmObservationDummy_.state.head(baseDim) = basePoseCmd_;
+        //   std::cout << "Base Pose Command: " << basePoseCmd_.transpose() << std::endl;
+        // }
         break;
       default:
         break;
@@ -595,7 +595,7 @@ namespace mobile_manipulator_controller
     const auto& currentTorsoState = currentHumanoidObservation.state.segment<6>(6);
     ocs2::vector_t desiredArmState = desiredState.tail(info_.armDim);
     ocs2::vector_t desiredArmInput = desiredInput.tail(info_.armDim);
-    limitArmPosition(desiredArmState);
+    // limitArmPosition(desiredArmState);
     const auto& currentArmState = currentHumanoidObservation.state.tail(info_.armDim);
     // std::cout << "Desired torso state: " << desiredTorsoState.transpose() << std::endl;
     auto goalTorsoTargetTrajectories = generateTargetTrajectories(currentTorsoState, desiredTorsoState, currentHumanoidObservation);
@@ -607,7 +607,18 @@ namespace mobile_manipulator_controller
     //   controlBase(mmState, mmInput);
     // else
     // std::cout << "[MobileManipulatorController] mmState: " << mmState.transpose() << std::endl;
-      controlBasePos(mmState, mmInput);
+     switch(controlType_)
+    {
+      case ControlType::None:
+        break;
+      case ControlType::ArmOnly:
+        break;
+      case ControlType::BaseArm:
+        controlBasePos(mmState, mmInput);
+        break;
+      default:
+        break;
+    }
     humanoidArmTargetTrajectoriesPublisher_.publish(ros_msg_conversions::createTargetTrajectoriesMsg(goalArmTargetTrajectories));
     auto getJointStatesMsg = [&](const vector_t& q_arm, const vector_t& dq_arm)
     {
