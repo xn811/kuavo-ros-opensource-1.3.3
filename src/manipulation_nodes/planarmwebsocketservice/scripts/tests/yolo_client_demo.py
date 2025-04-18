@@ -73,16 +73,15 @@ async def send_test_message(uri):
     try:
         await client.connect()
 
-        python_name = "/main.py"
-        model_name = "/yolo11n.pt"
+        path = "~/kuavo-ros-control/src/manipulation_nodes/planarmwebsocketservice/upload_files/test/main.py"
         message = {
             "cmd": "run_node",
             "data": {
-                "main_path": python_name,
-                "model_path": model_name
+                "path": path
             }
         }
-        # message = {"cmd": "stop_run_code"}
+
+        # message = {"cmd": "get_robot_info"}
 
         await client.send_message(message)
         print("Message sent, now listening for responses...")
@@ -104,7 +103,7 @@ async def send_test_message(uri):
         print('------------------------------------')
 
         sleep(5)
-        message = {"cmd": "stop_run_code"}
+        message = {"cmd": "stop_run_node"}
         # message = {"cmd": "stop_preview_action"}
         await client.send_message(message)
         print("Message sent, now listening for responses...")

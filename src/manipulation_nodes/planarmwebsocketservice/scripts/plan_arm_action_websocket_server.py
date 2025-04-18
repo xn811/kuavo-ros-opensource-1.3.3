@@ -44,9 +44,7 @@ ROBOT_MAC_ADDRESS = get_mac_address()
 ROBOT_USERNAME = "lab"
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
-ROBOT_ACTION_FILE_FOLDER = package_path + "/action_files" 
-ROBOT_MODEL_FILE_FOLDER = package_path + "/models" 
-ROBOT_PYTHON_FILE_FOLDER = package_path + "/scripts"
+ROBOT_UPLOAD_FOLDER = package_path + "/upload_files"
 
 robot_info = {
     "data": {
@@ -55,9 +53,7 @@ robot_info = {
         "robot_connect_wifi": ROBOT_CONNECT_WIFI,
         "robot_ws_address": ROBOT_WS_ADDRESS,
         "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
-        "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
-        "robot_python_file_folder": ROBOT_PYTHON_FILE_FOLDER,
-        "robot_model_file_folder": ROBOT_MODEL_FILE_FOLDER,
+        "robot_upload_folder": ROBOT_UPLOAD_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
     }

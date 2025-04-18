@@ -1,6 +1,7 @@
 import rospy
 import rospkg
 import os
+import sys
 import asyncio
 import json
 from queue import Queue
@@ -28,9 +29,10 @@ response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
-PYTHON_FILE_FOLDER = package_path + "/scripts"
+
 ACTION_FILE_FOLDER = package_path + "/action_files"
-MODEL_FOLDER = package_path + "/models"
+UPLOAD_FILES_FOLDER = package_path + "/upload_files" 
+
 g_robot_type = ""
 ocs2_current_joint_state = []
 joint_names = [
@@ -331,8 +333,12 @@ async def get_robot_info_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
 
+    robot_version = rospy.get_param('robot_version')
     payload = Payload(
-        cmd="get_robot_info", data={"code": 0, "upload_python_path": PYTHON_FILE_FOLDER, "upload_model_path": MODEL_FOLDER}
+        cmd="get_robot_info", 
+        data={"code": 0, 
+              "robot_type": robot_version,
+            }
     )
 
     response = Response(
@@ -376,15 +382,7 @@ async def run_node_handler(
 
     data = data["data"]
     print(f"received message data: {data}")
-    main_path = PYTHON_FILE_FOLDER + data["main_path"]
-    model_path = MODEL_FOLDER + data["model_path"]
-
-    if not os.path.exists(main_path) or not os.path.exists(model_path):
-        print(f"main.py or model.pt not found: {main_path} or {model_path}")
-        payload.data["code"] = 1
-        response = Response(payload=payload, target=websocket)
-        response_queue.put(response)
-        return
+    execute_path = data["path"]
 
     response = Response(
         payload=payload,
@@ -393,25 +391,31 @@ async def run_node_handler(
 
     # Create a new stop event for this thread
     stop_event = threading.Event()
-    active_threads[websocket] = stop_event
 
     # Start a thread to update the progress
     thread = threading.Thread(
-        target=execute_command_progress, args=(response, stop_event, main_path, model_path)
+        target=execute_command_progress, args=(websocket, response, stop_event, execute_path)
     )
     print("Starting thread to update progress")
     thread.start()
 
 
-def execute_command_progress(response: Response, stop_event: threading.Event, main_path, model_path):
+def execute_command_progress(websocket: websockets.WebSocketServerProtocol, response: Response, stop_event: threading.Event, execute_path):
     payload = response.payload
     update_interval = 0.001 
 
-    execute_command = ["python3", main_path, "--model_path", model_path]
-    print(f"Executing command: {execute_command}")
+    if not os.path.exists(execute_path):
+        payload.data["code"] = 1
+        payload.data["msg"] = "File not found."
+        response_queue.put(response)
+        return
+
+    py_exe = sys.executable
+    command_list = [py_exe, execute_path]
+    print(f"Executing command: {command_list}")
     global process
     try: 
-        process = subprocess.Popen(execute_command)
+        process = subprocess.Popen(command_list)
     except Exception as e:
         print("An error occurred while trying to execute the command:")
         print(e)
@@ -420,6 +424,7 @@ def execute_command_progress(response: Response, stop_event: threading.Event, ma
         response_queue.put(response)
         print("Command execution failed.")   
     else:
+        active_threads[websocket] = stop_event
         payload.data["code"] = 0
         payload.data["msg"] = "Command executed successfully."
         response_queue.put(response)
@@ -429,19 +434,27 @@ def execute_command_progress(response: Response, stop_event: threading.Event, ma
 
 def monitor_and_stop(process):
     global should_stop
+    process_terminated = False
     while True:
         time.sleep(1)
         if should_stop:
             print("Kill the target process")
             process.terminate()
             try:
-                process.wait(timeout=5)
+                process.wait(timeout=3)
+                process_terminated = True
             except subprocess.TimeoutExpired:
                 print("Forced kill the target process")
                 process.kill()
+                try:
+                    process.wait(timeout=2)
+                    process_terminated = True
+                except subprocess.TimeoutExpired:
+                    process_terminated = False
             break
+    return process_terminated
 
-async def stop_run_code_handler(
+async def stop_run_node_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
     if websocket in active_threads:
@@ -449,19 +462,22 @@ async def stop_run_code_handler(
         del active_threads[websocket]
     
     payload = Payload(
-        cmd="stop_run_code", data={"code":0}
-    )
-    response = Response(
-        payload=payload,
-        target=websocket,
+        cmd="stop_run_node", data={"code":0}
     )
 
     global process, should_stop
     monitor_thread = threading.Thread(target=monitor_and_stop, args=(process,))
     monitor_thread.start()
     should_stop = True
-    monitor_thread.join()
+    process_terminated = monitor_thread.join()
+    
+    if not process_terminated:
+        payload.data["code"] = 1
 
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
     response_queue.put(response)
 
 # Add a function to clean up when a websocket connection is closed

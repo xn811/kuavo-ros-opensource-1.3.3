@@ -65,9 +65,7 @@
         "robot_connect_wifi": ROBOT_CONNECT_WIFI,
         "robot_ws_address": ROBOT_WS_ADDRESS,
         "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
-        "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
-        "robot_python_file_folder": ROBOT_PYTHON_FILE_FOLDER,
-        "robot_model_file_folder": ROBOT_MODEL_FILE_FOLDER,
+        "robot_upload_folder": ROBOT_UPLOAD_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
     }
@@ -91,15 +89,17 @@ response:
     "cmd": "get_robot_info",
     "data": {
         "code": 0,
-        "upload_dir": "upload_path"
+        "upload_dir": "upload_path",
+        "robot_type": "40"
     }
 }
 ```
 
-| 名称         | 类型     | 描述             |
-| ---------- | ------ | -------------- |
-| code       | int    | 错误码 0: 成功      |
-| upload_dir | string | 机器人存储执行脚本路径文件夹 |
+| 名称            | 类型     | 描述             |
+| ------------- | ------ | -------------- |
+| code          | int    | 错误码 0: 成功      |
+| upload_dir    | string | 机器人存储执行脚本路径文件夹 |
+| robot_type | string | 机器人的类型         |
 
 ### 获取机器人状态
 
@@ -136,15 +136,14 @@ request:
 {
     "cmd": "run_node",
     "data": {
-        "main_path": "/main.py",
-        "model_path": "/best.pt"
+        "path": "**/main.py"
     }
 }
 ```
 
 | 名称   | 类型     | 描述                      |
 | ---- | ------ | ----------------------- |
-| path | string | 脚本路径，仅需`"/" + 文件名.文件类型` |
+| path | string | 脚本路径 |
 
 response:
 
@@ -162,6 +161,31 @@ response:
 | ---- | ------ | ------------------ |
 | code | int    | 错误码 0: 成功 1: 文件不存在 |
 | msg  | string | 信息                 |
+
+### 关闭脚本执行
+
+request:
+
+```json
+{
+    "cmd": "stop_run_node"
+}
+```
+
+response:
+
+```json
+{
+    "cmd": "stop_run_node",
+    "data": {
+        "code": 0
+    }
+}
+```
+
+| 名称   | 类型  | 描述                   |
+| ---- | --- | -------------------- |
+| code | int | 错误码 0: 成功 1: 超过5s未关闭 |
 
 ### 预览动作
 
@@ -279,6 +303,79 @@ ws://{robot_ws_logger_address}
     "message": "running finish",
     "module": "robot_control",
     "function": "start_robot"
+}
+```
+
+## YOLO目标检测
+
+`model_utils.py` 中 `YOLO_detection` 为 YOLO目标检测类，用于处理图像检测和结果发布。
+
+### load_model(model_path)
+
+加载YOLO模型。
+
+**参数:**
+
+- `model_path` (str): YOLO模型文件的路径
+
+**返回:**
+
+- model: 加载成功的YOLO模型对象
+- None: 加载失败时返回
+
+### get_detections(camera, model)
+
+获取当前图像的目标检测结果。
+
+**参数:**
+
+- `camera` (str): 相机名称
+- `model`: YOLO模型对象
+
+**返回:**
+
+- results: 检测结果列表
+- None: 无图像数据时返回
+
+### get_max_area_object(results)
+
+从检测结果中返回最大面积的目标。
+
+**参数:**
+
+- `results`: YOLO检测结果
+
+**返回:**
+
+```python
+{
+    'x': float,      # x坐标
+    'y': float,      # y坐标
+    'w': float,      # 宽度
+    'h': float,      # 高度
+    'area': float,   # 面积
+    'class_name': str  # 目标名称
+}
+```
+
+### get_min_area_object(results)
+
+从检测结果中返回最小面积的目标。
+
+**参数:**
+
+- `results`: YOLO检测结果
+
+**返回:**
+
+```python
+{
+    'x': float,      # x坐标
+    'y': float,      # y坐标
+    'w': float,      # 宽度
+    'h': float,      # 高度
+    'area': float,   # 面积
+    'class_name': str  # 目标名称
 }
 ```
 
