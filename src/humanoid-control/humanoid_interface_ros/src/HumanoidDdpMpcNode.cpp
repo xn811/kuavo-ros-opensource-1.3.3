@@ -79,12 +79,6 @@ int main(int argc, char **argv)
   auto rosReferenceManagerPtr = std::make_shared<RosReferenceManager>(robotName, interface.getReferenceManagerPtr());
   rosReferenceManagerPtr->subscribe(nodeHandle);
 
-  // 传入正向运动学模型
-  CentroidalModelPinocchioMapping pinocchioMapping(interface.getCentroidalModelInfo());
-  auto eeKinematics = PinocchioEndEffectorKinematics(interface.getPinocchioInterface(), pinocchioMapping,
-                                                      interface.modelSettings().contactNames3DoF);
-  interface.getSwitchedModelReferenceManagerPtr()->setPinocchioEndEffectorKinematics(eeKinematics);
-
   // MPC
   GaussNewtonDDP_MPC mpc(interface.mpcSettings(), interface.ddpSettings(), interface.getRollout(), interface.getOptimalControlProblem(),
                          interface.getInitializer());

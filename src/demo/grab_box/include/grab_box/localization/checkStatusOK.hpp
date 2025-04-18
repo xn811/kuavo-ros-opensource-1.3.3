@@ -26,11 +26,10 @@ namespace GrabBox
       // eePoseSubscriber_ = nh.subscribe<kuavo_msgs::endEffectorData>("/humanoid_ee_State", 1, &CheckStatusOK::eePoseCallback, this);
       eePoseSubscriber_ = nh.subscribe<std_msgs::Float64MultiArray>("/mobile_manipulator_eef_poses", 10, &CheckStatusOK::eePoseCallback, this);
       terrainHeightSubscriber_ = nh.subscribe<std_msgs::Float64>("/humanoid/mpc/terrainHeight", 1, &CheckStatusOK::terrainHeightCallback, this);
-      single_step_mode_sub_ = nh.subscribe("/humanoid/single_step_mode", 10, &CheckStatusOK::singleStepModeCallback, this);
 
       while(!nh.hasParam("/com_height"))
       {
-        // ROS_ERROR_STREAM("com_height parameter is NOT found, waiting for 0.1s.");
+        ROS_ERROR_STREAM("com_height parameter is NOT found, waiting for 0.1s.");
         ros::Duration(0.1).sleep();
       }
       ROS_INFO_STREAM("[CheckStatusOK] com_height parameter is founded.");
@@ -38,13 +37,12 @@ namespace GrabBox
       ROS_INFO_STREAM("[CheckStatusOK] com_height: " << com_height_);
       while(!ee_pose_updated_)
       {
-        // ROS_WARN("[CheckStatusOK] Waiting for end-effector pose...");
-        ros::Duration(0.1).sleep();
+        ROS_WARN("[CheckStatusOK] Waiting for end-effector pose...");
+        ros::Duration(0.01).sleep();
         ros::spinOnce();
       }
       ROS_INFO("[CheckStatusOK] Already received end-effector pose.");
       config.blackboard->set<std::string>("current_gait_name", "stance");
-      config.blackboard->set<bool>("continuous_tracking_started", continuous_tracking_started_);
     }
 
     static BT::PortsList providedPorts()
@@ -55,13 +53,11 @@ namespace GrabBox
     BT::NodeStatus tick() override final
     {
       ros::spinOnce();
-      config().blackboard->get<bool>("continuous_tracking_started", continuous_tracking_started_);
       if(!continuous_tracking_started_)
       {
         if(setContinuousTracking(true))
           continuous_tracking_started_ = true;
       }
-      config().blackboard->set<bool>("continuous_tracking_started", continuous_tracking_started_);
       if(!ee_pose_updated_)
       {
         ROS_WARN("Failed to get end-effector pose.");
@@ -140,18 +136,12 @@ namespace GrabBox
       config().blackboard->set<std::string>("current_gait_name", msg->gait_name);
       std::cout << "[CheckStatusOK] current[" << msg->start_time << "] gait name : " << msg->gait_name << std::endl;
     }
-
-    void singleStepModeCallback(const std_msgs::Bool::ConstPtr& msg)
-    {
-      config().blackboard->set<bool>("single_step_mode", msg->data);
-    }
-
+  
   private:
     ros::Subscriber subObservation_;
     ros::Subscriber eePoseSubscriber_;
     ros::Subscriber terrainHeightSubscriber_;
     ros::Subscriber gait_time_name_sub_;
-    ros::Subscriber single_step_mode_sub_;
     ros::Publisher eef_pose_pub_;
     ocs2::SystemObservation latestObservation_;
     ros::ServiceClient continuousTrackClient_; // Service client for continuous tracking

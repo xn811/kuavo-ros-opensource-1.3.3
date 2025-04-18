@@ -28,7 +28,7 @@ namespace GrabBox
   typedef std::pair<Eigen::Vector3d, Eigen::Quaterniond> HandPose;
   typedef std::pair<HandPose, HandPose> TwoHandPose;
   typedef std::vector<TwoHandPose> TwoHandPoseTrajectory;
-  typedef std::vector<std::pair<TwoHandPose, Eigen::Vector3d>> TwoHandPoseWithForceTrajectory;//pose+force
+  typedef std::vector<std::pair<TwoHandPose, double>> TwoHandPoseWithForceTrajectory;//pose+force
 
   /**
    * @brief 归一化角度，将角度限制在 [-180, 180] 之间

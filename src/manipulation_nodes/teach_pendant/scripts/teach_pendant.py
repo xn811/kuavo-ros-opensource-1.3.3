@@ -74,7 +74,7 @@ def joint_data_callback(sensors_data):
     if hasattr(joint_data, 'joint_q') and hasattr(joint_data, 'joint_v') and hasattr(joint_data, 'joint_vd'):
         joint_state.position = joint_data.joint_q[12:26]
         joint_state.velocity = joint_data.joint_v[12:26]
-        joint_state.effort = joint_data.joint_current[12:26]
+        joint_state.effort = joint_data.joint_torque[12:26]
     else:
         rospy.logwarn("The received message does not contain the expected attributes.")
         return

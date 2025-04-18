@@ -33,7 +33,6 @@ namespace HighlyDynamic
 #define PA100_C2T (1.2) // 1.2
 #define PA100_18_C2T (2.0)
 #define PA100_20_C2T (2.4)
-#define PA105_18_C2T (4.1)
 #define CK_C2T (2.1) // 1.4
 #define PA72_C2T (2.0)
 #define PA60_C2T (2.0)

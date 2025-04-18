@@ -1,7 +1,7 @@
 <launch>  
     <!-- Add robot version argument -->
     <arg name="isaac_robot_version"        default="$(optenv ROBOT_VERSION 45)"/>
-    <arg name="use_camera_ros_topic_flag"  default="1"/>
+    <arg name="use_camera_ros_topic_flag"  default="0"/>
     <arg name="use_point_cloud_flag"       default="0"/>
     <arg name="scene_index"                default="2"/>
     <arg name="robot_scene_point_index"    default="1"/>

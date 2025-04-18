@@ -356,35 +356,20 @@ namespace ocs2
         // trans from world to base
         Eigen::Vector3d delta_pose = (Eigen::Vector3d() << (cmdPoseWorld_.head(2) - currentState.segment<2>(6)), 0).finished();
         const Eigen::Vector3d current_zyx(currentState(9), 0, 0);
-        Eigen::Matrix3d R_Ws = getRotationMatrixFromZyxEulerAngles(current_zyx);
-        delta_pose = R_Ws.transpose() * delta_pose;
+        Eigen::Matrix3d R_WBr = getRotationMatrixFromZyxEulerAngles(current_zyx);
+        delta_pose = R_WBr.transpose() * delta_pose;
         // const Eigen::Vector3d target_zyx(cmdPoseWorld_[3], 0, 0);
-        // Eigen::Matrix3d R_Wt = getRotationMatrixFromZyxEulerAngles(target_zyx);
-        // Eigen::Matrix3d  R_st = R_Ws.transpose() * R_Wt;
-        // auto euler_zyx = getZyxEulerAnglesFromRotationMatrix(R_st);
-        double delta_yaw = normalizedYaw(normalizedYaw(cmdPoseWorld_[3]) - normalizedYaw(currentState(9)));
-        // std::cout << "euler_z: " << euler_zyx(0) << ", delta_yaw: " << delta_yaw << std::endl;
+        // Eigen::Matrix3d R_WBt = getRotationMatrixFromZyxEulerAngles(target_zyx);
+        // auto R_BrBt = R_WBr.transpose() * R_WBt;
+        double delta_yaw = normalizedYaw((cmdPoseWorld_[3]) - normalizedYaw(currentState(9)));
         cmd_vector << delta_pose.head(2), delta_yaw;
       }
       else return;
       double target_yaw = 0;
-      ros_logger_->publishValue("/humanoid/GaitReceiver/single_step_yaw_computed_", single_step_yaw_computed_);
-      ros_logger_->publishValue("/humanoid/GaitReceiver/getFinalYawSingleStepMode", swingTrajectoryPlannerPtr_->getFinalYawSingleStepMode());
-      if(PoseCmdWorldUpdated_ && (!single_step_yaw_computed_ && !swingTrajectoryPlannerPtr_->getFinalYawSingleStepMode()))
+      if(!single_step_yaw_computed_)
       {
-        if(cmd_vector.head(2).norm() > 0.3){//TODO: 这里的阈值可以调整
-          target_yaw = atan2(cmd_vector(1), cmd_vector(0));//TO-DO: 转换到局部系(2025/01/17 by matthew)
-          double yaw_diff = abs(normalizedYaw(normalizedYaw(target_yaw) - normalizedYaw(cmd_vector[2])));
-          std::cout << "yaw_diff: " << yaw_diff << std::endl;
-          if(yaw_diff > single_step_yaw_threshold_)
-          {
-            swingTrajectoryPlannerPtr_->setFinalYawSingleStepMode(true);
-            double target_yaw_world = currentState(9) + target_yaw;
-            swingTrajectoryPlannerPtr_->setTargetYaw(target_yaw_world);
-            std::cout << "yaw_diff: " << yaw_diff << std::endl;
-            std::cout << "target_yaw_world: " << target_yaw_world << std::endl;
-          }
-        }
+        if(cmd_vector.head(2).norm() > 0.3)//TODO: 这里的阈值可以调整
+          target_yaw = atan2(cmd_vector(1), cmd_vector(0));
         else{
           target_yaw = cmd_vector(2);
         }
@@ -444,7 +429,7 @@ namespace ocs2
         ros_logger_->publishVector("/humanoid/GaitReceiver/cmd_vector", cmd_vector);
 
         if(!gaitSchedulePtr_->getModeSchedule().existValidFootPose(initTime) && !swingTrajectoryPlannerPtr_->isSingleStepPhase())
-        if (planner_vec.norm() <= cmd_threshold|| (planner_vec.norm() <= cmd_threshold*1.5 && PoseCmdWorldUpdated_))// wait for stop
+        if (planner_vec.norm() <= cmd_threshold)// wait for stop
         {
           auto current_pose = currentState.segment<6>(6);
           auto current_mode = gaitSchedulePtr_->getModeSchedule().modeAtTime(initTime);
@@ -484,11 +469,10 @@ namespace ocs2
                 ROS_ERROR("Failed to plan single step.");
               swingTrajectoryPlannerPtr_->setSingleStepPhase(success);
               std::cout << "[GaitReceiver]: setSingleStepPhase set to success in stop case" << std::endl;
+              swingTrajectoryPlannerPtr_->setFinalYawSingleStepMode(false);
             }
             PoseCmdUpdated_ = false;
             PoseCmdWorldUpdated_ = false;
-            swingTrajectoryPlannerPtr_->setFinalYawSingleStepMode(false);
-
           }
         }
       }else// auto start
@@ -532,7 +516,6 @@ namespace ocs2
     {
       double xy_error = (currentPose.head(2) - current_target_.head(2)).norm();
       double yaw_error = std::abs(currentPose(3) - current_target_(3));
-      // std::cout << "[GaitReceiver] xy_error : " << xy_error << std::endl;
       // std::cout << "[GaitReceiver] yaw_error : " << yaw_error << std::endl;
       double xy_th = is_cmd_pose ? TARGET_REACHED_THRESHOLD_CMD_POSE : TARGET_REACHED_THRESHOLD;
       double yaw_th = is_cmd_pose ? TARGET_REACHED_THRESHOLD_YAW_CMD_POSE : TARGET_REACHED_THRESHOLD_YAW;

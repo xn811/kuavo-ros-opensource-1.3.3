@@ -271,31 +271,31 @@ class Env:
         sensor_data.joint_data.joint_q = [0.0] * 28
         sensor_data.joint_data.joint_v = [0.0] * 28
         sensor_data.joint_data.joint_vd = [0.0] * 28
-        sensor_data.joint_data.joint_current = [0.0] * 28
+        sensor_data.joint_data.joint_torque = [0.0] * 28
         
         # 腿部数据赋值（0-11）
         for i in range(6):
             # 左腿数据 (0-5)
             sensor_data.joint_data.joint_q[i] = q_leg[i*2]
             sensor_data.joint_data.joint_v[i] = dq_leg[i*2]
-            sensor_data.joint_data.joint_current[i] = current_leg[i*2]
+            sensor_data.joint_data.joint_torque[i] = current_leg[i*2]
             
             # 右腿数据 (6-11)
             sensor_data.joint_data.joint_q[i+6] = q_leg[i*2+1]
             sensor_data.joint_data.joint_v[i+6] = dq_leg[i*2+1]
-            sensor_data.joint_data.joint_current[i+6] = current_leg[i*2+1]
+            sensor_data.joint_data.joint_torque[i+6] = current_leg[i*2+1]
         
         # 手臂数据赋值（12-25）
         for i in range(7):
             # 左手数据 (12-18)
             sensor_data.joint_data.joint_q[i+12] = q_arm[i*2]
             sensor_data.joint_data.joint_v[i+12] = dq_arm[i*2]
-            sensor_data.joint_data.joint_current[i+12] = current_arm[i*2]
+            sensor_data.joint_data.joint_torque[i+12] = current_arm[i*2]
             
             # 右手数据 (19-25)
             sensor_data.joint_data.joint_q[i+19] = q_arm[i*2+1]
             sensor_data.joint_data.joint_v[i+19] = dq_arm[i*2+1]
-            sensor_data.joint_data.joint_current[i+19] = current_arm[i*2+1]
+            sensor_data.joint_data.joint_torque[i+19] = current_arm[i*2+1]
         
         # 获取头部数据
         if "head_positions" in self.joint_data["joint_state"]:
@@ -307,13 +307,13 @@ class Env:
             for i in range(2):
                 sensor_data.joint_data.joint_q[26+i] = head_positions[i]
                 sensor_data.joint_data.joint_v[26+i] = head_velocities[i]
-                sensor_data.joint_data.joint_current[26+i] = head_applied_effort[i]
+                sensor_data.joint_data.joint_torque[26+i] = head_applied_effort[i]
         else:
             # 如果没有头部数据，设置为0
             for i in range(26, 28):
                 sensor_data.joint_data.joint_q[i] = 0.0
                 sensor_data.joint_data.joint_v[i] = 0.0
-                sensor_data.joint_data.joint_current[i] = 0.0
+                sensor_data.joint_data.joint_torque[i] = 0.0
 
         # IMU数据
         sensor_data.imu_data.gyro.x = angular_velocity[0]  # ang_vel

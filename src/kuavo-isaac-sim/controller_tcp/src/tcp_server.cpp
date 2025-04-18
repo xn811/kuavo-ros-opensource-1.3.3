@@ -47,6 +47,7 @@ int TcpServer::launch()
         // have the thread run independently
         th.detach();
     }
+    return 0;
 }
 
 

@@ -17,9 +17,6 @@ current_script_dir=$(dirname "$(realpath "$0")")
 prefix="${current_script_dir%/tools/check_tool}"
 
 
-<<<<<<< HEAD
-setZeroPath="$prefix/src/kuavo-ros-control-lejulib/hardware_node/lib/ruiwo_controller/"
-=======
 
 kuavo_ros_folder_path="$prefix/src/kuavo-ros-control-lejulib/hardware_node/lib/ruiwo_controller"
 kuavo_ros_file_path="$kuavo_ros_folder_path/Negtive.sh"
@@ -38,7 +35,6 @@ else
 fi
 
 
->>>>>>> origin/dev
 
 cd $setZeroPath
 

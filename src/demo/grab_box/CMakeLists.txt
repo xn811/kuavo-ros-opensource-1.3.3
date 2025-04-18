@@ -67,15 +67,7 @@ target_include_directories(${PROJECT_NAME}_demo PUBLIC
 )
 
 add_executable(tag_tracker_node src/tagTracker.cpp src/poseTransformer.cpp)
-target_link_libraries(tag_tracker_node ${catkin_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${GrabBoxLib}
-  yaml-cpp
-  drake::drake
-  )
-target_include_directories(tag_tracker_node PUBLIC
-  ${PROJECT_BINARY_DIR}/include
-)
+target_link_libraries(tag_tracker_node ${catkin_LIBRARIES})
 
 # example
 add_executable(btcpp_sample test/test1.cpp)

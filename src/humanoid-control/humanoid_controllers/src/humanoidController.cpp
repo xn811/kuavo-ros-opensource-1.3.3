@@ -269,6 +269,7 @@ namespace humanoid_controller
     jointNum_ = HumanoidInterface_->modelSettings().mpcLegsDof;
     armNum_ = info.actuatedDofNum - jointNum_;
 
+
     if (armNumReal_ + jointNumReal_ != jointNum_ + armNum_) // mpc维度和实际维度不一致，简化的模型
     {
       is_simplified_model_ = true;

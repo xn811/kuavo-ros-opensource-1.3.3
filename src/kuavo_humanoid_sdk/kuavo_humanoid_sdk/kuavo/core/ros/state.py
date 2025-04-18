@@ -231,7 +231,7 @@ class KuavoRobotStateCore:
             position = copy.deepcopy(msg.joint_data.joint_q),
             velocity = copy.deepcopy(msg.joint_data.joint_v),
             torque = copy.deepcopy(msg.joint_data.joint_vd),
-            acceleration = copy.deepcopy(msg.joint_data.joint_current)
+            acceleration = copy.deepcopy(msg.joint_data.joint_torque)
         )
 
     def _odom_callback(self, msg:Odometry)->None:

@@ -57,7 +57,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <kuavo_msgs/changeArmCtrlMode.h>
 #include "kuavo_msgs/robotHeadMotionData.h"
-#include <std_srvs/SetBool.h>
 
 namespace ocs2
 {
@@ -326,21 +325,6 @@ namespace ocs2
         head_pitch = -25.0 * head_pitch;// +- 25deg 
         // std::cout << "head_yaw: " << head_yaw << " head_pitch: " << head_pitch << std::endl;
         controlHead(head_yaw, head_pitch);
-        if(joy_msg->buttons[joyButtonMap["BUTTON_STANCE"]])
-        {
-          ROS_INFO("Start grab box demo");
-          enableGrabBoxDemo(true);
-        }
-        if(joy_msg->buttons[joyButtonMap["BUTTON_TROT"]])
-        {
-          ROS_INFO("Stop grab box demo");
-          enableGrabBoxDemo(false);
-        }
-        if(joy_msg->buttons[joyButtonMap["BUTTON_JUMP"]])
-        {
-          ROS_INFO("Reset grab box demo");
-          resetGrabBoxDemo(true);
-        }
         // return;
         joystickOriginAxisTemp_.head(4) << joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_X"]], joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_Y"]], joystick_origin_axis_[2], joystick_origin_axis_[3];
       }
@@ -589,58 +573,6 @@ namespace ocs2
       msg.joint_data[1] = head_pitch;
       head_motion_pub_.publish(msg);
     }
-
-  bool enableGrabBoxDemo(bool enable)
-  {
-    const std::string service_name = "/grab_box_demo/control_bt";
-    ros::NodeHandle nh;
-
-    // 等待服务可用
-    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
-      ROS_ERROR("Service %s not available", service_name.c_str());
-      return false;
-    }
-
-    // 创建服务代理
-    ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
-    std_srvs::SetBool srv;
-    srv.request.data = enable;
-
-    // 调用服务
-    if (client.call(srv)) {
-      ROS_INFO("controlBtTree call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
-      return srv.response.success; // 服务调用成功
-    } else {
-      ROS_ERROR("Failed to call service %s", service_name.c_str());
-      return false; // 服务调用失败
-    }
-  }
-
-  bool resetGrabBoxDemo(bool reset)
-  {
-    const std::string service_name = "/grab_box_demo/reset_bt";
-    ros::NodeHandle nh;
-
-    // 等待服务可用
-    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
-      ROS_ERROR("Service %s not available", service_name.c_str());
-      return false;
-    }
-
-    // 创建服务代理
-    ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
-    std_srvs::SetBool srv;
-    srv.request.data = reset;
-
-    // 调用服务
-    if (client.call(srv)) {
-      ROS_INFO("resetGrabBoxDemo call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
-      return srv.response.success; // 服务调用成功
-    } else {
-      ROS_ERROR("Failed to call service %s", service_name.c_str());
-      return false; // 服务调用失败
-    }
-  }
 
   private:
     ros::NodeHandle nodeHandle_;

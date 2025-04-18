@@ -4,12 +4,12 @@ import time
 from SimpleSDK import RUIWOTools
 
 # 速度相关参数，方便调整
-MOTION_DURATION = 0.3  # 每个动作的执行时间（秒）
-POS_KP = 20
+MOTION_DURATION = 1 # 每个动作的执行时间（秒）
+POS_KP = 30
 POS_KD = 5
 
 # 500Hz 的更新频率
-UPDATE_FREQUENCY = 500  # Hz
+UPDATE_FREQUENCY = 50  # Hz
 
 UPDATE_INTERVAL = 1 / UPDATE_FREQUENCY  # 秒
 
@@ -30,13 +30,15 @@ def read_zero_positions():
 
 # 获取用户输入的测试时长
 def get_test_duration():
+    # 计算完成一个完整动作周期所需的时间
+    cycle_time = len(base_actions) * MOTION_DURATION
     while True:
         try:
-            duration = int(input("\n请输入测试时长（0 - 1000 秒）："))
-            if 0 <= duration <= 1000:
+            duration = int(input(f"\n请输入测试时长（大于 {cycle_time} 秒）："))
+            if duration >= cycle_time:
                 return duration
             else:
-                print("输入的时长不在 0 - 1000 秒范围内，请重新输入。")
+                print(f"输入的时长小于一个完整动作周期的时间（大于 {cycle_time} 秒），请重新输入。")
         except ValueError:
             print("输入无效，请输入一个整数。")
 
@@ -66,16 +68,71 @@ def read_joint_ids():
         print("[RUIWO motor]:Warning: config.yaml file does not exist, using default joint IDs.")
         return [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]
 
-# 原始公共动作帧
-base_actions = [
+# 读取机器人的版本号
+def get_robot_version():
+    # 获取用户的主目录
+    home_dir = os.path.expanduser('/home/lab/')
+    bashrc_path = os.path.join(home_dir, '.bashrc')
+
+    if os.path.exists(bashrc_path):
+        with open(bashrc_path, 'r') as file:
+            lines = file.readlines()
+        for line in reversed(lines):  # 从文件末尾开始读取
+            line = line.strip()  # 去除行首和行尾的空白字符
+            if line.startswith("export ROBOT_VERSION=") and "#" not in line:
+                version = line.split("=")[1].strip()
+                print(f"---------- 检测到 ROBOT_VERSION = {version} ----------")
+                if version in ["41", "42", "45"]:
+                    return version
+                else:
+                    print(f"[RUIWO motor]:Warning: ROBOT_VERSION '{version}' 不是有效值。")
+                    break
+    print("[RUIWO motor]:Warning: ROBOT_VERSION 未找到或无效，需要手动输入。")
+    while True:
+        version = input("请输入机器人版本号（41 42 或 45）：").strip()
+        if version in ["41", "42", "45"]:
+            return version
+        else:
+            print("输入的版本号无效，请输入 41 42 或 45。")
+    return version  # 这行永远不会执行，但因完整性保留
+
+# 定义长手和短手的动作
+long_arm_actions = [
     [0.23, 0.00, 0.00, 0.00, 0.00, -0.24],
     [1.30, 1.00, -1.40, -1.33, 0.40, -0.77],
-    [1.94, -0.50, -0.37, 1.51, 0.76, 0.76],
-    [1.09, -1.70, -0.93, -1.51, 0.00, -0.24],
-    [0.23, -0.40, -1.93, 1.07, -0.70, 0.73],
-    [2.05, 0.00, -0.75, 0.71, 0.00, -0.52],
+    [1.94, -0.50, -0.37, 1.51, 0.80, 0.76],
+    [1.09, -2.00, -0.93, -1.51, 0.00, -0.24],
+    [0.23, -0.40, -2.30, 1.07, -0.80, 0.73],
+    [2.20, 0.00, -1.75, 0.71, 0.00, -0.52],
     [0.23, 0.00, 0.00, 0.00, 0.00, -0.24]
 ]
+
+short_arm_actions = [
+    [0.00, 0.00, 0.00, 0.00, -0.10, 0.00],
+    [0.85, -1.30, -0.20, 1.40, 1.30, -1.30],
+    [1.90, 0.40, -0.50, -1.40, 0.52, -0.80],
+    [1.31, 1.30, -0.90, 0.00, -0.10, 1.00],
+    [1.90, 0.31, -1.30, -1.40, -0.72, 0.00],
+    [1.40, 0.90, -0.60, 0.90, -1.50, -1.00],
+    [0.40, 0.20, 0.00, 0.20, -0.10, 0.00]
+]
+
+# 读取机器人的版本号
+robot_version = get_robot_version()
+
+# 根据版本号选择动作
+if robot_version == "41" or robot_version == "42":
+    base_actions = short_arm_actions
+    print("现在将要执行 KUAVO 机器的短手版。")
+elif robot_version == "45":
+    base_actions = long_arm_actions
+    print("现在将要执行 KUAVO 机器的长手版。")
+else:
+    print(f"[RUIWO motor]:Error: 未知的 ROBOT_VERSION '{robot_version}'，程序退出。")
+    exit(1)
+
+# 等待用户确认
+input("请确认机器型号无误后，按回车键继续...")
 
 # 读取关节 ID 列表
 joint_ids = read_joint_ids()
@@ -132,59 +189,45 @@ if not enable_all_success:
     print("有电机使能失败，程序退出。")
     exit(1)  # 退出程序
 
-# 执行动作序列
-action_index = 0
-
 # 获取用户输入的测试时长
 test_duration = get_test_duration()
 start_time = time.perf_counter()
+
+# 计算一个完整动作周期所需的时间
+cycle_time = len(base_actions) * MOTION_DURATION
 
 while True:
     current_time = time.perf_counter()
     elapsed_time = current_time - start_time
     remaining_time = test_duration - elapsed_time
 
-    if remaining_time <= 6:
-        # 剩余时间不足 6 秒，回到位置 1
-        target_positions = full_base_actions[0]  # 位置 1 的动作
-        current_positions = full_base_actions[action_index - 1] if action_index > 0 else [0.0] * len(joint_ids)
-        steps = MOTION_DURATION * UPDATE_FREQUENCY  # 按照 MOTION_DURATION 计算步数
+    # 输出剩余时间
+    print(f"{get_timestamp()} 总剩余时间：{remaining_time:.2f} 秒")
 
-        for step in range(int(steps)):
-            loop_start = time.perf_counter()
-            for joint_index, dev_id in enumerate(joint_ids):
-                # 计算当前位置到目标位置的插值
-                interpolated_pos = current_positions[joint_index] + (target_positions[joint_index] - current_positions[joint_index]) * (step / steps)
-                zero_position = zero_positions[joint_index]
-                compensated_pos = interpolated_pos + zero_position  # 应用零点补偿
-                state = ruiwo.run_ptm_mode(dev_id, compensated_pos, 0, POS_KP, POS_KD, 0)
-                if isinstance(state, list):
-                    pass
-                else:
-                    print(f"{get_timestamp()} ID: {dev_id} Run ptm mode:  [{state}]")
-
-            loop_end = time.perf_counter()
-            elapsed_time_loop = loop_end - loop_start
-            remaining_time_loop = UPDATE_INTERVAL - elapsed_time_loop
-            if remaining_time_loop > 0:
-                time.sleep(remaining_time_loop)
-        break
+    # 检查是否开始新的完整周期
+    if elapsed_time % cycle_time < MOTION_DURATION:
+        # 判断剩余时间是否足够完成一个完整周期
+        if remaining_time < cycle_time:
+            print(f"{get_timestamp()} 剩余时间不足完成一个动作周期，提前结束。")
+            break
 
     if elapsed_time >= test_duration:
         break
 
-    print(f"{get_timestamp()} 现在是运行到第 {elapsed_time:.2f} 秒，还剩 {remaining_time:.2f} 秒，开始执行动作 {action_index + 1}")
+    # 根据实际时间计算当前应该执行的关键帧索引
+    current_frame_index = int(elapsed_time // MOTION_DURATION) % len(full_base_actions)
+    next_frame_index = (current_frame_index + 1) % len(full_base_actions)
 
-    current_positions = full_base_actions[action_index - 1] if action_index > 0 else [0.0] * len(joint_ids)
-    target_positions = full_base_actions[action_index]
+    current_positions = full_base_actions[current_frame_index]
+    target_positions = full_base_actions[next_frame_index]
 
     # 检查长度是否匹配
     if len(current_positions) != len(joint_ids) or len(target_positions) != len(joint_ids):
-        raise ValueError(f"动作 {action_index + 1} 的位置列表长度不匹配。当前长度: {len(current_positions)}，目标长度: {len(target_positions)}，关节数量: {len(joint_ids)}")
+        raise ValueError(f"动作 {current_frame_index + 1} 的位置列表长度不匹配。当前长度: {len(current_positions)}，目标长度: {len(target_positions)}，关节数量: {len(joint_ids)}")
 
     steps = MOTION_DURATION * UPDATE_FREQUENCY  # MOTION_DURATION 秒内发送的步数
+    step_start_time = elapsed_time % MOTION_DURATION
 
-    action_start_time = time.perf_counter()
     for step in range(int(steps)):
         loop_start = time.perf_counter()
         for joint_index, dev_id in enumerate(joint_ids):
@@ -204,19 +247,7 @@ while True:
         if remaining_time > 0:
             time.sleep(remaining_time)
 
-    action_end_time = time.perf_counter()
-    actual_duration = action_end_time - action_start_time
-    print(f"{get_timestamp()} 动作 {action_index + 1} 实际执行时间: {actual_duration:.3f} 秒")
-
-    # 输出当前动作完成后的状态
-    next_action_index = action_index + 1
-    if next_action_index < len(full_base_actions):
-        print(f"{get_timestamp()} 现在到达位置 {action_index + 1}，开始向位置 {next_action_index + 1} 运动")
-    else:
-        action_index = 0  # 循环执行动作序列
-        print(f"{get_timestamp()} 现在到达位置 {action_index + 1}，重新开始动作序列")
-
-    action_index += 1
+    print(f"{get_timestamp()} 动作 {current_frame_index + 1} 执行完成，开始向位置 {next_frame_index + 1} 运动")
 
 # 失能所有关节电机
 for dev_id in joint_ids:

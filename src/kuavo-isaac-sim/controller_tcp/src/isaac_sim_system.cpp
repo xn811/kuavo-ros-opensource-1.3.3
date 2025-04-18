@@ -340,7 +340,7 @@ void KuavoVirtualController::timerCallback(const ros::TimerEvent&) {
     // 对关节数据进行插值
     sensor_msg.joint_data.joint_q.resize(current_data_.joint_q.size());
     sensor_msg.joint_data.joint_v.resize(current_data_.joint_v.size());
-    sensor_msg.joint_data.joint_current.resize(current_data_.joint_current.size());
+    sensor_msg.joint_data.joint_torque.resize(current_data_.joint_current.size());
     sensor_msg.joint_data.joint_vd.resize(current_data_.joint_v.size());
     
     // 使用数值微分方法计算加速度
@@ -386,7 +386,7 @@ void KuavoVirtualController::timerCallback(const ros::TimerEvent&) {
         sensor_msg.joint_data.joint_v[i] = previous_data_.joint_v[i] + 
             alpha * (current_data_.joint_v[i] - previous_data_.joint_v[i]);
         
-        sensor_msg.joint_data.joint_current[i] = previous_data_.joint_current[i] + 
+        sensor_msg.joint_data.joint_torque[i] = previous_data_.joint_current[i] + 
             alpha * (current_data_.joint_current[i] - previous_data_.joint_current[i]);
     }
     
