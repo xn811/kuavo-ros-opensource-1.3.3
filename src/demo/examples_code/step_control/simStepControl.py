@@ -101,7 +101,8 @@ def get_multiple_steps_msg(body_poses, dt, is_left_first=True, collision_check=T
             elif l_collision:
                 print("\033[92m[Info] Left foot is in collision, switch to right foot\033[0m")
                 is_left_first = False
-            else:
+            elif r_collision:
+                print("\033[92m[Info] Right foot is in collision, switch to left foot\033[0m")
                 is_left_first = True
 
             l_foot_rect_last = l_foot_rect_next
@@ -161,11 +162,4 @@ if __name__ == '__main__':
 
     # 生成步态消息并发布
     msg = get_multiple_steps_msg(body_poses, dt, is_left_first_default, collision_check)
-
-    # 等待订阅者连接
-    rate = rospy.Rate(10)  # 10Hz
-    while pub.get_num_connections() == 0 and not rospy.is_shutdown():
-        rospy.loginfo("等待订阅者连接...")
-        rate.sleep()
-
     pub.publish(msg)
