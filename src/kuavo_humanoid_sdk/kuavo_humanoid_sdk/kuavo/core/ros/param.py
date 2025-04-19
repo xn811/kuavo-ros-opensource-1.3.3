@@ -2,6 +2,12 @@ import rospy
 import json
 import xml.etree.ElementTree as ET
 from kuavo_humanoid_sdk.common.logger import SDKLogger
+
+# End effector types
+class EndEffectorType:
+    QIANGNAO = "qiangnao"
+    QIANGNAO_TOUCH = "qiangnao_touch"
+    LEJUCLAW = "lejuclaw"
 class RosParameter:
     def __init__(self):
         pass

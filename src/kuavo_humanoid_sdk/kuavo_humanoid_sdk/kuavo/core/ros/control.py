@@ -1,33 +1,44 @@
-
+import os
 import rospy
 import numpy as np
 from typing import Tuple
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
 from kuavo_humanoid_sdk.kuavo.core.ros.sat_utils import RotatingRectangle
-
+from kuavo_humanoid_sdk.kuavo.core.ros.param import EndEffectorType
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState, Joy
-from kuavo_msgs.msg import gestureTask,robotHandPosition, robotHeadMotionData, armTargetPoses, switchGaitByName
-from kuavo_msgs.msg import footPose, footPoseTargetTrajectories
-from kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
+from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import (gestureTask,robotHandPosition, robotHeadMotionData, armTargetPoses, switchGaitByName,
+                            footPose, footPoseTargetTrajectories, dexhandCommand)                         
+from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
                             controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest)
-from motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
-from motion_capture_ik.srv import twoArmHandPoseCmdSrv, fkSrv
+from kuavo_humanoid_sdk.msg.motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
+from kuavo_humanoid_sdk.msg.motion_capture_ik.srv import twoArmHandPoseCmdSrv, fkSrv
 
 class ControlEndEffector:
-    def __init__(self, eef_type: str = "qiangnao"):
-        self._pubs = []
+    def __init__(self, eef_type: str = EndEffectorType.QIANGNAO):
         self._eef_type = eef_type
-        if eef_type == "qiangnao":
+        self._pubs = []
+        if self._eef_type == EndEffectorType.QIANGNAO:
             self._pub_ctrl_robot_hand = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)                
-            self._pubs.append(self._pub_ctrl_robot_hand)
+            # publisher, name, require
+            self._pubs.append((self._pub_ctrl_robot_hand, True))
+        elif self._eef_type == EndEffectorType.QIANGNAO_TOUCH:
+            self._pub_ctrl_robot_hand = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)                
+            self._pub_dexhand_command = rospy.Publisher('/dexhand/command', dexhandCommand, queue_size=10)
+            self._pub_dexhand_right_command = rospy.Publisher('/dexhand/right/command', dexhandCommand, queue_size=10)
+            self._pub_dexhand_left_command = rospy.Publisher('/dexhand/left/command', dexhandCommand, queue_size=10)
+            # publisher, name, require
+            self._pubs.append((self._pub_dexhand_command, True))
+            self._pubs.append((self._pub_dexhand_right_command, True))
+            self._pubs.append((self._pub_dexhand_left_command, True))
+            
 
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
         
         success = True
-        for pub in self._pubs:
+        for pub, require in self._pubs:
             while pub.get_num_connections() == 0:
                 if (rospy.Time.now() - start_time).to_sec() > timeout:
                     SDKLogger.error(f"Timeout waiting for {pub.name} connection")
@@ -39,7 +50,7 @@ class ControlEndEffector:
 
     """ Control Kuavo Robot Dexhand """
     def pub_control_robot_dexhand(self, left_position:list, right_position:list)->bool:
-        if self._eef_type != 'qiangnao':
+        if not self._eef_type.startswith(EndEffectorType.QIANGNAO): # qiangnao, qiangnao_touch
             SDKLogger.warning(f"{self._eef_type} not support control dexhand")
             return False
         try :
@@ -52,9 +63,41 @@ class ControlEndEffector:
         except Exception as e:
             SDKLogger.error(f"publish robot dexhand: {e}")
             return False
+    
+    def pub_dexhand_command(self, data:list, ctrl_mode, hand_side)->bool:
+        """
+            ctrl_mode: 0 --> POSITION, 1 --> VELOCITY
+            hand_side: 0 --> left, 1 --> right, 2-->dual
+        """
+        if not self._eef_type == EndEffectorType.QIANGNAO_TOUCH:
+            SDKLogger.warning(f"{self._eef_type} not support pub_left_dexhand_command")
+            return False
+        try:
+            if hand_side != 2 and len(data) != 6:
+                SDKLogger.warning("Data length should be 6")
+                return False
+            if hand_side == 2 and len(data) != 12:
+                SDKLogger.warning("Data length should be 12")
+                return False
+            if ctrl_mode not in [dexhandCommand.POSITION_CONTROL, dexhandCommand.VELOCITY_CONTROL]:
+                SDKLogger.error(f"Invalid mode for pub_left_dexhand_command: {ctrl_mode}")
+                return False
+            msg = dexhandCommand()
+            msg.data = [int(d) for d in data]  # Convert data to integers
+            msg.control_mode = ctrl_mode
+            if hand_side == 0:
+                self._pub_dexhand_left_command.publish(msg)
+            elif hand_side == 1:
+                self._pub_dexhand_right_command.publish(msg)
+            else:
+                self._pub_dexhand_command.publish(msg)
+            return True        
+        except Exception as e:
+            SDKLogger.error(f"Failed to publish left dexhand command: {e}")
+            return False
         
     def srv_execute_gesture(self, gestures:list)->bool:
-        if self._eef_type != 'qiangnao':
+        if not self._eef_type.startswith(EndEffectorType.QIANGNAO): # qiangnao, qiangnao_touch
             SDKLogger.warning(f"{self._eef_type} not support control dexhand")
             return False
         try:
@@ -83,7 +126,7 @@ class ControlEndEffector:
         return False
 
     def srv_get_gesture_names(self)->list:
-        if self._eef_type != 'qiangnao':
+        if not self._eef_type.startswith(EndEffectorType.QIANGNAO): # qiangnao, qiangnao_touch
             SDKLogger.warning(f"{self._eef_type} not support control dexhand")
             return []
         try:
@@ -264,7 +307,7 @@ class ControlRobotMotion:
         self._pub_switch_gait = rospy.Publisher('/humanoid_switch_gait_by_name', switchGaitByName, queue_size=10)
         self._pub_step_ctrl = rospy.Publisher('/humanoid_mpc_foot_pose_target_trajectories', footPoseTargetTrajectories, queue_size=10)
 
-    def connect(self, timeout:float=1.0)-> bool:
+    def connect(self, timeout:float=2.0)-> bool:
         start_time = rospy.Time.now()
         publishers = [
             # (self._pub_joy, "joy publisher"),
@@ -509,6 +552,19 @@ class KuavoRobotControl:
         
         SDKLogger.debug(f"Control robot dexhand: {left_position}, {right_position}")
         return self.kuavo_eef_control.pub_control_robot_dexhand(left_position, right_position)
+
+    def robot_dexhand_command(self, data, ctrl_mode, hand_side):
+        """
+            Publish dexhand command
+            Args:
+                - data: list of 6 floats between 0 and 100
+                - ctrl_mode: int between 0(position), 1(velocity)
+                - hand_side: int between 0(left), 1(right), 2(dual)
+        """
+        if self.kuavo_eef_control is None:
+            SDKLogger.error("End effector control is not initialized.")
+            return False
+        return self.kuavo_eef_control.pub_dexhand_command(data, ctrl_mode, hand_side)
 
     def execute_gesture(self, gestures:list)->bool:
         """

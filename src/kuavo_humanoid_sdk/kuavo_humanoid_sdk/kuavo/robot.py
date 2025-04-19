@@ -5,7 +5,6 @@ kuavo_ros_env = KuavoROSEnv()
 if not kuavo_ros_env.Init():
     raise RuntimeError("Failed to initialize ROS environment")
 else:
-    import time
     from typing import Tuple
     from kuavo_humanoid_sdk.kuavo.robot_info import KuavoRobotInfo
     from kuavo_humanoid_sdk.kuavo.robot_arm import KuavoRobotArm 
@@ -14,6 +13,7 @@ else:
     from kuavo_humanoid_sdk.interfaces.robot import RobotBase
     from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams
     from kuavo_humanoid_sdk.common.logger import SDKLogger, disable_sdk_logging
+
 """
 Kuavo SDK - Python Interface for Kuavo Robot Control
 
@@ -35,12 +35,17 @@ The module requires a properly configured ROS environment to function.
 """
 __all__ = ["KuavoSDK", "KuavoRobot"]
 
+
 class KuavoSDK:
+    class Options:
+        Normal = 0x01
+        WithIK = 0x02
+
     def __init__(self):
        pass
 
     @staticmethod   
-    def Init(log_level: str = "INFO")-> bool:
+    def Init(options:int=Options.Normal, log_level: str = "INFO")-> bool:
         """Initialize the SDK.
         
         Args:
@@ -59,7 +64,14 @@ class KuavoSDK:
         if log_level.upper() == 'DEBUG':
             debug = True
         else:
-            debug = False    
+            debug = False   
+
+        # Check if IK option is enabled
+        if options & KuavoSDK.Options.WithIK:
+            if not KuavoROSEnv.check_rosnode_exists('/arms_ik_node'):
+                print("\033[31m\nError:WithIK option is enabled but ik_node is not running, please run `roslaunch motion_capture_ik ik_node.launch`\033[0m")      
+                exit(1)
+
         if not kuavo_core.initialize(debug=debug):
             SDKLogger.error("[SDK] Failed to initialize core components.")
             return False
@@ -86,7 +98,7 @@ class KuavoRobot(RobotBase):
             bool: True if the robot is put into stance mode successfully, False otherwise.
             
         Note:
-            You can call KuavoRobotState.wait_for_stance() to wait until the robot enters stance mode.
+            You can call :meth:`KuavoRobotState.wait_for_stance` to wait until the robot enters stance mode.
         """
         return self._kuavo_core.to_stance()
         
@@ -97,7 +109,7 @@ class KuavoRobot(RobotBase):
             bool: True if the robot is put into trot mode successfully, False otherwise.
             
         Note:
-            You can call KuavoRobotState.wait_for_walk() to wait until the robot enters trot mode.
+            You can call :meth:`KuavoRobotState.wait_for_walk` to wait until the robot enters trot mode.
         """
         return self._kuavo_core.to_trot()
 
@@ -113,7 +125,7 @@ class KuavoRobot(RobotBase):
             bool: True if the motion is controlled successfully, False otherwise.
             
         Note:
-            You can call KuavoRobotState.wait_for_walk() to wait until the robot enters walk mode.
+            You can call :meth:`KuavoRobotState.wait_for_walk` to wait until the robot enters walk mode.
         """
         # Limit velocity ranges
         limited_linear_x = min(0.4, max(-0.4, linear_x))
@@ -136,24 +148,29 @@ class KuavoRobot(RobotBase):
     def squat(self, height: float, pitch: float=0.0)->bool:
         """Control the robot's squat height and pitch.
         Args:
-                height (float): The height offset from normal standing height in meters, range [-0.3, 0.0],Negative values indicate squatting down.
+                height (float): The height offset from normal standing height in meters, range [-0.35, 0.0],Negative values indicate squatting down.
                 pitch (float): The pitch angle of the robot's torso in radians, range [-0.4, 0.4].
             
         Returns:
             bool: True if the squat is controlled successfully, False otherwise.
         """
         # Limit height range
-        limited_height = min(0.0, max(-0.3, height))
+        MAX_HEIGHT = 0.0
+        MIN_HEIGHT = -0.35
+        MAX_PITCH = 0.4
+        MIN_PITCH = -0.4
+        
+        limited_height = min(MAX_HEIGHT, max(MIN_HEIGHT, height))
         
         # Check if height exceeds limits
-        if height > 0.0 or height < -0.3:
-            SDKLogger.warn(f"[Robot] height {height} exceeds limit [-0.3, 0.0], will be limited")
+        if height > MAX_HEIGHT or height < MIN_HEIGHT:
+            SDKLogger.warn(f"[Robot] height {height} exceeds limit [{MIN_HEIGHT}, {MAX_HEIGHT}], will be limited")
         # Limit pitch range
-        limited_pitch = min(0.4, max(-0.4, pitch))
+        limited_pitch = min(MAX_PITCH, max(MIN_PITCH, pitch))
         
         # Check if pitch exceeds limits
-        if abs(pitch) > 0.4:
-            SDKLogger.warn(f"[Robot] pitch {pitch} exceeds limit [-0.4, 0.4], will be limited")
+        if abs(pitch) > MAX_PITCH:
+            SDKLogger.warn(f"[Robot] pitch {pitch} exceeds limit [{MIN_PITCH}, {MAX_PITCH}], will be limited")
         
         return self._kuavo_core.squat(limited_height, limited_pitch)
      
@@ -172,7 +189,11 @@ class KuavoRobot(RobotBase):
         Raises:
             RuntimeError: If the robot is not in stance state when trying to control step motion.
             ValueError: If target_pose length is not 4.
-        """
+
+        Note:
+            You can call :meth:`KuavoRobotState.wait_for_step_control` to wait until the robot enters step-control mode.
+            You can call :meth:`KuavoRobotState.wait_for_stance` to wait the step-control finish.
+        """    
         if len(target_pose) != 4:
             raise ValueError(f"[Robot] target_pose length must be 4 (x, y, z, yaw), but got {len(target_pose)}")
 
@@ -235,7 +256,7 @@ class KuavoRobot(RobotBase):
             ValueError: If the joint position is outside the range of [-π, π].
             RuntimeError: If the robot is not in stance state when trying to control the arm.
             
-        Note:
+        Warning:
             This is an asynchronous interface. The function returns immediately after sending the command.
             Users need to wait for the motion to complete on their own.
         """
@@ -293,6 +314,9 @@ class KuavoRobot(RobotBase):
                 
         Returns:
             list: List of joint positions in radians, or None if inverse kinematics failed.
+
+        Warning:
+            This function requires initializing the SDK with the :attr:`KuavoSDK.Options.WithIK`.
         """
         return self._robot_arm.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
 
@@ -305,5 +329,8 @@ class KuavoRobot(RobotBase):
         Returns:
             Tuple[KuavoPose, KuavoPose]: Tuple of poses for the robot left arm and right arm,
                 or (None, None) if forward kinematics failed.
+
+        Warning:
+            This function requires initializing the SDK with the :attr:`KuavoSDK.Options.WithIK`.        
         """
         return self._robot_arm.arm_fk(q)

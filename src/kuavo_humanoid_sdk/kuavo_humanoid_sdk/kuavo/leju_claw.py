@@ -22,7 +22,7 @@ class LejuClaw(EndEffector):
             target_torques (list, optional): The target torques of the claws. If None, default value [1.0, 1.0] will be used.
 
         Note:
-            The target_positions, target_velocities,  target_torques must be a list of length 2.
+            The target_positions, target_velocities,  target_torques must be a list of length `self.joint_count()`.
             After calling this function, you can call wait_for_finish() to wait until the claws reach the target position.
 
         Warning:
@@ -31,18 +31,22 @@ class LejuClaw(EndEffector):
         Returns:
             bool: True if the claws are successfully gripped, False otherwise
         """
-        if target_positions is None:
+        if target_positions is None or len(target_positions) != self.joint_count():
             raise ValueError("Target positions must be provided.")
         
         target_positions = [max(0.0, min(100.0, pos)) for pos in target_positions]
         if target_velocities is None:
             target_velocities = [90, 90]
         else:
+           if len(target_velocities) != self.joint_count():
+               raise ValueError("Target velocities must be a list of length 2.")
            target_velocities = [max(0.0, min(100.0, vel)) for vel in target_velocities]
         
         if target_torques is None:
             target_torques = [1.0, 1.0]
         else:
+            if len(target_torques) != self.joint_count():
+                raise ValueError("Target torques must be a list of length 2.")
             target_torques = [max(0.0, min(10.0, torque)) for torque in target_torques]
             
         return self.leju_claw_control.control(target_positions, target_velocities, target_torques, EndEffectorSide.BOTH)
@@ -56,7 +60,7 @@ class LejuClaw(EndEffector):
             target_torques (list, optional): The target torque of the left claw. If None, default value 1.0 will be used.
 
         Note:
-            The target_positions, target_velocities, target_torques must be a list of length 1
+            The target_positions, target_velocities, target_torques must be a list of length `self.joint_count()/2`.
             After calling this function, you can call wait_for_finish() to wait until the claws reach the target position.
 
         Warning:
@@ -69,8 +73,8 @@ class LejuClaw(EndEffector):
             raise ValueError("Target positions must be provided.")
         
         for data in [target_positions, target_velocities, target_torques]:
-            if data is not None and len(data) != 1:
-                raise ValueError("Target positions must be a list of length 1.")
+            if data is not None and len(data) != self.joint_count()/2:
+                raise ValueError(f"Target data must be a list of length {self.joint_count()/2}.")
         
         q = max(0.0, min(100.0, target_positions[0]))
 
@@ -98,7 +102,7 @@ class LejuClaw(EndEffector):
             bool: True if the claw is successfully gripped, False otherwise.
         
         Note:
-            The target_positions, target_velocities, target_torques must be a list of length 1
+            The target_positions, target_velocities, target_torques must be a list of length `self.joint_count()/2`.
             After calling this function, you can call wait_for_finish() to wait until the claws reach the target position.
 
         Warning:
@@ -108,8 +112,8 @@ class LejuClaw(EndEffector):
             raise ValueError("Target positions must be provided.")
         
         for data in [target_positions, target_velocities, target_torques]:
-            if data is not None and len(data) != 1:
-                raise ValueError("Target positions must be a list of length 1.")
+            if data is not None and len(data) != self.joint_count()/2:
+                raise ValueError(f"Target data must be a list of length {self.joint_count()/2}.")
         
         q = max(0.0, min(100.0, target_positions[0]))
 
@@ -163,29 +167,32 @@ class LejuClaw(EndEffector):
         """
         return self._rb_state.eef_state.state
     
-    def get_position(self)->Tuple[float, float]:
+    def get_position(self)->Tuple[list, list]:
         """Get the position of the claws.
 
         Returns:
-            Tuple[float, float]: The position of the claws, range [0.0, 100.0].
+            Tuple[list, list]: The position of the claws, range [0.0, 100.0].
         """
-        return self._rb_state.eef_state.position
+        claw_state = self._rb_state.eef_state
+        return (claw_state[0].position, claw_state[1].position)
     
-    def get_velocity(self)->Tuple[float, float]:
+    def get_velocity(self)->Tuple[list, list]:
         """Get the velocity of the claws.
 
         Returns:
-            Tuple[float, float]: The velocity of the claws.
+            Tuple[list, list]: The velocity of the claws.
         """
-        return self._rb_state.eef_state.velocity
+        claw_state = self._rb_state.eef_state
+        return (claw_state[0].velocity, claw_state[1].velocity)
     
-    def get_effort(self)->Tuple[float, float]:
+    def get_effort(self)->Tuple[list, list]:
         """Get the effort of the claws.
 
         Returns:
-            Tuple[float, float]: The effort of the claws.
+            Tuple[list, list]: The effort of the claws.
         """
-        return self._rb_state.eef_state.effort
+        claw_state = self._rb_state.eef_state
+        return (claw_state[0].effort, claw_state[1].effort)
 
     def get_state(self)->Tuple[EndEffectorState, EndEffectorState]:
         """Get the state of the claws.

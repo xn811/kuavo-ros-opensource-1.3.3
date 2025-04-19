@@ -4,12 +4,13 @@ import time
 from typing import Tuple
 from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
-from kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName
-
+from sensor_msgs.msg import JointState
+from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, getCurrentGaitName, getCurrentGaitNameRequest
-from ocs2_msgs.msg import mpc_observation
-from kuavo_humanoid_sdk.interfaces.data_types import KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode, EndEffectorState
-from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
+from kuavo_humanoid_sdk.msg.ocs2_msgs.msg import mpc_observation
+from kuavo_humanoid_sdk.interfaces.data_types import (KuavoImuData, KuavoJointData, KuavoOdometry, 
+                                                      KuavoArmCtrlMode, EndEffectorState, KuavoDexHandTouchState)
+from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 
 from collections import deque
@@ -66,12 +67,32 @@ class KuavoRobotStateCore:
             rospy.Subscriber("/humanoid_mpc_observation", mpc_observation, self._humanoid_mpc_observation_callback)
             
             kuavo_info = make_robot_param()
-            if kuavo_info['end_effector_type'] == "lejuclaw":
+            self._ee_type = kuavo_info['end_effector_type']
+            if self._ee_type == EndEffectorType.LEJUCLAW:
                 rospy.Subscriber("/leju_claw_state", lejuClawState, self._lejuclaw_state_callback)
-            elif kuavo_info['end_effector_type'] == "qiangnao":
-                pass # TODO(kuavo): add qiangnao state subscriber
-                # rospy.Subscriber("/robot_hand_state", robotHandState, self._dexterous_hand_state_callback)
-            
+            elif self._ee_type == EndEffectorType.QIANGNAO:
+                rospy.Subscriber("/dexhand/state", JointState, self._dexterous_hand_state_callback)
+            elif self._ee_type == EndEffectorType.QIANGNAO_TOUCH:
+                rospy.Subscriber("/dexhand/state", JointState, self._dexterous_hand_state_callback)
+                rospy.Subscriber("/dexhand/touch_state", dexhandTouchState, self._dexhand_touch_state_callback)
+                # Initialize touch state for both hands with empty KuavoDexHandTouchState instances
+                self._dexhand_touch_state = (
+                    KuavoDexHandTouchState(
+                        data=(KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+                    ),  # Left hand touch state
+                    KuavoDexHandTouchState(
+                        data=(KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                              KuavoDexHandTouchState.KuavoTouchState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+                    )   # Right hand touch state
+                )
+
             """ data """
             self._terrain_height = 0.0
             self._imu_data = KuavoImuData(
@@ -93,17 +114,17 @@ class KuavoRobotStateCore:
                 angular = (0.0, 0.0, 0.0)
             )
             self._eef_state = (EndEffectorState(
-                position = 0.0,
-                velocity = 0.0,
-                effort = 0.0,
+                position = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                velocity = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                effort = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
                 state=EndEffectorState.GraspingState.UNKNOWN
             ), EndEffectorState(
-                position = 0.0,
-                velocity = 0.0,
-                effort = 0.0,
+                position = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                velocity = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                effort = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
                 state=EndEffectorState.GraspingState.UNKNOWN
             ))
-
+                            
             # gait manager
             self._gait_manager = GaitManager()
             self._prev_gait_name = self.gait_name
@@ -156,6 +177,12 @@ class KuavoRobotStateCore:
     def eef_state(self)->Tuple[EndEffectorState, EndEffectorState]:
         return self._eef_state
     
+    @property
+    def dexhand_touch_state(self)-> Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]:
+        if self._ee_type != EndEffectorType.QIANGNAO_TOUCH:
+            raise Exception("This robot does not support touch state")
+        return self._dexhand_touch_state
+
     @property
     def current_observation_time(self) -> float:
         """Get the current observation time from MPC.
@@ -231,7 +258,7 @@ class KuavoRobotStateCore:
             position = copy.deepcopy(msg.joint_data.joint_q),
             velocity = copy.deepcopy(msg.joint_data.joint_v),
             torque = copy.deepcopy(msg.joint_data.joint_vd),
-            acceleration = copy.deepcopy(msg.joint_data.joint_torque)
+            acceleration = copy.deepcopy(msg.joint_data.joint_current if hasattr(msg.joint_data, 'joint_current') else msg.joint_data.joint_torque)
         )
 
     def _odom_callback(self, msg:Odometry)->None:
@@ -245,29 +272,57 @@ class KuavoRobotStateCore:
 
     def _lejuclaw_state_callback(self, msg:lejuClawState)->None:
         self._eef_state = (EndEffectorState(
-            position = msg.data.position[0],
-            velocity = msg.data.velocity[0],
-            effort = msg.data.effort[0],
+            # left claw
+            position = [msg.data.position[0]],
+            velocity = [msg.data.velocity[0]],
+            effort = [msg.data.effort[0]],
             state=EndEffectorState.GraspingState(msg.state[0])
         ), EndEffectorState(
-            position = msg.data.position[1],
-            velocity = msg.data.velocity[1],
-            effort = msg.data.effort[1],
+            # right claw
+            position = [msg.data.position[1]],
+            velocity = [msg.data.velocity[1]],
+            effort = [msg.data.effort[1]],
             state=EndEffectorState.GraspingState(msg.state[1])
         ))
 
-    def _dexterous_hand_state_callback(self, msg)->None:
+    def _dexterous_hand_state_callback(self, msg:JointState)->None:
         self._eef_state = (EndEffectorState(
-            position = msg.data.position[0],
-            velocity = msg.data.velocity[0],
-            effort = msg.data.effort[0],
-            state=EndEffectorState.GraspingState(msg.state[0])
+            # left hand
+            position = list(msg.position[:len(msg.position)//2]),
+            velocity = list(msg.velocity[:len(msg.velocity)//2]),
+            effort = list(msg.effort[:len(msg.effort)//2]),
+            state=EndEffectorState.GraspingState.UNKNOWN
         ), EndEffectorState(
-            position = msg.data.position[1],
-            velocity = msg.data.velocity[1],
-            effort = msg.data.effort[1],
-            state=EndEffectorState.GraspingState(msg.state[1])
+            # right hand
+            position = list(msg.position[len(msg.position)//2:]),
+            velocity = list(msg.velocity[len(msg.velocity)//2:]),
+            effort = list(msg.effort[len(msg.effort)//2:]),
+            state=EndEffectorState.GraspingState.UNKNOWN
         ))
+
+    def _dexhand_touch_state_callback(self, msg:dexhandTouchState)->None:
+        # Update touch state for both hands
+        self._dexhand_touch_state = (
+            KuavoDexHandTouchState(
+                data=tuple(KuavoDexHandTouchState.KuavoTouchState(
+                    sensor.normal_force1, sensor.normal_force2, sensor.normal_force3,
+                    sensor.tangential_force1, sensor.tangential_force2, sensor.tangential_force3,
+                    sensor.tangential_direction1, sensor.tangential_direction2, sensor.tangential_direction3,
+                    sensor.self_proximity1, sensor.self_proximity2, sensor.mutual_proximity,
+                    sensor.status
+                ) for sensor in msg.left_hand)
+            ),  # Left hand touch state
+            KuavoDexHandTouchState(
+                data=tuple(KuavoDexHandTouchState.KuavoTouchState(
+                    sensor.normal_force1, sensor.normal_force2, sensor.normal_force3,
+                    sensor.tangential_force1, sensor.tangential_force2, sensor.tangential_force3,
+                    sensor.tangential_direction1, sensor.tangential_direction2, sensor.tangential_direction3,
+                    sensor.self_proximity1, sensor.self_proximity2, sensor.mutual_proximity,
+                    sensor.status
+                ) for sensor in msg.right_hand)
+            )   # Right hand touch state
+        )
+
     def _humanoid_mpc_gait_changed_callback(self, msg: gaitTimeName):
         """
         Callback function for gait change messages.

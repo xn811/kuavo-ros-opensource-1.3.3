@@ -2,7 +2,7 @@ import time
 import math
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot,KuavoRobotState
 
-if not KuavoSDK().Init(log_level='DEBUG'):# Init!
+if not KuavoSDK().Init(log_level='INFO'):# Init!
     print("Init KuavoSDK failed, exit!")
     exit(1)
 

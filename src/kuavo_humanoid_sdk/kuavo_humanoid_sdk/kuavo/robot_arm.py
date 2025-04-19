@@ -118,6 +118,9 @@ class KuavoRobotArm:
                 
         Returns:
             list: List of joint positions in radians, or None if inverse kinematics failed.
+
+        Warning:
+            This function requires initializing the SDK with the :attr:`KuavoSDK.Options.WithIK`.        
         """
         return self._kuavo_core.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
 
@@ -130,6 +133,9 @@ class KuavoRobotArm:
         Returns:
             Tuple[KuavoPose, KuavoPose]: Tuple of poses for the robot left arm and right arm,
                 or (None, None) if forward kinematics failed.
+        
+        Warning:
+            This function requires initializing the SDK with the :attr:`KuavoSDK.Options.WithIK`.        
         """
         if len(q) != self._robot_info.arm_joint_dof:
             raise ValueError("Invalid position length. Expected {}, got {}".format(self._robot_info.arm_joint_dof, len(q)))

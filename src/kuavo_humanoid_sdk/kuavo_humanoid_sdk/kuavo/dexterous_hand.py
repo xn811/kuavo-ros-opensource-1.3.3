@@ -2,7 +2,7 @@
 # coding: utf-8
 from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.end_effector import EndEffector
-from kuavo_humanoid_sdk.interfaces.data_types import EndEffectorSide, EndEffectorState
+from kuavo_humanoid_sdk.interfaces.data_types import EndEffectorSide, EndEffectorState, KuavoDexHandTouchState
 from kuavo_humanoid_sdk.kuavo.core.dex_hand_control import DexHandControl
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 
@@ -29,8 +29,8 @@ class DexterousHand(EndEffector):
         Note:
             target_velocities and target_torques are not supported.
         """
-        if len(target_positions) != len(self.joint_names):
-            raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {len(self.joint_names)}")
+        if len(target_positions) != self.joint_count():
+            raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {self.joint_count()}")
         
         q = [max(0, min(100, pos if isinstance(pos, int) else int(pos))) for pos in target_positions]
 
@@ -54,8 +54,8 @@ class DexterousHand(EndEffector):
         Note:
             target_velocities and target_torques are not supported.
         """
-        if len(target_positions) != (len(self.joint_names)/2):
-                raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {len(self.joint_names)/2}.")
+        if len(target_positions) != (self.joint_count()/2):
+                raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {self.joint_count()/2}.")
         
         q = [max(0, min(100, pos if isinstance(pos, int) else int(pos))) for pos in target_positions]
 
@@ -78,8 +78,8 @@ class DexterousHand(EndEffector):
         Note:
             target_velocities and target_torques are not supported.
         """
-        if len(target_positions) != (len(self.joint_names)/2):
-            raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {len(self.joint_names)/2}.")
+        if len(target_positions) != (self.joint_count()/2):
+            raise ValueError(f"Target positions must have the same length as joint names {len(target_positions)} != {self.joint_count()/2}.")
         
         q = [max(0, min(100, pos if isinstance(pos, int) else int(pos))) for pos in target_positions]
 
@@ -95,7 +95,7 @@ class DexterousHand(EndEffector):
         Returns:
             bool: True if open command sent successfully, False otherwise.
         """
-        zero_pos = [0]*len(self.joint_names)
+        zero_pos = [0]*self.joint_count()
         if side == EndEffectorSide.LEFT:
             return self.dex_hand_control.control(target_positions=zero_pos[:len(zero_pos)//2], side=EndEffectorSide.LEFT)
         elif side == EndEffectorSide.RIGHT:
@@ -119,10 +119,11 @@ class DexterousHand(EndEffector):
         gesture = []
         if l_gesture_name is not None:
             gesture.append({'gesture_name':l_gesture_name, 'hand_side':EndEffectorSide.LEFT})
+            self.dex_hand_control.make_gestures(gesture)
         if r_gesture_name is not None:
             gesture.append({'gesture_name':r_gesture_name, 'hand_side':EndEffectorSide.RIGHT})    
-        self.dex_hand_control.make_gestures(gesture)
-
+            self.dex_hand_control.make_gestures(gesture)
+        return True
     def get_gesture_names(self)->list:
         """Get the names of all gestures.
 
@@ -134,7 +135,6 @@ class DexterousHand(EndEffector):
         return self.dex_hand_control.get_gesture_names()
     
     def get_state(self)->Tuple[EndEffectorState, EndEffectorState]:
-        # TODO(kuavo): Not implemented yet
         """Get the state of the dexterous hand.
 
         Returns:
@@ -142,42 +142,57 @@ class DexterousHand(EndEffector):
         """
         return self._rb_state.eef_state
 
-    def get_position(self)->Tuple[float, float]:
-        # TODO(kuavo): Not implemented yet
+    def get_position(self)->Tuple[list, list]:
         """Get the position of the dexterous hand.
 
         Returns:
-            Tuple[float, float]: The position of the dexterous hand.
+            Tuple[list, list]: The position of the dexterous hand.
         """
-        return self._rb_state.eef_state.position
+        state = self._rb_state.eef_state
+        return (state[0].position, state[1].position)
     
-    def get_velocity(self)->Tuple[float, float]:
-        # TODO(kuavo): Not implemented yet
+    def get_velocity(self)->Tuple[list, list]:
         """Get the velocity of the dexterous hand.
 
         Returns:
-            Tuple[float, float]: The velocity of the dexterous hand.
+            Tuple[list, list]: The velocity of the dexterous hand.
         """
-        return self._rb_state.eef_state.velocity
+        state = self._rb_state.eef_state
+        return (state[0].velocity, state[1].velocity)
 
-    def get_effort(self)->Tuple[float, float]:
-        # TODO(kuavo): Not implemented yet
+    def get_effort(self)->Tuple[list, list]:
         """Get the effort of the dexterous hand.
 
         Returns:
-            Tuple[float, float]: The effort of the dexterous hand.
+            Tuple[list, list]: The effort of the dexterous hand.
 
         Note:
             0 ~ 100 for each finger. Fraction of max motor current, absolute number.
             The max motor current is 600mA, in a word, 100.
         """
-        return self._rb_state.eef_state.effort
+        state = self._rb_state.eef_state
+        return (state[0].effort, state[1].effort)
 
     def get_grasping_state(self)->Tuple[EndEffectorState.GraspingState, EndEffectorState.GraspingState]:
-        # TODO(kuavo): Not implemented yet
         """Get the grasping state of the dexterous hand.
+
+        Note:
+            The grasping state is not implemented yet.
 
         Returns:
             Tuple[EndEffectorState.GraspingState, EndEffectorState.GraspingState]: The grasping state of the dexterous hand.
         """
-        return self._rb_state.eef_state.state
+        raise NotImplementedError("This function is not implemented yet")
+
+
+class TouchDexterousHand(DexterousHand):
+    def __init__(self):
+        super().__init__()
+
+    def get_touch_state(self)-> Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]:
+        """Get the touch state of the dexterous hand.
+
+        Returns:
+            Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]
+        """
+        return self._rb_state.dexhand_touch_state

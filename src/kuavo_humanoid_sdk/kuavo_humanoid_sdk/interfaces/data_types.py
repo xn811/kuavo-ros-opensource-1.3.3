@@ -65,13 +65,13 @@ class EndEffectorState:
     """Data class representing the state of the end effector.
 
     Args:
-        position (float): Position of the end effector, [0, 100]
-        velocity (float): ...
-        effort (float): ...
+        position (list): float, Position of the end effector, range: [0, 100]
+        velocity (list): float, ...
+        effort (list): float, ...
     """
-    position: float
-    velocity: float
-    effort: float
+    position: list
+    velocity: list
+    effort: list
     class GraspingState(Enum):
         """Enum class representing the grasping states of the end effector.
 
@@ -120,3 +120,26 @@ class KuavoIKParams:
     oritation_constraint_tol: float = 1e-3
     pos_constraint_tol: float = 1e-3 # 0.001m, work when pos_cost_weight==0.0
     pos_cost_weight: float = 0.0 # If U need high accuracy, set this to 0.0 !!!
+
+@dataclass
+class KuavoDexHandTouchState:
+    """Data class representing the touch state of the dexterous hand."""
+    
+    @dataclass
+    class KuavoTouchState:
+        """Data class representing the touch state of the dexterous hand."""
+        normal_force1: int  # 法向力1
+        normal_force2: int  # 法向力2
+        normal_force3: int  # 法向力3
+        tangential_force1: int  # 切向力1
+        tangential_force2: int  # 切向力2
+        tangential_force3: int  # 切向力3
+        tangential_direction1: int  # 切向力方向1
+        tangential_direction2: int  # 切向力方向2
+        tangential_direction3: int  # 切向力方向3
+        self_proximity1: int  # 自电容接近传感器1
+        self_proximity2: int  # 自电容接近传感器2
+        mutual_proximity: int  # 互电容接近传感器
+        status: int  # 传感器状态
+    # 5 fingers
+    data: Tuple[KuavoTouchState, KuavoTouchState, KuavoTouchState, KuavoTouchState, KuavoTouchState]

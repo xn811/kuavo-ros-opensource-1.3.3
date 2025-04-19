@@ -37,6 +37,7 @@ class KuavoRobotInfo(RobotInfoBase):
             str: The end effector type, where:
                 - "qiangnao" means "dexteroushand"
                 - "lejuclaw" means "lejuclaw"
+                - "qiangnao_touch" means "touchdexteroushand"
                 - ...
         """
         return self._end_effector_type

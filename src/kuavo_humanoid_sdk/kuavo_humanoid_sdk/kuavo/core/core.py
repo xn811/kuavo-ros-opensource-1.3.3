@@ -28,7 +28,7 @@ from transitions import Machine, State
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
 from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
-from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, kuavo_ros_param
+from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 
 # Define robot states
@@ -78,7 +78,6 @@ class KuavoRobotCore:
          raise RuntimeError if initialize failed.
         """
         try:
-            info = make_robot_param()
             # init state by gait_name
             gait_name = self._rb_state.gait_name()
             if gait_name is not None:
@@ -173,15 +172,20 @@ class KuavoRobotCore:
             SDKLogger.warn(f"[Core] control torso height failed, robot is not in stance state({self.state})!")
             return False
         
-        # Limit height range to [-0.3, 0.0]
-        limited_height = min(0.0, max(-0.3, height))
-        if height > 0.0 or height < -0.3:
-            SDKLogger.warn(f"[Core] height {height} exceeds limit [-0.3, 0.0], will be limited")
+        MIN_HEIGHT = -0.35
+        MAX_HEIGHT = 0.0
+        MIN_PITCH = -0.4
+        MAX_PITCH = 0.4
         
-        # Limit pitch range to [-0.4, 0.4]
-        limited_pitch = min(0.4, max(-0.4, pitch))
-        if abs(pitch) > 0.4:
-            SDKLogger.warn(f"[Core] pitch {pitch} exceeds limit [-0.4, 0.4], will be limited")
+        # Limit height range
+        limited_height = min(MAX_HEIGHT, max(MIN_HEIGHT, height))
+        if height > MAX_HEIGHT or height < MIN_HEIGHT:
+            SDKLogger.warn(f"[Core] height {height} exceeds limit [{MIN_HEIGHT}, {MAX_HEIGHT}], will be limited")
+        
+        # Limit pitch range
+        limited_pitch = min(MAX_PITCH, max(MIN_PITCH, pitch))
+        if abs(pitch) > MAX_PITCH:
+            SDKLogger.warn(f"[Core] pitch {pitch} exceeds limit [{MIN_PITCH}, {MAX_PITCH}], will be limited")
 
         return self._control.control_torso_height(limited_height, limited_pitch)
 
@@ -238,9 +242,9 @@ class KuavoRobotCore:
             max_y_step = 0.20
             max_yaw_step = 90
         else:
-            max_x_step = 0.10
-            max_y_step = 0.10
-            max_yaw_step = 30
+            max_x_step = 0.15
+            max_y_step = 0.15
+            max_yaw_step = 45
         
         body_poses = []
         
@@ -294,6 +298,10 @@ class KuavoRobotCore:
     def control_robot_dexhand(self, left_position:list, right_position:list)->bool:
         return self._control.control_robot_dexhand(left_position, right_position)
     
+    def robot_dexhand_command(self, data, ctrl_mode, hand_side):
+         return self._control.robot_dexhand_command(data, ctrl_mode, hand_side)
+
+
     def control_leju_claw(self, postions:list, velocities:list=[90, 90], torques:list=[1.0, 1.0]) ->bool:
         return self._control.control_leju_claw(postions, velocities, torques)
 

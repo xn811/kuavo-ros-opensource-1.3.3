@@ -45,6 +45,7 @@
 
 #include "joint_address.hpp"
 #include "dexhand_mujoco_node.h"
+#include "dexhand/json.hpp"
 
 //  ************************* lcm ****************************
 
@@ -1018,6 +1019,29 @@ int simulate_loop(ros::NodeHandle &nh, bool spin_thread = false)
     nh.getParam("/wbc_frequency", frequency);
   }
   ROS_INFO("Mujoco Frequency: %f Hz", frequency);
+  
+  // 获取配置文件
+  if(nh.hasParam("/kuavo_configuration")) {
+    std::string kuavo_configuration;
+    nh.getParam("/kuavo_configuration", kuavo_configuration);
+    if (!kuavo_configuration.empty()) {
+      try {
+          nlohmann::json config_json;
+          // 解析kuavo_configuration字符串为JSON对象
+          std::istringstream config_stream(kuavo_configuration);
+          config_stream >> config_json;
+          if (config_json.contains("EndEffectorType") && config_json["EndEffectorType"].is_array()) {
+            if (!config_json["EndEffectorType"].empty()) {
+              std::string end_effector_type = config_json["EndEffectorType"][0];
+              nh.setParam("end_effector_type", end_effector_type);
+              ROS_INFO("\033[32mEnd effector type: %s\033[0m", end_effector_type.c_str());
+            }
+          }
+      } catch (const std::exception& e) {
+        ROS_ERROR("Error parsing configuration file: %s", e.what());
+      }
+    }
+  }
 
   // scan for libraries in the plugin directory to load additional plugins
   scanPluginLibraries();

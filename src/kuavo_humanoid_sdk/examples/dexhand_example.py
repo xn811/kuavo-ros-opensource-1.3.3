@@ -27,6 +27,6 @@ def main():
             print("Supported gesture: ", gesture)
     
     # make gesture
-    dex_hand.make_gesture(l_gesture_name="thumbs-up", r_gesture_name="fist")
+    dex_hand.make_gesture(l_gesture_name="thumbs-up", r_gesture_name="ok")
 if __name__ == "__main__":
     main()

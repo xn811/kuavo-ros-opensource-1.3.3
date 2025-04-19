@@ -11,7 +11,12 @@
 *************
 API Reference
 *************
-.. automodule:: kuavo_humanoid_sdk
+.. currentmodule:: kuavo_humanoid_sdk
+
+.. autoclass:: KuavoSDK
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 .. autoclass:: KuavoRobot
     :members:
@@ -39,6 +44,11 @@ API Reference
     :show-inheritance:
 
 .. autoclass:: DexterousHand
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: TouchDexterousHand
     :members:
     :undoc-members:
     :show-inheritance:

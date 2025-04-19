@@ -52,37 +52,54 @@ class KuavoROSEnv:
         Raises:
             Exception: If the modelPath parameter is not found or the modelPath parameter is not a valid path.
         """
+        # if generate docs, skip init.
+        if 'GEN_KUAVO_HUMANOID_SDK_DOCS' in os.environ:
+            return True
+
         # Return directly if already initialized successfully
         if self._init_success:
             return True
-
+        
         # Check if ROS master is running
         try:
             rospy.get_master().getPid()
         except Exception as e:
-            raise Exception(f"ROS master is not running. Please start roscore first or check ROS_MASTER_URI, {e}")
-        
+            print(f"\033[31m\nError:Can't connect to ros master, Please start roscore first or check ROS_MASTER_URI.\nException:{e}\033[0m"
+                  "\nMaybe manually launch the app first?"
+                  "\n - for example(sim): roslaunch humanoid_controller load_kuavo_mujoco_sim.launch, "
+                  "\n - for example(real): roslaunch humanoid_controller load_kuavo_real.launch\n")
+            exit(1)
+
+        """
+        # NOTE: We add kuavo_msgs/motion_capture_ik package in SDK integration.
         kuavo_ws_root = self._get_kuavo_ws_root()
-        
         # Add kuavo_msgs package to Python path
         dist_path = os.path.join(kuavo_ws_root, 'devel/lib/python3/dist-packages')
         if not os.path.exists(dist_path):
             dist_path = os.path.join(kuavo_ws_root, 'install/lib/python3/dist-packages')
             if not os.path.exists(dist_path):
                 raise Exception(f"{dist_path} package not found in Python path")
-        
         if dist_path not in os.sys.path:
             os.sys.path.append(dist_path)
-
+        """
+        
         # Initialize the ROS node
         if not rospy.get_node_uri():
             rospy.init_node(f'kuavo_sdk_node', anonymous=True, disable_signals=True)
         
-        self.launch_ik_node()
-        self.launch_gait_switch_node()
-        
+        # Only check nodes exist when Init SDK, if not, tips user manually launch nodes.
+        # self.launch_ik_node()
+        # self.launch_gait_switch_node()
+        deps_nodes = ['/humanoid_gait_switch_by_name']
+        for node in deps_nodes:
+            if not KuavoROSEnv.check_rosnode_exists(node):
+                print(f"\033[31m\nError:Node {node} not found. Please launch it manuallly.\033[0m")
+                exit(1)
+                
         self._init_success = True  # Set flag after successful initialization
+
         return True
+    
     def _launch_ros_node(self, node_name, launch_cmd, log_name):
         """Launch a ROS node with the given command and log the output.
         
@@ -194,3 +211,24 @@ class KuavoROSEnv:
 
         except Exception as e:
             raise Exception(f"Failed to launch gait_switch node: {e}")
+        
+    
+    @staticmethod
+    def check_rosnode_exists(node_name):
+        """Check if a ROS node is running.
+        
+        Args:
+            node_name (str): Name of the node to check
+            
+        Returns:
+            bool: True if node is running, False otherwise
+        """
+        try:
+            nodes = subprocess.check_output(['rosnode', 'list']).decode('utf-8').split('\n')
+            return node_name in nodes
+        except subprocess.CalledProcessError as e:
+            SDKLogger.error(f"Error checking if node {node_name} exists: {e}")
+            return False
+        except Exception as e:
+            SDKLogger.error(f"Error checking if node {node_name} exists: {e}")
+            return False

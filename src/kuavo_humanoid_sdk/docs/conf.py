@@ -5,11 +5,11 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
+import os
 project = 'Kuavo Humanoid SDK'
 copyright = '2025, lejurobot'
 author = 'lejurobot'
-release = '0.1.0'
+release = os.getenv('KUAVO_HUMANOID_SDK_VERSION', '0.1.0')
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

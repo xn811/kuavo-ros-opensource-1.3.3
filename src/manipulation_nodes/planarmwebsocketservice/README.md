@@ -89,7 +89,6 @@ response:
     "cmd": "get_robot_info",
     "data": {
         "code": 0,
-        "upload_dir": "upload_path",
         "robot_type": "40"
     }
 }
@@ -98,7 +97,6 @@ response:
 | 名称            | 类型     | 描述             |
 | ------------- | ------ | -------------- |
 | code          | int    | 错误码 0: 成功      |
-| upload_dir    | string | 机器人存储执行脚本路径文件夹 |
 | robot_type | string | 机器人的类型         |
 
 ### 获取机器人状态
