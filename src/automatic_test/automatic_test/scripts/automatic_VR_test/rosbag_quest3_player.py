@@ -84,8 +84,8 @@ class Quest3RosbagPlayer:
                 
                 
                 try:
-                    # 启动rosbag play进程
-                    play_process = subprocess.Popen(["rosbag", "play", self.bag_path])
+                    # 启动rosbag play进程，添加-q参数以消除打印信息
+                    play_process = subprocess.Popen(["rosbag", "play", "-q", self.bag_path])
 
                     # 等待rosbag播放完成
                     play_process.wait()

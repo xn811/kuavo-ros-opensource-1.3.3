@@ -180,7 +180,7 @@ def main():
         
         # 等待5.5秒后自动停止录制
         console.print("[blue]将在5.5秒后自动停止录制...[/blue]")
-        time.sleep(7.5)
+        time.sleep(9.5)
         
         # 发布录制停止指令
         console.print("[blue]发布录制停止指令...[/blue]")

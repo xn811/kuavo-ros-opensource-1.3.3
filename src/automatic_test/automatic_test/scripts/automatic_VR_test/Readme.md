@@ -1,4 +1,46 @@
 # VR 测试说明文档
+## 一键模拟 VR 测试
+### 配置
+- 安装依赖:
+```bash
+   sudo pip install tqdm && sudo pip install questionary
+```
+- 编译:
+```bash
+    cd <kuavo-ros-control>
+    catkin build automatic_test
+```
+- 加载环境变量
+```bash
+    source devel/setup.bash
+```
+### 启动测试
+- 参数说明
+```bash 
+    "test_round": 测试轮数,即每一个动作执行多少次.
+```
+- 启动脚本
+```bash
+    ./start_VR_test.sh test_round
+```
+### 测试结束后,会统计误差以及判断动作是否执行标准,如果有不标准的执行,认为此次动作失败,会以红色注明.
+
+## 关于阈值的说明
+## 误差计算方法
+1. 逆解的逐关节误差：
+- 比较每一个关节的每一个逆解结果，两个值作差值，将整个逆解结果的差值进行求平方差，并且将所得的平方差求平均,获得平均平方差.
+2. 机器人实际运动关节对比：
+- 由于每一次的运动，逆解并不一定是唯一解。因此还读取了实际的关节电机读数，可参考电机是否达到目标位置。同样使用逐关节误差的平方求平均.
+## 阈值
+- 经过仿真和实机测试,当前阈值设置为:
+```bash  
+    文件目录:
+    kuavo-ros-control/src/automatic_test/automatic_test/scripts/automatic_VR_test/VR_test.py
+    # 关节误差阈值
+    JOINT_ERROR_THRESHOLD = 0.015  
+    # 逆解轨迹误差阈值
+    IK_ERROR_THRESHOLD = 9.0  
+```
 ## 动作录制
 - 启动机器人仿真，启动 VR
 ```bash
@@ -6,11 +48,12 @@
    roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch 
    roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch 
 ```
-- 接入 VR 解锁手臂
+- 接入 VR
 - 运行程序，开始录制：
 ```python
     python3 record_bag.py
 ```
+- 解锁手臂,开始跟随运动.
 - 执行待测试动作，大约在 5 秒以内
 - 录制完毕后，录制的 rosbag 文件在以下目录，同时脚本也会有输出：
 ```bash
@@ -35,25 +78,3 @@
     ./filter_bag.sh session_2025*.bag
 ```
 - 拆分出来后的 rosbag 包保存在当前目录
-## 运行测试
-- 新建一个文件夹，存放 rosbag 文件
-```bash
-    mkdir VR_action
-```
-- 将 rosbag 放入其中
-```bash
-    mv session_2025*_group*.bag VR_action
-```
-- 执行 VR_test.py 文件，并选择需要执行动作的 bag 子目录
-```bash
-    先加载参考轨迹，选择后缀为 _group1.bag
-    再加载动作轨迹，选择后缀为 _group2.bag
-```
-- 等待结果的计算
-## 误差计算方法
-1. 逆解的逐关节误差：
-- 比较每一个关节的每一个逆解结果，两个值作差值，将整个逆解结果的差值进行求平方差，给出阈值，并且对比是否合格。
-2. 机器人实际运动关节对比：
-- 由于每一次的运动，逆解并不一定是唯一解。因此还读取了实际的关节电机读数，可参考电机是否达到目标位置。若达到目标位置，则可以认为此次测试通过。
-## 阈值
-- 当前测试还未能测试出较好的阈值结果，需要多测试和验证才能给出。

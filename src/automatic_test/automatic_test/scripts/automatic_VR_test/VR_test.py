@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import rospy
@@ -16,6 +17,11 @@ import subprocess
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
 console = Console()
 
+# 关节误差阈值
+JOINT_ERROR_THRESHOLD = 0.015  
+# 逆解轨迹误差阈值
+IK_ERROR_THRESHOLD = 9.0  
+
 class TrajectoryValidator:
     def __init__(self):
         self.reference_joint_states = []
@@ -26,7 +32,6 @@ class TrajectoryValidator:
         self.is_recording = False
         self.start_time = None
         self.recording_sub = rospy.Subscriber('/recording_status', Bool, self.recording_callback)
-        
         # 增加逆解轨迹相关变量
         self.reference_ik_trajectory = []
         self.actual_ik_trajectory = []
@@ -41,7 +46,7 @@ class TrajectoryValidator:
         
     def load_reference_bag(self, reference_bag_path):
         """加载参考轨迹的rosbag文件"""
-        console.print(f"[blue]加载参考轨迹: {reference_bag_path}[/blue]")
+        # console.print(f"[blue]加载参考轨迹: {reference_bag_path}[/blue]")
         try:
             bag = rosbag.Bag(reference_bag_path)
             for topic, msg, t in tqdm(bag.read_messages(topics=['/sensors_data_raw', '/kuavo_arm_traj']), desc="加载参考轨迹"):
@@ -60,8 +65,8 @@ class TrajectoryValidator:
                     self.reference_ik_trajectory.append(msg)
                     self.time_reference_ik.append(t.to_sec())
             bag.close()
-            console.print(f"[green]成功加载参考轨迹，共 {len(self.reference_joint_states)} 个关节数据点[/green]")
-            console.print(f"[green]成功加载参考逆解轨迹，共 {len(self.reference_ik_trajectory)} 个数据点[/green]")
+            # console.print(f"[green]成功加载参考轨迹，共 {len(self.reference_joint_states)} 个关节数据点[/green]")
+            # console.print(f"[green]成功加载参考逆解轨迹，共 {len(self.reference_ik_trajectory)} 个数据点[/green]")
             return True
         except Exception as e:
             console.print(f"[red]加载参考轨迹失败: {str(e)}[/red]")
@@ -104,7 +109,7 @@ class TrajectoryValidator:
             self.time_actual_ik.append(elapsed_time)
 
     
-    def play_trajectory_bag(self, trajectory_bag_path):
+    def play_trajectory_bag(self, trajectory_bag_path=None):
         """播放轨迹指令的rosbag文件"""
         
         # 取消之前的订阅
@@ -130,19 +135,19 @@ class TrajectoryValidator:
         while self.is_recording:
             rospy.sleep(0.1)
             
-        console.print(f"[green]轨迹播放完成，记录了 {len(self.actual_joint_states)} 个实际关节状态[/green]")
-        console.print(f"[green]轨迹播放完成，记录了 {len(self.actual_ik_trajectory)} 个实际逆解轨迹点[/green]")
+        # console.print(f"[green]轨迹播放完成，记录了 {len(self.actual_joint_states)} 个实际关节状态[/green]")
+        # console.print(f"[green]轨迹播放完成，记录了 {len(self.actual_ik_trajectory)} 个实际逆解轨迹点[/green]")
         try:
             # 保存当前运行的轨迹数据
             if self.actual_joint_states and self.time_actual:
                 self.multiple_runs_trajectories.append(self.actual_joint_states.copy())
                 self.multiple_runs_times.append(self.time_actual.copy())
-                console.print(f"[green]已保存第 {len(self.multiple_runs_trajectories)} 次运行的关节状态数据[/green]")
+                # console.print(f"[green]已保存第 {len(self.multiple_runs_trajectories)} 次运行的关节状态数据[/green]")
             
             if self.actual_ik_trajectory and self.time_actual_ik:
                 self.multiple_runs_ik_trajectories.append(self.actual_ik_trajectory.copy())
                 self.multiple_runs_ik_times.append(self.time_actual_ik.copy())
-                console.print(f"[green]已保存第 {len(self.multiple_runs_ik_trajectories)} 次运行的逆解轨迹数据[/green]")
+                # console.print(f"[green]已保存第 {len(self.multiple_runs_ik_trajectories)} 次运行的逆解轨迹数据[/green]")
             
             return True
         except Exception as e:
@@ -191,9 +196,9 @@ class TrajectoryValidator:
                 # 计算平方差误差
                 mse = np.mean([(r - a)**2 for r, a in zip(ref_positions, act_positions)])
                 errors.append(mse)
-                console.print(f"[green]位置 {joint_idx} 的平方差误差: {mse}[/green]")
+                # console.print(f"[green]位置 {joint_idx} 的平方差误差: {mse}[/green]")
             except Exception as e:
-                console.print(f"[red]计算位置 {joint_idx} 的误差时出错: {str(e)}[/red]")
+                # console.print(f"[red]计算位置 {joint_idx} 的误差时出错: {str(e)}[/red]")
                 return None
         
         # 清除实际轨迹数据
@@ -239,7 +244,7 @@ class TrajectoryValidator:
                 # 计算平方差误差
                 mse = np.mean([(r - a)**2 for r, a in zip(ref_positions, act_positions)])
                 errors.append(mse)
-                console.print(f"[green]逆解轨迹位置 {i} 的平方差误差: {mse}[/green]")
+                # console.print(f"[green]逆解轨迹位置 {i} 的平方差误差: {mse}[/green]")
         except Exception as e:
             console.print(f"[red]计算逆解轨迹误差时出错: {str(e)}[/red]")
             return None
@@ -502,34 +507,21 @@ def select_rosbag_file(base_dir, message):
         console.print(f"[red]目录不存在: {base_dir}[/red]")
         return None
     
-    subfolders = [folder for folder in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, folder))]
-    if not subfolders:
-        console.print("[red]没有找到子文件夹[/red]")
-        return None
-    
-    selected_folder = questionary.select("请选择一个子文件夹", choices=subfolders).ask()
-    if selected_folder is None:
-        return None
-    
-    folder_path = os.path.join(base_dir, selected_folder)
-    rosbag_files = [file for file in os.listdir(folder_path) if file.endswith(".bag")]
-    if not rosbag_files:
-        console.print(f"[red]在选定的文件夹中没有找到rosbag文件[/red]")
-        return None
-    
-    selected_rosbag = questionary.select(message, choices=rosbag_files).ask()
-    if selected_rosbag is None:
-        return None
-    
-    return os.path.join(folder_path, selected_rosbag)
+    # 直接返回base_dir，不再进行文件选择
+    # console.print(f"[green]直接使用rosbag文件: {base_dir}[/green]")
+    return base_dir
 
 def main():
     rospy.init_node('trajectory_validator', anonymous=True)
     
     validator = TrajectoryValidator()
     
-    # 选择rosbag文件
-    rosbag_log_save_path = os.path.expanduser("./")
+    # 从命令行参数获取rosbag文件路径，如果没有提供则使用当前目录
+    if len(sys.argv) > 1:
+        rosbag_log_save_path = sys.argv[1]
+    else:
+        rosbag_log_save_path = os.path.expanduser("./")
+    console.print(f"[blue]使用rosbag路径: {rosbag_log_save_path}[/blue]")
     
     # 选择参考轨迹rosbag
     reference_bag_path = select_rosbag_file(rosbag_log_save_path, "请选择包含标准电机位置的参考rosbag文件")
@@ -540,17 +532,12 @@ def main():
     if not validator.load_reference_bag(reference_bag_path):
         return
     
-    # 选择轨迹指令rosbag
-    trajectory_bag_path = select_rosbag_file(rosbag_log_save_path, "请选择包含VR路径指令的rosbag文件")
-    if not trajectory_bag_path:
-        return
-    
     # 运行5次并记录数据
-    console.print("[blue]将进行5次轨迹运行并记录数据...[/blue]")
-    for run in range(5):
-        console.print(f"[blue]开始第 {run+1} 次运行...[/blue]")
+    # console.print("[blue]将进行5次轨迹运行并记录数据...[/blue]")
+    for run in range(1):
+        # console.print(f"[blue]开始第 {run+1} 次运行...[/blue]")
         
-        if not validator.play_trajectory_bag(trajectory_bag_path):
+        if not validator.play_trajectory_bag():
             console.print(f"[red]第 {run+1} 次运行失败，跳过[/red]")
             continue
         console.print(f"[green]第 {run+1} 次运行完成[/green]")
@@ -561,53 +548,54 @@ def main():
         # 计算关节误差
         errors = validator.calculate_error()
         if errors:
-            console.print(f"[green]第 {run+1} 次运行的关节轨迹误差计算完成[/green]")
+            # console.print(f"[green]第 {run+1} 次运行的关节轨迹误差计算完成[/green]")
             
             # 显示每个位置的误差
-            console.print(f"[blue]第 {run+1} 次运行各关节位置的平方差误差 (MSE):[/blue]")
+            # console.print(f"[blue]第 {run+1} 次运行各关节位置的平方差误差 (MSE):[/blue]")
             total_error = 0.0
             for idx, error in enumerate(errors):
-                console.print(f"  位置 {idx}: {error:.4f}")
+                # console.print(f"  位置 {idx}: {error:.4f}")
                 total_error += error
             
             # 计算平均误差
             avg_error = total_error / len(errors)
-            console.print(f"[blue]第 {run+1} 次运行平均关节误差: {avg_error:.4f}[/blue]")
             
             # 根据误差判断动作是否标准
-            threshold = 0.0025  # 平方差阈值 (0.05的平方)
-            if avg_error < threshold:
-                console.print(f"[green]第 {run+1} 次运行关节动作执行标准！误差在可接受范围内。[/green]")
+            if avg_error < JOINT_ERROR_THRESHOLD:
+                console.print(f"[green]运行平均关节误差: {avg_error:.4f}[/green]")
+                console.print(f"[green]运行关节动作执行标准！误差在可接受范围内。[/green]")
             else:
-                console.print(f"[yellow]第 {run+1} 次运行关节动作执行不够标准，误差超过阈值。[/yellow]")
+                console.print(f"[red]运行平均关节误差: {avg_error:.4f}[/red]")
+                console.print(f"[red]运行关节动作执行不够标准，误差超过阈值。[/red]")
             
             # 可视化比较
-            validator.visualize_comparison(errors)
+            # validator.visualize_comparison(errors)
         else:
             console.print(f"[red]无法计算第 {run+1} 次运行的关节轨迹误差[/red]")
         
         # 计算逆解轨迹误差
         ik_errors = validator.calculate_ik_error()
         if ik_errors:
-            console.print(f"[green]第 {run+1} 次运行的逆解轨迹误差计算完成[/green]")
+            # console.print(f"[green]第 {run+1} 次运行的逆解轨迹误差计算完成[/green]")
             
             # 显示每个位置的误差
-            console.print(f"[blue]第 {run+1} 次运行各逆解位置的平方差误差 (MSE):[/blue]")
+            # console.print(f"[blue]第 {run+1} 次运行各逆解位置的平方差误差 (MSE):[/blue]")
             total_error = 0.0
             for idx, error in enumerate(ik_errors):
-                console.print(f"  逆解位置 {idx}: {error:.4f}")
+                # console.print(f"  逆解位置 {idx}: {error:.4f}")
                 total_error += error
             
             # 计算平均平方差误差
             avg_error = total_error / len(ik_errors)
-            console.print(f"[blue]第 {run+1} 次运行平均逆解平方差误差: {avg_error:.4f}[/blue]")
             
-            # 根据平方差误差判断逆解是否标准
-            threshold = 0.0025  # 平方差阈值 (0.05的平方)
-            if avg_error < threshold:
-                console.print(f"[green]第 {run+1} 次运行逆解轨迹执行标准！平方差误差在可接受范围内。[/green]")
+            
+            # 根据平方差误差判断逆解是否标准（单位：度）
+            if avg_error < IK_ERROR_THRESHOLD:
+                console.print(f"[green]运行平均逆解平方差误差: {avg_error:.4f}[/green]")
+                console.print(f"[green]运行逆解轨迹执行标准！平方差误差在可接受范围内。[/green]")
             else:
-                console.print(f"[yellow]第 {run+1} 次运行逆解轨迹执行不够标准，平方差误差超过阈值。[/yellow]")
+                console.print(f"[red]运行平均逆解平方差误差: {avg_error:.4f}[/red]")
+                console.print(f"[red]运行逆解轨迹执行不够标准，平方差误差超过阈值。[/red]")
 
         else:
             console.print(f"[red]无法计算第 {run+1} 次运行的逆解轨迹误差[/red]")
@@ -616,8 +604,8 @@ def main():
         rospy.sleep(1.0)
     
     # 所有运行完成后，生成多次运行的综合比较图
-    console.print("[blue]生成多次运行的综合比较图...[/blue]")
-    validator.visualize_multiple_runs_comparison()
+    # console.print("[blue]生成多次运行的综合比较图...[/blue]")
+    # validator.visualize_multiple_runs_comparison()
 
 if __name__ == "__main__":
     try:
