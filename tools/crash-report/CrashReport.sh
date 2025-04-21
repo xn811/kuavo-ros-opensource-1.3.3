@@ -4,7 +4,8 @@
 # as long as you include the original copyright notice and license in any 
 # copies or substantial portions of the software. 
 # The software is provided "as is", without warranty of any kind.
-
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+PROJECT_DIR="$(readlink -f "$SCRIPT_DIR/../..")"
 ARICHE_DIR="/tmp/kuavo-crash"
 TIMESTAMP=""
 LAUNCH_ID=""
@@ -92,6 +93,12 @@ archive_files() {
     info_file="$HOME/.ros/kuavo_launch/${launch_id}/info.txt"
     if [ -f "$info_file" ]; then
         cp "$info_file" "$archive_dir"
+        if [ -d "$PROJECT_DIR/.git" ]; then
+            current_commit=$(git rev-parse HEAD)
+            echo "current_commit: $current_commit" >> "$archive_dir/info.txt"
+        else
+            echo "current_commit: not found" >> "$archive_dir/info.txt"
+        fi
     else
         exit_with_fail "没有找到info.txt文件: $info_file"
     fi
@@ -111,6 +118,24 @@ archive_files() {
     else
         exit_with_fail "coredump 目录下没有文件: $src_dir"
         exit 1
+    fi
+
+    # Copy installed and devel directories to the archive directory
+    installed_dir="$PROJECT_DIR/installed"
+    devel_dir="$PROJECT_DIR/devel"
+    if [ -d "$installed_dir" ]; then
+        cp -r "$installed_dir" "$archive_dir"
+    else
+        echo "没有找到已安装的目录: $installed_dir"
+    fi
+    if [ -d "$devel_dir" ]; then
+        cp -rL "$devel_dir" "$archive_dir"
+        private_dir="$archive_dir/devel/.private"
+        if [ -d "$private_dir" ]; then
+            rm -rf "$private_dir"
+        fi
+    else
+        echo "没有找到开发目录: $devel_dir"
     fi
 
     # remove unused files
