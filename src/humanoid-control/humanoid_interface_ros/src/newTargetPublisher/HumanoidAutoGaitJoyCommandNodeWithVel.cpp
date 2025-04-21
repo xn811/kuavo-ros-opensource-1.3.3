@@ -500,7 +500,7 @@ namespace ocs2
       }
 
       // theta_z relative to current
-      if (std::abs(commad_line_target_(3)) > DEAD_ZONE)
+      if (std::abs(joystick_origin_axis(3)) > DEAD_ZONE)
       {
         updated[3] = true;
         // current_target_(3) = currentPose(3) + commad_line_target_(3) * M_PI / 180.0;
