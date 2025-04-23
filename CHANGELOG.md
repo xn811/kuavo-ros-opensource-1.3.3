@@ -1,8 +1,28 @@
 # beta 分支
 
-## 其他改进
+## 文档相关
+- [kuavo humanoid sdk] 更新安装文档和 API 文档，详情见 [文档链接](./src/kuavo_humanoid_sdk/README.md)
 
-1. 升级了 Quest3 的 APK 程序 //kuavo.lejurobot.com/Quest_apks/leju_kuavo_hand-0.0.1-147-g85b5c38.apk ，显示出识别的骨骼效果，能方便的查看到 Quest3 识别出错的情况。以及更新 Meta SDK 到 0.74 改进识别的稳定性。
+## 新增功能
+- [kuavo humanoid sdk] 不依赖下位机的环境和kuavo_msgs消息包, 支持安装在上位机运行，[最新版本](https://pypi.org/project/kuavo-humanoid-sdk/1.1.2a924/) 
+- [kuavo humanoid sdk] 启动时只检测依赖的节点是否存在，如果不存在则提示用户启动
+- [kuavo humanoid sdk] 支持控制触觉灵巧手以及获取对应的触觉状态
+- 路径跟踪案例添加`/cmd_pose`控制机器人跟踪路径，见[参考链接](/src/demo/trace_path/scripts/trace_path/mpc_client_example.py)
+- 新增站立时上拉保护，拉起之后，切换到挂起模式保持不动
+- 新增下蹲离地保护功能，下蹲到一定程度自动切换到挂起模式，即使没有按back退出也始终保持姿态
+- 新增挂起模式，通过监测总接触力挂起模式，使用进入挂起模式的初始位置作为关节参考
+- 站立保护功能支持站立失败缩腿后重新使用键盘或北通遥控器重复尝试站立
+
+## 修复问题
+- 修复当前机器人不支持步态设置连续的单腿浮空状态的问题
+- 修复isaac-sim仿真环境未使用最新的`sensordata_msg`导致的程序启动失败问题
+- 修复正常退出机器人程序手臂电机不解锁和 rosbag 包出现 active 的问题
+- 修复关节保护模式下，现行腿部控制方式可能导致的电机堵转问题
+- 修复 48 版本 kuavo.json 配置文件缺少`joint_current_limits`导致无法启动程序问题
+
+## 其他改进
+- 新增 KuavoCrashReport 工具，用于收集机器人故障信息，并上传反馈给乐聚人员，[使用文档链接](./tools/crash-report/README.md)
+- 升级了 Quest3 的 APK 程序 //kuavo.lejurobot.com/Quest_apks/leju_kuavo_hand-0.0.1-147-g85b5c38.apk ，显示出识别的骨骼效果，能方便的查看到 Quest3 识别出错的情况。以及更新 Meta SDK 到 0.74 改进识别的稳定性。
 
 # 1.1.2
 ## Breaking Changes
