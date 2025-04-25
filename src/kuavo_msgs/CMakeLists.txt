@@ -86,6 +86,7 @@ add_service_files(
   controlLejuClaw.srv
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
+  playmusic.srv
 )
 
 ## Generate actions in the 'action' folder
