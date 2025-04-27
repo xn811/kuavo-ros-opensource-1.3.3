@@ -216,6 +216,7 @@ namespace humanoid_controller
     std::mutex sensor_data_mutex_;
 
     std::thread keyboardThread_;
+    int imuType_;
 
     // Interface
     std::shared_ptr<HumanoidInterface> HumanoidInterface_;

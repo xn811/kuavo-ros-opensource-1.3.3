@@ -158,6 +158,19 @@ namespace humanoid_controller
     headNum_ = motor_info.num_head_joints;
     armNumReal_ = motor_info.num_arm_joints;
     jointNumReal_ = motor_info.num_joints - headNum_ - armNumReal_;
+    std::string imu_type_str = motor_info.getIMUType(robot_version_int);
+    if (imu_type_str == "xsens")
+    {
+      imuType_ = 2;
+    }
+    else if (imu_type_str == "hipnuc") 
+    {
+      imuType_ = 1;
+    }
+    else
+    {
+      imuType_ = 0;
+    }
     actuatedDofNumReal_ = jointNumReal_ + armNumReal_ + headNum_;
     ros::param::set("/armRealDof",  static_cast<int>(armNumReal_));
     ros::param::set("/legRealDof",  static_cast<int>(jointNumReal_));
@@ -607,19 +620,15 @@ namespace humanoid_controller
     sensor_data.orientationCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
     sensor_data.angularVelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
     sensor_data.linearAccelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
-
-    sensor_data.linearAccel_ = acc_filter_.update(sensor_data.linearAccel_);
-    // free_acc_filter_.update(sensor_data.linearAccel_);
-    sensor_data.angularVel_ = gyro_filter_.update(sensor_data.angularVel_);
-    // std::cout << "sensor_data.linearAccel_: " << sensor_data.linearAccel_.transpose() << std::endl;
-    // std::cout << "sensor_data.angularVel_: " << sensor_data.angularVel_.transpose() << std::endl;
-    // std::cout << "sensor_data.quat_.coeffs(): " << sensor_data.quat_.coeffs().transpose() << std::endl;
-    // std::cout << "sensor_data.jointPos_: " << sensor_data.jointPos_.transpose() << std::endl;
-    // std::cout << "sensor_data.jointVel_: " << sensor_data.jointVel_.transpose() << std::endl;
-    // std::cout << "sensor_data.jointAcc_: " << sensor_data.jointAcc_.transpose() << std::endl;
-    // std::cout << "sensor_data.jointTorque_: " << sensor_data.jointTorque_.transpose() << std::endl;
+    // if(imuType_ == 2)
+    {
+      sensor_data.linearAccel_ = acc_filter_.update(sensor_data.linearAccel_);
+      sensor_data.angularVel_ = gyro_filter_.update(sensor_data.angularVel_);
+      
+    }
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/linearAccel", sensor_data.linearAccel_);
     ros_logger_->publishVector("/state_estimate/imu_data_filtered/angularVel", sensor_data.angularVel_);
+    // free_acc_filter_.update(sensor_data.linearAccel_);
     // END_EFFECTOR DATA
     // sensor_data_mutex_.lock();
     // sensorDataQueue.push(sensor_data);

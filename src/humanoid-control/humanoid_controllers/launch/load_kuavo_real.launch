@@ -29,6 +29,7 @@
     <arg name="use_estimator_contact"   default="false"/>
     <arg name="only_half_up_body" default="false"/>
     <arg name="stand_up_protect" default="true"/>
+    <arg name="redundant_imu" default="false"/>
     <!-- The file defining gait definition -->
 
     <!-- Set with_coredump parameter based on coredump value -->
@@ -59,6 +60,7 @@
     <param name="start_way"  value="$(arg start_way)"/>
     <param name="use_estimator_contact"  value="$(arg use_estimator_contact)"/>
     <param name="stand_up_protect" value="$(arg stand_up_protect)"/>
+    <param name="redundant_imu" value="$(arg redundant_imu)"/>
 
     <!-- Launch script to collect kuavo-launch information -->
     <node pkg="humanoid_controllers" type="collect_launch_info.sh" name="collect_launch_info" />

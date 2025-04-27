@@ -112,6 +112,8 @@ namespace ocs2
             vel_control_pub_ = nodeHandle_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
             change_arm_mode_service_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/humanoid_change_arm_ctrl_mode");
+            change_arm_mode_service_VR_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/change_arm_ctrl_mode");
+            
             get_arm_mode_service_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/humanoid_get_arm_ctrl_mode");
             command_height_ = 0.0;
             command_add_height_pre_ = 0.0;
@@ -183,6 +185,22 @@ namespace ocs2
             }
         }
 
+        void callVRSetArmModeSrv(int32_t mode)
+        {
+            kuavo_msgs::changeArmCtrlMode srv;
+            srv.request.control_mode = mode;
+
+            // 调用服务
+            if (change_arm_mode_service_VR_client_.call(srv))
+            {
+                ROS_INFO("SetArmModeSrv call successful");
+            }
+            else
+            {
+                ROS_ERROR("Failed to call SetArmModeSrv");
+            }
+        }
+
         void callTerminateSrv()
         {
         std::cout << "tigger callTerminateSrv" << std::endl;
@@ -241,7 +259,12 @@ namespace ocs2
                 {
                     current_arm_mode_ = callGetArmModeSrv();
                     current_arm_mode_ = (current_arm_mode_!=2) ? 2 : 1;
-                    callSetArmModeSrv(current_arm_mode_);
+                    if (only_half_up_body_) {
+                        callVRSetArmModeSrv(current_arm_mode_);
+                    }
+                    else {
+                        callSetArmModeSrv(current_arm_mode_);
+                    }
                 }
 
                 return;
@@ -681,6 +704,7 @@ namespace ocs2
         geometry_msgs::Twist cmdVel_;
 
         ros::ServiceClient change_arm_mode_service_client_;
+        ros::ServiceClient change_arm_mode_service_VR_client_;
         ros::ServiceClient get_arm_mode_service_client_;
 
         int current_arm_mode_{1};

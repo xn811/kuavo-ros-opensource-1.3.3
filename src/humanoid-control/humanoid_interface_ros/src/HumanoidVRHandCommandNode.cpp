@@ -13,6 +13,7 @@
 #include <kuavo_msgs/headBodyPose.h>
 #include <kuavo_msgs/changeArmCtrlMode.h>
 #include <kuavo_msgs/changeTorsoCtrlMode.h>
+#include <kuavo_msgs/armTargetPoses.h>
 
 #include "humanoid_interface/command/HumanoidHandTarget.h"
 #include "humanoid_interface_drake/humanoid_interface_drake.h"
@@ -22,6 +23,8 @@ using namespace humanoid;
 
 enum class ArmCtlIdx { Left, Right, Both };
 enum class ArmCtlMode { JointSpace, TaskSpace };
+
+#define ArmToZeroTime 3
 
 namespace
 {
@@ -92,6 +95,12 @@ class VRHandCommandNode {
         ArmTargetTrajectoriesPublisher_ = nodeHandle.advertise<ocs2_msgs::mpc_target_trajectories>(robotName + "_mpc_target_arm", 1);
         torsoTargetTrajectoriesPublisher_ = nodeHandle.advertise<ocs2_msgs::mpc_target_trajectories>(robotName + "_mpc_target_pose", 1);
 
+        armTargetPosePublisher_ = nodeHandle.advertise<kuavo_msgs::armTargetPoses>("/kuavo_arm_target_poses", 1, true);
+        if (nodeHandle.hasParam("/only_half_up_body"))
+        {
+          nodeHandle.getParam("/only_half_up_body", only_half_up_body_);
+        }
+
         vrCmdSub_ = nh_.subscribe("/kuavo_arm_traj", 10, &VRHandCommandNode::vrCmdCallback, this);
         observationSub_ = nh_.subscribe(robotName + "_wbc_observation", 10, &VRHandCommandNode::observationCallback, this);  
         auto eePoseCallback = [this](const kuavo_msgs::endEffectorData::ConstPtr& msg){
@@ -130,6 +139,7 @@ class VRHandCommandNode {
         ros::Duration(0.1).sleep();
       }
       ROS_INFO("[VRHandCommandNode]: First ee pose received.");
+
       auto rate = ros::Rate(100);
       while (ros::ok())
       {
@@ -322,6 +332,11 @@ class VRHandCommandNode {
       return {timeTrajectory, stateTrajectory, inputTrajectory};
     }
 
+
+    void setInitArmPos(const Eigen::VectorXd& init_arm_pos){
+      init_arm_pos_ = init_arm_pos;
+    }
+
   private:
     void vrCmdCallback(const sensor_msgs::JointState::ConstPtr &msg)
     {
@@ -350,10 +365,24 @@ class VRHandCommandNode {
       const auto mpcTargetTrajectoriesMsg = ros_msg_conversions::createTargetTrajectoriesMsg(goalTargetTrajectories);
       ArmTargetTrajectoriesPublisher_.publish(mpcTargetTrajectoriesMsg);
       // targetTrajectoriesPublisherPtr_->publishTargetTrajectories(goalTargetTrajectories);
+      last_joint_state_ = *msg;
     }
     void observationCallback(const ocs2_msgs::mpc_observation::ConstPtr &observation_msg)
     {
       observation_ = ros_msg_conversions::readObservationMsg(*observation_msg);
+      if(!get_observation_){
+        
+        if (only_half_up_body_){
+          // Control mode:
+          // 0: Keep current arm pose
+          // 1: Auto swing arms during walking
+          // 2: External control through VR/teleoperation
+          callSetArmModeSrv(2);
+          backArmPoseToZero();
+          ros::Duration(ArmToZeroTime).sleep();
+          callSetArmModeSrv(0);
+        }
+      }
       get_observation_ = true;
     }
     void headBodyPoseCallback(const kuavo_msgs::headBodyPose::ConstPtr& msg)
@@ -380,6 +409,32 @@ class VRHandCommandNode {
       const auto mpcTargetTrajectoriesMsg = ros_msg_conversions::createTargetTrajectoriesMsg(goalTargetTrajectories);
       torsoTargetTrajectoriesPublisher_.publish(mpcTargetTrajectoriesMsg);
     }
+
+    void backArmPoseToZero(){
+
+      if (init_arm_pos_.size() != num_arm_joints_){
+        ROS_ERROR("[VRHandCommandNode]: init_arm_pos_ size: %d, num_arm_joints_: %d", init_arm_pos_.size(), num_arm_joints_);
+        return;
+      }
+      kuavo_msgs::armTargetPoses arm_target_poses;
+      arm_target_poses.times.clear();
+      arm_target_poses.values.clear();
+      
+      // 3 seconds has tested in real robot
+      arm_target_poses.times.push_back(ArmToZeroTime);
+      
+      arm_target_poses.values.resize(init_arm_pos_.size());
+      for(int i = 0; i < init_arm_pos_.size(); i++) {
+        arm_target_poses.values[i] = init_arm_pos_(i);
+      }
+      while(armTargetPosePublisher_.getNumSubscribers() == 0 && ros::ok()){
+        ROS_INFO_THROTTLE(1, "[VRHandCommandNode]: Waiting for /kuavo_arm_target_pose subscribers");
+        ros::Duration(0.1).sleep();
+        ros::spinOnce();
+      }
+      armTargetPosePublisher_.publish(arm_target_poses);
+    }
+
     bool changeArmCtlModeCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
     {
         if (!get_observation_){
@@ -387,7 +442,19 @@ class VRHandCommandNode {
           return false;
         }
         int control_mode = req.control_mode;
+
+        // Control mode:
+        // 0: Keep current arm pose
+        // 1: Auto swing arms during walking
+        // 2: External control through VR/teleoperation
+        if(only_half_up_body_ &&
+          control_mode == 1 && last_arm_control_mode_ == 2) {
+
+          backArmPoseToZero();
+        }
+
         enable_ctrl_ = control_mode;
+        last_arm_control_mode_ = control_mode;
         res.result = true;
         std::cout << "Arm control mode changed to " << control_mode << "\n";
         callSetArmModeSrv(control_mode);
@@ -468,6 +535,7 @@ class VRHandCommandNode {
       TargetTrajectories goalTargetTrajectories = goalHandPoseToTargetTrajectories(leftHandTargetPose, rightHandTargetPose, observation_, lastEeState_);
       targetTrajectoriesPublisherPtr_->publishTargetTrajectories(goalTargetTrajectories);
     }
+
     ros::NodeHandle nh_;
     ArmCtlMode armCtlMode_;
     ArmCtlIdx armCtlIdx_;
@@ -499,6 +567,13 @@ class VRHandCommandNode {
     bool updated_torso_ctrl_mode_{false};
     // 添加记录上一次进回调的时间戳变量
     std::chrono::steady_clock::time_point last_callback_time_;
+
+    ros::Publisher armTargetPosePublisher_;
+    bool only_half_up_body_{false};
+    int last_arm_control_mode_{0};
+    sensor_msgs::JointState last_joint_state_;
+    // 手臂初始位置
+    vector_t init_arm_pos_;
 };
 
 
@@ -530,6 +605,7 @@ int main(int argc, char* argv[]) {
   loadData::loadEigenMatrix(referenceFile, "targetTorsoDispalcementVelocity", targetTorsoDispalcementVelocity);
 
   VRHandCommandNode node(nodeHandle, ArmCtlMode::JointSpace, ArmCtlIdx::Both);
+  node.setInitArmPos(drake_interface_->getKuavoSettings().predefined_arm_pose.init_arm_pos);
   node.run();
   return 0;
 }
