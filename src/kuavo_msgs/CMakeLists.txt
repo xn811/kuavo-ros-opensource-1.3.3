@@ -96,6 +96,7 @@ add_service_files(
   getCurrentGaitName.srv
   handForceLevel.srv
   enableHandTouchSensor.srv
+  playmusic.srv
 )
 
 ## Generate actions in the 'action' folder
