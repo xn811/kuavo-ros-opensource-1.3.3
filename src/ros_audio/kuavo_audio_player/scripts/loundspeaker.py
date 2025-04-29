@@ -11,9 +11,42 @@ rospy.loginfo("音频文件路径: %s", audio_path)
 
 class MusicPlayerNode:
     def __init__(self):
+        if not self.check_sound_card():
+            print("声卡状态异常，无法播放音乐")
+            exit()
         rospy.init_node('music_player_node')
         self.service = rospy.Service('play_music', playmusic, self.play_music_callback)
         self.music_directory = audio_path  # 替换为你的音乐文件目录
+
+    def check_sound_card(self):
+        """
+        检查声卡状态，特别是耳机和扬声器的可用性
+        """
+        # 检查耳机状态
+        try:
+            headphone_command = 'pactl list | grep Headphone'
+            headphone_result = subprocess.run(headphone_command, shell=True, capture_output=True, text=True)
+            print(headphone_result.stdout)
+            # 检查耳机是否不可用
+            headphone_available = "not available" not in headphone_result.stdout
+            print(f"耳机状态: {'可用' if headphone_available else '不可用'}")
+            if headphone_available:
+                return True
+            # 检查扬声器状态
+            speaker_command = 'pactl list | grep Speaker'
+            speaker_result = subprocess.run(speaker_command, shell=True, capture_output=True, text=True)
+            
+            # 检查扬声器是否存在
+            speaker_exists = bool(speaker_result.stdout.strip())
+            print(f"扬声器状态: {'存在' if speaker_exists else '不存在'}")
+            if speaker_exists:
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"检查声卡状态时出错: {str(e)}")
+            return False
 
     def play_music_callback(self, req):
         try:

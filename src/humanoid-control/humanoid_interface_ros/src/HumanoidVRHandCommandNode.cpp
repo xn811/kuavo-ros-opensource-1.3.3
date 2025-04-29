@@ -433,6 +433,8 @@ class VRHandCommandNode {
         ros::spinOnce();
       }
       armTargetPosePublisher_.publish(arm_target_poses);
+      // 半身模式下 /kuavo_arm_target_pose 会替换掉初始数据，所以初始发两次确保发送成功
+      armTargetPosePublisher_.publish(arm_target_poses);
     }
 
     bool changeArmCtlModeCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)

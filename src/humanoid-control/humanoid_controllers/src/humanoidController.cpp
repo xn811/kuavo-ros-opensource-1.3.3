@@ -316,7 +316,11 @@ namespace humanoid_controller
     defalutJointPos_.tail(armNum_) = vector_t::Zero(armNum_);
     currentArmTargetTrajectories_ = {{0.0}, {vector_t::Zero(armNumReal_)}, {vector_t::Zero(info.inputDim)}};
 
-    vector_t drake_q = drake_interface_->getDrakeSquatState();
+    vector_t drake_q;
+    if (is_real_)// 实物从squat姿态开始
+      drake_q = drake_interface_->getDrakeSquatState();
+    else
+      drake_q = drake_interface_->getDrakeState();
     vector_t mujoco_q = vector_t::Zero(drake_q.size());
     mujoco_q << drake_q.segment(4, 3), drake_q.head(4), drake_q.tail(drake_q.size() - 7);
     std::vector<double> robot_init_state_param;
@@ -892,6 +896,8 @@ namespace humanoid_controller
       jointCmdMsg.joint_kp.push_back(0);
       jointCmdMsg.joint_kd.push_back(0);
     }
+    // if (use_shm_communication_) 
+    //     publishJointCmdToShm(jointCmdMsg);
     jointCmdPub_.publish(jointCmdMsg);
 
     if (!wheel_arm_robot_ && stand_up_protect_ && is_real_)
@@ -951,7 +957,7 @@ namespace humanoid_controller
 
     /*******************超过设置时间，退出******************/
     // 延迟启动, 避免切换不稳定
-    if (time.toSec() > robotStandUpCompleteTime_ + 0.8)
+    if (time.toSec() > robotStandUpCompleteTime_ + 0.8 || !is_real_)
     {
       SystemObservation initial_observation = currentObservation_;
       initial_observation.state = initial_status_;
