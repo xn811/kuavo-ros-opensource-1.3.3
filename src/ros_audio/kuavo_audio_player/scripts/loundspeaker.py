@@ -12,7 +12,7 @@ rospy.loginfo("音频文件路径: %s", audio_path)
 class MusicPlayerNode:
     def __init__(self):
         if not self.check_sound_card():
-            print("声卡状态异常，无法播放音乐")
+            print("未检测到播音设备，不启用播音功能！")
             exit()
         rospy.init_node('music_player_node')
         self.service = rospy.Service('play_music', playmusic, self.play_music_callback)
