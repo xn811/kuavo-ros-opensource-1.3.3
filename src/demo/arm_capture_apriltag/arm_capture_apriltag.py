@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 
 import rospy
-from kuavo_sdk.msg import AprilTagDetectionArray
+from kuavo_msgs.msg import AprilTagDetectionArray
 import math
 import numpy as np  # 引入numpy库用于数值计算
 
 import time
 import argparse
-from kuavo_sdk.srv import fkSrv
-from kuavo_sdk.msg import armTargetPoses
-from kuavo_sdk.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
-from kuavo_sdk.srv import twoArmHandPoseCmdSrv
-from kuavo_sdk.msg import twoArmHandPoseCmd, ikSolveParam
+from kuavo_msgs.msg import armTargetPoses
+from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
+from motion_capture_ik.srv import twoArmHandPoseCmdSrv
+from motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
 
-from kuavo_sdk.msg import robotHandPosition
-from kuavo_sdk.msg import robotHeadMotionData
+from kuavo_msgs.msg import robotHandPosition
+from kuavo_msgs.msg import robotHeadMotionData
+
 
 ####################################################################
 

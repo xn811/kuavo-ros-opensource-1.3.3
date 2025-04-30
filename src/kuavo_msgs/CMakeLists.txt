@@ -69,6 +69,8 @@ add_message_files(
   gestureTask.msg
   lejuClawState.msg
   Metadata.msg
+  AprilTagDetection.msg
+  AprilTagDetectionArray.msg
 )
 
 ## Generate services in the 'srv' folder
