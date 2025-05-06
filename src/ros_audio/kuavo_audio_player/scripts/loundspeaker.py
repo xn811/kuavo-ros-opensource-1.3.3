@@ -24,16 +24,19 @@ class MusicPlayerNode:
         """
         # 检查耳机状态
         try:
-            headphone_command = 'pactl list | grep Headphone'
+            headphone_command = 'pactl list | grep -i Headphone'
             headphone_result = subprocess.run(headphone_command, shell=True, capture_output=True, text=True)
             print(headphone_result.stdout)
+            if not bool(headphone_result.stdout.strip()):
+                print(f"不存在耳机设备")
             # 检查耳机是否不可用
-            headphone_available = "not available" not in headphone_result.stdout
-            print(f"耳机状态: {'可用' if headphone_available else '不可用'}")
-            if headphone_available:
-                return True
+            else:
+                headphone_available = "not available" not in headphone_result.stdout
+                print(f"耳机状态: {'可用' if headphone_available else '不可用'}")
+                if headphone_available:
+                    return True
             # 检查扬声器状态
-            speaker_command = 'pactl list | grep Speaker'
+            speaker_command = 'pactl list | grep -i Speaker'
             speaker_result = subprocess.run(speaker_command, shell=True, capture_output=True, text=True)
             
             # 检查扬声器是否存在
