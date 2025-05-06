@@ -186,8 +186,8 @@ RUN git config --global --add safe.directory /root/kuavo_ws
 RUN apt install -y ros-noetic-desktop-full ros-noetic-behaviortree-cpp-v3
 RUN apt install -y bc ros-noetic-apriltag*
 RUN apt clean && apt autoclean
-RUN echo `export LD_LIBRARY_PATH=/opt/drake/lib/:$LD_LIBRARY_PATH` >> /root/.bashrc \
-    && echo `export LD_LIBRARY_PATH=/opt/drake/lib/:$LD_LIBRARY_PATH` >> /root/.zshrc \
+RUN echo 'export LD_LIBRARY_PATH=/opt/drake/lib/:$LD_LIBRARY_PATH' >> /root/.bashrc \
+    && echo 'export LD_LIBRARY_PATH=/opt/drake/lib/:$LD_LIBRARY_PATH' >> /root/.zshrc \
     && echo 'export ROBOT_VERSION=42' >> /root/.bashrc \
     && echo 'export ROBOT_VERSION=42' >> /root/.zshrc
 
