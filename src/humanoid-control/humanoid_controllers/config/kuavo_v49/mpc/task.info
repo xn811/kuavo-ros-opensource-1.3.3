@@ -20,7 +20,7 @@ model_settings
 
   verboseCppAd                  false
   recompileLibrariesCppAd       false
-  modelFolderCppAd              /var/ocs2/kuavo_v45 ; will save in <modelFolderCppAd>/md5_<urdf>/<centroidalModelType>/<dof>
+  modelFolderCppAd              /var/ocs2/kuavo_v49 ; will save in <modelFolderCppAd>/md5_<urdf>/<centroidalModelType>/<dof>
 
   modelDof                     26 ; total dof of the model, including the arms and legs
   mpcArmsDof                   8 ; mpc dof of the arms, you can simplify the model by reducing this value(will automatically reduce the QR size)
@@ -712,7 +712,7 @@ standUpJointAccelTask
 {
   leg
   {
-    kp    200
+    kp    600
     kd    10.2
     kp_sim    500
     kd_sim    10.2
@@ -726,7 +726,7 @@ standUpJointAccelTask
 
 standUpWeight
 {
-    Linear          1
+    Linear          3
     Angular         10
     JointAcc        20
     contactForce    0.1 
