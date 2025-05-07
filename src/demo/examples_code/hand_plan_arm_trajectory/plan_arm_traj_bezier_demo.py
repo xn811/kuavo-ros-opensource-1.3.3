@@ -239,7 +239,7 @@ def frames_to_custom_action_data(frames):
     return action_data
 
 
-+ def filter_data(action_data):
+def filter_data(action_data):
     """
     轨迹数据过滤和平滑处理
     
