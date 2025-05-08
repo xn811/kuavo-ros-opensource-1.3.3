@@ -3,7 +3,7 @@ import rospy
 from kuavo_audio_player.srv import playmusic, playmusicResponse, playmusicRequest
 import os
 import subprocess  # 引入 subprocess 模块
-
+import time
 
 # 从ROS参数服务器获取音频路径参数，如果未设置则使用默认值
 audio_path = rospy.get_param('audio_path', '/home/lab/.config/lejuconfig/music')
@@ -11,9 +11,10 @@ rospy.loginfo("音频文件路径: %s", audio_path)
 
 class MusicPlayerNode:
     def __init__(self):
-        if not self.check_sound_card():
+        while not self.check_sound_card():
             print("未检测到播音设备，不启用播音功能！")
-            exit()
+            time.sleep(10000)
+        print("启动music_player_node节点")
         rospy.init_node('music_player_node')
         self.service = rospy.Service('play_music', playmusic, self.play_music_callback)
         self.music_directory = audio_path  # 替换为你的音乐文件目录
@@ -43,6 +44,17 @@ class MusicPlayerNode:
             speaker_exists = bool(speaker_result.stdout.strip())
             print(f"扬声器状态: {'存在' if speaker_exists else '不存在'}")
             if speaker_exists:
+                return True
+            
+            # root用户下检查扬声器状态
+            root_speaker_command = 'aplay -l | grep -i Audio'
+            root_speaker_result = subprocess.run(root_speaker_command, shell=True, capture_output=True, text=True)
+            print(root_speaker_result.stdout)
+            root_speaker_exists = bool(root_speaker_result.stdout.strip())
+            print(f"root扬声器状态: {'存在' if root_speaker_exists else '不存在'}")
+            if not root_speaker_exists:
+                print(f"不存在扬声器设备")
+            else:
                 return True
             
             return False

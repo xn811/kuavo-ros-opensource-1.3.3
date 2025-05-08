@@ -40,6 +40,12 @@ namespace joint_test_poses {
         pos2[27] = 20.05;
         poses.push_back(pos2);
 
+        // Third pose: test head
+        std::vector<double> pos3(num_joint, 0);
+        pos3[26] = 60;
+        pos3[27] = 25;
+        poses.push_back(pos3);
+
         return poses;
     }
 

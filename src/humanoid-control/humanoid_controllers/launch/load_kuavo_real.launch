@@ -109,9 +109,36 @@
     <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
     <group if="$(arg use_joystick)">
       <group if="$(eval arg('joystick_type') == 'h12')">
-        <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">
-          <arg name="start_way" value="$(arg start_way)"/>
-        </include>
+
+        <group if="$(eval arg('start_way') == 'manual')">
+          <!-- 此if分支为命令行启动机器人: joystick_type=h12，h12遥控器使用和服务启动(start_way=auto)相同的逻辑。-->
+          
+          <param name="start_way" value="auto"/>
+
+          <!-- 确定状态机初始状态 -->
+          <param name="manual_h12_init_state" value="ready_stance"/>
+          <group if="$(eval arg('cali') or arg('cali_arm'))">
+              <param name="manual_h12_init_state" value="calibrate"/>
+          </group>
+
+          <!-- 补充环境变量，和服务启动的变量一致 -->
+          <env name="KUAVO_ROS_CONTROL_WS_PATH" value="$(find humanoid_controllers)/../../../" />
+          <!-- 启动 h12pro 控制节点 -->
+          <include file="$(find h12pro_controller_node)/launch/h12pro_autostart.launch">
+          </include>
+
+          <param name="joystick_sensitivity" value="20"/>
+          <node pkg="humanoid_interface_ros" type="humanoid_joy_control_auto_gait_with_vel" name="humanoid_joy_control_auto_gait_with_vel" output="screen"/>
+          
+        </group>
+
+        <group if="$(eval arg('start_way') == 'auto')">
+
+          <include file="$(find humanoid_controllers)/launch/joy/joy_control_h12.launch">
+            <arg name="start_way" value="$(arg start_way)"/>
+          </include>
+        </group>
+
       </group>
       <group if="$(eval arg('joystick_type') == 'sim')">
         <include file="$(find humanoid_controllers)/launch/joy/joy_control_sim.launch">
