@@ -697,6 +697,131 @@ Control the head of the robot.
 * **Return type:**
   bool
 
+### *class* kuavo_humanoid_sdk.KuavoRobotVision(robot_type: str = 'kuavo')
+
+Bases: `object`
+
+Vision system interface for Kuavo humanoid robot.
+
+Provides access to AprilTag detection data from different coordinate frames.
+
+#### *property* apriltag_data_from_base *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+
+All detected AprilTags in camera frame (property)
+
+* **Type:**
+  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+
+#### *property* apriltag_data_from_camera *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+
+All detected AprilTags in camera frame (property)
+
+* **Type:**
+  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+
+#### *property* apriltag_data_from_odom *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+
+All detected AprilTags in camera frame (property)
+
+* **Type:**
+  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+
+#### get_data_by_id(target_id: int, data_source: str = 'base') → dict
+
+Get AprilTag detection data for a specific ID from specified source.
+
+* **Parameters:**
+  * **target_id** (*int*) – AprilTag ID to retrieve
+  * **data_source** (*str* *,* *optional*) – Data source frame. Can be “base”, “camera”,
+    or “odom”. Defaults to “base”.
+* **Returns:**
+  Detection data containing position, orientation and metadata
+* **Return type:**
+  dict
+
+#### get_data_by_id_from_base(target_id: int) → dict
+
+Get AprilTag data from base coordinate frame.
+
+* **Parameters:**
+  **target_id** (*int*) – AprilTag ID to retrieve
+* **Returns:**
+  See get_data_by_id() for return format
+* **Return type:**
+  dict
+
+#### get_data_by_id_from_camera(target_id: int) → dict
+
+Get AprilTag data from camera coordinate frame.
+
+* **Parameters:**
+  **target_id** (*int*) – AprilTag ID to retrieve
+* **Returns:**
+  See get_data_by_id() for return format
+* **Return type:**
+  dict
+
+#### get_data_by_id_from_odom(target_id: int) → dict
+
+Get AprilTag data from odom coordinate frame.
+
+* **Parameters:**
+  **target_id** (*int*) – AprilTag ID to retrieve
+* **Returns:**
+  See get_data_by_id() for return format
+* **Return type:**
+  dict
+
+### *class* kuavo_humanoid_sdk.KuavoRobotTools
+
+Bases: `object`
+
+Robot tools class providing coordinate frame transformation interfaces.
+
+This class encapsulates coordinate transformation queries between different robot frames,
+supporting multiple return data formats.
+
+#### get_base_to_odom(return_type: str = 'pose_quaternion') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+
+Get transformation from base_link to odom frame.
+
+* **Parameters:**
+  **return_type** (*str* *,* *optional*) – Return format type. Same as get_tf_transform.
+  Defaults to “pose_quaternion”.
+* **Returns:**
+  Transformation data or None
+* **Return type:**
+  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+
+#### get_camera_to_base(return_type: str = 'homogeneous') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+
+Get transformation from camera_link to base_link frame.
+
+* **Parameters:**
+  **return_type** (*str* *,* *optional*) – Return format type. Same as get_tf_transform.
+  Defaults to “homogeneous”.
+* **Returns:**
+  Transformation data or None
+* **Return type:**
+  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+
+#### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+
+Get transformation between specified coordinate frames.
+
+* **Parameters:**
+  * **target_frame** (*str*) – Name of target coordinate frame
+  * **source_frame** (*str*) – Name of source coordinate frame
+  * **return_type** (*str* *,* *optional*) – Return data format type. Valid values:
+    “pose_quaternion” - quaternion pose format,
+    “homogeneous” - homogeneous matrix format. Defaults to “pose_quaternion”.
+* **Returns:**
+  Transformation data in specified format, or None if failed
+* **Return type:**
+  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+* **Raises:**
+  **ValueError** – If invalid return_type is provided
+
 ### *class* kuavo_humanoid_sdk.DexterousHand
 
 Bases: `EndEffector`
@@ -1012,6 +1137,31 @@ Wait for the claw motion to finish.
 * **Return type:**
   bool
 
+### *class* kuavo_humanoid_sdk.interfaces.data_types.AprilTagData(id: list, size: list, pose: list)
+
+Represents detected AprilTag information with pose estimation.
+
+#### id
+
+List of detected AprilTag IDs (integers)
+
+* **Type:**
+  list
+
+#### size
+
+List of tag physical sizes in meters (floats)
+
+* **Type:**
+  list
+
+#### pose
+
+List of PoseQuaternion objects representing tag poses
+
+* **Type:**
+  list
+
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide(value)
 
 Enum class representing the sides of the end effector.
@@ -1060,6 +1210,27 @@ Moving to target position (value: 2)
 #### GRABBED
 
 Object successfully grasped (value: 3)
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix(matrix: ndarray)
+
+4x4 homogeneous transformation matrix for 3D transformations.
+
+Represents both rotation and translation in 3D space. Can be used for
+coordinate frame transformations and pose composition.
+
+#### matrix
+
+4x4 numpy array of shape (4, 4) containing:
+
+```default
+[[R, t],
+ [0, 1]]
+```
+
+* **Type:**
+  np.ndarray
+
+### where R is 3x3 rotation matrix and t is 3x1 translation
 
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoArmCtrlMode(value)
 
@@ -1122,3 +1293,25 @@ Data class representing odometry data from the robot.
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoPose(position: Tuple[float, float, float], orientation: Tuple[float, float, float, float])
 
 Data class representing the pose of the robot.
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion(position: Tuple[float, float, float], orientation: Tuple[float, float, float, float])
+
+3D pose representation using position and quaternion orientation.
+
+Provides a singularity-free orientation representation. Commonly used
+in robotics for smooth interpolation between orientations.
+
+#### position
+
+XYZ coordinates in meters
+
+* **Type:**
+  Tuple[float, float, float]
+
+#### orientation
+
+Unit quaternion in
+(x, y, z, w) format following ROS convention
+
+* **Type:**
+  Tuple[float, float, float, float]

@@ -27,6 +27,8 @@ from transitions import Machine, State
 
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
 from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl
+from kuavo_humanoid_sdk.kuavo.core.ros.vision import KuavoRobotVisionCore
+from kuavo_humanoid_sdk.kuavo.core.ros.tools import KuavoRobotToolsCore
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
 from kuavo_humanoid_sdk.common.logger import SDKLogger
@@ -68,6 +70,10 @@ class KuavoRobotCore:
             self._control = KuavoRobotControl()
             self._rb_state = KuavoRobotStateCore()
             self._arm_ctrl_mode = KuavoArmCtrlMode.AutoSwing
+            # robot vision
+            self._robot_vision = KuavoRobotVisionCore()
+            # robot ros tf
+            self._robot_tf_tool = KuavoRobotToolsCore()
             # register gait changed callback
             self._rb_state.register_gait_changed_callback(self._humanoid_gait_changed)
             # initialized

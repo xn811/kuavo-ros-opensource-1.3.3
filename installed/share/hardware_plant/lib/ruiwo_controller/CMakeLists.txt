@@ -6,19 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找 Python 库
-execute_process(
-    COMMAND lsb_release -rs
-    OUTPUT_VARIABLE UBUNTU_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-if(UBUNTU_VERSION VERSION_EQUAL "20.04")
-    find_package(Python3 3.8 EXACT COMPONENTS Interpreter Development NumPy REQUIRED)
-elseif(UBUNTU_VERSION VERSION_EQUAL "22.04")
-    find_package(Python3 3.10 EXACT COMPONENTS Interpreter Development NumPy REQUIRED)
-else()
-    message(FATAL_ERROR "Unsupported Ubuntu version: ${UBUNTU_VERSION}")
-endif()
+find_package(Python3 3.8 EXACT COMPONENTS Interpreter Development NumPy REQUIRED)
 # find_package(PythonInterp REQUIRED 3.8)
 if(Python3_FOUND)
     message(STATUS "Found Python: ${Python3_EXECUTABLE}")

@@ -43,6 +43,16 @@ API Reference
     :undoc-members:
     :show-inheritance:
 
+.. autoclass:: KuavoRobotVision
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: KuavoRobotTools
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. autoclass:: DexterousHand
     :members:
     :undoc-members:

@@ -36,7 +36,6 @@ inline std::vector<double> eigenToStdVector(const Eigen::VectorXd& vec) {
 
 struct HardwareParam {
     bool cali_leg{false};
-    std::vector<double> initial_state;
     std::vector<double> defalut_joint_pos;
     int robot_version{42};
     bool cali{false}; 

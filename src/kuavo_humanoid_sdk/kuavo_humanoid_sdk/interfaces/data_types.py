@@ -1,6 +1,7 @@
 from typing import Tuple
 from enum import Enum
 from dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class KuavoJointData:
@@ -143,3 +144,48 @@ class KuavoDexHandTouchState:
         status: int  # 传感器状态
     # 5 fingers
     data: Tuple[KuavoTouchState, KuavoTouchState, KuavoTouchState, KuavoTouchState, KuavoTouchState]
+
+@dataclass
+class AprilTagData:
+    """Represents detected AprilTag information with pose estimation.
+    
+    Attributes:
+        id (list): List of detected AprilTag IDs (integers)
+        size (list): List of tag physical sizes in meters (floats)
+        pose (list): List of PoseQuaternion objects representing tag poses
+    """
+    id: list
+    size: list
+    pose: list
+
+@dataclass
+class HomogeneousMatrix:
+    """4x4 homogeneous transformation matrix for 3D transformations.
+    
+    Represents both rotation and translation in 3D space. Can be used for
+    coordinate frame transformations and pose composition.
+    
+    Attributes:
+        matrix (np.ndarray): 4x4 numpy array of shape (4, 4) containing::
+        
+            [[R, t],
+             [0, 1]] 
+            
+        where R is 3x3 rotation matrix and t is 3x1 translation
+    """
+    matrix: np.ndarray  # Shape (4,4) homogeneous transformation matrix
+
+@dataclass
+class PoseQuaternion:
+    """3D pose representation using position and quaternion orientation.
+    
+    Provides a singularity-free orientation representation. Commonly used
+    in robotics for smooth interpolation between orientations.
+    
+    Attributes:
+        position (Tuple[float, float, float]): XYZ coordinates in meters
+        orientation (Tuple[float, float, float, float]): Unit quaternion in
+            (x, y, z, w) format following ROS convention
+    """
+    position: Tuple[float, float, float]
+    orientation: Tuple[float, float, float, float]
