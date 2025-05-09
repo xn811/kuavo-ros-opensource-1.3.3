@@ -116,6 +116,7 @@ public:
     void setHardwareParam(const HardwareParam& param) { hardware_param_ = param; }
     HardwareParam& getHardwareParam() { return hardware_param_; }
     const std::array<eef_controller::BrainCoController::HandStatus, 2>&  getHandControllerStatus();
+    eef_controller::FingerStatusPtrArray getHandControllerWithTouchStatus();
 
     bool th_running_ = false;
     int hardware_status_ = -1;
@@ -129,7 +130,6 @@ public:
     std::vector<double_t> joint_velocity_limits_;
     std::vector<double_t> joint_current_limits_;
 
-    // TouchDexhandContrllerPtr dexhand_actuator;
     std::unique_ptr<eef_controller::TouchDexhandContrller> dexhand_actuator;
     std::string gesture_filepath_;
 
