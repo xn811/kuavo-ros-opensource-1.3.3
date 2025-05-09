@@ -8,6 +8,7 @@ find_package(catkin REQUIRED
         COMPONENTS
         roscpp
         hardware_interface
+        kuavo_common
         )
 
 catkin_package(
@@ -35,6 +36,7 @@ catkin_package(
 include_directories(
         include
         ${catkin_INCLUDE_DIRS}
+        ${kuavo_common_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} INTERFACE)

@@ -14,5 +14,8 @@ ecmaster*.csv
 node_modules/
 .docusaurus/
 new-docs
+.cache/
+**/build
+**/installed
 .aider*
 src/manipulation_nodes/planarmwebsocketservice/models/*.pt

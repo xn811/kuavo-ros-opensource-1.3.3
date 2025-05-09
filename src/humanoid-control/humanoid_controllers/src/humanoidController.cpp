@@ -31,8 +31,9 @@
 #include <humanoid_wbc/StandUpWbc.h>
 #include <ocs2_core/reference/TargetTrajectories.h>
 #include <humanoid_wbc/HierarchicalWbc.h>
-#include "humanoid_interface_drake/common/utils.h"
-#include "humanoid_interface_drake/common/sensor_data.h"
+#include "kuavo_common/common/sensor_data.h"
+#include "kuavo_common/common/utils.h"
+#include "humanoid_interface_drake/kuavo_data_buffer.h"
 #include "humanoid_interface_drake/humanoid_interface_drake.h"
 
 namespace humanoid_controller
@@ -339,8 +340,10 @@ namespace humanoid_controller
     std::cout << "controller squat_initial_state_:" << squat_initial_state_.transpose() << std::endl;
     std::vector<double> initial_state_vector(initial_state_.data(), initial_state_.data() + initial_state_.size());
     std::vector<double> squat_initial_state_vector(squat_initial_state_.data(), squat_initial_state_.data() + squat_initial_state_.size());
+    std::vector<double> default_joint_pos_vector(defalutJointPos_.data(), defalutJointPos_.data() + defalutJointPos_.size());
     controllerNh_.setParam("/initial_state", initial_state_vector);
     controllerNh_.setParam("/squat_initial_state", squat_initial_state_vector);
+    controllerNh_.setParam("/default_joint_pos", default_joint_pos_vector);
 
     joint_state_limit_.resize(actuatedDofNumReal_, 2);
 

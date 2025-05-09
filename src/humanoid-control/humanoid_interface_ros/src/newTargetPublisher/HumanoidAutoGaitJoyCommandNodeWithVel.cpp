@@ -53,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <humanoid_interface/gait/MotionPhaseDefinition.h>
 #include "kuavo_msgs/gaitTimeName.h"
 #include <ocs2_msgs/mpc_flattened_controller.h>
-#include <humanoid_interface_drake/common/json.hpp>
+#include <kuavo_common/common/json.hpp>
 #include <map>
 #include <kuavo_msgs/changeArmCtrlMode.h>
 #include "kuavo_msgs/robotHeadMotionData.h"

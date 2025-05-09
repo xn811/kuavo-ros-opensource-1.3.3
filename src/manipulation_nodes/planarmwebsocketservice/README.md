@@ -66,6 +66,7 @@
         "robot_ws_address": ROBOT_WS_ADDRESS,
         "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
         "robot_upload_folder": ROBOT_UPLOAD_FOLDER,
+        "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
     }

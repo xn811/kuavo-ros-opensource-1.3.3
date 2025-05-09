@@ -334,7 +334,7 @@ namespace humanoid_controller
     KuavoDataBuffer<SensorData> *sensors_data_buffer_ptr_;
     bool is_real_{false};
     bool is_cali_{false};
-    char intial_input_cmd_ = '\0';
+    char initial_input_cmd_ = '\0';
     // TrajectoryPublisher *trajectory_publisher_{nullptr};
     double dt_ = 0.001;
     std::thread mpcThread_;
