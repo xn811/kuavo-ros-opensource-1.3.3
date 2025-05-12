@@ -420,6 +420,15 @@ def stop_callback(event):
     subprocess.run(["tmux", "kill-session", "-t", VR_REMOTE_CONTROL_SESSION_NAME], 
                   stderr=subprocess.DEVNULL) 
     kill_record_vr_rosbag()
+    
+    manual_h12_init_state = rospy.get_param("manual_h12_init_state", "none")
+    if "none" != manual_h12_init_state:
+        # 此if分支为命令行启动机器人: joystick_type=h12，遥控器使用和服务启动相同的逻辑。
+        # manual_h12_init_state为初始状态，其值为none表示当前是用服务启动的机器人。
+        # manual_h12_init_state不是none表示是命令行启动的机器人，此时启动机器人程序没有使用tmux，需要额外关闭
+
+        subprocess.run(["rosnode", "kill", "/nodelet_manager"], 
+                    stderr=subprocess.DEVNULL)
 
 def arm_pose_callback(event):
     source = event.kwargs.get("source")
