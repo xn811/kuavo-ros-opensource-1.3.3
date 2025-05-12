@@ -1,6 +1,7 @@
 import rospy
 import rospkg
 import os
+import pwd
 import sys
 import asyncio
 import json
@@ -12,6 +13,7 @@ import threading
 import time
 import math
 import subprocess
+from pathlib import Path
 from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2
 
 from kuavo_ros_interfaces.srv import planArmTrajectoryBezierCurve, stopPlanArmTrajectory, planArmTrajectoryBezierCurveRequest, ocs2ChangeArmCtrlMode
@@ -32,6 +34,25 @@ package_path = rospkg.RosPack().get_path(package_name)
 
 ACTION_FILE_FOLDER = package_path + "/action_files"
 UPLOAD_FILES_FOLDER = package_path + "/upload_files" 
+
+# 下位机音乐文件存放路径，如果不存在则进行创建
+sudo_user = os.environ.get("SUDO_USER")
+if sudo_user:
+    user_info = pwd.getpwnam(sudo_user)
+    home_path = user_info.pw_dir
+else:
+    home_path = os.path.expanduser("~")
+
+MUSIC_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'music')
+try:
+    Path(MUSIC_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"创建目录时出错: {e}")
+
+# H12 遥控器按键功能配置文件路径
+h12_package_name = "h12pro_controller_node"
+h12_package_path = rospkg.RosPack().get_path(h12_package_name)
+H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
 
 g_robot_type = ""
 ocs2_current_joint_state = []
@@ -336,9 +357,12 @@ async def get_robot_info_handler(
     robot_version = rospy.get_param('robot_version')
     payload = Payload(
         cmd="get_robot_info", 
-        data={"code": 0, 
-              "robot_type": robot_version,
-            }
+        data={
+            "code": 0, 
+            "robot_type": robot_version,
+            "music_folder_path": MUSIC_FILE_FOLDER,
+            "h12_config_path": H12_CONFIG_PATH
+        }
     )
 
     response = Response(
