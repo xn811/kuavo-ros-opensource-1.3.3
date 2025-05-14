@@ -91,12 +91,14 @@
     <arg name="cali" default="false" />
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
+    <arg name="joint_protect_enable" default="false" />
 
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />
     <param name="cali" value="$(arg cali)" />
     <param name="cali_arm" value="$(arg cali_arm)" />
     <param name="cali_leg" value="$(arg cali_leg)" />
+    <param name="joint_protect_enable" value="$(arg joint_protect_enable)" />
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" 
        output="screen" required="true" clear_params="true"
        launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)">
