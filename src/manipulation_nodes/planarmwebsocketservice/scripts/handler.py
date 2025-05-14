@@ -54,6 +54,19 @@ h12_package_name = "h12pro_controller_node"
 h12_package_path = rospkg.RosPack().get_path(h12_package_name)
 H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
 
+# 获取仓库路径
+ # 获取当前 Python 文件的路径
+current_file = os.path.abspath(__file__)
+# 获取文件所在目录
+current_dir = os.path.dirname(current_file)
+repo_path_result = subprocess.run(
+    ['git', 'rev-parse', '--show-toplevel'],
+    capture_output=True,
+    text=True,
+    cwd=current_dir
+)
+REPO_PATH = repo_path_result.stdout.strip()
+
 g_robot_type = ""
 ocs2_current_joint_state = []
 joint_names = [
@@ -361,7 +374,8 @@ async def get_robot_info_handler(
             "code": 0, 
             "robot_type": robot_version,
             "music_folder_path": MUSIC_FILE_FOLDER,
-            "h12_config_path": H12_CONFIG_PATH
+            "h12_config_path": H12_CONFIG_PATH,
+            "repo_path": REPO_PATH
         }
     )
 

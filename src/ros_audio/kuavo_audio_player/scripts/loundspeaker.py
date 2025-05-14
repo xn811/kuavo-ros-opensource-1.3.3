@@ -22,7 +22,7 @@ try:
     import samplerate
 except ImportError:
     print("samplerate 未安装，先安装 samplerate")
-    command = "pip install samplerate pyaudio numpy --index-url https://pypi.org/simple -y"
+    command = "pip install samplerate pyaudio numpy --index-url https://pypi.org/simple --no-input"
     os.system(command)
     import samplerate
 audio_path = "/home/lab/.config/lejuconfig/music"
@@ -35,6 +35,7 @@ class MusicPlayerNode:
 
         rospy.init_node('music_player_node')
         self.service = rospy.Service('play_music', playmusic, self.play_music_callback)
+        audio_path = rospy.get_param('music_path')
         self.music_directory = audio_path
         self.audio_subscriber = rospy.Subscriber('audio_data', Int16MultiArray, self.audio_callback, queue_size=10)
         self.stop_music_subscriber = rospy.Subscriber('stop_music', Bool, self.stop_music_callback, queue_size=10)   
@@ -168,9 +169,9 @@ class MusicPlayerNode:
     def play_music_callback(self, req):
         try:   
             music_file = os.path.join(self.music_directory, f"{req.music_number}")
-            play_command = ['play', '-q', music_file]
+            play_command = ['play', '-q', music_file,'vol', str(req.volume), 'speed', str(req.speed)]
             self.current_music_process.append(subprocess.Popen(play_command))
-            rospy.loginfo(f"播放本地音乐 {music_file}，音量 {req.volume}%，进程ID: {self.current_music_process[-1].pid}")
+            rospy.loginfo(f"播放本地音乐 {music_file}，音量 {req.volume}%，速度 {req.speed}倍，进程ID: {self.current_music_process[-1].pid}")
             return playmusicResponse(success_flag=True)
         except Exception as e:
             rospy.logerr(f"播放音乐出错: {str(e)}")

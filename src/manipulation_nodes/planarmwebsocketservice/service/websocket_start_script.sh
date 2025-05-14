@@ -24,17 +24,16 @@ done
 # 获取脚本自身所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "SCRIPT_DIR: $SCRIPT_DIR"
+cd "$SCRIPT_DIR"
 
-# 从脚本目录向上查找 kuavo-ros-control 路径
-current_path="$SCRIPT_DIR"
-while [[ "$current_path" != "/" ]]; do
-    if [[ "$(basename "$current_path")" == "kuavo-ros-control" ]]; then
-        echo "$current_path"
-        cd "$current_path"
-        break
-    fi
-    current_path=$(dirname "$current_path")
-done
+# 使用 git 命令获取仓库根目录
+REPO_ROOT=$(git rev-parse --show-toplevel)
+if [[ -z "$REPO_ROOT" ]]; then
+    echo "错误：无法找到 git 仓库根目录"
+    exit 1
+fi
+echo "仓库根目录: $REPO_ROOT"
+cd "$REPO_ROOT"
 
 source /opt/ros/noetic/setup.bash --extend
 source devel/setup.bash --extend

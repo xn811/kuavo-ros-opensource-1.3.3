@@ -99,6 +99,7 @@ add_service_files(
   handForceLevel.srv
   enableHandTouchSensor.srv
   playmusic.srv
+  SpeechSynthesis.srv
 )
 
 ## Generate actions in the 'action' folder

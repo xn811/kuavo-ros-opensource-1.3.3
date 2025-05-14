@@ -772,6 +772,40 @@ Get AprilTag data from odom coordinate frame.
 * **Return type:**
   dict
 
+### *class* kuavo_humanoid_sdk.KuavoRobotAudio
+
+Bases: `object`
+
+Audio system interface for controlling audio playback functionality of Kuavo humanoid robot.
+
+Provides functionality to play music files.
+
+#### play_audio(file_name: str, volume: float = 0.5, speed: float = 1.0) → bool
+
+Play the specified audio file.
+
+* **Parameters:**
+  **file_name** (*str*) – Name of the audio file to play
+* **Returns:**
+  True if the play request was successfully sent, False otherwise
+* **Return type:**
+  bool
+
+#### stop_music()
+
+Stop the currently playing audio.
+
+#### text_to_speech(text: str, volume: float = 0.5) → bool
+
+Synthesize and play the specified text.
+
+* **Parameters:**
+  **text** (*str*) – Text to be played
+* **Returns:**
+  True if the play request was successfully sent, False otherwise
+* **Return type:**
+  bool
+
 ### *class* kuavo_humanoid_sdk.KuavoRobotTools
 
 Bases: `object`

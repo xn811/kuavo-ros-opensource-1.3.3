@@ -48,6 +48,11 @@ API Reference
     :undoc-members:
     :show-inheritance:
 
+.. autoclass:: KuavoRobotAudio
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. autoclass:: KuavoRobotTools
     :members:
     :undoc-members:
@@ -70,3 +75,4 @@ API Reference
 
 .. automodule:: kuavo_humanoid_sdk.interfaces.data_types
     :members:
+

@@ -1,4 +1,5 @@
 string music_number
-int64 volume
+float32 volume
+float32 speed
 ---
 bool success_flag
