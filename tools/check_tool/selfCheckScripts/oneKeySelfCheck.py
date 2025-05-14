@@ -15,18 +15,34 @@ current_process = None
 
 # 定义要打印的日志信息列表
 target_logs = [
-    "IMU init successful!!!",
-    "IMU init failed!!!",
-    "end effector init successful!!!",
-    "end effector init failed!!!",
-    "motor init successful!!!",
-    "motor init failed!!!",
-    "+++++++++++++++++++++++++++ 测试Arm电机 +++++++++++++++++++++++++++",
-    "robot arm motor test failed.",
-    "测试Arm电机成功!!!",
-    "+++++++++++++++++++++++++++ 移动到校准姿态 +++++++++++++++++++++++++++",
-    "robot move to cali pos failed.",
-    "当前cali位置是否正确，[y/n] 输入[y]进入到准备姿态"
+    "IMU 总采样次数: ",
+    "数据读取失败次数: ",
+    "数据读取成功率: ", 
+    "Yaw角漂移检测失败！漂移量：",
+    "可能原因：IMU未校准、陀螺仪零偏过大或设备晃动",
+    "Yaw角稳定性检测通过！漂移量：",
+    "当前IMU（HIPNUC）不支持时间戳，无法统计更新频率.",
+    "IMU更新频率统计:",
+    "加速度计: 均值=",
+    "陀螺仪:   均值=",
+    "四元数:   均值=",
+    "获取IMU数据更新频率失败!!!",
+    "IMU 初始化成功!!!",
+    "IMU 初始化失败!!!",
+    "末端执行器(灵巧手)初始化成功!!!",
+    "末端执行器(灵巧手)初始化失败!!!",
+    "电机初始化成功!!!",
+    "电机初始化失败!!!",
+    "测试手臂电机>>",
+    "手臂关节",
+    "测试手臂电机失败, 请用户确认相应关节是否使能!!!",
+    "测试手臂电机成功!!!",
+    "测试腿部电机>>",
+    "测试腿部电机失败!!!",
+    "测试手臂电机成功!!!",
+    "测试手臂电机失败!!!",
+    "当前cali位置是否正确，[y/n] 输入[y]进入到准备姿态(执行完后可以输入[x]退出程序)",
+    "输入x退出程序："
 ]
 
 # 获取当前脚本所在的目录
@@ -38,6 +54,9 @@ OneKeyCheckSalveComputer_path = os.path.join(current_dir, 'OneKeyCheckSlaveCompu
 kuavo_ros_control_path = os.path.abspath(os.path.join(current_dir, "../../.."))
 # 打印kuavo-ros-control的路径
 print(f"kuavo-ros-control的路径为: {kuavo_ros_control_path}")
+
+# 获取当前Python脚本所在目录
+shell_script_path = os.path.join(current_dir, "compiling_dependent_lib.sh")
 
 # 计算相对路径
 launch_path = os.path.join(kuavo_ros_control_path, "hardware_node hardwareSelfCheck.launch")
@@ -74,7 +93,15 @@ def h12_remote_control_detection():
     if workspace_path not in sys.path:
         sys.path.append(workspace_path)
 
+    # 检查并赋予执行权限（关键修复）
+    if not os.access(shell_script_path, os.X_OK):
+        os.chmod(shell_script_path, 0o755)
+        # print(f"已为 {shell_script_path} 添加执行权限")
+
     try:
+        result = os.system(shell_script_path)
+        if result != 0:
+            print(f"Error occurred while running the shell script. Return code: {result}")
         from h12pro_controller_node.msg import h12proRemoteControllerChannel
         print("成功导入消息模块")
     except ImportError as e:
@@ -199,7 +226,7 @@ def run_roslaunch():
 
             # 生成支持点击的超链接
             clickable_link = f"\x1b]8;;file://{output_file_path}\x1b\\{output_file_path}\x1b]8;;\x1b\\"
-            print(f"ROS launch已启动，输出已保存到 {clickable_link}，你可以点击该链接查看详细信息。按Ctrl+C退出...")
+            print(f"ROS launch已启动，输出已保存到当前路径下 {clickable_link}，你可以点击该链接查看详细信息。按Ctrl+C退出...")
             roslaunch_running = True
 
             # 启动输入线程

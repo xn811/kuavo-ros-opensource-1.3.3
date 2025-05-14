@@ -9,6 +9,7 @@
 
     要做下位机自检首先要编译相关库
     catkin build hardware_node 
+
     source devel/setup.bash
 
     运行oneKeySelfCheck.py脚本选择 1
@@ -25,8 +26,6 @@
     脚本启动后会自动启动上位机的ros_application和ros_navigation程序,测试音响，麦克风，RGB和Depth图片获取，以及雷达信号获取
 
 5. h12信号检测
-    要先编译相关库
-    catkin build h12pro_controller_node
-    再运行脚本，选择 3 
+    运行脚本，选择 3 
 
 6. 如果在脚本运行中遇到无法解决问题，请联系唐宁进行反馈和解决
