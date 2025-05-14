@@ -91,7 +91,7 @@
     <arg name="cali" default="false" />
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
-    <arg name="joint_protect_enable" default="false" />
+    <arg name="joint_protect_enable" default="true" />
 
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />
