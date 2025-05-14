@@ -66,7 +66,6 @@ include_directories(
         include
         ${catkin_INCLUDE_DIRS}
         ${pinocchio_INCLUDE_DIRS}
-        ${kuavo_common_INCLUDE_DIRS}
 )
 if (kuavo_estimation_FOUND)
 message(STATUS "add kuavo_estimation include")
@@ -118,7 +117,6 @@ target_link_libraries(${PROJECT_NAME}
         ${pinocchio_LIBRARIES}
         humanoid_interface_shm
         drake::drake 
-        ${kuavo_common_LIBRARIES}
         )
 if (kuavo_estimation_FOUND)
 message(STATUS "add kuavo_estimation link")
@@ -186,7 +184,6 @@ target_link_libraries(nodelet_player
         ${catkin_LIBRARIES}
         ${pinocchio_LIBRARIES}
         drake::drake 
-        ${kuavo_common_LIBRARIES}
 )
 # if (kuavo_estimation_FOUND)
 # message(STATUS "add kuavo_estimation link to nodelet_player")

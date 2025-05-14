@@ -16,6 +16,5 @@ node_modules/
 new-docs
 .cache/
 **/build
-**/installed
 .aider*
 src/manipulation_nodes/planarmwebsocketservice/models/*.pt

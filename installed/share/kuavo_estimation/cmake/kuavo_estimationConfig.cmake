@@ -91,9 +91,9 @@ endif()
 # flag project as catkin-based to distinguish if a find_package()-ed project is a catkin project
 set(kuavo_estimation_FOUND_CATKIN_PROJECT TRUE)
 
-if(NOT "include;/media/data/gitlab-runner/builds/8rHoW4Dt/0/highlydynamic/kuavo-ros-control/src/kuavo_common/include;/usr/include/eigen3 " STREQUAL " ")
+if(NOT "include " STREQUAL " ")
   set(kuavo_estimation_INCLUDE_DIRS "")
-  set(_include_dirs "include;/media/data/gitlab-runner/builds/8rHoW4Dt/0/highlydynamic/kuavo-ros-control/src/kuavo_common/include;/usr/include/eigen3")
+  set(_include_dirs "include")
   if(NOT " " STREQUAL " ")
     set(_report "Check the issue tracker '' and consider creating a ticket if the problem has not been reported yet.")
   elseif(NOT " " STREQUAL " ")
@@ -185,7 +185,7 @@ foreach(t ${kuavo_estimation_EXPORTED_TARGETS})
   endif()
 endforeach()
 
-set(depends "")
+set(depends "kuavo_common")
 foreach(depend ${depends})
   string(REPLACE " " ";" depend_list ${depend})
   # the package name of the dependency must be kept in a unique variable so that it is not overwritten in recursive calls
