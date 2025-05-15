@@ -22,7 +22,7 @@ try:
     import samplerate
 except ImportError:
     print("samplerate 未安装，先安装 samplerate")
-    command = "pip install samplerate pyaudio numpy --index-url https://pypi.org/simple --no-input"
+    command = "pip install samplerate -i https://mirrors.aliyun.com/pypi/simple/ --no-input"
     os.system(command)
     import samplerate
 audio_path = "/home/lab/.config/lejuconfig/music"
