@@ -4,11 +4,15 @@ import time
 from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.data_types import (
     KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode,EndEffectorState)
-from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
+from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
+from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 
 class KuavoRobotState:
     def __init__(self, robot_type: str = "kuavo"):
-        self._rs_core = KuavoRobotStateCore()
+        if GlobalConfig.use_websocket:
+            self._rs_core = KuavoRobotStateCoreWebsocket()
+        else:
+            self._rs_core = KuavoRobotStateCore()
 
     @property
     def imu_data(self) -> KuavoImuData:

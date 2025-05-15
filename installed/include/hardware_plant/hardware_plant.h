@@ -36,13 +36,13 @@ inline std::vector<double> eigenToStdVector(const Eigen::VectorXd& vec) {
 
 struct HardwareParam {
     bool cali_leg{false};
-    std::vector<double> defalut_joint_pos;
+    std::vector<double> default_joint_pos;
     int robot_version{42};
     bool cali{false}; 
     bool cali_arm{false};
     int build_cppad_state{0};
     bool only_half_up_body{false};
-    bool teach_pedant_{false};
+    int teach_pendant_{0};
 };
 
 enum ImuType
@@ -90,6 +90,7 @@ public:
     void endEffectorCommand(std::vector<EndEffectorData> &end_effector_cmd);
     bool checkJointPos(const std::vector<JointParam_t> &joint_data, std::vector<uint8_t> ids, std::string &msg);
     void jointFiltering(std::vector<JointParam_t> &joint_data, double dt);
+    void setDefaultJointPos(std::vector<double> default_joint_pos);
     
     void setEcmasterDriverType(std::string type = "elmo");
     static void signalHandler(int sig);

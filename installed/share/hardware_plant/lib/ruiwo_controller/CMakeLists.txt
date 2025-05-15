@@ -15,22 +15,16 @@ if(Python3_FOUND)
 else()
     message(FATAL_ERROR "Python not found")
 endif()
-add_library(ruiwo_actuatorLib SHARED ruiwo_actuator.cpp)
-target_include_directories(ruiwo_actuatorLib PUBLIC ${Python3_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-target_link_libraries(ruiwo_actuatorLib PUBLIC Python3::Python stdc++fs -pthread)
 
-# 查找 YAML-CPP 库
 find_package(yaml-cpp REQUIRED)
 
-target_include_directories(ruiwo_actuatorLib PUBLIC ${Python3_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR} yaml-cpp)
+add_library(ruiwo_actuatorLib SHARED ruiwo_actuator.cpp)
+target_include_directories(ruiwo_actuatorLib PUBLIC ${Python3_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ruiwo_actuatorLib PUBLIC Python3::Python stdc++fs -pthread yaml-cpp)
 
 # 添加可执行文件
 add_executable(ruiwo_test ruiwo_test.cpp)
 target_include_directories(ruiwo_test PRIVATE ${PROJECT_SOURCE_DIR})
-
-
-# 链接 Python 库
 target_link_libraries(ruiwo_test PUBLIC ruiwo_actuatorLib)
 
 install(TARGETS ruiwo_actuatorLib

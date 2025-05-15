@@ -6,6 +6,10 @@ Before running any code examples, make sure to start the robot first by executin
 - For simulation: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (Example command)
 - For real robot: `roslaunch humanoid_controllers load_kuavo_real.launch` (Example command)
 
+#### NOTE
+If using websocket mode, you need to start the rosbridge server on robot first: `roslaunch rosbridge_server rosbridge_websocket.launch` (Example command)
+
+
 # API Reference
 
 ### *class* kuavo_humanoid_sdk.KuavoSDK
@@ -16,13 +20,21 @@ Bases: `object`
 
 Disable all logging output from the SDK.
 
-#### *static* Init(options: int = 1, log_level: str = 'INFO') → bool
+#### *static* Init(options: int = 1, log_level: str = 'INFO', websocket_mode: bool = False, websocket_host: str = "127.0.0.1", websocket_port: int = 9090) → bool
 
 Initialize the SDK.
 
 * **Parameters:**
-  **log_level** (*str*) – The logging level to use. Can be “ERROR”, “WARN”, “INFO”, “DEBUG”.
+  - **log_level** (*str*) – The logging level to use. Can be “ERROR”, “WARN”, “INFO”, “DEBUG”.
   Defaults to “INFO”.
+  - **websocket_mode** (*bool*) – Whether to use websocket mode for ROS communication. If True, the SDK will connect to ROS through websocket instead of direct ROS connection.
+  Defaults to False.
+  - **websocket_host** (*str*) – The host address of the rosbridge websocket server when using websocket mode.
+  Defaults to "127.0.0.1".
+  - **websocket_port** (*int*) – The port number of the rosbridge websocket server when using websocket mode.
+  Defaults to 9090.
+
+
 * **Returns:**
   True if initialization is successful, False otherwise.
 * **Return type:**

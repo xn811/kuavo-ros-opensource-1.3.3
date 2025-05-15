@@ -5,13 +5,17 @@ from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.end_effector import EndEffector
 from kuavo_humanoid_sdk.interfaces.data_types import EndEffectorSide, EndEffectorState
 from kuavo_humanoid_sdk.kuavo.core.leju_claw_control import LejuClawControl
-from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
+from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
+from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 
 class LejuClaw(EndEffector):
     def __init__(self):
         super().__init__(joint_names=['left_claw', 'right_claw'])
         self.leju_claw_control = LejuClawControl()
-        self._rb_state = KuavoRobotStateCore()
+        if GlobalConfig.use_websocket:
+            self._rb_state = KuavoRobotStateCoreWebsocket()
+        else:
+            self._rb_state = KuavoRobotStateCore()
 
     def control(self, target_positions: list, target_velocities:list=None, target_torques: list=None)->bool:
         """Control the claws to grip.

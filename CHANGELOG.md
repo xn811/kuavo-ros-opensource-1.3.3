@@ -5,6 +5,9 @@
 - [kuavo humanoid sdk] 更新安装文档和 API 文档，详情见 [文档链接](./src/kuavo_humanoid_sdk/README.md)
 
 ## 新增功能
+- 硬件节点默认打开关节保护检测功能，并取消触发关节保护之后的动作
+- [kuavo humanoid sdk] 新增视觉接口和工具类接口，详情见[使用案例](./src/kuavo_humanoid_sdk/examples/vision_robot_example.py)
+- 新增机器人 weboscket 节点配置成开机启动的 systemctl 服务
 - 新增版本号为 49 的机器人模型， 特点相机模型为 orbbec 
 - 下位机胸部 NUC 增加音频播放 ROS 服务
 - 新增一键自检功能：IMU硬件连接，手臂电机通讯响应，灵巧手抓握测试，遥控器硬件信号，上下位机通信检查，相机/雷达/音响检查, [文档链接](tools/check_tool/selfCheckScripts/README.md)
@@ -18,6 +21,18 @@
 - 站立保护功能支持站立失败缩腿后重新使用键盘或北通遥控器重复尝试站立
 
 ## 修复问题
+- 修复执行手臂电机辨识相序脚本报错找不到文件的问题
+- 修复 4pro 进阶版机器人半身控制时，H12播放手臂动作异常问题
+- 修复末端为夹爪时程序启动崩溃的问题，原因是：初始化夹爪 ROS timer 顺序比硬件夹爪资源要早，导致夹爪 timer callback 访问了非法的资源
+- 修复 HardwareTool.py 工具校准程序报错，手臂电机设置零点时提示找不到相关文件问题
+- 修复 ROBOT_VERSION 为 49 的 kuavo.json 配置文件缺少电流保护相关的配置`joint_current_limits`字段
+- 修复 websocket 广播机器人信息接口缺失`robot_action_file_folder`字段
+- 修复手眼标定 launch 文件中相机话题名称错误的问题
+- 修复终端日志频繁刷音频节点检测不到设备的问题
+- 修复 h12 遥控器开机自启动和使用终端启动（joystick_type=h12）存在不一致的问题 
+- 修复 ROBOT_VERSION 为 49 时缺少一些配置文件错误
+- 改进关节保护手部速度阈值以及关节保护电机力矩阈值
+- 改进关节保护堵转检测时间窗口从 0.1 增加到 0.2
 - 修复机器人半身状态下/轮臂机器人初始手臂不弯曲
 - 修复仿真和实物的键盘控制，请求原地旋转(j or l)10%无法执行的问题
 - 修复当前机器人不支持步态设置连续的单腿浮空状态的问题

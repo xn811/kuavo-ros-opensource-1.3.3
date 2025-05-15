@@ -78,6 +78,18 @@ add_message_files(
   yoloDetection.msg
   AprilTagDetection.msg
   AprilTagDetectionArray.msg
+
+  # motion_capture_ik
+  robotArmQVVD.msg
+  ikSolveError.msg
+  handPose.msg
+  armHandPose.msg
+  twoArmHandPose.msg
+  headBodyPose.msg
+  ikSolveParam.msg
+  twoArmHandPoseCmd.msg
+  robotHandPosition.msg
+  headBodyPose.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -99,6 +111,13 @@ add_service_files(
   handForceLevel.srv
   enableHandTouchSensor.srv
   playmusic.srv
+
+  # motion_capture_ik
+  changeArmCtrlMode.srv
+  twoArmHandPoseCmdSrv.srv
+  changeArmCtrlModeKuavo.srv
+  fkSrv.srv
+
   SpeechSynthesis.srv
 )
 

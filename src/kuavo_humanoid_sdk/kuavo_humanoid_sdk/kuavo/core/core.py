@@ -19,20 +19,19 @@ Each state has an entry callback that handles initialization when entering that 
 
 import time
 import math
-import rospy
 import threading
 import numpy as np
 from typing import Tuple
 from transitions import Machine, State
 
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
-from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl
+from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl, KuavoRobotControlWebsocket
 from kuavo_humanoid_sdk.kuavo.core.ros.vision import KuavoRobotVisionCore
 from kuavo_humanoid_sdk.kuavo.core.ros.tools import KuavoRobotToolsCore
-from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
+from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-
+from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 # Define robot states
 ROBOT_STATES = [
     State(name='stance', on_enter=['_on_enter_stance']),
@@ -67,8 +66,13 @@ class KuavoRobotCore:
                 send_event=True
             )
             # robot control
-            self._control = KuavoRobotControl()
-            self._rb_state = KuavoRobotStateCore()
+            if GlobalConfig.use_websocket:
+                self._control = KuavoRobotControlWebsocket()
+                self._rb_state = KuavoRobotStateCoreWebsocket()
+            else:
+                self._control = KuavoRobotControl()
+                self._rb_state = KuavoRobotStateCore()
+                
             self._arm_ctrl_mode = KuavoArmCtrlMode.AutoSwing
             # robot vision
             self._robot_vision = KuavoRobotVisionCore()

@@ -49,12 +49,12 @@ git checkout dev
 - docker镜像可以自行根据后续章节使用`./docker/Dockerfile`构建，或者下载已经编译好的镜像：
 
 ```bash  
-wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_ocs2_mpc_wbc_img_0_3.tar
+wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_mpc_wbc_img_v0.6.1.tar.gz
 ```
 
 - 执行以下命令导入容器镜像：
 ```bash
-docker load -i kuavo_opensource_ocs2_mpc_wbc_img_0_3.tar
+docker load -i kuavo_opensource_mpc_wbc_img_v0.6.1.tar.gz
 ```
 - 执行`./docker/run.sh`进入容器后，默认在仓库的映射目录`/root/kuavo_ws`，执行以下命令开始编译：
 
@@ -110,7 +110,11 @@ roslaunch humanoid_controllers load_kuavo_isaac_sim.launch  # 启动控制器、
 - `lejuclaw` : 二指夹爪
 - `qiangnao_touch` : 触觉灵巧手
 
-- 实物运行时，开机第一次需要先在cali模式下运行一次，确认机器人姿态和位置正确(机器人所有关节回到零位)
+在运行实物时，您可以通过指定`ruiwo_cxx_sdk`参数来选择手臂电机使用 C++ SDK 还是 Python SDK：
+- 默认值为`true`表示使用 C++ SDK
+- `false`表示使用 Python SDK, 比如`roslaunch humanoid_controllers load_kuavo_real.launch ruiwo_cxx_sdk:=true`
+
+实物运行时，开机第一次需要先在cali模式下运行一次，确认机器人姿态和位置正确(机器人所有关节回到零位)
 
 ```bash
 source devel/setup.bash

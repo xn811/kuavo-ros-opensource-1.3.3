@@ -30,6 +30,7 @@
     <arg name="only_half_up_body" default="false"/>
     <arg name="stand_up_protect" default="true"/>
     <arg name="redundant_imu" default="false"/>
+    <arg name="ruiwo_cxx_sdk" default="true"/>
     <!-- The file defining gait definition -->
 
     <!-- Set with_coredump parameter based on coredump value -->
@@ -61,6 +62,7 @@
     <param name="use_estimator_contact"  value="$(arg use_estimator_contact)"/>
     <param name="stand_up_protect" value="$(arg stand_up_protect)"/>
     <param name="redundant_imu" value="$(arg redundant_imu)"/>
+    <param name="ruiwo_cxx_sdk" value="$(arg ruiwo_cxx_sdk)"/>
 
     <!-- Launch script to collect kuavo-launch information -->
     <node pkg="humanoid_controllers" type="collect_launch_info.sh" name="collect_launch_info" />
@@ -104,8 +106,13 @@
     </node>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_controller" args="load HumanoidControllerNodelet nodelet_manager" respawn="false" output="screen" required="true" />
+    <group unless="$(arg ruiwo_cxx_sdk)">
+      <node pkg="nodelet" type="nodelet" name="nodelet_hardware" args="load HardwareNodelet nodelet_manager" respawn="false" output="screen" required="true"  />
+    </group>
+    <group if="$(arg ruiwo_cxx_sdk)">
+      <node pkg="nodelet" type="nodelet" name="nodelet_hardware" args="load HardwareNodeletCXX nodelet_manager" respawn="false" output="screen" required="true"  />
+    </group>
 
-    <node pkg="nodelet" type="nodelet" name="nodelet_hardware" args="load HardwareNodelet nodelet_manager" respawn="false" output="screen" required="true"  />
     <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
     <group if="$(arg use_joystick)">
       <group if="$(eval arg('joystick_type') == 'h12')">

@@ -39,6 +39,11 @@ RuiWoActuator::~RuiWoActuator()
 
 int RuiWoActuator::initialize()
 {
+    std::cout << "===============================================" << std::endl;
+    std::cout << "RUIWO Python SDK" << std::endl;
+    std::cout << "Calibration Mode: " << (is_cali_ ? "True" : "False") << std::endl;
+    std::cout << "===============================================" << std::endl;
+
     // 获取yaml文件信息，确认是否使用多圈编码
     std::string path = getHomePath();
     if (path.empty()) {

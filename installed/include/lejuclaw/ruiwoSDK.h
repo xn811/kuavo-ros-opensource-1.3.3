@@ -50,7 +50,7 @@ typedef struct {
     CanComParam can_com_param;
 } RUIWOTools;
 
-int open_canbus(RUIWOTools* ruiwo, int init_bmlib);
+int open_canbus(RUIWOTools* ruiwo, int init_bmlib, unsigned char *version);
 int close_canbus(RUIWOTools* ruiwo);
 uint32_t float_to_int(float float_num, float min_num, float max_num, uint8_t bit_num);
 float int_to_float(uint32_t int_num, float min_num, float max_num, uint8_t bit_num);
@@ -60,6 +60,7 @@ int enter_reset_state(RUIWOTools* ruiwo, uint32_t dev_id, float* state_list);
 int set_zero_position(RUIWOTools* ruiwo, uint32_t dev_id, float* state_list);
 int run_servo_mode(RUIWOTools* ruiwo, uint32_t dev_id, float pos, float vel, float pos_kp, float pos_kd, float vel_kp, float vel_kd, float vel_ki, float* state_list);
 int run_ptm_mode(RUIWOTools* ruiwo, uint32_t dev_id, float pos, float vel, float pos_kp, float pos_kd, float torque, float* state_list);
+int run_ptm_mode_No_response(RUIWOTools* ruiwo, uint32_t dev_id, float pos, float vel, float pos_kp, float pos_kd, float torque, float* state_list);
 int run_vel_mode(RUIWOTools* ruiwo, uint32_t dev_id, float vel, float vel_kp, float vel_kd, float vel_ki, float* state_list);
 int run_torque_mode(RUIWOTools* ruiwo, uint32_t dev_id, float torque, float* state_list);
 void initialize_ruiwoSDK(RUIWOTools *ruiwo);
