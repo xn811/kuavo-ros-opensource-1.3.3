@@ -192,8 +192,7 @@ def run_roslaunch():
     global target_logs
 
     package_name_list = [
-                    "hardware_node",
-                    "humanoid_controllers"
+                    "hardware_node"
                     ]
     if not check_package_compiled(package_name_list):
         return 1
