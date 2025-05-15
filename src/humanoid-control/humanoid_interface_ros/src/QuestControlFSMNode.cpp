@@ -117,6 +117,8 @@ namespace ocs2
             get_arm_mode_service_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/humanoid_get_arm_ctrl_mode");
             command_height_ = 0.0;
             command_add_height_pre_ = 0.0;
+
+            arm_mode_pub_ = nodeHandle_.advertise<std_msgs::Int32>("/quest3/triger_arm_mode", 1);
         }
 
         void run()
@@ -178,6 +180,10 @@ namespace ocs2
             if (change_arm_mode_service_client_.call(srv))
             {
                 ROS_INFO("SetArmModeSrv call successful");
+                // 发布当前手臂模式
+                std_msgs::Int32 arm_mode_msg;
+                arm_mode_msg.data = mode;
+                arm_mode_pub_.publish(arm_mode_msg);
             }
             else
             {
@@ -194,6 +200,10 @@ namespace ocs2
             if (change_arm_mode_service_VR_client_.call(srv))
             {
                 ROS_INFO("SetArmModeSrv call successful");
+                // 发布当前手臂模式
+                std_msgs::Int32 arm_mode_msg;
+                arm_mode_msg.data = mode;
+                arm_mode_pub_.publish(arm_mode_msg);
             }
             else
             {
@@ -257,8 +267,8 @@ namespace ocs2
                 }
                 else if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed) // 启用手臂控制
                 {
-                    current_arm_mode_ = callGetArmModeSrv();
-                    current_arm_mode_ = (current_arm_mode_!=2) ? 2 : 1;
+                    current_arm_mode_ = (current_arm_mode_!=1) ? 1 : 2;
+                    std::cout << "[QuestControlFSM] change arm mode to :" << current_arm_mode_ << std::endl;
                     if (only_half_up_body_) {
                         callVRSetArmModeSrv(current_arm_mode_);
                     }
@@ -707,7 +717,7 @@ namespace ocs2
         ros::ServiceClient change_arm_mode_service_VR_client_;
         ros::ServiceClient get_arm_mode_service_client_;
 
-        int current_arm_mode_{1};
+        int current_arm_mode_{2};
 
         float total_mode_scale_{1.0};
 
@@ -735,6 +745,8 @@ namespace ocs2
 
         bool last_cmd_close_to_zero_{true};
         bool only_half_up_body_{false};
+
+        ros::Publisher arm_mode_pub_;
     };
 }
 

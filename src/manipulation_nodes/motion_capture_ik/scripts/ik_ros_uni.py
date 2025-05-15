@@ -5,7 +5,7 @@ import signal
 import rospy
 import argparse
 import argparse
-from std_msgs.msg import Float32, Float32MultiArray
+from std_msgs.msg import Float32, Float32MultiArray, Int32
 from sensor_msgs.msg import JointState
 from handcontrollerdemorosnode.msg import armPoseWithTimeStamp, robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
@@ -133,6 +133,7 @@ class IkRos:
         self.__send_srv = send_srv
         self.__freeze_finger = False
         self.__button_y_last = False
+        self.trigger_reset_mode = False
 
         # self.hand_pub_timer = rospy.Timer(rospy.Duration(0.001), self.hand_finger_data_process)
 
@@ -215,6 +216,12 @@ class IkRos:
         self.ik_thread = threading.Thread(target=self.ik_controller_thread)
         self.ik_thread.start()
         set_thread_priority(self.ik_thread, int(SCHED_FIFO), 50)
+
+        # 保存初始关节角度
+        self.initial_q_first = None
+        
+        # 订阅手臂模式topic
+        self.arm_mode_sub = rospy.Subscriber('/quest3/triger_arm_mode', Int32, self.arm_mode_callback)
 
         self.run()
         self.ik_thread.join()
@@ -366,6 +373,7 @@ class IkRos:
         if self.__as_mc_ik:
             print("[ik]: If you want to stop teleoperation, please make a Shot-guesture(hold on for 1-2 seconds).")
         q_last = self.arm_ik.q0() if self.external_q0 is None else self.external_q0
+        pre_q_first = q_last.copy()
         # q_last[-14:] = self.__joint_states  # two arm joint states
         # q_last[7:14] = [0.1084,  0.0478 , 0.1954 ,-0.0801 , 0.1966 ,-0.5861 , 0.0755]
         q_now = q_last
@@ -380,6 +388,14 @@ class IkRos:
             is_runing = self.quest3_arm_info_transformer.is_runing if self.__as_mc_ik else True
             self.__current_pose, self.__current_pose_right = self.get_two_arm_pose(q_last)
             self.pub_solved_arm_eef_pose(q_last, self.__current_pose, self.__current_pose_right)
+            if self.trigger_reset_mode:
+                self.__target_pose = (None, None)
+                self.__current_pose = (None, None)
+                self.__target_pose_right = (None, None)
+                self.__current_pose_right = (None, None)
+                q_last = pre_q_first.copy()
+                self.trigger_reset_mode = False
+
             if(self.__as_mc_ik and self.quest3_arm_info_transformer.check_if_vr_error()):
                 rate.sleep()
                 print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3 or check the battery level of the joystick!!!\.\033[0m")
@@ -387,6 +403,11 @@ class IkRos:
             elif(self.__as_mc_ik and self.judge_target_is_far(0.35) or not is_runing):
                 rate.sleep()
                 sys.stdout.write("\rStatus: {}, is target far?: {}".format("RUNING" if is_runing else "STOPED", self.judge_target_is_far()))
+                continue
+            
+            if self.__target_pose[0] is None or self.__target_pose_right[0] is None or \
+                self.__current_pose[0] is None or self.__current_pose_right[0] is None:
+                rate.sleep()
                 continue
             if self.arm_ik.type().name() == IkTypeIdx.TorsoIK.name():
                 l_hand_pose, l_hand_RPY = None, None
@@ -655,9 +676,9 @@ class IkRos:
         """
         If target is far, return True, else return False.
         """
-        if self.__target_pose is None or self.__target_pose_right is None:
+        if self.__target_pose[0] is None or self.__target_pose_right[0] is None:
             return False
-        if self.__current_pose is None or self.__current_pose_right is None:
+        if self.__current_pose[0] is None or self.__current_pose_right[0] is None:
             return False
         pos_left, _ = self.__current_pose
         pos_right, _ = self.__current_pose_right
@@ -769,6 +790,16 @@ class IkRos:
                 # print(f"left_claw_pos: {left_claw_pos}, right_claw_pos: {right_claw_pos}")
             else:
                 return
+
+    # 添加手臂模式回调函数
+    def arm_mode_callback(self, msg):
+        new_mode = msg.data
+        if new_mode != 2:  # 当模式不是2时
+            # 重置所有姿态
+            print(f"\033[91m[IK]Reset arm mode.\033[0m")
+            self.trigger_reset_mode = True
+            
+
 
 if __name__ == "__main__":
     rospy.init_node("diff_ik_node", anonymous=True)
