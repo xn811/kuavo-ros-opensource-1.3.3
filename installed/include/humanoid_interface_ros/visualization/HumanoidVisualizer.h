@@ -108,9 +108,6 @@ namespace ocs2
 
       void updateHeadJointPositions(const vector_t &positions);
       
-      void updateHandJointPositions(const vector_t &positions);
-
-
       void updateSimplifiedArmPositions(const vector_t &positions);
       
       bool getJointLimits(const std::string &joint_name, std::pair<double, double> &limits) const;
@@ -146,9 +143,6 @@ namespace ocs2
       bool updateHeadJointPositions_ = false;
       std::vector<double> head_joint_positions_;
       std::vector<double> simplifiedJointPositions_;
-      std::vector<std::string> dexhand_joint_names_;
-      bool updateDexhandJointPositions_ = false;
-      std::vector<double> dexhand_joint_positions_;
 
       scalar_t lastTime_;
       scalar_t minPublishTimeDifference_;
