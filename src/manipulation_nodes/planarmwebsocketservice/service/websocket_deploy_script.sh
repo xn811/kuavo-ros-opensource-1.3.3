@@ -14,6 +14,8 @@ fi
 
 # 更新服务脚本路径
 
+ROBOT_VERSION=$ROBOT_VERSION
+
 # 获取当前脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -22,6 +24,7 @@ SERVICE_FILE="$SCRIPT_DIR/websocket_start.service"
 START_SCRIPT_PATH="$SCRIPT_DIR/websocket_start_script.sh"
 
 # 替换 ExecStart 路径
+sed -i "s|^Environment=ROBOT_VERSION=.*|Environment=ROBOT_VERSION=$ROBOT_VERSION|" $SERVICE_FILE
 sudo sed -i "s|^ExecStart=.*|ExecStart=/bin/bash $START_SCRIPT_PATH|" $SERVICE_FILE
 sudo cp $SERVICE_FILE /etc/systemd/system/
 
@@ -55,7 +58,9 @@ fi
 sudo catkin clean -y
 catkin config -DCMAKE_ASM_COMPILER=/usr/bin/as -DCMAKE_BUILD_TYPE=Release # Important! 
 source installed/setup.bash     # 加载一些已经安装的ROS包依赖环境，包括硬件包等
-catkin build humanoid_controllers humanoid_plan_arm_trajectory planarmwebsocketservice
+catkin build humanoid_controllers
+catkin build humanoid_plan_arm_trajectory
+catkin build planarmwebsocketservice
 
 # 重新启动服务
 sudo systemctl daemon-reload

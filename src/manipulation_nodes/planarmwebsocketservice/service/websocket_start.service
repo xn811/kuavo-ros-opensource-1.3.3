@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
+Environment=ROBOT_VERSION=40
 ExecStart=/bin/bash /home/lab/kuavo-ros-opensource/src/manipulation_nodes/planarmwebsocketservice/service/websocket_start_script.sh
 Restart=always
 RestartSec=5s
