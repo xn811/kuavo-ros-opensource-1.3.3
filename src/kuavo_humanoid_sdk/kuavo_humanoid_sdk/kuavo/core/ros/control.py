@@ -17,8 +17,8 @@ try:
                                 footPose, footPoseTargetTrajectories, dexhandCommand)
     from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
                             controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest)
-    from kuavo_humanoid_sdk.msg.motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
-    from kuavo_humanoid_sdk.msg.motion_capture_ik.srv import twoArmHandPoseCmdSrv, fkSrv
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
 except:
     pass
 

@@ -67,9 +67,13 @@
     <!-- Launch script to collect kuavo-launch information -->
     <node pkg="humanoid_controllers" type="collect_launch_info.sh" name="collect_launch_info" />
     
-   <!-- mpc node -->
+    <!-- teach_pendant=1, teach pendant mode -->
     <param name="teach_pendant"  value="$(arg teach_pendant)"/>
 
+    <group if="$(eval arg('teach_pendant') == 1)">
+      <param name="stand_up_protect" value="false"/>
+    </group>
+    
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">
       <node pkg="humanoid_interface_ros" type="humanoid_sqp_mpc" name="humanoid_sqp_mpc" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)"/>

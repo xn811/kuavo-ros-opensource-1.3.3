@@ -9,7 +9,7 @@ from geometry_msgs.msg import Pose, Quaternion
 from sensor_msgs.msg import JointState
 from visualization_msgs.msg import Marker
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
-from motion_capture_ik.msg import headBodyPose
+from kuavo_msgs.msg import headBodyPose
 import rospy
 import time
 import tf

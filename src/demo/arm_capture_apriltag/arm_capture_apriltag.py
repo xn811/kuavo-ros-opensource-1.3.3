@@ -9,8 +9,8 @@ import time
 import argparse
 from kuavo_msgs.msg import armTargetPoses
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, changeArmCtrlModeResponse
-from motion_capture_ik.srv import twoArmHandPoseCmdSrv
-from motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam
+from kuavo_msgs.srv import twoArmHandPoseCmdSrv
+from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
 
 from kuavo_msgs.msg import robotHandPosition
 from kuavo_msgs.msg import robotHeadMotionData

@@ -16,7 +16,7 @@ from kuavo_msgs.msg import robotHandPosition, sensorsData
 import numpy as np
 from scipy.interpolate import CubicSpline
 import copy
-from motion_capture_ik.msg import twoArmHandPoseCmd, ikSolveParam, twoArmHandPose
+from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, twoArmHandPose
 from geometry_msgs.msg import Transform, TransformStamped
 
 import copy
