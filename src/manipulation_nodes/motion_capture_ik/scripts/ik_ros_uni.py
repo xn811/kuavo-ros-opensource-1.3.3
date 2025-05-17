@@ -357,7 +357,7 @@ class IkRos:
         if self.__as_mc_ik:
             print("[ik]: Waiting for OK-guesture(hold on for 1-2 seconds) to start teleoperation...")
             while not self.quest3_arm_info_transformer.is_runing:
-                self.hand_finger_data_process(0)
+                #self.hand_finger_data_process(0)
                 if self.stop_event.is_set():
                     print("[ik]: Stop event is set, exit.")
                     return
@@ -383,7 +383,7 @@ class IkRos:
         sum_time_cost = 0.0
         arm_q_filtered = [0.0] * 14
         while not rospy.is_shutdown():
-            self.hand_finger_data_process(0)
+            #self.hand_finger_data_process(0)
             # print(f"q_now: {q_now}")
             is_runing = self.quest3_arm_info_transformer.is_runing if self.__as_mc_ik else True
             self.__current_pose, self.__current_pose_right = self.get_two_arm_pose(q_last)
