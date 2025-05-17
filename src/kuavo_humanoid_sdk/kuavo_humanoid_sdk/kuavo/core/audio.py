@@ -1,6 +1,5 @@
 import time
 import math
-import rospy
 import threading
 import numpy as np
 from typing import Tuple

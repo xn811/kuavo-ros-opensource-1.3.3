@@ -1,20 +1,28 @@
 #! /usr/bin/env python3
 # coding: utf-8
-import rospy
+
 import copy
 import time
 import numpy as np
-import tf2_ros
-import tf.transformations as tf_trans
 from typing import Tuple, Union
-from std_msgs.msg import Float64
-from nav_msgs.msg import Odometry
-from sensor_msgs.msg import JointState
-from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
+from kuavo_humanoid_sdk.common.logger import SDKLogger
+
+try:
+    import rospy
+    import tf2_ros
+    import tf.transformations as tf_trans
+    from std_msgs.msg import Float64
+    from nav_msgs.msg import Odometry
+    from sensor_msgs.msg import JointState
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
+    from geometry_msgs.msg import TransformStamped
+except ImportError:
+    pass
+
 from kuavo_humanoid_sdk.interfaces.data_types import (PoseQuaternion, HomogeneousMatrix)
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
-from kuavo_humanoid_sdk.common.logger import SDKLogger
-from geometry_msgs.msg import TransformStamped
+
+
 
 class KuavoRobotToolsCore:
     """Provides core ROS tools for Kuavo humanoid robot transformations.
@@ -32,7 +40,7 @@ class KuavoRobotToolsCore:
             self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
     def _get_tf_tree_transform(self, target_frame: str, source_frame: str, 
-                     time=rospy.Time(0), timeout=1.0,
+                     time=0.0, timeout=1.0,
                      return_type: str = "pose_quaternion") -> Union[PoseQuaternion, HomogeneousMatrix, None]:
         """Gets transform between coordinate frames.
         
@@ -53,6 +61,7 @@ class KuavoRobotToolsCore:
             tf2_ros.ConnectivityException: If transform connectivity issue
             tf2_ros.ExtrapolationException: If transform time is out of range
         """
+        time = rospy.Time(time)
         try:
             transform = self.tf_buffer.lookup_transform(
                 target_frame,

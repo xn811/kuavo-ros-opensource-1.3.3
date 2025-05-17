@@ -72,12 +72,13 @@ class KuavoRobotCore:
             else:
                 self._control = KuavoRobotControl()
                 self._rb_state = KuavoRobotStateCore()
+                # robot vision
+                self._robot_vision = KuavoRobotVisionCore()
+                # robot ros tf
+                self._robot_tf_tool = KuavoRobotToolsCore()
                 
             self._arm_ctrl_mode = KuavoArmCtrlMode.AutoSwing
-            # robot vision
-            self._robot_vision = KuavoRobotVisionCore()
-            # robot ros tf
-            self._robot_tf_tool = KuavoRobotToolsCore()
+            
             # register gait changed callback
             self._rb_state.register_gait_changed_callback(self._humanoid_gait_changed)
             # initialized

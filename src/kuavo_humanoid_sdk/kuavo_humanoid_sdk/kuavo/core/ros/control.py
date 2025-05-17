@@ -272,9 +272,9 @@ class ControlEndEffectorWebsocket:
                 ]
             }
             response = service.call(request)
-            if not response.get('result', False):
+            if not response.get('success', False):
                 SDKLogger.error(f"Failed to execute gesture '{gestures}': {response.get('message', '')}")
-            return response.get('result', False)
+            return response.get('success', False)
         except Exception as e:
             SDKLogger.error(f"Service call failed: {e}")
             return False

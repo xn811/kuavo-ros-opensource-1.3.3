@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 # coding: utf-8
-import rospy
+
 import copy
 import time
 from collections import deque
@@ -10,13 +10,17 @@ from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffecto
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.interfaces.data_types import (AprilTagData)
 
-from std_msgs.msg import Float64
-from nav_msgs.msg import Odometry
-from sensor_msgs.msg import JointState
-from apriltag_ros.msg import AprilTagDetectionArray
-from geometry_msgs.msg import TransformStamped, PoseStamped
-import tf2_ros
-import tf2_geometry_msgs
+try:
+    import rospy
+    from std_msgs.msg import Float64
+    from nav_msgs.msg import Odometry
+    from sensor_msgs.msg import JointState
+    from apriltag_ros.msg import AprilTagDetectionArray
+    from geometry_msgs.msg import TransformStamped, PoseStamped
+    import tf2_ros
+    import tf2_geometry_msgs
+except ImportError:
+    pass
 
 class KuavoRobotVisionCore:
     """Handles vision-related data processing for Kuavo humanoid robot.
@@ -59,7 +63,7 @@ class KuavoRobotVisionCore:
                 pose = []
             )
 
-    def _apriltag_data_callback_camera(self, data: AprilTagDetectionArray):
+    def _apriltag_data_callback_camera(self, data):
         """Callback for processing AprilTag detections from camera.
         
         Args:
@@ -87,7 +91,7 @@ class KuavoRobotVisionCore:
         # # debug
         # rospy.loginfo("Apriltag data from camera: %s", self._apriltag_data_from_camera)
 
-    def _apriltag_data_callback_base(self, data: AprilTagDetectionArray):
+    def _apriltag_data_callback_base(self, data):
         """Callback for processing AprilTag detections from base link.
         
         Args:

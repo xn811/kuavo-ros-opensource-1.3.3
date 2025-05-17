@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import rospy
-from std_msgs.msg import Bool
+
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.kuavo.core.core import KuavoRobotCore
-from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import  playmusic, playmusicRequest
-from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import  SpeechSynthesis, SpeechSynthesisRequest
+
+try:
+    import rospy
+    from std_msgs.msg import Bool
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import  playmusic, playmusicRequest
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import  SpeechSynthesis, SpeechSynthesisRequest
+except ImportError:
+    pass
+
 class Audio:
     """Audio system interface for controlling audio playback functionality of Kuavo humanoid robot.
     

@@ -5,7 +5,10 @@ from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.interfaces.data_types import (AprilTagData)
 from kuavo_humanoid_sdk.kuavo.core.ros.vision import KuavoRobotVisionCore
 
-from apriltag_ros.msg import AprilTagDetectionArray
+try:
+    from apriltag_ros.msg import AprilTagDetectionArray
+except ImportError:
+    pass
 
 class KuavoRobotVision:
     """Vision system interface for Kuavo humanoid robot.

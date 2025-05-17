@@ -2,7 +2,7 @@ import time
 import math
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot, KuavoRobotState
 from kuavo_humanoid_sdk import KuavoPose
-
+ 
 if __name__ == "__main__":
     # !!! Initialize Kuavo SDK with IK module !!!
     if not KuavoSDK.Init(options=KuavoSDK.Options.WithIK): # Init! Important! if U use IK, you must use this option!
