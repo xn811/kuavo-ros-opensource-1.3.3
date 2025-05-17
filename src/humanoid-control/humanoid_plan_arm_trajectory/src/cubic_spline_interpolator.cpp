@@ -19,6 +19,9 @@ void CubicSplineInterpolator::initialize(ros::NodeHandle& nh, ros::NodeHandle& p
   initializeSpecific();
 }
 
+void CubicSplineInterpolator::initializeLimitations() {
+}
+
 void CubicSplineInterpolator::interpolate() {
   std::vector<Eigen::MatrixXd> pos_samples;
   for (const auto& position : positions_) {

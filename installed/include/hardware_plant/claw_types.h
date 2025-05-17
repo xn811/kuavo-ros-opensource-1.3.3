@@ -15,7 +15,7 @@ struct JointState {
 
 struct ClawState {
     JointState data;
-    std::vector<int8_t> state;
+    std::vector<int8_t> state = {0, 0};
 };
 
 struct lejuClawCommand {

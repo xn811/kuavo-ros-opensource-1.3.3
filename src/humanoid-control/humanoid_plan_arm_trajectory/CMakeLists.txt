@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   message_runtime
   trajectory_msgs
+  urdf
 )
 
 find_package(drake REQUIRED)

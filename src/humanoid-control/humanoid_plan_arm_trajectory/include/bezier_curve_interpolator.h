@@ -49,6 +49,7 @@ namespace ocs2 {
         virtual void initialize(ros::NodeHandle& nh, ros::NodeHandle& private_nh);
       private:
         void initializeSpecific() override;
+        void initializeLimitations() override;
         void interpolate() override;
         void update() override;
         void reset() override;
@@ -61,6 +62,7 @@ namespace ocs2 {
         double total_time_ = 0.0;
         ControlPointsType control_points_;
         std::vector<std::list<BezierCurve>> bezier_curves_; 
+        Eigen::MatrixXd joint_limits_;
     };
   }
 }

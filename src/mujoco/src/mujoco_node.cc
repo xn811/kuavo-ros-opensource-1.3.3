@@ -923,6 +923,9 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
       std::cout << "[mujoco_node]: init dexhand node" << std::endl;
       g_dexhand_node = std::make_shared<DexHandMujocoRosNode>();
       g_dexhand_node->init(*g_nh_ptr, m, RHandJointsAddr, LHandJointsAddr);
+
+      int hand_joints_num = g_dexhand_node->get_hand_joints_num();
+      g_nh_ptr->setParam("end_effector_joints_num", hand_joints_num);
   }
 
   std::cout << "[mujoco_node]: waiting for init qpos" << std::endl;

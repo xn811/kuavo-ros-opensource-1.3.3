@@ -17,6 +17,7 @@ class CubicSplineInterpolator : public HumanoidPlanArmTrajectory {
         ~CubicSplineInterpolator()=default;
         virtual void initialize(ros::NodeHandle& nh, ros::NodeHandle& private_nh);
       private:
+        void initializeLimitations() override;
         void initializeSpecific() override;
         void interpolate() override;
         void update() override;
