@@ -316,6 +316,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   BufferedValue<TargetTrajectories> armFullDofTargetTrajectories_;
 
   BufferedValue<TargetTrajectories> poseTargetTrajectories_;
+  BufferedValue<vector_t> armWrenchBuffer_;
 
   int cntMPC_ = 0;
   ros::NodeHandle nodeHandle_;
