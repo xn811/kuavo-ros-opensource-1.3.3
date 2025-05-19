@@ -60,6 +60,50 @@ class KuavoArmCtrlMode(Enum):
     AutoSwing = 1 
     ExternalControl = 2
 
+class KuavoManipulationMpcFrame(Enum):
+    """Enum class representing the manipulation mpc frame for the Kuavo robot end effector.
+
+    Attributes:
+        KeepCurrentFrame: Keep the current frame (value: 0)
+        WorldFrame: World frame (value: 1)
+        LocalFrame: Local frame (value: 2)
+        VRFrame: VR frame (value: 3)
+        ManipulationWorldFrame: Manipulation world frame (value: 4)
+    """
+    KeepCurrentFrame = 0
+    WorldFrame = 1
+    LocalFrame = 2
+    VRFrame = 3
+    ManipulationWorldFrame = 4
+    ERROR = -1
+
+class KuavoManipulationMpcCtrlMode(Enum):
+    """Enum class representing the control mode for the Kuavo robot manipulation MPC.
+
+    Attributes:
+        NoControl: No control (value: 0)
+        ArmOnly: Only control the arm (value: 1)
+        BaseOnly: Only control the base (value: 2)
+        BaseArm: Control both the base and the arm (value: 3)
+        ERROR: Error state (value: -1)
+    """
+    NoControl = 0
+    ArmOnly = 1
+    BaseOnly = 2
+    BaseArm = 3
+    ERROR = -1
+
+class KuavoManipulationMpcControlFlow(Enum):
+    """Enum class representing the control data flow for the Kuavo robot manipulation.
+
+    Attributes:
+        ThroughFullBodyMpc: Control data flows through full-body MPC before entering WBC (value: 0)
+        DirectToWbc: Control data flows directly to WBC without full-body MPC (value: 1)
+        Error: Invalid control path (value: -1)
+    """
+    ThroughFullBodyMpc = 0
+    DirectToWbc = 1
+    Error = -1
 
 @dataclass
 class EndEffectorState:

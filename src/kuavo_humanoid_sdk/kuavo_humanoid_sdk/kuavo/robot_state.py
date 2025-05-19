@@ -3,7 +3,8 @@
 import time
 from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.data_types import (
-    KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode,EndEffectorState)
+    KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode,EndEffectorState, 
+    KuavoManipulationMpcControlFlow, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcFrame)
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
 from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 
@@ -147,6 +148,31 @@ class KuavoRobotState:
         """
         return self._rs_core.arm_control_mode
     
+    def manipulation_mpc_ctrl_mode(self) -> KuavoManipulationMpcCtrlMode:
+        """Get the current control mode of the robot manipulation MPC.
+
+        Returns:
+            KuavoManipulationMpcCtrlMode: Current manipulation MPC control mode.
+
+        """
+        return self._rs_core.manipulation_mpc_ctrl_mode
+    
+    def manipulation_mpc_control_flow(self) -> KuavoManipulationMpcControlFlow:
+        """Get the current control flow of the robot manipulation.
+
+        Returns:
+            KuavoManipulationMpcControlFlow: Current manipulation control flow.
+        """
+        return self._rs_core.manipulation_mpc_control_flow
+    
+    def manipulation_mpc_frame(self) -> KuavoManipulationMpcFrame:
+        """Get the current frame of the robot manipulation MPC.
+
+        Returns:
+            KuavoManipulationMpcFrame: Current manipulation MPC frame.
+        """
+        return self._rs_core.manipulation_mpc_frame
+    
     def head_joint_state(self) -> KuavoJointData:
         """Get the current state of the robot head joints.
 
@@ -271,3 +297,10 @@ class KuavoRobotState:
             time.sleep(0.1)
             wait_time += 0.1
         return self._rs_core.is_gait('custom_gait')
+    
+# if __name__ == "__main__":
+#     state = KuavoRobotState()
+#     print(state.manipulation_mpc_frame())
+#     print(state.manipulation_mpc_control_flow())
+#     print(state.manipulation_mpc_ctrl_mode())
+#     print(state.arm_control_mode())

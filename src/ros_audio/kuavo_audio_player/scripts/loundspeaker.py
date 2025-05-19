@@ -13,7 +13,7 @@ except ImportError:
     import pyaudio
 from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import Bool
-from kuavo_audio_player.srv import playmusic, playmusicResponse
+from kuavo_msgs.srv import playmusic, playmusicResponse
 import subprocess
 import time
 import signal

@@ -1,5 +1,4 @@
 import roslibpy
-import copy
 import time
 from typing import Tuple
 
@@ -14,12 +13,14 @@ try:
 except:
     pass
 
-from kuavo_humanoid_sdk.interfaces.data_types import (KuavoImuData, KuavoJointData, KuavoOdometry, 
-                                                      KuavoArmCtrlMode, EndEffectorState, KuavoDexHandTouchState)
+from kuavo_humanoid_sdk.interfaces.data_types import (KuavoImuData, KuavoJointData, KuavoOdometry, KuavoManipulationMpcFrame, 
+                                                      KuavoArmCtrlMode, EndEffectorState, KuavoDexHandTouchState,
+                                                      KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow)
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
-
+from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (changeArmCtrlMode, changeArmCtrlModeRequest,setMmCtrlFrame, setMmCtrlFrameRequest,
+                                                   changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
 from collections import deque
 from typing import Tuple, Optional
 
@@ -157,6 +158,11 @@ class KuavoRobotStateCore:
             self._arm_ctrl_mode = self._srv_get_arm_ctrl_mode()
             self._initialized = True
 
+            # 获取manipulation mpc 相关参数
+            self._manipulation_mpc_frame = self._srv_get_manipulation_mpc_frame()
+            self._manipulation_mpc_ctrl_mode = self._srv_get_manipulation_mpc_ctrl_mode()
+            self._manipulation_mpc_control_flow = self._srv_get_manipulation_mpc_control_flow()
+
     @property
     def com_height(self)->float:
         # odom.position.z - terrain_height = com_height
@@ -180,6 +186,27 @@ class KuavoRobotStateCore:
         if mode is not None:
             self._arm_ctrl_mode = mode
         return self._arm_ctrl_mode
+    
+    @property
+    def manipulation_mpc_ctrl_mode(self)->KuavoManipulationMpcCtrlMode:
+        mode = self._srv_get_manipulation_mpc_ctrl_mode()
+        if mode is not None:
+            self._manipulation_mpc_ctrl_mode = mode
+        return self._manipulation_mpc_ctrl_mode
+    
+    @property
+    def manipulation_mpc_frame(self)->KuavoManipulationMpcFrame:
+        frame = self._srv_get_manipulation_mpc_frame()
+        if frame is not None:
+            self._manipulation_mpc_frame = frame
+        return self._manipulation_mpc_frame
+    
+    @property
+    def manipulation_mpc_control_flow(self)->KuavoManipulationMpcControlFlow:
+        flow = self._srv_get_manipulation_mpc_control_flow()
+        if flow is not None:
+            self._manipulation_mpc_control_flow = flow
+        return self._manipulation_mpc_control_flow
     
     @property
     def eef_state(self)->Tuple[EndEffectorState, EndEffectorState]:
@@ -387,6 +414,194 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Service call failed: {e}")
         return None
 
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
+        try:
+            service_name = '/mobile_manipulator_get_mpc_control_mode'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeTorsoCtrlMode)
+            
+            req = changeTorsoCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc control mode: {resp.message}")
+                return KuavoManipulationMpcCtrlMode.ERROR
+            return KuavoManipulationMpcCtrlMode(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
+        return KuavoManipulationMpcCtrlMode.ERROR
+
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
+        try:
+            service_name = '/get_mm_ctrl_frame'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_frame_srv = rospy.ServiceProxy(service_name, setMmCtrlFrame)
+            
+            req = setMmCtrlFrameRequest()
+            
+            resp = get_frame_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc frame: {resp.message}")
+                return KuavoManipulationMpcFrame.ERROR
+            return KuavoManipulationMpcFrame(resp.currentFrame)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
+        return KuavoManipulationMpcFrame.ERROR
+
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
+        try:
+            service_name = '/get_mm_wbc_arm_trajectory_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeArmCtrlMode)
+            
+            req = changeArmCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {resp.message}")
+                return KuavoManipulationMpcControlFlow.Error
+            return KuavoManipulationMpcControlFlow(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
+        return KuavoManipulationMpcControlFlow.Error
+
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
+        try:
+            service_name = '/mobile_manipulator_get_mpc_control_mode'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeTorsoCtrlMode)
+            
+            req = changeTorsoCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc control mode: {resp.message}")
+                return KuavoManipulationMpcCtrlMode.ERROR
+            return KuavoManipulationMpcCtrlMode(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
+        return KuavoManipulationMpcCtrlMode.ERROR
+
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
+        try:
+            service_name = '/get_mm_ctrl_frame'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_frame_srv = rospy.ServiceProxy(service_name, setMmCtrlFrame)
+            
+            req = setMmCtrlFrameRequest()
+            
+            resp = get_frame_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc frame: {resp.message}")
+                return KuavoManipulationMpcFrame.ERROR
+            return KuavoManipulationMpcFrame(resp.currentFrame)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
+        return KuavoManipulationMpcFrame.ERROR
+
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
+        try:
+            service_name = '/get_mm_wbc_arm_trajectory_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeArmCtrlMode)
+            
+            req = changeArmCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {resp.message}")
+                return KuavoManipulationMpcControlFlow.Error
+            return KuavoManipulationMpcControlFlow(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
+        return KuavoManipulationMpcControlFlow.Error
+
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
+        try:
+            service_name = '/mobile_manipulator_get_mpc_control_mode'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeTorsoCtrlMode)
+            
+            req = changeTorsoCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc control mode: {resp.message}")
+                return KuavoManipulationMpcCtrlMode.ERROR
+            return KuavoManipulationMpcCtrlMode(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
+        return KuavoManipulationMpcCtrlMode.ERROR
+
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
+        try:
+            service_name = '/get_mm_ctrl_frame'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_frame_srv = rospy.ServiceProxy(service_name, setMmCtrlFrame)
+            
+            req = setMmCtrlFrameRequest()
+            
+            resp = get_frame_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc frame: {resp.message}")
+                return KuavoManipulationMpcFrame.ERROR
+            return KuavoManipulationMpcFrame(resp.currentFrame)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
+        return KuavoManipulationMpcFrame.ERROR
+
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
+        try:
+            service_name = '/get_mm_wbc_arm_trajectory_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeArmCtrlMode)
+            
+            req = changeArmCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {resp.message}")
+                return KuavoManipulationMpcControlFlow.Error
+            return KuavoManipulationMpcControlFlow(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
+        return KuavoManipulationMpcControlFlow.Error
 class KuavoRobotStateCoreWebsocket:
     _instance = None
 
@@ -692,3 +907,11 @@ class KuavoRobotStateCoreWebsocket:
         except Exception as e:
             SDKLogger.error(f"Service call failed: {e}")
         return None
+
+
+if __name__ == "__main__":
+    state = KuavoRobotStateCore()
+    print(state.manipulation_mpc_frame)
+    print(state.manipulation_mpc_control_flow)
+    print(state.manipulation_mpc_ctrl_mode)
+    print(state.arm_control_mode)

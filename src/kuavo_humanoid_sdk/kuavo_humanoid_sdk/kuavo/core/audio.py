@@ -6,11 +6,15 @@ from typing import Tuple
 from transitions import Machine, State
 
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-from kuavo_humanoid_sdk.kuavo.core.ros.audio import Audio
+from kuavo_humanoid_sdk.common.global_config import GlobalConfig
+from kuavo_humanoid_sdk.kuavo.core.ros.audio import Audio, AudioWebsocket
 
 class KuavoRobotAudioCore:
     def __init__(self):
-        self.robot_audio = Audio()
+        if GlobalConfig.use_websocket:
+            self.robot_audio = AudioWebsocket()
+        else:
+            self.robot_audio = Audio()
 
     def play_audio(self, music_number: str, volume: float = 0.5, speed: float = 1.0) -> bool:
         """

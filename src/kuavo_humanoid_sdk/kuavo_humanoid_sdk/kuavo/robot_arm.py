@@ -3,7 +3,7 @@
 
 import math
 from typing import Tuple
-from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
+from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow
 from kuavo_humanoid_sdk.kuavo.core.core import KuavoRobotCore
 from kuavo_humanoid_sdk.kuavo.robot_info import KuavoRobotInfo
 
@@ -14,8 +14,11 @@ class KuavoRobotArm:
     
     def arm_reset(self)-> bool:
         return self._kuavo_core.robot_arm_reset()
+    
+    def manipulation_mpc_reset(self)-> bool:
+        return self._kuavo_core.robot_manipulation_mpc_reset()
         
-    def control_arm_position(self, joint_position:list)->bool:
+    def control_arm_joint_positions(self, joint_position:list)->bool:
         """
             Control the position of the robot arm joint.
             Args:
@@ -35,9 +38,9 @@ class KuavoRobotArm:
             if abs(pos) > math.pi:
                 raise ValueError(f"Joint position {pos} rad exceeds ±π rad (±180 deg) limit")
 
-        return self._kuavo_core.control_robot_arm_traj(joint_data=joint_position)
+        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_position)
 
-    def control_arm_target_poses(self, times:list, q_frames:list)->bool:
+    def control_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
         """
             Control the target poses of the robot arm.
             Args:
@@ -51,12 +54,12 @@ class KuavoRobotArm:
             Returns:
                 bool: True if the control was successful, False otherwise.    
         """
-        if len(times) != len(q_frames):
+        if len(times) != len(joint_q):
             raise ValueError("Invalid input. times and joint_q must have thesame length.")
         
         # Check if joint positions are within ±180 degrees (±π radians)
         q_degs = []
-        for q in q_frames:
+        for q in joint_q:
             if any(abs(pos) > math.pi for pos in q):
                 raise ValueError("Joint positions must be within ±π rad (±180 deg)")
             if len(q) != self._robot_info.arm_joint_dof:
@@ -64,7 +67,19 @@ class KuavoRobotArm:
             # Convert joint positions from radians to degrees
             q_degs.append([(p * 180.0 / math.pi) for p in q])
 
-        return self._kuavo_core.control_robot_arm_target_poses(times=times, joint_q=q_degs)
+        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs)
+
+    def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
+        """
+            Control the end effector pose of the robot arm.
+            Args:
+                left_pose (KuavoPose): Pose of the robot left arm, xyz and quat.
+                right_pose (KuavoPose): Pose of the robot right arm, xyz and quat.
+                frame (KuavoManipulationMpcFrame): Frame of the robot end effector pose.
+            Returns:
+                bool: True if the control was successful, False otherwise.
+        """
+        return self._kuavo_core.control_robot_end_effector_pose(left_pose, right_pose, frame)
 
     def set_fixed_arm_mode(self) -> bool:
         """
@@ -90,6 +105,30 @@ class KuavoRobotArm:
         """
         return self._kuavo_core.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl)
 
+    def set_manipulation_mpc_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode) -> bool:
+        """
+        Set the manipulation mpc mode.
+        Returns:
+            bool: True if the manipulation mpc mode is set successfully, False otherwise.
+        """
+        return self._kuavo_core.change_manipulation_mpc_ctrl_mode(ctrl_mode)
+    
+    def set_manipulation_mpc_control_flow(self, control_flow: KuavoManipulationMpcControlFlow) -> bool:
+        """
+        Set the manipulation mpc control flow.
+        Returns:
+            bool: True if the manipulation mpc control flow is set successfully, False otherwise.
+        """
+        return self._kuavo_core.change_manipulation_mpc_control_flow(control_flow)
+    
+    def set_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame) -> bool:
+        """
+        Set the manipulation mpc frame.
+        Returns:
+            bool: True if the manipulation mpc frame is set successfully, False otherwise.
+        """
+        return self._kuavo_core.change_manipulation_mpc_frame(frame)
+    
     """ Arm Forward kinematics && Arm Inverse kinematics """
     def arm_ik(self, 
                left_pose: KuavoPose, 
@@ -144,3 +183,10 @@ class KuavoRobotArm:
         if result is None:
             return None, None
         return result
+
+# if __name__ == "__main__":
+#     arm = KuavoRobotArm()
+#     arm.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
+#     arm.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
+#     arm.set_manipulation_mpc_frame(KuavoManipulationMpcFrame.WorldFrame)
+#     arm.control_robot_end_effector_pose(KuavoPose(position=[0.3, 0.4, 0.9], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoPose(position=[0.3, -0.5, 1.0], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoManipulationMpcFrame.WorldFrame)

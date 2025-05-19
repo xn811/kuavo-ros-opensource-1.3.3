@@ -27,3 +27,13 @@ class KuavoRobotHead:
             SDKLogger.warn(f"[Robot] pitch {pitch} exceeds limit [-{math.pi/7.2:.3f}, {math.pi/7.2:.3f}] radians (-25 to 25 degrees), will be limited")
         limited_pitch = min(math.pi/7.2, max(-math.pi/7.2, pitch))
         return self._kuavo_core.control_robot_head(yaw=limited_yaw, pitch=limited_pitch)
+
+    def enable_head_tracking(self, target_id: int)->bool:
+        """Enable the head tracking.
+        """
+        return self._kuavo_core.enable_head_tracking(target_id)
+    
+    def disable_head_tracking(self)->bool:
+        """Disable the head tracking.
+        """
+        return self._kuavo_core.disable_head_tracking()

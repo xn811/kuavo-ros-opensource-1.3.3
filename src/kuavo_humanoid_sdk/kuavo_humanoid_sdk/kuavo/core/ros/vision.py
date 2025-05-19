@@ -34,16 +34,16 @@ class KuavoRobotVisionCore:
     def __init__(self):
         """Initializes vision system components including TF and AprilTag subscribers."""
         if not hasattr(self, '_initialized'):
+            # Initialize TF components
             self.tf_buffer = tf2_ros.Buffer()
             self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
             self.tf_broadcaster = tf2_ros.TransformBroadcaster()
-            self._apriltag_data_camera_sub = rospy.Subscriber('/tag_detections', AprilTagDetectionArray, self._apriltag_data_callback_camera)
-            self._apriltag_data_base_sub = rospy.Subscriber('/robot_tag_info', AprilTagDetectionArray, self._apriltag_data_callback_base)
-
+            
             # 添加TF2监听器
             self._tf_buffer = tf2_ros.Buffer()
             self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
 
+            # FIRST: Initialize data structures before creating subscribers
             """ data """
             self._apriltag_data_from_camera = AprilTagData(
                 id = [],
@@ -62,6 +62,13 @@ class KuavoRobotVisionCore:
                 size = [],
                 pose = []
             )
+            
+            # THEN: Create subscribers after all data structures are initialized
+            self._apriltag_data_camera_sub = rospy.Subscriber('/tag_detections', AprilTagDetectionArray, self._apriltag_data_callback_camera)
+            self._apriltag_data_base_sub = rospy.Subscriber('/robot_tag_info', AprilTagDetectionArray, self._apriltag_data_callback_base)
+            
+            # Mark as initialized
+            self._initialized = True
 
     def _apriltag_data_callback_camera(self, data):
         """Callback for processing AprilTag detections from camera.
@@ -147,7 +154,7 @@ class KuavoRobotVisionCore:
         
         # 如果base数据为空，则不处理
         if not self._apriltag_data_from_base.id:
-            SDKLogger.warn("No base tag data, skip transform")
+            # SDKLogger.warn("No base tag data, skip transform")
             return
         
         try:
@@ -246,7 +253,7 @@ class KuavoRobotVisionCore:
         }
         
         if data_source not in data_map:
-            SDKLogger.error(f"Invalid data source: {data_source}, must be one of {list(data_map.keys())}")
+            # SDKLogger.error(f"Invalid data source: {data_source}, must be one of {list(data_map.keys())}")
             return None
         
         data = data_map[data_source]
@@ -255,7 +262,7 @@ class KuavoRobotVisionCore:
         indices = [i for i, tag_id in enumerate(data.id) if tag_id == target_id]
         
         if not indices:
-            SDKLogger.debug(f"No data found for tag ID {target_id} in {data_source} source")
+            # SDKLogger.debug(f"No data found for tag ID {target_id} in {data_source} source")
             return None
         
         return {

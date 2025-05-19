@@ -119,6 +119,7 @@ add_service_files(
   fkSrv.srv
 
   SpeechSynthesis.srv
+  setMmCtrlFrame.srv
 )
 
 ## Generate actions in the 'action' folder

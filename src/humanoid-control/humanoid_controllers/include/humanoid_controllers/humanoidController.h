@@ -188,6 +188,8 @@ namespace humanoid_controller
     void startMpccallback(const std_msgs::Bool::ConstPtr &msg);
 
     bool enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
+    bool enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
+    bool getMmArmCtrlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
     void real_init_wait();
     void swingArmPlanner(double st, double current_time, double stepDuration, Eigen::VectorXd &desire_arm_q, Eigen::VectorXd &desire_arm_v);
     void headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg);
@@ -298,6 +300,7 @@ namespace humanoid_controller
     ros::Subscriber gait_scheduler_sub_;
     ros::Subscriber head_sub_;
     ros::Subscriber arm_joint_traj_sub_;
+    ros::Subscriber mm_arm_joint_traj_sub_;
     ros::Subscriber arm_target_traj_sub_;//最终的手臂目标位置
     ros::Subscriber foot_pos_des_sub_;
     ros::Subscriber hand_wrench_sub_;
@@ -309,6 +312,8 @@ namespace humanoid_controller
     ros::Subscriber enable_wbc_sub_;
 
     ros::ServiceServer enableArmCtrlSrv_;
+    ros::ServiceServer enableMmArmCtrlSrv_;
+    ros::ServiceServer getMmArmCtrlSrv_;
     ros::ServiceServer currentGaitNameSrv_;
     GaitManager *gaitManagerPtr_=nullptr;
 
@@ -414,7 +419,9 @@ namespace humanoid_controller
 
 
     bool use_ros_arm_joint_trajectory_ = false;
+    bool use_mm_arm_joint_trajectory_ = false;
     ArmJointTrajectory arm_joint_trajectory_;
+    ArmJointTrajectory mm_arm_joint_trajectory_;
     vector_t arm_joint_pos_cmd_prev_;
     vector_t joint_control_modes_;
     std::map<std::string, ModeSequenceTemplate> gait_map_;

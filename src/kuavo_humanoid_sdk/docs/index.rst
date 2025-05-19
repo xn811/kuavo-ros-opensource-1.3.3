@@ -31,3 +31,4 @@ Licensed under the `MIT License`.
    pages/quickstart
    pages/api_reference
    pages/examples
+   pages/kuavo_strategy

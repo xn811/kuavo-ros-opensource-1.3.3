@@ -54,7 +54,7 @@ Bases: `object`
 
 Bases: `RobotBase`
 
-#### arm_fk(q: list) → Tuple[[KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
+#### arm_fk(q: list) → Tuple[[KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
 
 Forward kinematics for the robot arm.
 
@@ -64,22 +64,22 @@ Forward kinematics for the robot arm.
   Tuple of poses for the robot left arm and right arm,
   : or (None, None) if forward kinematics failed.
 * **Return type:**
-  Tuple[[KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
+  Tuple[[KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
 
 #### WARNING
-This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
+This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
 
-#### arm_ik(left_pose: [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
+#### arm_ik(left_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
 
 Inverse kinematics for the robot arm.
 
 * **Parameters:**
-  * **left_pose** ([*KuavoPose*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot left arm, xyz and quat.
-  * **right_pose** ([*KuavoPose*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot right arm, xyz and quat.
+  * **left_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot left arm, xyz and quat.
+  * **right_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot right arm, xyz and quat.
   * **left_elbow_pos_xyz** (*list*) – Position of the robot left elbow. If [0.0, 0.0, 0.0], will be ignored.
   * **right_elbow_pos_xyz** (*list*) – Position of the robot right elbow. If [0.0, 0.0, 0.0], will be ignored.
   * **arm_q0** (*list* *,* *optional*) – Initial joint positions in radians. If None, will be ignored.
-  * **params** ([*KuavoIKParams*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) *,* *optional*) – Parameters for the inverse kinematics. If None, will be ignored.
+  * **params** ([*KuavoIKParams*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) *,* *optional*) – Parameters for the inverse kinematics. If None, will be ignored.
     Contains:
     - major_optimality_tol: Major optimality tolerance
     - major_feasibility_tol: Major feasibility tolerance
@@ -94,7 +94,7 @@ Inverse kinematics for the robot arm.
   list
 
 #### WARNING
-This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
+This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
 
 #### arm_reset() → bool
 
@@ -105,7 +105,7 @@ Reset the robot arm.
 * **Return type:**
   bool
 
-#### control_arm_position(joint_positions: list) → bool
+#### control_arm_joint_positions(joint_positions: list) → bool
 
 Control the position of the arm.
 
@@ -120,7 +120,7 @@ Control the position of the arm.
   * **ValueError** – If the joint position is outside the range of [-π, π].
   * **RuntimeError** – If the robot is not in stance state when trying to control the arm.
 
-#### control_arm_target_poses(times: list, q_frames: list) → bool
+#### control_arm_joint_trajectory(times: list, q_frames: list) → bool
 
 Control the target poses of the robot arm.
 
@@ -153,9 +153,31 @@ Control the head of the robot.
 * **Return type:**
   bool
 
+#### control_robot_end_effector_pose(left_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), frame: [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
+
+Control the end effector pose of the robot arm.
+
+* **Parameters:**
+  * **left_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot left arm, xyz and quat.
+  * **right_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot right arm, xyz and quat.
+  * **frame** ([*KuavoManipulationMpcFrame*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) – Frame of the robot arm.
+* **Returns:**
+  True if the end effector pose is controlled successfully, False otherwise.
+* **Return type:**
+  bool
+
 #### jump()
 
 Jump the robot.
+
+#### manipulation_mpc_reset() → bool
+
+Reset the robot arm.
+
+* **Returns:**
+  True if the arm is reset successfully, False otherwise.
+* **Return type:**
+  bool
 
 #### set_auto_swing_arm_mode() → bool
 
@@ -184,6 +206,24 @@ Freezes the robot arm.
 * **Return type:**
   bool
 
+#### set_manipulation_mpc_control_flow(control_flow: [KuavoManipulationMpcControlFlow](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcControlFlow)) → bool
+
+Set the manipulation mpc control flow.
+:returns: True if the manipulation mpc control flow is set successfully, False otherwise.
+:rtype: bool
+
+#### set_manipulation_mpc_frame(frame: [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
+
+Set the manipulation mpc frame.
+:returns: True if the manipulation mpc frame is set successfully, False otherwise.
+:rtype: bool
+
+#### set_manipulation_mpc_mode(ctrl_mode: [KuavoManipulationMpcCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcCtrlMode)) → bool
+
+Set the manipulation mpc mode.
+:returns: True if the manipulation mpc mode is set successfully, False otherwise.
+:rtype: bool
+
 #### squat(height: float, pitch: float = 0.0) → bool
 
 Control the robot’s squat height and pitch.
@@ -207,7 +247,7 @@ Put the robot into ‘stance’ mode.
   bool
 
 #### NOTE
-You can call [`KuavoRobotState.wait_for_stance()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_stance) to wait until the robot enters stance mode.
+You can call [`KuavoRobotState.wait_for_stance()`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoRobotState.wait_for_stance) to wait until the robot enters stance mode.
 
 #### step_by_step(target_pose: list, dt: float = 0.4, is_left_first_default: bool = True, collision_check: bool = True) → bool
 
@@ -227,8 +267,8 @@ Control the robot’s motion by step.
   * **ValueError** – If target_pose length is not 4.
 
 #### NOTE
-You can call [`KuavoRobotState.wait_for_step_control()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_step_control) to wait until the robot enters step-control mode.
-You can call [`KuavoRobotState.wait_for_stance()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_stance) to wait the step-control finish.
+You can call [`KuavoRobotState.wait_for_step_control()`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoRobotState.wait_for_step_control) to wait until the robot enters step-control mode.
+You can call [`KuavoRobotState.wait_for_stance()`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoRobotState.wait_for_stance) to wait the step-control finish.
 
 #### trot() → bool
 
@@ -240,7 +280,7 @@ Put the robot into ‘trot’ mode.
   bool
 
 #### NOTE
-You can call [`KuavoRobotState.wait_for_walk()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_walk) to wait until the robot enters trot mode.
+You can call [`KuavoRobotState.wait_for_walk()`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoRobotState.wait_for_walk) to wait until the robot enters trot mode.
 
 #### walk(linear_x: float, linear_y: float, angular_z: float) → bool
 
@@ -256,7 +296,7 @@ Control the robot’s motion.
   bool
 
 #### NOTE
-You can call [`KuavoRobotState.wait_for_walk()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_walk) to wait until the robot enters walk mode.
+You can call [`KuavoRobotState.wait_for_walk()`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoRobotState.wait_for_walk) to wait until the robot enters walk mode.
 
 ### *class* kuavo_humanoid_sdk.KuavoRobotInfo(robot_type: str = 'kuavo')
 
@@ -363,7 +403,7 @@ Returns the robot’s angular velocity in world coordinates.
 * **Return type:**
   Tuple[float, float, float]
 
-#### arm_control_mode() → [KuavoArmCtrlMode](#kuavo_humanoid_sdk.interfaces.data_types.KuavoArmCtrlMode)
+#### arm_control_mode() → [KuavoArmCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoArmCtrlMode)
 
 Get the current control mode of the robot arm.
 
@@ -374,9 +414,9 @@ Get the current control mode of the robot arm.
     ExternalControl: 2 - The robot arm is controlled externally.
     or None.
 * **Return type:**
-  [KuavoArmCtrlMode](#kuavo_humanoid_sdk.interfaces.data_types.KuavoArmCtrlMode)
+  [KuavoArmCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoArmCtrlMode)
 
-#### arm_joint_state() → [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
+#### arm_joint_state() → [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
 
 Get the current state of the robot arm joints.
 
@@ -393,7 +433,7 @@ Get the current state of the robot arm joints, including:
     torque: list[float]   \* arm_dof(14)
     acceleration: list[float] \* arm_dof(14)
 * **Return type:**
-  [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
+  [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
 
 #### *property* com_height *: float*
 
@@ -404,7 +444,7 @@ Get the height of the robot’s center of mass.
 * **Return type:**
   float
 
-#### eef_state() → Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+#### eef_state() → Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 Get the current state of the robot’s end effectors.
 
@@ -415,7 +455,7 @@ Get the current state of the robot’s end effectors.
       - orientation: (float, float, float, float) - Quaternion orientation
       - state: EndEffectorState.GraspingState - Current grasping state (UNKNOWN, OPEN, CLOSED)
 * **Return type:**
-  Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+  Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 #### gait_name() → str
 
@@ -426,7 +466,7 @@ Get the current gait name of the robot.
 * **Return type:**
   str
 
-#### head_joint_state() → [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
+#### head_joint_state() → [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
 
 Get the current state of the robot head joints.
 
@@ -442,9 +482,9 @@ velocity, torque and acceleration values.
 
   The joint order is [yaw, pitch].
 * **Return type:**
-  [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
+  [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
 
-#### *property* imu_data *: [KuavoImuData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoImuData)*
+#### *property* imu_data *: [KuavoImuData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoImuData)*
 
 Get Robot IMU Data.
 
@@ -487,7 +527,7 @@ Check if the robot is currently in walk mode.
 * **Return type:**
   bool
 
-#### *property* joint_state *: [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)*
+#### *property* joint_state *: [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)*
 
 Get Robot Joint Data.
 
@@ -506,7 +546,7 @@ The data includes:
     torque (list[float]): Joint torques, length = joint_dof(28)
     acceleration (list[float]): Joint accelerations, length = joint_dof(28)
 * **Return type:**
-  [KuavoJointData](#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
+  [KuavoJointData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointData)
 
 #### linear_velocity() → Tuple[float, float, float]
 
@@ -517,7 +557,34 @@ Returns the robot’s linear velocity in world coordinates.
 * **Return type:**
   Tuple[float, float, float]
 
-#### *property* odometry *: [KuavoOdometry](#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)*
+#### manipulation_mpc_control_flow() → [KuavoManipulationMpcControlFlow](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcControlFlow)
+
+Get the current control flow of the robot manipulation.
+
+* **Returns:**
+  Current manipulation control flow.
+* **Return type:**
+  [KuavoManipulationMpcControlFlow](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcControlFlow)
+
+#### manipulation_mpc_ctrl_mode() → [KuavoManipulationMpcCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcCtrlMode)
+
+Get the current control mode of the robot manipulation MPC.
+
+* **Returns:**
+  Current manipulation MPC control mode.
+* **Return type:**
+  [KuavoManipulationMpcCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcCtrlMode)
+
+#### manipulation_mpc_frame() → [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)
+
+Get the current frame of the robot manipulation MPC.
+
+* **Returns:**
+  Current manipulation MPC frame.
+* **Return type:**
+  [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)
+
+#### *property* odometry *: [KuavoOdometry](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)*
 
 Get Robot Odometry Data.
 
@@ -531,7 +598,7 @@ linear velocity and angular velocity measurements.
     linear (tuple): Linear velocity (x, y, z) in m/s
     angular (tuple): Angular velocity (x, y, z) in rad/s
 * **Return type:**
-  [KuavoOdometry](#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)
+  [KuavoOdometry](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)
 
 #### robot_orientation() → Tuple[float, float, float, float]
 
@@ -599,7 +666,7 @@ Wait for the robot to enter walk state.
 
 Bases: `object`
 
-#### arm_fk(q: list) → Tuple[[KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
+#### arm_fk(q: list) → Tuple[[KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
 
 Forward kinematics for the robot arm.
 
@@ -609,22 +676,22 @@ Forward kinematics for the robot arm.
   Tuple of poses for the robot left arm and right arm,
   : or (None, None) if forward kinematics failed.
 * **Return type:**
-  Tuple[[KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
+  Tuple[[KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
 
 #### WARNING
-This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
+This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
 
-#### arm_ik(left_pose: [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
+#### arm_ik(left_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
 
 Inverse kinematics for the robot arm.
 
 * **Parameters:**
-  * **left_pose** ([*KuavoPose*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot left arm, xyz and quat.
-  * **right_pose** ([*KuavoPose*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot right arm, xyz and quat.
+  * **left_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot left arm, xyz and quat.
+  * **right_pose** ([*KuavoPose*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – Pose of the robot right arm, xyz and quat.
   * **left_elbow_pos_xyz** (*list*) – Position of the robot left elbow. If [0.0, 0.0, 0.0], will be ignored.
   * **right_elbow_pos_xyz** (*list*) – Position of the robot right elbow. If [0.0, 0.0, 0.0], will be ignored.
   * **arm_q0** (*list* *,* *optional*) – Initial joint positions in radians. If None, will be ignored.
-  * **params** ([*KuavoIKParams*](#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) *,* *optional*) – Parameters for the inverse kinematics. If None, will be ignored.
+  * **params** ([*KuavoIKParams*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) *,* *optional*) – Parameters for the inverse kinematics. If None, will be ignored.
     Contains:
     - major_optimality_tol: Major optimality tolerance
     - major_feasibility_tol: Major feasibility tolerance
@@ -639,11 +706,11 @@ Inverse kinematics for the robot arm.
   list
 
 #### WARNING
-This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
+This function requires initializing the SDK with the [`KuavoSDK.Options.WithIK`](kuavo_strategy.md#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK).
 
 #### arm_reset() → bool
 
-#### control_arm_position(joint_position: list) → bool
+#### control_arm_joint_positions(joint_position: list) → bool
 
 Control the position of the robot arm joint.
 :param joint_position: List of joint positions in radians
@@ -656,7 +723,7 @@ Control the position of the robot arm joint.
 * **Returns:**
   True if the control was successful, False otherwise.
 
-#### control_arm_target_poses(times: list, q_frames: list) → bool
+#### control_arm_joint_trajectory(times: list, joint_q: list) → bool
 
 Control the target poses of the robot arm.
 :param times: List of time intervals in seconds
@@ -674,6 +741,23 @@ Control the target poses of the robot arm.
 * **Return type:**
   bool
 
+#### control_robot_end_effector_pose(left_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), frame: [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
+
+Control the end effector pose of the robot arm.
+:param left_pose: Pose of the robot left arm, xyz and quat.
+:type left_pose: KuavoPose
+:param right_pose: Pose of the robot right arm, xyz and quat.
+:type right_pose: KuavoPose
+:param frame: Frame of the robot end effector pose.
+:type frame: KuavoManipulationMpcFrame
+
+* **Returns:**
+  True if the control was successful, False otherwise.
+* **Return type:**
+  bool
+
+#### manipulation_mpc_reset() → bool
+
 #### set_auto_swing_arm_mode() → bool
 
 Swing the robot arm.
@@ -690,6 +774,24 @@ External control the robot arm.
 
 Freezes the robot arm.
 :returns: True if the arm is frozen successfully, False otherwise.
+:rtype: bool
+
+#### set_manipulation_mpc_control_flow(control_flow: [KuavoManipulationMpcControlFlow](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcControlFlow)) → bool
+
+Set the manipulation mpc control flow.
+:returns: True if the manipulation mpc control flow is set successfully, False otherwise.
+:rtype: bool
+
+#### set_manipulation_mpc_frame(frame: [KuavoManipulationMpcFrame](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
+
+Set the manipulation mpc frame.
+:returns: True if the manipulation mpc frame is set successfully, False otherwise.
+:rtype: bool
+
+#### set_manipulation_mpc_mode(ctrl_mode: [KuavoManipulationMpcCtrlMode](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcCtrlMode)) → bool
+
+Set the manipulation mpc mode.
+:returns: True if the manipulation mpc mode is set successfully, False otherwise.
 :rtype: bool
 
 ### *class* kuavo_humanoid_sdk.KuavoRobotHead
@@ -717,26 +819,26 @@ Vision system interface for Kuavo humanoid robot.
 
 Provides access to AprilTag detection data from different coordinate frames.
 
-#### *property* apriltag_data_from_base *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+#### *property* apriltag_data_from_base *: [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
 
 All detected AprilTags in camera frame (property)
 
 * **Type:**
-  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+  [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
 
-#### *property* apriltag_data_from_camera *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
-
-All detected AprilTags in camera frame (property)
-
-* **Type:**
-  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
-
-#### *property* apriltag_data_from_odom *: [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+#### *property* apriltag_data_from_camera *: [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
 
 All detected AprilTags in camera frame (property)
 
 * **Type:**
-  [AprilTagData](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+  [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
+
+#### *property* apriltag_data_from_odom *: [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)*
+
+All detected AprilTags in camera frame (property)
+
+* **Type:**
+  [AprilTagData](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData)
 
 #### get_data_by_id(target_id: int, data_source: str = 'base') → dict
 
@@ -827,7 +929,7 @@ Robot tools class providing coordinate frame transformation interfaces.
 This class encapsulates coordinate transformation queries between different robot frames,
 supporting multiple return data formats.
 
-#### get_base_to_odom(return_type: str = 'pose_quaternion') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+#### get_base_to_odom(return_type: str = 'pose_quaternion') → [PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 
 Get transformation from base_link to odom frame.
 
@@ -837,9 +939,9 @@ Get transformation from base_link to odom frame.
 * **Returns:**
   Transformation data or None
 * **Return type:**
-  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+  Union[[PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
 
-#### get_camera_to_base(return_type: str = 'homogeneous') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+#### get_camera_to_base(return_type: str = 'homogeneous') → [PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 
 Get transformation from camera_link to base_link frame.
 
@@ -849,9 +951,9 @@ Get transformation from camera_link to base_link frame.
 * **Returns:**
   Transformation data or None
 * **Return type:**
-  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+  Union[[PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
 
-#### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
+#### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 
 Get transformation between specified coordinate frames.
 
@@ -864,7 +966,7 @@ Get transformation between specified coordinate frames.
 * **Returns:**
   Transformation data in specified format, or None if failed
 * **Return type:**
-  Union[[PoseQuaternion](#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+  Union[[PoseQuaternion](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
 * **Raises:**
   **ValueError** – If invalid return_type is provided
 
@@ -949,7 +1051,7 @@ Get the names of all gestures.
 * **Return type:**
   list
 
-#### get_grasping_state() → Tuple[[GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
+#### get_grasping_state() → Tuple[[GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
 
 Get the grasping state of the dexterous hand.
 
@@ -959,7 +1061,7 @@ The grasping state is not implemented yet.
 * **Returns:**
   The grasping state of the dexterous hand.
 * **Return type:**
-  Tuple[[EndEffectorState.GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [EndEffectorState.GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
+  Tuple[[EndEffectorState.GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [EndEffectorState.GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
 
 #### get_position() → Tuple[list, list]
 
@@ -970,14 +1072,14 @@ Get the position of the dexterous hand.
 * **Return type:**
   Tuple[list, list]
 
-#### get_state() → Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+#### get_state() → Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 Get the state of the dexterous hand.
 
 * **Returns:**
   The state of the dexterous hand.
 * **Return type:**
-  Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+  Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 #### get_velocity() → Tuple[list, list]
 
@@ -1003,12 +1105,12 @@ Make predefined gestures for both hands.
 #### NOTE
 gestures e.g.: ‘fist’, ‘ok’, ‘thumbs_up’, ‘666’…
 
-#### open(side: [EndEffectorSide](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
+#### open(side: [EndEffectorSide](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
 
 Open the dexterous hand(s) by setting all joint positions to 0.
 
 * **Parameters:**
-  **side** ([*EndEffectorSide*](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – Which hand(s) to open. Defaults to EndEffectorSide.BOTH.
+  **side** ([*EndEffectorSide*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – Which hand(s) to open. Defaults to EndEffectorSide.BOTH.
   Can be LEFT, RIGHT, or BOTH.
 * **Returns:**
   True if open command sent successfully, False otherwise.
@@ -1017,9 +1119,9 @@ Open the dexterous hand(s) by setting all joint positions to 0.
 
 ### *class* kuavo_humanoid_sdk.TouchDexterousHand
 
-Bases: [`DexterousHand`](#kuavo_humanoid_sdk.DexterousHand)
+Bases: [`DexterousHand`](kuavo_strategy.md#kuavo_humanoid_sdk.DexterousHand)
 
-#### get_touch_state() → Tuple[[KuavoDexHandTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState), [KuavoDexHandTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState)]
+#### get_touch_state() → Tuple[[KuavoDexHandTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState), [KuavoDexHandTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState)]
 
 Get the touch state of the dexterous hand.
 
@@ -1030,7 +1132,7 @@ Get the touch state of the dexterous hand.
 
 Bases: `EndEffector`
 
-#### close(side: [EndEffectorSide](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
+#### close(side: [EndEffectorSide](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
 
 Control the claws to close/grip.
 
@@ -1039,7 +1141,7 @@ Control the claws to close.
 After calling this function, you can call wait_for_finish() to wait until the claws reach the target position.
 
 * **Parameters:**
-  **side** ([*EndEffectorSide*](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side to control. Defaults to EndEffectorSide.BOTH.
+  **side** ([*EndEffectorSide*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side to control. Defaults to EndEffectorSide.BOTH.
 * **Returns:**
   True if the claw is successfully gripped, False otherwise.
 * **Return type:**
@@ -1116,14 +1218,14 @@ Get the effort of the claws.
 * **Return type:**
   Tuple[list, list]
 
-#### get_grasping_state() → Tuple[[GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
+#### get_grasping_state() → Tuple[[GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
 
 Get the grasping state of the claws.
 
 * **Returns:**
   The grasping state of the claws.
 * **Return type:**
-  Tuple[[EndEffectorState.GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [EndEffectorState.GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
+  Tuple[[EndEffectorState.GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState), [EndEffectorState.GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState)]
 
 #### get_position() → Tuple[list, list]
 
@@ -1134,7 +1236,7 @@ Get the position of the claws.
 * **Return type:**
   Tuple[list, list]
 
-#### get_state() → Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+#### get_state() → Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 Get the state of the claws.
 
@@ -1145,7 +1247,7 @@ Get the state of the claws.
     - effort: The effort of the claws.
     - state: The grasping state of the claws.
 * **Return type:**
-  Tuple[[EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
+  Tuple[[EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
 #### get_velocity() → Tuple[list, list]
 
@@ -1156,7 +1258,7 @@ Get the velocity of the claws.
 * **Return type:**
   Tuple[list, list]
 
-#### open(side: [EndEffectorSide](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
+#### open(side: [EndEffectorSide](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH) → bool
 
 Control the claws to release/open.
 
@@ -1165,18 +1267,18 @@ Control the claws to open.
 After calling this function, you can call wait_for_finish() to wait until the claws reach the target position.
 
 * **Parameters:**
-  **side** ([*EndEffectorSide*](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side to control. Defaults to EndEffectorSide.BOTH.
+  **side** ([*EndEffectorSide*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side to control. Defaults to EndEffectorSide.BOTH.
 * **Returns:**
   True if the claw is successfully released, False otherwise.
 * **Return type:**
   bool
 
-#### wait_for_finish(side: [EndEffectorSide](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH, timeout: float = 2.5)
+#### wait_for_finish(side: [EndEffectorSide](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) = EndEffectorSide.BOTH, timeout: float = 2.5)
 
 Wait for the claw motion to finish.
 
 * **Parameters:**
-  * **side** ([*EndEffectorSide*](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side of the claw to wait for. Defaults to EndEffectorSide.BOTH.
+  * **side** ([*EndEffectorSide*](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide) *,* *optional*) – The side of the claw to wait for. Defaults to EndEffectorSide.BOTH.
   * **timeout** (*float* *,* *optional*) – The timeout duration in seconds. Defaults to 2.5.
 * **Returns:**
   True if motion completed before timeout, False otherwise.
@@ -1224,7 +1326,7 @@ The right side of the end effector (value: ‘right’)
 
 Both sides of the end effector (value: ‘both’)
 
-### *class* kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState(position: list, velocity: list, effort: list, state: [GraspingState](#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState))
+### *class* kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState(position: list, velocity: list, effort: list, state: [GraspingState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState.GraspingState))
 
 Data class representing the state of the end effector.
 
@@ -1294,7 +1396,7 @@ The robot arm is in automatic swinging mode (value: 1)
 
 The robot arm is controlled by external commands (value: 2)
 
-### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState(data: Tuple[[KuavoTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState)])
+### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState(data: Tuple[[KuavoTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState), [KuavoTouchState](kuavo_strategy.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState.KuavoTouchState)])
 
 Data class representing the touch state of the dexterous hand.
 
@@ -1325,6 +1427,70 @@ Data class representing joint states of the robot.
   * **velocity** (*list*) – List of joint velocities in radians/second
   * **torque** (*list*) – List of joint torques/efforts in Newton-meters or Amperes
   * **acceleration** (*list*) – List of joint accelerations in radians/second^2
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcControlFlow(value)
+
+Enum class representing the control data flow for the Kuavo robot manipulation.
+
+#### ThroughFullBodyMpc
+
+Control data flows through full-body MPC before entering WBC (value: 0)
+
+#### DirectToWbc
+
+Control data flows directly to WBC without full-body MPC (value: 1)
+
+#### Error
+
+Invalid control path (value: -1)
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcCtrlMode(value)
+
+Enum class representing the control mode for the Kuavo robot manipulation MPC.
+
+#### NoControl
+
+No control (value: 0)
+
+#### ArmOnly
+
+Only control the arm (value: 1)
+
+#### BaseOnly
+
+Only control the base (value: 2)
+
+#### BaseArm
+
+Control both the base and the arm (value: 3)
+
+#### ERROR
+
+Error state (value: -1)
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame(value)
+
+Enum class representing the manipulation mpc frame for the Kuavo robot end effector.
+
+#### KeepCurrentFrame
+
+Keep the current frame (value: 0)
+
+#### WorldFrame
+
+World frame (value: 1)
+
+#### LocalFrame
+
+Local frame (value: 2)
+
+#### VRFrame
+
+VR frame (value: 3)
+
+#### ManipulationWorldFrame
+
+Manipulation world frame (value: 4)
 
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry(position: Tuple[float, float, float], orientation: Tuple[float, float, float, float], linear: Tuple[float, float, float], angular: Tuple[float, float, float])
 

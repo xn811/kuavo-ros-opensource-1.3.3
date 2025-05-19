@@ -417,6 +417,7 @@ namespace humanoid_controller
     sensorsDataSub_ = controllerNh_.subscribe<kuavo_msgs::sensorsData>("/sensors_data_raw", 10, &humanoidController::sensorsDataCallback, this);
     mpcStartSub_ = controllerNh_.subscribe<std_msgs::Bool>("/start_mpc", 10, &humanoidController::startMpccallback, this);
     arm_joint_trajectory_.initialize(armNumReal_);
+    mm_arm_joint_trajectory_.initialize(armNumReal_);
     arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
       {
         if(msg->name.size() != armNumReal_){
@@ -434,7 +435,23 @@ namespace humanoid_controller
         }
         // std::cout << "arm joint pos: " << arm_joint_trajectory_.pos.size() << std::endl;
       });
-     
+      mm_arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/mm_kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
+      {
+        if(msg->name.size() != armNumReal_){
+          std::cerr << "The dimensin of arm joint pos is NOT equal to the armNumReal_!!" << msg->name.size() << " vs " << armNumReal_ << "\n";
+          return;
+        }
+        for(int i = 0; i < armNumReal_; i++)
+        {
+          // std::cout << "arm joint pos: " << msg->position[i] << std::endl;
+          mm_arm_joint_trajectory_.pos[i] = msg->position[i] * M_PI / 180.0;
+          if(msg->velocity.size() == armNumReal_)
+            mm_arm_joint_trajectory_.vel[i] = msg->velocity[i] * M_PI / 180.0;
+          if(msg->effort.size() == armNumReal_)
+            mm_arm_joint_trajectory_.tau[i] = msg->effort[i];
+        }
+        // std::cout << "arm joint pos: " << arm_joint_trajectory_.pos.size() << std::endl;
+      });
       // Arm TargetTrajectories
       auto armTargetTrajectoriesCallback = [this](const ocs2_msgs::mpc_target_trajectories::ConstPtr &msg)
       {
@@ -471,6 +488,8 @@ namespace humanoid_controller
         }
       );
       enableArmCtrlSrv_ = controllerNh_.advertiseService("/enable_wbc_arm_trajectory_control", &humanoidController::enableArmTrajectoryControlCallback, this);
+      enableMmArmCtrlSrv_ = controllerNh_.advertiseService("/enable_mm_wbc_arm_trajectory_control", &humanoidController::enableMmArmTrajectoryControlCallback, this);
+      getMmArmCtrlSrv_ = controllerNh_.advertiseService("/get_mm_wbc_arm_trajectory_control", &humanoidController::getMmArmCtrlCallback, this);
       jointCmdPub_ = controllerNh_.advertise<kuavo_msgs::jointCmd>("/joint_cmd", 10);
       mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
       feettargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("/humanoid_controller/feet_target_policys", 10, true);
@@ -666,6 +685,20 @@ namespace humanoid_controller
       return true;
   }
 
+  bool humanoidController::enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
+  {
+      use_mm_arm_joint_trajectory_ = req.control_mode;
+      res.result = true;
+      return true;
+  }
+
+  bool humanoidController::getMmArmCtrlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
+  {
+    res.result = true;
+    res.mode = static_cast<int>(use_mm_arm_joint_trajectory_);
+    res.message = "Successfully get mm arm ctrl mode to " + std::to_string(static_cast<int>(use_mm_arm_joint_trajectory_));
+    return true;
+  }
   void humanoidController::starting(const ros::Time &time)
   {
     // Initial state
@@ -1218,7 +1251,22 @@ namespace humanoid_controller
       }
       // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
     }
-
+    if(use_mm_arm_joint_trajectory_)
+    {
+      // TODO: feedback in planner
+      // auto arm_pos = currentObservation_.state.tail(armNum_); 
+      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
+      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
+      if (only_half_up_body_) 
+      {
+          optimizedState2WBC_mrt_.segment<7>(24) = mm_arm_joint_trajectory_.pos.segment<7>(0);
+          optimizedState2WBC_mrt_.segment<7>(24+7) = mm_arm_joint_trajectory_.pos.segment<7>(7);
+      }
+      else {
+          // 位置、速度
+          optimizedState2WBC_mrt_.tail(armNumReal_) = mm_arm_joint_trajectory_.pos;
+      }
+    }
     // // use filter output
     optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
     optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));

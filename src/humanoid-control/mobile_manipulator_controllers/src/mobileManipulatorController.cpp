@@ -114,7 +114,7 @@ namespace mobile_manipulator_controller
     humanoidObservationSub_ = controllerNh_.subscribe("/humanoid_wbc_observation", 1, &MobileManipulatorController::humanoidObservationCallback, this);// contain all arm joint
     basePoseCmdSubscriber_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/base_pose_cmd", 10, basePoseCmdCallback);
     kinematicMpcControlSrv_ = controllerNh_.advertiseService(robotName_ + "_mpc_control", &MobileManipulatorController::controlService, this);
-    
+    getKinematicMpcControlModeSrv_ = controllerNh_.advertiseService(robotName_ + "_get_mpc_control_mode", &MobileManipulatorController::getKinematicMpcControlModeService, this);
     mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
 
     humanoidTorsoTargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("humanoid_mpc_target_pose", 1);
@@ -124,7 +124,7 @@ namespace mobile_manipulator_controller
     humanoidCmdPosPublisher_ = controllerNh_.advertise<geometry_msgs::Twist>("/cmd_pose", 10, true);
     mmEefPosesPublisher_ = controllerNh_.advertise<std_msgs::Float64MultiArray>(robotName_ + "_eef_poses", 10, true);
     mmPlanedTrajPublisher_ = nh.advertise<visualization_msgs::MarkerArray>(robotName_ + "/planed_two_hand_trajectory", 10);
-    armTrajPublisher_ = controllerNh_.advertise<sensor_msgs::JointState>("/kuavo_arm_traj", 10);
+    armTrajPublisher_ = controllerNh_.advertise<sensor_msgs::JointState>("/mm_kuavo_arm_traj", 10);
 
     yaml_cfg_ = YAML::LoadFile(mobile_manipulator_controller::getPath() + "/cfg/cfg.yaml");
 
@@ -789,13 +789,21 @@ namespace mobile_manipulator_controller
       return true;
   }
 
+  bool MobileManipulatorController::getKinematicMpcControlModeService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res) {
+    res.result = true;
+    res.mode = static_cast<int>(controlType_);
+    res.message = "Kinematic MPC control mode is " + controlTypeToString(controlType_) + ".";
+    std::cout << res.message << std::endl;
+    return true;
+  }
+
   void MobileManipulatorController::pubHumanoid2MMTf()
   {
     geometry_msgs::TransformStamped static_transformStamped;
     static_transformStamped.header.stamp = ros::Time::now();
 
     static_transformStamped.header.frame_id = "odom";
-    static_transformStamped.child_frame_id = "world";
+    static_transformStamped.child_frame_id = "mm/world";
 
     static_transformStamped.transform.translation.x = 0.0;
     static_transformStamped.transform.translation.y = 0.0;
@@ -838,7 +846,7 @@ namespace mobile_manipulator_controller
   {
     visualization_msgs::MarkerArray marker_array;
     visualization_msgs::Marker marker_l, marker_r;
-    marker_l.header.frame_id = "world";
+    marker_l.header.frame_id = "mm/world";
     marker_l.header.stamp = ros::Time::now();
     // marker_l.ns = "l_hand";
     marker_l.id = 0;

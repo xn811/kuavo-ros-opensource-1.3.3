@@ -29,7 +29,7 @@ if __name__ == "__main__":
     if res:
         times = [0.5, 2.5]
         q_frames = [arm_q, res]
-        robot.control_arm_target_poses(times, q_frames)
+        robot.control_arm_joint_trajectory(times, q_frames)
         time.sleep(3.5)
         robot.set_fixed_arm_mode()
         time.sleep(1.0)

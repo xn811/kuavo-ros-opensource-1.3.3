@@ -5,7 +5,7 @@ from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 from kuavo_humanoid_sdk.kuavo.core.ros_env import KuavoROSEnv, KuavoROSEnvWebsocket
 from kuavo_humanoid_sdk.interfaces.robot import RobotBase
 from kuavo_humanoid_sdk.common.logger import SDKLogger, disable_sdk_logging
-from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams
+from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow
 from kuavo_humanoid_sdk.kuavo.core.core import KuavoRobotCore
 
 from typing import Tuple
@@ -219,6 +219,46 @@ class KuavoRobot(RobotBase):
             raise ValueError(f"[Robot] target_pose length must be 4 (x, y, z, yaw), but got {len(target_pose)}")
 
         return self._kuavo_core.step_control(target_pose, dt, is_left_first_default, collision_check)
+
+    def control_command_pose(self, target_pose_x: float, target_pose_y: float, target_pose_z: float, target_pose_yaw: float) -> bool:
+        """Control robot pose in base_link frame.
+        
+        Args:
+            target_pose_x (float): The target x position in meters.
+            target_pose_y (float): The target y position in meters.
+            target_pose_z (float): The target z position in meters.
+            target_pose_yaw (float): The target yaw angle in radians.
+            
+        Returns:
+            bool: True if the command was sent successfully, False otherwise.
+            
+        Raises:
+            RuntimeError: If the robot is not in stance state when trying to control pose.
+            
+        Note:
+            This command changes the robot state to 'command_pose'.
+        """
+        return self._kuavo_core.control_command_pose(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
+
+    def control_command_pose_world(self, target_pose_x: float, target_pose_y: float, target_pose_z: float, target_pose_yaw: float) -> bool:
+        """Control robot pose in odom (world) frame.
+        
+        Args:
+            target_pose_x (float): The target x position in meters.
+            target_pose_y (float): The target y position in meters.
+            target_pose_z (float): The target z position in meters.
+            target_pose_yaw (float): The target yaw angle in radians.
+            
+        Returns:
+            bool: True if the command was sent successfully, False otherwise.
+            
+        Raises:
+            RuntimeError: If the robot is not in stance state when trying to control pose.
+            
+        Note:
+            This command changes the robot state to 'command_pose_world'.
+        """
+        return self._kuavo_core.control_command_pose_world(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
     
     def control_head(self, yaw: float, pitch: float)->bool:
         """Control the head of the robot.
@@ -232,6 +272,16 @@ class KuavoRobot(RobotBase):
         """
         return self._robot_head.control_head(yaw=yaw, pitch=pitch)
     
+    def enable_head_tracking(self, target_id: int)->bool:
+        """Enable the head tracking.
+        """
+        return self._robot_head.enable_head_tracking(target_id)
+    
+    def disable_head_tracking(self)->bool:
+        """Disable the head tracking.
+        """
+        return self._robot_head.disable_head_tracking()
+    
     """ Robot Arm Control """
     def arm_reset(self)->bool:
         """Reset the robot arm.
@@ -240,8 +290,16 @@ class KuavoRobot(RobotBase):
             bool: True if the arm is reset successfully, False otherwise.
         """
         return self._robot_arm.arm_reset()
+    
+    def manipulation_mpc_reset(self)->bool:
+        """Reset the robot arm.
         
-    def control_arm_position(self, joint_positions:list)->bool:
+        Returns:
+            bool: True if the arm is reset successfully, False otherwise.
+        """
+        return self._robot_arm.manipulation_mpc_reset()
+    
+    def control_arm_joint_positions(self, joint_positions:list)->bool:
         """Control the position of the arm.
         
         Args:
@@ -259,9 +317,9 @@ class KuavoRobot(RobotBase):
             print("The length of the position list must be equal to the number of DOFs of the arm.")
             return False
         
-        return self._robot_arm.control_arm_position(joint_positions)
+        return self._robot_arm.control_arm_joint_positions(joint_positions)
     
-    def control_arm_target_poses(self, times:list, q_frames:list)->bool:
+    def control_arm_joint_trajectory(self, times:list, q_frames:list)->bool:
         """Control the target poses of the robot arm.
         
         Args:
@@ -281,7 +339,7 @@ class KuavoRobot(RobotBase):
             This is an asynchronous interface. The function returns immediately after sending the command.
             Users need to wait for the motion to complete on their own.
         """
-        return self._robot_arm.control_arm_target_poses(times, q_frames)
+        return self._robot_arm.control_arm_joint_trajectory(times, q_frames)
 
     def set_fixed_arm_mode(self) -> bool:
         """Freezes the robot arm.
@@ -306,6 +364,30 @@ class KuavoRobot(RobotBase):
             bool: True if the arm is external controlled successfully, False otherwise.
         """
         return self._robot_arm.set_external_control_arm_mode()
+    
+    def set_manipulation_mpc_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode) -> bool:
+        """
+        Set the manipulation mpc mode.
+        Returns:
+            bool: True if the manipulation mpc mode is set successfully, False otherwise.
+        """
+        return self._robot_arm.set_manipulation_mpc_mode(ctrl_mode)
+    
+    def set_manipulation_mpc_control_flow(self, control_flow: KuavoManipulationMpcControlFlow) -> bool:
+        """
+        Set the manipulation mpc control flow.
+        Returns:
+            bool: True if the manipulation mpc control flow is set successfully, False otherwise.
+        """ 
+        return self._robot_arm.set_manipulation_mpc_control_flow(control_flow)
+
+    def set_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame) -> bool:
+        """
+        Set the manipulation mpc frame.
+        Returns:
+            bool: True if the manipulation mpc frame is set successfully, False otherwise.
+        """
+        return self._robot_arm.set_manipulation_mpc_frame(frame)
     
     """ Arm Forward kinematics && Arm Inverse kinematics """
     def arm_ik(self, 
@@ -355,3 +437,23 @@ class KuavoRobot(RobotBase):
             This function requires initializing the SDK with the :attr:`KuavoSDK.Options.WithIK`.        
         """
         return self._robot_arm.arm_fk(q)
+
+    def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
+        """Control the end effector pose of the robot arm.
+        
+        Args:
+            left_pose (KuavoPose): Pose of the robot left arm, xyz and quat.
+            right_pose (KuavoPose): Pose of the robot right arm, xyz and quat.
+            frame (KuavoManipulationMpcFrame): Frame of the robot arm.
+            
+        Returns:
+            bool: True if the end effector pose is controlled successfully, False otherwise.
+        """
+        return self._robot_arm.control_robot_end_effector_pose(left_pose, right_pose, frame)
+
+if __name__ == "__main__":
+    robot = KuavoRobot()
+    robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
+    robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
+    robot.set_manipulation_mpc_frame(KuavoManipulationMpcFrame.WorldFrame)
+    robot.control_robot_end_effector_pose(KuavoPose(position=[0.3, 0.4, 0.9], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoPose(position=[0.3, -0.5, 1.0], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoManipulationMpcFrame.WorldFrame)

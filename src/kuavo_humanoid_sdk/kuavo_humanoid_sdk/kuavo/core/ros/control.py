@@ -5,7 +5,9 @@ import numpy as np
 from typing import Tuple
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
-from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose
+from kuavo_humanoid_sdk.interfaces.data_types import (KuavoArmCtrlMode, KuavoIKParams, KuavoPose, 
+                                                      KuavoManipulationMpcControlFlow, KuavoManipulationMpcCtrlMode
+                                                      ,KuavoManipulationMpcFrame)
 from kuavo_humanoid_sdk.kuavo.core.ros.sat_utils import RotatingRectangle
 from kuavo_humanoid_sdk.kuavo.core.ros.param import EndEffectorType
 
@@ -16,11 +18,15 @@ try:
     from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import (gestureTask,robotHandPosition, robotHeadMotionData, armTargetPoses, switchGaitByName,
                                 footPose, footPoseTargetTrajectories, dexhandCommand)
     from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
-                            controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest)
-    from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
+                            controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest,
+                            changeTorsoCtrlMode, changeTorsoCtrlModeRequest, setMmCtrlFrame, setMmCtrlFrameRequest,
+                            setTagId, setTagIdRequest)
+    from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose
     from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
+    from std_srvs.srv import SetBool, SetBoolRequest
 except:
     pass
+
 
 
 
@@ -387,6 +393,7 @@ class ControlRobotArm:
     def __init__(self):
         self._pub_ctrl_arm_traj = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=10)
         self._pub_ctrl_arm_target_poses = rospy.Publisher('/kuavo_arm_target_poses', armTargetPoses, queue_size=10)
+        self._pub_ctrl_hand_pose_cmd = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
 
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
@@ -429,6 +436,153 @@ class ControlRobotArm:
         except Exception as e:
             SDKLogger.error(f"publish arm target poses: {e}")
         return False
+    def pub_end_effector_pose_cmd(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
+        try:
+            msg = twoArmHandPoseCmd()
+            left_pose_msg = armHandPose()
+            left_pose_msg.pos_xyz = left_pose.position
+            left_pose_msg.quat_xyzw = left_pose.orientation
+            right_pose_msg = armHandPose()
+            right_pose_msg.pos_xyz = right_pose.position
+            right_pose_msg.quat_xyzw = right_pose.orientation
+            msg.hand_poses.left_pose = left_pose_msg
+            msg.hand_poses.right_pose = right_pose_msg
+            if frame.value not in [0, 1, 2, 3, 4]:
+                SDKLogger.error(f"Invalid frame: {frame}")
+                return False
+            msg.frame = frame.value
+            self._pub_ctrl_hand_pose_cmd.publish(msg)
+            return True
+        except Exception as e:
+            SDKLogger.error(f"publish arm target poses: {e}")
+        return False
+
+    def srv_change_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame)->bool:
+        try:
+            service_name = '/set_mm_ctrl_frame'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            set_frame_srv = rospy.ServiceProxy(service_name, setMmCtrlFrame)
+            
+            req = setMmCtrlFrameRequest()
+            req.frame = frame.value
+            
+            resp = set_frame_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to change manipulation mpc frame to {frame}: {resp.message}")
+            return resp.result
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to change manipulation mpc frame: {e}")
+        return False
+    
+    def srv_change_manipulation_mpc_ctrl_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode)->bool:
+        try:
+            service_name = '/mobile_manipulator_mpc_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            set_mode_srv = rospy.ServiceProxy(service_name, changeTorsoCtrlMode)
+            
+            req = changeTorsoCtrlModeRequest()
+            req.control_mode = ctrl_mode.value
+            
+            resp = set_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to change manipulation mpc control mode to {ctrl_mode}: {resp.message}")
+            return resp.result
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to change manipulation mpc control mode: {e}")
+        return False
+
+    def srv_change_manipulation_mpc_control_flow(self, ctrl_flow: KuavoManipulationMpcControlFlow)-> bool:
+        try:
+            service_name = '/enable_mm_wbc_arm_trajectory_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            set_mode_srv = rospy.ServiceProxy(service_name, changeArmCtrlMode)
+
+            req = changeArmCtrlModeRequest()
+            req.control_mode = ctrl_flow.value
+
+            resp = set_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to change manipulation mpc wbc arm trajectory control to {ctrl_flow}: {resp.message}")
+            return resp.result
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e:  # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to change manipulation mpc control flow: {e}")
+        return False
+
+    def srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
+        try:
+            service_name = '/mobile_manipulator_get_mpc_control_mode'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeTorsoCtrlMode)
+            
+            req = changeTorsoCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc control mode: {resp.message}")
+                return KuavoManipulationMpcCtrlMode.ERROR
+            return KuavoManipulationMpcCtrlMode(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
+        return KuavoManipulationMpcCtrlMode.ERROR
+
+    def srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
+        try:
+            service_name = '/get_mm_ctrl_frame'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_frame_srv = rospy.ServiceProxy(service_name, setMmCtrlFrame)
+            
+            req = setMmCtrlFrameRequest()
+            
+            resp = get_frame_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc frame: {resp.message}")
+                return KuavoManipulationMpcFrame.ERROR
+            return KuavoManipulationMpcFrame(resp.currentFrame)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
+        return KuavoManipulationMpcFrame.ERROR
+
+    def srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
+        try:
+            service_name = '/get_mm_wbc_arm_trajectory_control'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            get_mode_srv = rospy.ServiceProxy(service_name, changeArmCtrlMode)
+            
+            req = changeArmCtrlModeRequest()
+            
+            resp = get_mode_srv(req)
+            if not resp.result:
+                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {resp.message}")
+                return KuavoManipulationMpcControlFlow.ERROR
+            return KuavoManipulationMpcControlFlow(resp.mode)
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call to {service_name} failed: {e}")
+        except rospy.ROSException as e: # For timeout from wait_for_service
+            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
+        return KuavoManipulationMpcControlFlow.ERROR
+
 
     def srv_change_arm_ctrl_mode(self, mode: KuavoArmCtrlMode)->bool:
         try:
@@ -461,7 +615,7 @@ class ControlRobotArm:
 class ControlRobotHead:
     def __init__(self):
         self._pub_ctrl_robot_head = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=10)
-
+    
     def connect(self, timeout:float=1.0)->bool:
         start_time = rospy.Time.now()
         publishers = [
@@ -483,6 +637,168 @@ class ControlRobotHead:
         except Exception as e:
             SDKLogger.error(f"[Error] publish robot head: {e}")
             return False
+
+    def srv_enable_head_tracking(self, target_id: int)->bool:
+        """Enable the head tracking for a specific tag ID.
+        
+        Args:
+            target_id: The ID of the tag to track
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # 首先设置追踪目标ID
+            service_name = '/set_target_tag_id'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            set_tag_id_srv = rospy.ServiceProxy(service_name, setTagId)
+            
+            req = setTagIdRequest()
+            req.tag_id = target_id
+            
+            resp = set_tag_id_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to set target tag ID: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully set target tag ID to {target_id}: {resp.message}")
+            
+            # 然后启动连续追踪
+            service_name = '/continuous_track'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            continuous_track_srv = rospy.ServiceProxy(service_name, SetBool)
+            
+            req = SetBoolRequest()
+            req.data = True
+            
+            resp = continuous_track_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to start continuous tracking: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully started continuous tracking: {resp.message}")
+            return True
+            
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Failed to connect to service: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to enable head tracking: {e}")
+            
+        return False
+        
+    def srv_disable_head_tracking(self)->bool:
+        """Disable the head tracking.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            service_name = '/continuous_track'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            continuous_track_srv = rospy.ServiceProxy(service_name, SetBool)
+            
+            req = SetBoolRequest()
+            req.data = False
+            
+            resp = continuous_track_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to stop continuous tracking: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully stopped continuous tracking: {resp.message}")
+            return True
+            
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Failed to connect to service: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to disable head tracking: {e}")
+            
+        return False
+
+    def srv_enable_head_tracking(self, target_id: int)->bool:
+        """Enable the head tracking for a specific tag ID.
+        
+        Args:
+            target_id: The ID of the tag to track
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # 首先设置追踪目标ID
+            service_name = '/set_target_tag_id'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            set_tag_id_srv = rospy.ServiceProxy(service_name, setTagId)
+            
+            req = setTagIdRequest()
+            req.tag_id = target_id
+            
+            resp = set_tag_id_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to set target tag ID: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully set target tag ID to {target_id}: {resp.message}")
+            
+            # 然后启动连续追踪
+            service_name = '/continuous_track'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            continuous_track_srv = rospy.ServiceProxy(service_name, SetBool)
+            
+            req = SetBoolRequest()
+            req.data = True
+            
+            resp = continuous_track_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to start continuous tracking: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully started continuous tracking: {resp.message}")
+            return True
+            
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Failed to connect to service: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to enable head tracking: {e}")
+            
+        return False
+        
+    def srv_disable_head_tracking(self)->bool:
+        """Disable the head tracking.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            service_name = '/continuous_track'
+            rospy.wait_for_service(service_name, timeout=2.0)
+            continuous_track_srv = rospy.ServiceProxy(service_name, SetBool)
+            
+            req = SetBoolRequest()
+            req.data = False
+            
+            resp = continuous_track_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to stop continuous tracking: {resp.message}")
+                return False
+                
+            SDKLogger.info(f"Successfully stopped continuous tracking: {resp.message}")
+            return True
+            
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Failed to connect to service: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Failed to disable head tracking: {e}")
+            
+        return False
 
 """ Control Robot Head """
 class ControlRobotHeadWebsocket:
@@ -531,6 +847,7 @@ class ControlRobotMotion:
     def __init__(self):
         self._pub_cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         self._pub_cmd_pose = rospy.Publisher('/cmd_pose', Twist, queue_size=10)
+        self._pub_cmd_pose_world = rospy.Publisher('/cmd_pose_world', Twist, queue_size=10)
         self._pub_joy = rospy.Publisher('/joy', Joy, queue_size=10)
         self._pub_switch_gait = rospy.Publisher('/humanoid_switch_gait_by_name', switchGaitByName, queue_size=10)
         self._pub_step_ctrl = rospy.Publisher('/humanoid_mpc_foot_pose_target_trajectories', footPoseTargetTrajectories, queue_size=10)
@@ -542,7 +859,8 @@ class ControlRobotMotion:
             (self._pub_cmd_vel, "cmd_vel publisher"),
             (self._pub_cmd_pose, "cmd_pose publisher"),
             (self._pub_step_ctrl, "step_ctrl publisher"),
-            (self._pub_switch_gait, "switch_gait publisher")
+            (self._pub_switch_gait, "switch_gait publisher"),
+            (self._pub_cmd_pose_world, "cmd_pose_world publisher"),
         ]
         
         success = True
@@ -574,8 +892,16 @@ class ControlRobotMotion:
         except Exception as e:
             SDKLogger.error(f"[Error] publish cmd pose: {e}")
             return False    
-    
-    def _create_joy_msg(self):
+
+    def pub_cmd_pose_world(self, twist:Twist)->bool:
+        try:
+            self._pub_cmd_pose_world.publish(twist)
+            return True
+        except Exception as e:
+            SDKLogger.error(f"[Error] publish cmd pose world: {e}")
+            return False
+
+    def _create_joy_msg(self)->Joy:
         joy_msg = Joy()
         joy_msg.axes = [0.0] * 8  # Initialize 8 axes
         joy_msg.buttons = [0] * 16  # Initialize 16 buttons
@@ -1020,19 +1346,39 @@ class KuavoRobotControl:
         SDKLogger.debug(f"Control robot head: {yaw}, {pitch}")
         return self.kuavo_head_control.pub_control_robot_head(yaw, pitch)
     
-
-    def control_robot_arm_traj(self, joint_data:list)->bool:
+    def enable_head_tracking(self, target_id: int)->bool:
+        """Enable the head tracking for a specific tag ID.
+        
+        Args:
+            target_id: The ID of the tag to track
+            
+        Returns:
+            bool: True if successful, False otherwise
         """
-            Control robot arm trajectory
+        SDKLogger.debug(f"Enable head tracking: {target_id}")
+        return self.kuavo_head_control.srv_enable_head_tracking(target_id)
+    
+    def disable_head_tracking(self)->bool:
+        """Disable the head tracking.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        SDKLogger.debug(f"Disable head tracking")
+        return self.kuavo_head_control.srv_disable_head_tracking()
+    
+    def control_robot_arm_joint_positions(self, joint_data:list)->bool:
+        """
+            Control robot arm joint positions
             Arguments:
                 - joint_data: list of joint data (degrees)
         """
         # SDKLogger.debug(f"[ROS] Control robot arm trajectory: {joint_data}")
         return self.kuavo_arm_control.pub_control_robot_arm_traj(joint_data)
     
-    def control_robot_arm_target_poses(self, times:list, joint_q:list)->bool:
+    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
         """
-            Control robot arm target poses
+            Control robot arm joint trajectory
             Arguments:
                 - times: list of times (seconds)
                 - joint_q: list of joint data (degrees)
@@ -1043,6 +1389,58 @@ class KuavoRobotControl:
             raise ValueError("Times and joint_q must not be empty.")
         
         return self.kuavo_arm_control.pub_arm_target_poses(times=times, joint_q=joint_q)
+    
+    def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
+        """
+            Control robot end effector pose
+            Arguments:
+                - left_pose: left end effector pose
+                - right_pose: right end effector pose
+                - frame: frame of the end effector pose, 0: keep current frame, 1: world frame, 2: local frame, 3: VR frame, 4: manipulation world frame
+        """
+        return self.kuavo_arm_control.pub_end_effector_pose_cmd(left_pose, right_pose, frame)
+    
+    def change_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame)->bool:
+        """
+            Change manipulation mpc frame
+            Arguments:
+                - frame: frame of the manipulation mpc
+        """
+        return self.kuavo_arm_control.srv_change_manipulation_mpc_frame(frame)
+    
+    def change_manipulation_mpc_ctrl_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode)->bool:
+        """
+            Change manipulation mpc control mode
+            Arguments:
+                - control_mode: control mode of the manipulation mpc
+        """
+        return self.kuavo_arm_control.srv_change_manipulation_mpc_ctrl_mode(ctrl_mode)
+    
+    def change_manipulation_mpc_control_flow(self, ctrl_flow: KuavoManipulationMpcControlFlow)->bool:
+        """
+            Change manipulation mpc wbc arm traj control mode, control signal will be sent to wbc directly
+            Arguments:
+                - control_mode: control mode of the manipulation mpc wbc arm traj
+        """
+        return self.kuavo_arm_control.srv_change_manipulation_mpc_control_flow(ctrl_flow)
+    
+    def get_manipulation_mpc_ctrl_mode(self)->KuavoManipulationMpcCtrlMode:
+        """
+            Get manipulation mpc control mode
+        """
+        return self.kuavo_arm_control.srv_get_manipulation_mpc_ctrl_mode()
+    
+    def get_manipulation_mpc_frame(self)-> KuavoManipulationMpcFrame:
+        """
+            Get manipulation mpc frame
+        """
+        return self.kuavo_arm_control.srv_get_manipulation_mpc_frame()  
+    
+    def get_manipulation_mpc_control_flow(self)->KuavoManipulationMpcControlFlow:
+        """
+            Get manipulation mpc wbc arm traj control mode
+        """
+        return self.kuavo_arm_control.srv_get_manipulation_mpc_control_flow()   
     
     def change_robot_arm_ctrl_mode(self, mode:KuavoArmCtrlMode)->bool:
         """
@@ -1083,6 +1481,28 @@ class KuavoRobotControl:
         com_msg = Twist()
         com_msg.linear.z = height
         com_msg.angular.y = pitch
+        return self.kuavo_motion_control.pub_cmd_pose(com_msg)
+
+    def control_command_pose_world(self, target_pose_x:float, target_pose_y:float, target_pose_z:float, target_pose_yaw:float)->bool:
+        """
+            odom下的机器人cmd_pose_world
+        """
+        com_msg = Twist()
+        com_msg.linear.x = target_pose_x
+        com_msg.linear.y = target_pose_y
+        com_msg.linear.z = target_pose_z
+        com_msg.angular.z = target_pose_yaw
+        return self.kuavo_motion_control.pub_cmd_pose_world(com_msg)
+
+    def control_command_pose(self, target_pose_x:float, target_pose_y:float, target_pose_z:float, target_pose_yaw:float)->bool:
+        """
+            base_link下的机器人cmd_pose
+        """
+        com_msg = Twist()
+        com_msg.linear.x = target_pose_x
+        com_msg.linear.y = target_pose_y
+        com_msg.linear.z = target_pose_z
+        com_msg.angular.z = target_pose_yaw
         return self.kuavo_motion_control.pub_cmd_pose(com_msg)
 
     def step_control(self, body_poses:list, dt:float, is_left_first_default:bool=True, collision_check:bool=True)->bool:
@@ -1438,3 +1858,17 @@ def get_multiple_steps_msg(body_poses:list, dt:float, is_left_first:bool=True, c
     # print("foot_traj:", foot_traj)
     # print("torso_traj:", torso_traj)
     return get_foot_pose_traj_msg(time_traj, foot_idx_traj, foot_traj, torso_traj)
+""" ------------------------------------------------------------------------------"""
+
+
+# if __name__ == "__main__":
+#     control = KuavoRobotControl()
+#     control.change_manipulation_mpc_frame(KuavoManipulationMpcFrame.KeepCurrentFrame)
+#     control.change_manipulation_mpc_ctrl_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
+#     control.change_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
+#     print(control.get_manipulation_mpc_ctrl_mode())
+#     print(control.get_manipulation_mpc_frame())
+#     print(control.get_manipulation_mpc_control_flow())
+#     control.change_manipulation_mpc_frame(KuavoManipulationMpcFrame.WorldFrame)
+#     control.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl)
+#     control.control_robot_end_effector_pose(KuavoPose(position=[0.3, 0.4, 0.9], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoPose(position=[0.3, -0.5, 1.0], orientation=[0.0, 0.0, 0.0, 1.0]), KuavoManipulationMpcFrame.WorldFrame)
