@@ -37,18 +37,17 @@ class ControlEndEffector:
         if self._eef_type == EndEffectorType.QIANGNAO:
             self._pub_ctrl_robot_hand = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)                
             # publisher, name, require
-            self._pubs.append((self._pub_ctrl_robot_hand, True))
+            self._pubs.append((self._pub_ctrl_robot_hand, False))
         elif self._eef_type == EndEffectorType.QIANGNAO_TOUCH:
             self._pub_ctrl_robot_hand = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)                
             self._pub_dexhand_command = rospy.Publisher('/dexhand/command', dexhandCommand, queue_size=10)
             self._pub_dexhand_right_command = rospy.Publisher('/dexhand/right/command', dexhandCommand, queue_size=10)
             self._pub_dexhand_left_command = rospy.Publisher('/dexhand/left/command', dexhandCommand, queue_size=10)
             # publisher, name, require
-            self._pubs.append((self._pub_dexhand_command, True))
-            self._pubs.append((self._pub_dexhand_right_command, True))
-            self._pubs.append((self._pub_dexhand_left_command, True))
+            self._pubs.append((self._pub_dexhand_command, False))
+            self._pubs.append((self._pub_dexhand_right_command, False))
+            self._pubs.append((self._pub_dexhand_left_command, False))
             
-
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
         
@@ -56,8 +55,9 @@ class ControlEndEffector:
         for pub, require in self._pubs:
             while pub.get_num_connections() == 0:
                 if (rospy.Time.now() - start_time).to_sec() > timeout:
-                    SDKLogger.error(f"Timeout waiting for {pub.name} connection")
-                    success = False
+                    if require:
+                        SDKLogger.error(f"Timeout waiting for {pub.name} connection")
+                        success = False
                     break
                 rospy.sleep(0.1)
 
@@ -198,16 +198,16 @@ class ControlEndEffectorWebsocket:
         if self._eef_type == EndEffectorType.QIANGNAO:
             self._pub_ctrl_robot_hand = roslibpy.Topic(websocket.client, '/control_robot_hand_position', 'kuavo_msgs/robotHandPosition')                
             # publisher, name, require
-            self._pubs.append((self._pub_ctrl_robot_hand, True))
+            self._pubs.append((self._pub_ctrl_robot_hand, False))
         elif self._eef_type == EndEffectorType.QIANGNAO_TOUCH:
             self._pub_ctrl_robot_hand = roslibpy.Topic(websocket.client, '/control_robot_hand_position', 'kuavo_msgs/robotHandPosition')                
             self._pub_dexhand_command = roslibpy.Topic(websocket.client, '/dexhand/command', 'kuavo_msgs/dexhandCommand')
             self._pub_dexhand_right_command = roslibpy.Topic(websocket.client, '/dexhand/right/command', 'kuavo_msgs/dexhandCommand')
             self._pub_dexhand_left_command = roslibpy.Topic(websocket.client, '/dexhand/left/command', 'kuavo_msgs/dexhandCommand')
             # publisher, name, require
-            self._pubs.append((self._pub_dexhand_command, True))
-            self._pubs.append((self._pub_dexhand_right_command, True))
-            self._pubs.append((self._pub_dexhand_left_command, True))
+            self._pubs.append((self._pub_dexhand_command, False))
+            self._pubs.append((self._pub_dexhand_right_command, False))
+            self._pubs.append((self._pub_dexhand_left_command, False))
 
     def connect(self, timeout:float=1.0)-> bool:
         return True

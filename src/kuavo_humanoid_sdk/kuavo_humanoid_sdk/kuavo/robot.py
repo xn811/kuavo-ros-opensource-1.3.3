@@ -47,22 +47,30 @@ class KuavoSDK:
     def Init(options:int=Options.Normal, log_level: str = "INFO", 
              websocket_mode: bool = False, websocket_host='127.0.0.1', websocket_port=9090, websocket_timeout=5)-> bool:
         """Initialize the SDK.
+        
+        Initializes the Kuavo SDK with specified options and configuration.
+        
         Args:
-            log_level (str): The logging level to use. Can be "ERROR", "WARN", "INFO", "DEBUG".
+            options (int): Configuration options for the SDK. Use KuavoSDK.Options constants.
+                Defaults to Options.Normal.
+            log_level (str): Logging level to use. Options are "ERROR", "WARN", "INFO", "DEBUG".
                 Defaults to "INFO".
-            websocket_mode (bool): Whether to use websocket mode for ROS communication. If True,
-                the SDK will connect to ROS through websocket instead of direct ROS connection.
+            websocket_mode (bool): Whether to use websocket mode for ROS communication.
+                If True, connects to ROS through websocket instead of direct connection.
                 Defaults to False.
-            websocket_host (str): The host address of the rosbridge websocket server when using
-                websocket mode. Defaults to "127.0.0.1".
-            websocket_port (int): The port number of the rosbridge websocket server when using
-                websocket mode. Defaults to 9090.
-            websocket_timeout (int): The timeout for the websocket connection. Defaults to 5.
+            websocket_host (str): Host address of the rosbridge websocket server.
+                Only used when websocket_mode is True. Defaults to "127.0.0.1".
+            websocket_port (int): Port number of the rosbridge websocket server.
+                Only used when websocket_mode is True. Defaults to 9090.
+            websocket_timeout (int): Timeout in seconds for the websocket connection.
+                Defaults to 5.
+                
         Returns:
-            bool: True if initialization is successful, False otherwise.
+            bool: True if initialization succeeds, False otherwise.
             
         Raises:
-            RuntimeError: If the initialization fails.
+            RuntimeError: If initialization fails due to missing dependencies or
+                connection issues.
         """
         GlobalConfig.use_websocket = websocket_mode
         GlobalConfig.websocket_host = websocket_host

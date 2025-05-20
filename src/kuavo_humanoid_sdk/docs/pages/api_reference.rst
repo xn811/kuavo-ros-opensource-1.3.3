@@ -76,6 +76,11 @@ API Reference
     :undoc-members:
     :show-inheritance:
 
+.. autoclass:: KuavoRobotObservation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. automodule:: kuavo_humanoid_sdk.interfaces.data_types
     :members:
 

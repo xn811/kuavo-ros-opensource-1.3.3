@@ -1,20 +1,19 @@
-<a id="api-reference"></a>
-
-#### WARNING
-Before running any code examples, make sure to start the robot first by executing either:
-
-# API Reference
-
 <a id="kuavo-strategy"></a>
 
 #### WARNING
 Before running any code examples, make sure to start the robot first by executing either:
 
+- For simulation: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (Example command)
+- For real robot: `roslaunch humanoid_controllers load_kuavo_real.launch` (Example command)
+
+#### NOTE
+If using websocket mode, you need to start the rosbridge server on robot first: `roslaunch rosbridge_server rosbridge_websocket.launch` (Example command)
+
 # Kuavo Strategy 策略模块
 
 ## 基础策略接口
 
-### *class* kuavo_humanoid_sdk.kuavo_strategy.kuavo_strategy.KuavoRobotStrategyBase(robot: KuavoRobot, robot_state: KuavoRobotState, robot_tools: KuavoRobotTools, robot_vision: KuavoRobotVision)
+### *class* kuavo_humanoid_sdk.kuavo_strategy.kuavo_strategy.KuavoRobotStrategyBase(robot: [KuavoRobot](api_reference.md#kuavo_humanoid_sdk.KuavoRobot), robot_state: [KuavoRobotState](api_reference.md#kuavo_humanoid_sdk.KuavoRobotState), robot_tools: [KuavoRobotTools](api_reference.md#kuavo_humanoid_sdk.KuavoRobotTools), robot_vision: [KuavoRobotVision](api_reference.md#kuavo_humanoid_sdk.KuavoRobotVision))
 
 Bases: `ABC`
 
@@ -61,7 +60,7 @@ Kuavo机器人策略基础类，提供策略执行的抽象接口
 
 ### 箱子信息数据结构
 
-### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.BoxInfo(pose: KuavoPose, size: Tuple[float, float, float] = (0.3, 0.2, 0.15), mass: float = 1.0)
+### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.BoxInfo(pose: [KuavoPose](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), size: Tuple[float, float, float] = (0.3, 0.2, 0.15), mass: float = 1.0)
 
 Bases: `object`
 
@@ -74,7 +73,7 @@ Bases: `object`
 箱子的位姿信息
 
 * **Type:**
-  KuavoPose
+  [KuavoPose](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)
 
 #### size
 
@@ -92,19 +91,19 @@ Bases: `object`
 
 #### mass *: float* *= 1.0*
 
-#### pose *: KuavoPose*
+#### pose *: [KuavoPose](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)*
 
 #### size *: Tuple[float, float, float]* *= (0.3, 0.2, 0.15)*
 
 ### 箱子抓取策略类
 
-### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.KuavoGraspBox(robot: KuavoRobot, robot_state: KuavoRobotState, robot_tools: KuavoRobotTools, robot_vision: KuavoRobotVision)
+### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.KuavoGraspBox(robot: [KuavoRobot](api_reference.md#kuavo_humanoid_sdk.KuavoRobot), robot_state: [KuavoRobotState](api_reference.md#kuavo_humanoid_sdk.KuavoRobotState), robot_tools: [KuavoRobotTools](api_reference.md#kuavo_humanoid_sdk.KuavoRobotTools), robot_vision: [KuavoRobotVision](api_reference.md#kuavo_humanoid_sdk.KuavoRobotVision))
 
 Bases: [`KuavoRobotStrategyBase`](#kuavo_humanoid_sdk.kuavo_strategy.kuavo_strategy.KuavoRobotStrategyBase)
 
 箱子抓取策略类，继承自基础策略类
 
-#### arm_move_to_target(target_pose: KuavoPose, approach_speed=0.15, \*\*kwargs)
+#### arm_move_to_target(target_pose: [KuavoPose](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), approach_speed=0.15, \*\*kwargs)
 
 手臂移动到目标位置
 
@@ -140,7 +139,7 @@ Bases: [`KuavoRobotStrategyBase`](#kuavo_humanoid_sdk.kuavo_strategy.kuavo_strat
 * **Return type:**
   bool
 
-#### head_find_target(target_info: AprilTagData, max_search_time=None, search_pattern='rotate_head', \*\*kwargs)
+#### head_find_target(target_info: [AprilTagData](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData), max_search_time=None, search_pattern='rotate_head', \*\*kwargs)
 
 使用头部旋转寻找AprilTag目标
 
@@ -153,7 +152,13 @@ Bases: [`KuavoRobotStrategyBase`](#kuavo_humanoid_sdk.kuavo_strategy.kuavo_strat
 * **Return type:**
   bool
 
-#### walk_approach_target(target_info: AprilTagData, target_distance=0.5, approach_speed=0.15, \*\*kwargs)
+logic:
+: 1. 判断目标位置是否在机器人FOV(70度视场角)内
+  2. 如果不在FOV内且search_pattern为”rotate_body”，先旋转机器人身体朝向目标位置
+  3. 无论如何都使用头部搜索模式尝试找到目标
+  4. 找到apriltag_data_from_odom之后，马上开始头部追踪
+
+#### walk_approach_target(target_info: [AprilTagData](api_reference.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData), target_distance=0.5, approach_speed=0.15, \*\*kwargs)
 
 走路接近AprilTag目标
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import time
+import copy
 from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.data_types import (
     KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode,EndEffectorState, 
@@ -84,7 +85,7 @@ class KuavoRobotState:
         Returns:
             Tuple[float, float, float]: Position (x, y, z) in meters.
         """
-        return self._rs_core.odom_data.position
+        return tuple(self._rs_core.odom_data.position)
 
     def robot_orientation(self) -> Tuple[float, float, float, float]:
         """Returns the robot's orientation in world coordinates.
@@ -92,7 +93,7 @@ class KuavoRobotState:
         Returns:
             Tuple[float, float, float, float]: Orientation as quaternion (x, y, z, w).
         """
-        return self._rs_core.odom_data.orientation
+        return tuple(self._rs_core.odom_data.orientation)
 
     def linear_velocity(self) -> Tuple[float, float, float]:
         """Returns the robot's linear velocity in world coordinates.
@@ -100,7 +101,7 @@ class KuavoRobotState:
         Returns:
             Tuple[float, float, float]: Linear velocity (x, y, z) in m/s.
         """
-        return self._rs_core.odom_data.linear
+        return tuple(self._rs_core.odom_data.linear)
     
 
     def angular_velocity(self) -> Tuple[float, float, float]:
@@ -109,7 +110,7 @@ class KuavoRobotState:
         Returns:
             Tuple[float, float, float]: Angular velocity (x, y, z).
         """
-        return self._rs_core.odom_data.angular
+        return tuple(self._rs_core.odom_data.angular)
 
     def arm_joint_state(self) -> KuavoJointData:
         """Get the current state of the robot arm joints.
@@ -146,7 +147,7 @@ class KuavoRobotState:
                 ExternalControl: 2 - The robot arm is controlled externally.
                 or None.
         """
-        return self._rs_core.arm_control_mode
+        return KuavoArmCtrlMode(self._rs_core.arm_control_mode)
     
     def manipulation_mpc_ctrl_mode(self) -> KuavoManipulationMpcCtrlMode:
         """Get the current control mode of the robot manipulation MPC.
@@ -207,7 +208,7 @@ class KuavoRobotState:
                     - orientation: (float, float, float, float) - Quaternion orientation
                     - state: EndEffectorState.GraspingState - Current grasping state (UNKNOWN, OPEN, CLOSED)
         """
-        return self._rs_core.eef_state
+        return copy.deepcopy(self._rs_core.eef_state)
 
     def gait_name(self)->str:
         """Get the current gait name of the robot.

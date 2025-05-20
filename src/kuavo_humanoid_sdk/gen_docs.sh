@@ -41,7 +41,9 @@ if package_path not in sys.path:
 
 install_dependencies() {
     echo "Installing dependencies..."
-    pip list | grep -E "sphinx|sphinx-rtd-theme|sphinx-markdown-builder" > /dev/null || pip install sphinx sphinx-rtd-theme sphinx-markdown-builder
+    for pkg in sphinx sphinx-rtd-theme sphinx-markdown-builder; do
+        pip list | grep "$pkg" > /dev/null || (echo "Installing $pkg..." && pip install "$pkg")
+    done
 }
 
 check_ros_env() {

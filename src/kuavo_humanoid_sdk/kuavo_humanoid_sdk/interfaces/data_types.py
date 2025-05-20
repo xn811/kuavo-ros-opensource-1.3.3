@@ -233,3 +233,39 @@ class PoseQuaternion:
     """
     position: Tuple[float, float, float]
     orientation: Tuple[float, float, float, float]
+
+
+@dataclass
+class KuavoJointCommand:
+    """Data class representing joint command for the robot.
+
+    Args:
+        joint_q (list): List of joint position commands in radians
+        joint_v (list): List of joint velocity commands in radians/second
+        tau (list): List of joint torque/effort commands in Newton-meters or Amperes
+        tau_max (list): List of maximum allowable torques for each joint
+        tau_ratio (list): List of torque ratios (actual/maximum) for each joint
+        joint_kp (list): List of position control proportional gains
+        joint_kd (list): List of velocity control derivative gains
+        control_modes (list): List of control mode integers for each joint
+    """
+    joint_q: list
+    joint_v: list
+    tau: list
+    tau_max: list
+    tau_ratio: list
+    joint_kp: list
+    joint_kd: list
+    control_modes: list
+
+
+@dataclass
+class KuavoTwist:
+    """Data class representing twist (velocity) data for the robot.
+
+    Args:
+        linear (Tuple[float, float, float]): Linear velocity (x, y, z) 
+        angular (Tuple[float, float, float]): Angular velocity (x, y, z)
+    """
+    linear: Tuple[float, float, float]
+    angular: Tuple[float, float, float]

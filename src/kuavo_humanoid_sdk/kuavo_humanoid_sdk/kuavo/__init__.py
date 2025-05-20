@@ -8,3 +8,4 @@ from .robot_head import KuavoRobotHead
 from .robot_audio import KuavoRobotAudio
 from .dexterous_hand import DexterousHand, TouchDexterousHand
 from .leju_claw import LejuClaw
+from .robot_observation import KuavoRobotObservation
