@@ -7,9 +7,7 @@ def main():
         print("Init KuavoSDK failed, exit!")
         exit(1)
 
-    robot = KuavoRobot() 
-    robot_state = KuavoRobotState()
-    robot_vision = KuavoRobotVision()
+    robot = KuavoRobot()
     
     # Stance
     robot.stance()
