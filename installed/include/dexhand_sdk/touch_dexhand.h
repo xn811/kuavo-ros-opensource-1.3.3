@@ -91,12 +91,12 @@ const UnsignedFingerArray kCloseFingerPositions = {
     50, 90, 90, 90, 90, 90
 };
 
-struct DeviceInfo {
+struct DeviceInfo_t {
     DexHandType sku_type;
     std::string serial_number;
     std::string firmware_version;
 
-    friend std::ostream& operator<<(std::ostream& os, const DeviceInfo& info) {
+    friend std::ostream& operator<<(std::ostream& os, const DeviceInfo_t& info) {
         os << "Sku Type: " << static_cast<int>(info.sku_type) << "\nSerial Number: " << info.serial_number << "\nFirmware Version: " << info.firmware_version << "\n";
         return os;
     }
@@ -158,7 +158,7 @@ public:
      * 
      * @return DeviceInfo 
      */
-    DeviceInfo getDeviceInfo();
+    DeviceInfo_t getDeviceInfo();
 
     /**
      * @brief Set the Finger Positions.
