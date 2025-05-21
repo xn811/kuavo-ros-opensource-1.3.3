@@ -64,6 +64,7 @@ add_message_files(
   armTargetPoses.msg
   robotHeadMotionData.msg
   footPose.msg
+  footPoses.msg
   footPoseTargetTrajectories.msg
   gestureInfo.msg
   gestureTask.msg

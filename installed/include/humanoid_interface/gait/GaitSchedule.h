@@ -50,12 +50,14 @@ namespace ocs2
       std::vector<FootIdx> footIndices;  // foot indices
       std::vector<Eigen::Vector4d> footPoseSequence;  // pose(xyz yaw) of each step at each event time
       std::vector<Eigen::Vector4d> torsoPoseSequence;  // torso pose(xyz yaw) of each step at each event time
+      std::vector<std::vector<Eigen::Vector4d>> additionalFootPoseSequence;  // additional foot pose(xyz yaw) of each step at each event time
       void clear()
       {
         eventTimes.clear();
         footIndices.clear();
         footPoseSequence.clear();
         torsoPoseSequence.clear();
+        additionalFootPoseSequence.clear();
       }
     };
 

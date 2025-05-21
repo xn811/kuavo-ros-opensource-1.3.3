@@ -83,7 +83,7 @@ class SwingTrajectoryPlanner {
               const feet_array_t<scalar_array_t>& maxHeightSequence, 
               const TargetTrajectories& targetTrajectories, 
               const scalar_t& initTime);
-  vector3_t findFootPosNext(int feet, int current_index, int swingStartIndex, int swingFinalIndex, const ModeSchedule& modeSchedule, const vector3_t &last_stance_position);
+  std::pair<vector3_t, std::vector<vector3_t>> findFootPosNext(int feet, int current_index, int swingStartIndex, int swingFinalIndex, const ModeSchedule& modeSchedule, const vector3_t &last_stance_position);
   
   // 存储规划值到 vector 中
   std::vector<scalar_t> saveTrajectoryToVector() const {

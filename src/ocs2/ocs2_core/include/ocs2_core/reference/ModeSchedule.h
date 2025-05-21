@@ -127,6 +127,7 @@ struct ModeSchedule {
   std::vector<bool> enableFootSequence;  // decide whether foot is enabled or not at each mode at each event time
   std::vector<Eigen::Vector4d> footPoseSequence;  // foot pos(xyz yaw) of each mode at each event time
   std::vector<Eigen::Vector4d> torsoPoseSequence; // torso pos(xyz yaw) of each mode at each event time
+  std::vector<std::vector<Eigen::Vector4d>> additionalFootPoseSequence; // additional foot pos(xyz yaw) of each mode at each event time
   // bool with_pos_sequence{false};  // whether posSequence is available or not
 };
 

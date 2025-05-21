@@ -56,6 +56,10 @@ ModeSchedule::ModeSchedule(std::vector<scalar_t> eventTimesInput, std::vector<si
     , footPoseSequence(std::move(footPoseSequenceInput))
     , torsoPoseSequence(std::move(torsoPoseSequenceInput))
 {
+  for (int i = 0;i< modeSequence.size();++i)
+  {
+    additionalFootPoseSequence.push_back(std::vector<Eigen::Vector4d>());
+  }
   assert(!modeSequence.empty());
   assert(eventTimes.size() + 1 == modeSequence.size());
   assert(eventTimes.size() + 1 == enableFootSequence.size());
