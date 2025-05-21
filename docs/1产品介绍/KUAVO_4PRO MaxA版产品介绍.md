@@ -35,7 +35,7 @@ KUAVO机器人4pro MaxA版包含头、躯干、手臂、腿部，全身总共28�
 
 - 单腿拥有6个自由度，包含大腿侧摆关节、大腿旋转关节、大腿前摆关节、膝关节、上踝关节和下踝关节。
 
-![KUAVO 4PRO](images/kuavo_4pro.png)
+![KUAVO 4PRO](images/Max版本产品规格.png)
 
 ## 产品规格
 
@@ -84,7 +84,7 @@ KUAVO机器人4pro MaxA版包含头、躯干、手臂、腿部，全身总共28�
 | 26   | 右踝上  | r_foot_pitch | -45     | 20      | 36       | 12       | 77        |
 | 27   | 右踝下  | r_foot_roll  | -15     | 15      | 36       | 12       | 77        |
 
-![](./images/4pro长手关节图示1.png)
+![](./images/4pro长手关节MAX图示1.png)
 
 ![](./images/4pro长手关节图示4.png)
 
@@ -359,3 +359,5 @@ KUAVO机器人4pro MaxA版包含头、躯干、手臂、腿部，全身总共28�
 ![灵巧手参数说明](images/灵巧手参数说明.png)
 
 灵巧手产品说明手册：[app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf](https://app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf)
+
+灵巧手官方文档网站：[灵巧手官方文档网站](https://www.brainco-hz.com/docs/revolimb-hand/guide/quick_start.html)

@@ -46,7 +46,7 @@ KUAVO机器人4pro 展厅版包含头、躯干、手臂、腿部，全身总共2
 | 算力平台 | 下位机<br/>上位机                                                             | 摩方i913900 x 1<br/>SWNUC12WSKI70000 x 1 |
 | 安全功能 | 本体急停<br/>声音提醒                                                           | 1<br/>低电量提醒                                                 |
 
-![KUAVO 4PRO](images/4pro长手产品规格.png)
+![KUAVO 4PRO](images/4pro长手产品规格1.png)
 
 ## KUAVO_4pro展厅版自由度范围、速度扭矩限制关节位置及运动控制坐标系图示
 
@@ -81,7 +81,7 @@ KUAVO机器人4pro 展厅版包含头、躯干、手臂、腿部，全身总共2
 | 26   | 右踝上  | r_foot_pitch | -45     | 20      | 36       | 12       | 77        |
 | 27   | 右踝下  | r_foot_roll  | -15     | 15      | 36       | 12       | 77        |
 
-![](./images/4pro长手关节图示1.png)
+![](./images/4pro长手关节展厅版本图示1.png)
 
 ![](./images/4pro长手关节图示4.png)
 
@@ -285,3 +285,5 @@ KUAVO机器人4pro 展厅版包含头、躯干、手臂、腿部，全身总共2
 ![灵巧手参数说明](images/灵巧手参数说明.png)
 
 灵巧手产品说明手册：[app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf](https://app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf)
+
+灵巧手官方文档网站：[灵巧手官方文档网站](https://www.brainco-hz.com/docs/revolimb-hand/guide/quick_start.html)

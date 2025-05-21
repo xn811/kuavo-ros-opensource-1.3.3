@@ -45,7 +45,7 @@ KUAVO机器人4pro 标准版包含头、躯干、手臂、腿部，全身总共2
 | 算力平台 | 下位机<br/>上位机                                                             | 摩方i913900 x 1<br/>ORIN_NX x 1 |
 | 安全功能 | 本体急停<br/>声音提醒                                                           | 1<br/>低电量提醒                                                 |
 
-![KUAVO 4PRO](images/4pro长手产品规格1.png)
+![KUAVO 4PRO](images/4pro长手标准版本产品规格1.png)
 
 ## KUAVO_4pro标准版自由度范围、速度扭矩限制关节位置及运动控制坐标系图示
 
@@ -74,7 +74,7 @@ KUAVO机器人4pro 标准版包含头、躯干、手臂、腿部，全身总共2
 | 20   | 右踝上  | r_foot_pitch | -45     | 20      | 36       | 12       | 77        |
 | 21   | 右踝下  | r_foot_roll  | -15     | 15      | 36       | 12       | 77        |
 
-![KUAVO 4PRO](images/长手图.jpg)
+![KUAVO 4PRO](images/标准版本长手图.png)
 
 ![](./images/4pro长手关节图示4.png)
 
