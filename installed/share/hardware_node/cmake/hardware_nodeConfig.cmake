@@ -185,7 +185,7 @@ foreach(t ${hardware_node_EXPORTED_TARGETS})
   endif()
 endforeach()
 
-set(depends "roscpp;kuavo_common")
+set(depends "roscpp;kuavo_common;kuavo_assets")
 foreach(depend ${depends})
   string(REPLACE " " ";" depend_list ${depend})
   # the package name of the dependency must be kept in a unique variable so that it is not overwritten in recursive calls

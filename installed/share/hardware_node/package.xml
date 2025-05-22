@@ -50,6 +50,7 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <depend>kuavo_msgs</depend>
   <depend>kuavo_common</depend>
+  <depend>kuavo_assets</depend>
   <depend>hardware_interface</depend>
   <depend>humanoid_interface</depend>
   <buildtool_depend>catkin</buildtool_depend>

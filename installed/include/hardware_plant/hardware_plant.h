@@ -43,6 +43,7 @@ struct HardwareParam {
     int build_cppad_state{0};
     bool only_half_up_body{false};
     int teach_pendant_{0};
+    std::string kuavo_assets_path{""};
 };
 
 enum ImuType

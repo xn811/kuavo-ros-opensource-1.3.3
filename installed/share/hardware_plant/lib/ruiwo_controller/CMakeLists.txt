@@ -19,7 +19,11 @@ endif()
 find_package(yaml-cpp REQUIRED)
 
 add_library(ruiwo_actuatorLib SHARED ruiwo_actuator.cpp)
-target_include_directories(ruiwo_actuatorLib PUBLIC ${Python3_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+target_include_directories(ruiwo_actuatorLib PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include/ruiwo_controller>
+  $<INSTALL_INTERFACE:${Python3_INCLUDE_DIRS}>
+)
 target_link_libraries(ruiwo_actuatorLib PUBLIC Python3::Python stdc++fs -pthread yaml-cpp)
 
 # 添加可执行文件
@@ -28,6 +32,7 @@ target_include_directories(ruiwo_test PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(ruiwo_test PUBLIC ruiwo_actuatorLib)
 
 install(TARGETS ruiwo_actuatorLib
+    # EXPORT hardware_plantTargets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
@@ -45,4 +50,9 @@ install(DIRECTORY ./
                    WORLD_EXECUTE WORLD_READ
 )
 
+file(GLOB RUIWO_CONTROLLER_HEADERS
+    "${PROJECT_SOURCE_DIR}/*.h"
+)
 
+install(FILES ${RUIWO_CONTROLLER_HEADERS}
+        DESTINATION include/ruiwo_controller)
