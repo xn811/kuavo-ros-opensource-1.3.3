@@ -107,7 +107,18 @@ const sidebars = {
           type: 'category',
           label: '扩展案例',
           items: [
-            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/展厅版大模型使用案例',
+            {
+          type: 'category',
+          label: '模仿学习使用案例',
+          items: [
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/案例概述',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/环境配置',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/数据采集',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/模型训练',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/模型部署',
+        'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/常见问题',
+          ],
+        },
             'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人导航案例',
           ],
         },
