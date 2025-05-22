@@ -49,11 +49,26 @@ class KuavoRobotStrategyBase(ABC):
         pass
     
     @abstractmethod
-    def arm_move_to_target(self, target_pose, **kwargs):
-        """手臂移动到特定的位置(闭环)
+    def walk_to_pose(self, target_info, target_distance=0.5, **kwargs):
+        """走到指定距离的目标位置
         
         Args:
-            target_pose: 目标位置姿态
+            target_info: 目标信息，包含位置、姿态等
+            target_distance: 与目标的期望距离(米)
+            **kwargs: 其他参数
+            
+        Returns:
+            bool: 是否成功接近目标
+        """
+        pass
+
+    @abstractmethod
+    def arm_move_to_target(self, target_info, **kwargs):
+        """手臂移动到特定的位置
+        
+        Args:
+            target_info: 目标信息，包含位置、姿态等
+            arm_mode: 手臂控制模式
             **kwargs: 其他参数
             
         Returns:
@@ -61,3 +76,29 @@ class KuavoRobotStrategyBase(ABC):
         """
         pass
 
+    @abstractmethod
+    def arm_transport_target_up(self, target_info, **kwargs):
+        """提起操作对象
+        
+        Args:
+            target_info: 目标信息，包含位置、姿态等
+            arm_mode: 手臂控制模式
+            **kwargs: 其他参数
+            
+        Returns:
+            bool: 是否成功提起操作对象
+        """
+        pass
+
+    @abstractmethod
+    def arm_transport_target_down(self, target_info, **kwargs):
+        """放下操作对象
+        
+        Args:
+            target_info: 目标信息，包含位置、姿态等
+            arm_mode: 手臂控制模式
+            **kwargs: 其他参数
+            
+        Returns:
+            bool: 是否成功放下操作对象
+        """

@@ -29,7 +29,7 @@ def main():
     # 创建箱子信息对象
     box_info = BoxInfo(
         pose=KuavoPose(
-            position=(0.5, 0.0, 0.4),  # 箱子位置
+            position=(0.0, -1.0, 0.9),  # 箱子位置
             orientation=(0.0, 0.0, 0.0, 1.0)  # 箱子朝向
         ),
         size=(0.3, 0.2, 0.15),  # 箱子尺寸(长、宽、高)，单位：米
@@ -39,8 +39,8 @@ def main():
     # 创建放置位置的箱子信息
     placement_box_info = BoxInfo(
         pose=KuavoPose(
-            position=(0.8, 0.3, 0.5),  # 目标放置位置坐标
-            orientation=(0.0, 0.0, 0.0, 1.0)  # 目标放置方向（四元数）
+            position=(0.0, 1.0, 0.9),  # 目标放置位置坐标
+            orientation=(0, 0, 0.7071, 0.7071)  # 目标放置方向（四元数）
         ),
         size=(0.3, 0.2, 0.15),  # 使用相同尺寸
         mass=1.0  # 使用相同质量
@@ -85,52 +85,63 @@ def main():
         print("✅ 已成功接近目标")
         time.sleep(1)  # 短暂暂停
         
-        # # 步骤3：手臂移动到抓取位置
-        # print("\n3. 手臂移动到抓取位置...")
-        # # 使用KuavoPose对象
-        # grasp_pose = KuavoPose(
-        #     position=(0.5, 0.0, 0.4),  # 示例位置
-        #     orientation=(0.0, 0.0, 0.0, 1.0)  # 示例朝向（四元数）
-        # )
+        # 步骤3：手臂移动到抓取位置
+        print("\n3. 手臂移动到抓取位置...")
+        move_success = grasp_strategy.arm_move_to_target(
+            box_info,
+            arm_mode="manipulation_mpc"
+        )
         
-        # move_success = grasp_strategy.arm_move_to_target(
-        #     grasp_pose,
-        #     approach_speed=0.15
-        # )
-        
-        # if not move_success:
-        #     print("❌ 手臂移动失败，无法继续执行")
-        #     return
+        if not move_success:
+            print("❌ 手臂移动失败，无法继续执行")
+            return
             
-        # print("✅ 手臂已到达抓取位置")
-        # time.sleep(1)  # 短暂暂停
+        print("✅ 手臂已到达抓取位置")
+        # grasp_strategy.robot.arm_reset()
+        time.sleep(1.0)  # 短暂暂停
         
-        # # 步骤4：提起箱子
-        # print("\n4. 提起箱子...")
-        # transport_up_success = grasp_strategy.arm_transport_target_up(
-        #     box_info,
-        #     arm_mode="manipulation_mpc"
-        # )
         
-        # if not transport_up_success:
-        #     print("❌ 提起箱子失败")
-        #     return
+        # 步骤4：提起箱子
+        print("\n4. 提起箱子...")
+        transport_up_success = grasp_strategy.arm_transport_target_up(
+            box_info,
+            arm_mode="manipulation_mpc"
+        )
+        
+        if not transport_up_success:
+            print("❌ 提起箱子失败")
+            return
+        time.sleep(1.0)  # 短暂暂停
             
-        # print("✅ 成功提起箱子")
-        # time.sleep(2)  # 展示一下成功提起的状态
+        print("✅ 成功提起箱子")
+        # grasp_strategy.robot.arm_reset()
+        time.sleep(1.0)  # 展示一下成功提起的状态
+
+        # 步骤5：移动到放置位置
+        print("\n5. 移动到放置位置...")
+        move_success = grasp_strategy.walk_to_pose(
+            placement_box_info,
+            target_distance=0.6,
+            approach_speed=0.2,
+        )
+        if not move_success:
+            print("❌ 移动到放置位置失败")
+            return
+        time.sleep(1.0)  # 短暂暂停
+        # 步骤6：放下箱子
+        print("\n6. 放下箱子...")
+        transport_down_success = grasp_strategy.arm_transport_target_down(
+            placement_box_info,
+            arm_mode="manipulation_mpc"
+        )
         
-        # # 步骤5：放下箱子
-        # print("\n5. 放下箱子...")
-        # transport_down_success = grasp_strategy.arm_transport_target_down(
-        #     placement_box_info,
-        #     arm_mode="manipulation_mpc"
-        # )
-        
-        # if not transport_down_success:
-        #     print("❌ 放下箱子失败")
-        #     return
+        if not transport_down_success:
+            print("❌ 放下箱子失败")
+            return
             
-        # print("✅ 成功放下箱子")
+        print("✅ 成功放下箱子")
+        time.sleep(1.0)  # 短暂暂停
+        grasp_strategy.robot.arm_reset()
         
         print("\n========== 箱子抓取任务完成 ==========")
         

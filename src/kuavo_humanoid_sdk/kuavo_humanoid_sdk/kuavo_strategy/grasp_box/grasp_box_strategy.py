@@ -44,8 +44,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 箱子抓取相关的配置参数
         self.search_timeout = 20.0  # 搜索超时时间(秒)
         self.approach_timeout = 30.0  # 接近超时时间(秒)
-        self.grasp_height_offset = 0.1  # 抓取高度偏移量(米)
-
+        self.grasp_height_offset = 0.2  # 抓取高度偏移量(米)
+        self.grasp_orientation = [0, -0.67566370964, 0, 0.73720997571945]
         # 存放头部寻找AprilTag的目标，初始化为异常ID 9999
         self.head_find_target_current_info_pose = AprilTagData(
             id=[9999],  # 异常ID
@@ -82,6 +82,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         # 获取需要追踪的目标ID
         target_id = target_info.id[0]
+        
+        if target_id > 9999:
+            print(f"target_id: {target_id} 大于 9999, 无效的AprilTag家族ID")
+            return False
         
         # 判断目标位置是否在FOV内
         if len(target_info.pose) > 0:
@@ -209,6 +213,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         Returns:
             float: yaw角（弧度）
         """
+        if not quaternion or len(quaternion) != 4:
+            print("无法获取有效的四元数")
+            return 0.0
+            
         # 计算yaw角 (围绕z轴的旋转)
         # 四元数到欧拉角的简化计算，仅提取yaw
         x, y, z, w = quaternion
@@ -305,17 +313,154 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         print(f"yaw_reached: {yaw_reached}, pos_reached: {pos_reached}, stance_check: {stance_check}")
         return yaw_reached and pos_reached # and stance_check
     
-    def arm_move_to_target(self, target_pose:KuavoPose, approach_speed=0.15, **kwargs):
+    def _check_target_reachable(self, target_info:BoxInfo) -> bool:
+        """检查目标位置是否在机器人手臂可达区域内
+        
+        Args:
+            target_info: 目标信息，包含位置、尺寸等
+            
+        Returns:
+            bool: 目标是否可达
+            
+        Note:
+            此函数为预留接口，待实现以下功能：
+            1. 获取机器人当前位姿
+            2. 获取机器人手臂工作空间范围
+            3. 检查目标位置是否在工作空间内
+        """
+        # TODO: 实现可达性检查逻辑
+        # 1. 获取机器人当前位姿
+        # robot_pose = self.state.robot_pose()
+        
+        # 2. 获取机器人手臂工作空间范围
+        # workspace_range = self.robot.get_arm_workspace()
+        
+        # 3. 检查目标位置是否在工作空间内
+        # target_position = target_info.pose.position
+        # is_in_workspace = check_position_in_workspace(target_position, workspace_range)
+        
+        # 临时返回True，等待接口实现后修改
+        return True
+
+    def arm_move_to_target(self, target_info:BoxInfo, arm_mode="manipulation_mpc", **kwargs):
         """手臂移动到目标位置
         
         Args:
-            target_pose: 目标位置，可以是KuavoPose对象或包含position的字典
+            target_info: 目标信息，包含位置、尺寸等
             approach_speed: 接近速度(米/秒)
+            arm_mode: 手臂控制模式
         Returns:
             bool: 是否成功移动到目标位置
         """
+        # 设置手臂控制模式
+        if arm_mode == "manipulation_mpc":
+            self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
+        else:
+            self.robot.set_fixed_arm_mode()
+
+        left_pose, right_pose = self._get_target_pose(target_info)
+
+        if left_pose is None:
+            return False
+        
+        # 控制手臂移动到目标位置
+        if not self.robot.control_robot_end_effector_pose(
+            left_pose,
+            right_pose,
+            KuavoManipulationMpcFrame.LocalFrame
+        ) or not self._check_target_reachable(left_pose) or not self._check_target_reachable(right_pose):
+            return False
+        
+        time.sleep(2)
+        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
+        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
+        
         return True
     
+    def _get_target_pose(self, target_info:BoxInfo, **kwargs):
+        """获取目标位置和抓取姿态
+        
+        Args:
+            target_info: 目标信息，包含位置、尺寸等
+        Returns:
+            left_pose: 左臂抓取位置
+            right_pose: 右臂抓取位置
+        """
+        # 计算抓取姿态
+        box_position = list(target_info.pose.position)
+        print(f"原始世界坐标系下的位置: {box_position}")
+        
+        # 转换为齐次坐标
+        box_position_homogeneous = np.array(box_position + [1.0])
+        print(f"齐次坐标: {box_position_homogeneous}")
+
+        # 获取从世界坐标系到局部坐标系的变换矩阵
+        transform = self.tools.get_tf_transform("base_link", "odom", return_type="homogeneous")
+        if transform is not None:
+            # 从HomogeneousMatrix对象中获取矩阵数据
+            transform_matrix = transform.matrix
+            print(f"变换矩阵:\n{transform_matrix}")
+            
+            # 应用坐标变换
+            box_position_local = transform_matrix @ box_position_homogeneous
+            print(f"变换后的齐次坐标: {box_position_local}")
+            
+            # 移除齐次坐标的第四个元素
+            grasp_position = box_position_local[:3].tolist()
+            print(f"最终局部坐标系下的位置: {grasp_position}")
+        else:
+            print("警告：无法获取变换矩阵，使用原始位置作为抓取位置")
+            return None, None
+        
+        # odom->base_link->LocalFrame
+        grasp_position[2] += self.state.com_height
+        
+        # 计算末端位姿
+        left_pose = KuavoPose(
+            position=[grasp_position[0],
+                    grasp_position[1] + target_info.size[1] + self.grasp_height_offset,
+                    grasp_position[2] - target_info.size[2] / 2],
+            orientation=self.grasp_orientation
+        )
+        
+        right_pose = KuavoPose(
+            position=[grasp_position[0],
+                    grasp_position[1] - target_info.size[1] - self.grasp_height_offset,
+                    grasp_position[2] - target_info.size[2] / 2],
+            orientation=self.grasp_orientation
+        )
+        return left_pose, right_pose
+
+    def _check_box_lifting_status(self, target_info:BoxInfo) -> bool:
+        """检查箱子是否成功抬起
+        
+        Args:
+            target_info: 目标信息，包含位置、尺寸等
+            
+        Returns:
+            bool: 是否成功抬起箱子
+            
+        Note:
+            此函数为预留接口，待实现以下功能：
+            1. 获取手部力反馈数据
+            2. 根据箱子重量和力反馈判断是否成功抬起
+            3. 检查力反馈是否稳定
+        """
+        # TODO: 实现力反馈检测逻辑
+        # 1. 获取手部力反馈数据
+        # left_force = self.state.get_end_effector_force(EndEffectorSide.Left)
+        # right_force = self.state.get_end_effector_force(EndEffectorSide.Right)
+        
+        # 2. 根据箱子重量和力反馈判断
+        # expected_force = target_info.mass * 9.8
+        # actual_force = calculate_total_force(left_force, right_force)
+        
+        # 3. 检查力反馈稳定性
+        # force_stable = check_force_stability()
+        
+        # 临时返回True，等待接口实现后修改
+        return True
+
     def arm_transport_target_up(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
         """实现手臂搬起箱子的功能
         
@@ -326,8 +471,143 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         Returns:
             bool: 是否成功搬起目标
         """
+        # 设置手臂控制模式
+        if arm_mode == "manipulation_mpc":
+            self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
+        else:
+            self.robot.set_fixed_arm_mode()
+
+        left_pose, right_pose = self._get_target_pose(target_info)
+
+        if left_pose is None:
+            return False
+        
+        # Convert position tuples to lists for modification
+        left_pose.position = list(left_pose.position)
+        right_pose.position = list(right_pose.position)
+        
+        left_pose.position[1] -= (target_info.size[1] / 4 + self.grasp_height_offset)
+        right_pose.position[1] += (target_info.size[1] / 4 + self.grasp_height_offset)
+        self.robot.control_robot_end_effector_pose(
+            left_pose,
+            right_pose,
+            KuavoManipulationMpcFrame.LocalFrame
+        )
+        time.sleep(1.0)
+
+        left_pose.position[1] -= target_info.size[1] / 4
+        right_pose.position[1] += target_info.size[1] / 4
+        self.robot.control_robot_end_effector_pose(
+            left_pose,
+            right_pose,
+            KuavoManipulationMpcFrame.LocalFrame
+        )
+        time.sleep(1.0)
+
+        left_pose.position[2] += self.grasp_height_offset * 2
+        right_pose.position[2] += self.grasp_height_offset * 2
+        
+        if not self.robot.control_robot_end_effector_pose(
+            left_pose,
+            right_pose,
+            KuavoManipulationMpcFrame.LocalFrame
+        ) and self._check_box_lifting_status(target_info):
+            
+            return False
+        
+        time.sleep(2)
+        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
+        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
+        
         return True
     
+    def _arrive_pose(self, target_position: list, target_yaw: float, timeout: float = 10.0) -> bool:
+        """控制机器人移动到指定位姿并等待到达
+        
+        Args:
+            target_position: 目标位置 [x, y, z]
+            target_yaw: 目标朝向角度（弧度）
+            timeout: 等待超时时间（秒）
+            
+        Returns:
+            bool: 是否成功到达目标位姿
+        """
+        # 控制机器人移动到目标位姿
+        self.robot.control_command_pose_world(
+            target_position[0],  # x
+            target_position[1],  # y
+            0,                   # z (保持当前高度)
+            target_yaw          # 目标朝向
+        )
+        
+        # 等待机器人到达目标位姿
+        start_time = time.time()
+        rate_hz = 10  # 检查频率
+        wait_interval = 1.0 / rate_hz
+        
+        while time.time() - start_time < timeout:
+            # 检查位置和朝向是否到位
+            pos_reached = self._pos_check(target_position)
+            yaw_reached = self._yaw_check(target_yaw)
+            
+            if pos_reached and yaw_reached:
+                print("机器人已到达目标位姿!")
+                return True
+            
+            # 短暂等待再次检查
+            time.sleep(wait_interval)
+        
+        # 超时
+        print(f"等待机器人到达目标位姿超时!")
+        return False
+    
+    def walk_to_pose(self, target_info: BoxInfo, target_distance=0.5, approach_speed=0.15, **kwargs):
+        """让机器人走到指定的位姿
+        
+        Args:
+            target_pose: 目标位姿
+            target_distance: 与目标的期望距离(米)
+            approach_speed: 接近速度(米/秒)
+            
+        Returns:
+            bool: 是否成功到达目标位姿
+        """
+        # 获取目标位置和朝向
+        target_position = target_info.pose.position
+        target_orientation = target_info.pose.orientation
+        print(f"target_position: {target_position}, target_orientation: {target_orientation}")
+        
+        # 从四元数中提取yaw角
+        target_yaw = self._extract_yaw_from_quaternion(target_orientation)
+        print(f"target_yaw: {target_yaw}")
+        
+        # 计算偏移后的位置
+        # 根据目标朝向计算偏移方向
+        offset_x = -target_distance * math.cos(target_yaw)  # 负号是因为要远离目标
+        offset_y = -target_distance * math.sin(target_yaw)
+        
+        # 计算新的目标位置
+        new_target_position = [
+            target_position[0] + offset_x,
+            target_position[1] + offset_y,
+            target_position[2]
+        ]
+        
+        print(f"开始移动到目标位姿:")
+        print(f"原始目标位置: ({target_position[0]:.2f}, {target_position[1]:.2f}, {target_position[2]:.2f})")
+        print(f"偏移后位置: ({new_target_position[0]:.2f}, {new_target_position[1]:.2f}, {new_target_position[2]:.2f})")
+        print(f"目标朝向: {math.degrees(target_yaw):.2f}度")
+        
+        if not self._arrive_pose(
+            new_target_position,
+            target_yaw
+        ):
+            return False
+        
+        return True
+
+    
+
     def arm_transport_target_down(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
         """实现手臂放下箱子的功能
         
@@ -338,6 +618,60 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         Returns:
             bool: 是否成功放下目标
         """
+        # 设置手臂控制模式
+        if arm_mode == "manipulation_mpc":
+            self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
+        else:
+            self.robot.set_fixed_arm_mode()
+            
+        # 计算放置位置
+        left_pose, right_pose = self._get_target_pose(target_info)
+
+        if left_pose is None:
+            return False
+        
+        # 将position元组转换为列表
+        left_pose.position = list(left_pose.position)
+        right_pose.position = list(right_pose.position)
+        left_pose.position[1] -= (target_info.size[1] / 2 + self.grasp_height_offset)
+        right_pose.position[1] += (target_info.size[1] / 2 + self.grasp_height_offset)
+        
+        # 控制手臂移动到放置位置
+        if not self.robot.control_robot_end_effector_pose(
+            left_pose,
+            right_pose,
+            KuavoManipulationMpcFrame.LocalFrame
+        ):
+            print("移动到放置位置失败")
+            return False
+        
+        time.sleep(2)
+        
+         # 抬起手臂离开箱子
+        left_pose.position[1] += self.grasp_height_offset
+        right_pose.position[1] -= self.grasp_height_offset
+        
+        lift_pose_l = KuavoPose(
+            position=left_pose.position,
+            orientation=left_pose.orientation
+        )
+        lift_pose_r = KuavoPose(
+            position=right_pose.position,
+            orientation=right_pose.orientation
+        )
+        
+        if not self.robot.control_robot_end_effector_pose(
+            lift_pose_l,
+            lift_pose_r,
+            KuavoManipulationMpcFrame.LocalFrame
+        ):
+            print("抬起手臂离开箱子失败")
+            return False
+            
+        time.sleep(2)
+        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
+        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
+        
         return True
 
     def _wait_for_orientation(self, target_angle, max_wait_time=10.0, angle_threshold=0.1):
@@ -408,6 +742,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             pos_threshold: 位置阈值（米），小于此阈值认为已到位
         """
         current_pos = self.state.robot_position()
+        if not current_pos or len(current_pos) < 2:
+            print("无法获取有效的机器人当前位置")
+            return False
+            
         # print(f"current_pos: {current_pos}, pos_target: {pos_target}")
         pos_diff = np.linalg.norm(np.array(pos_target[:2]) - np.array(current_pos[:2]))
         print(f"当前位置(x,y): ({current_pos[0]:.2f}, {current_pos[1]:.2f}), 目标位置(x,y): ({pos_target[0]:.2f}, {pos_target[1]:.2f}), 距离: {pos_diff:.2f}米")
@@ -415,4 +753,6 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             print(f"机器人已到达目标位置!")
             return True
         else:
+            return False
+
             return False
