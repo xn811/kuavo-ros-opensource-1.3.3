@@ -212,12 +212,14 @@ namespace mobile_manipulator_controller
 
   void MobileManipulatorController::starting()
   {
+    ROS_WARN("No observation received yet. Keep waiting...");
     while(!recievedObservation_)
     {
-      ROS_WARN("No observation received yet. Keep waiting...");
       ros::Duration(0.1).sleep();
       ros::spinOnce();
     }
+    ROS_INFO_STREAM("\033[32m>>>>>>>>>>>> Observation received. <<<<<<<<<<< \033[0m");
+
     SystemObservation initial_observation = mmObservation_;
     initial_observation.state.setZero(info_.stateDim);
     initial_observation.input.setZero(info_.inputDim);
