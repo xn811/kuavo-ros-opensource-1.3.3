@@ -20,7 +20,7 @@ const sidebars = {
       items: [
                 {
           type: 'category',
-          label: '新款产品介绍',
+          label: 'KUAVO4Pro新版介绍',
           items: [
         'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 标准版产品介绍',
         'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 进阶版产品介绍',
@@ -30,8 +30,14 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 展厅算力版产品介绍',
           ],
         },
+        {
+          type: 'category',
+          label: 'KUAVO4Pro旧版介绍',
+          items: [
         'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
         'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4.1产品介绍',
+          ],
+        },
         'basic_usage/kuavo-ros-control/docs/1产品介绍/轮臂产品介绍',
       ],
     },
