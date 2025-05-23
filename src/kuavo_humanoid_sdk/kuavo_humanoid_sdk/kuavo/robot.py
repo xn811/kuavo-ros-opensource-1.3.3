@@ -459,6 +459,27 @@ class KuavoRobot(RobotBase):
         """
         return self._robot_arm.control_robot_end_effector_pose(left_pose, right_pose, frame)
 
+    def change_motor_param(self, motor_param:list)->Tuple[bool, str]:
+        """Change motor param
+
+        Args:
+            motor_param (list): List of :class:`kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam` objects containing:
+                - Kp (float): Position control proportional gain
+                - Kd (float): Velocity control derivative gain 
+                - id (int): Motor ID
+        Returns:
+            Tuple[bool, str]: Tuple of success and message
+        """
+        return self._kuavo_core.change_motor_param(motor_param)
+    
+    def get_motor_param(self)->Tuple[bool, list]:
+        """Get motor param
+
+        Returns:
+            Tuple[bool, list]: Tuple of success and list of :class:`kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam` objects
+        """
+        return self._kuavo_core.get_motor_param()
+        
 if __name__ == "__main__":
     robot = KuavoRobot()
     robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)

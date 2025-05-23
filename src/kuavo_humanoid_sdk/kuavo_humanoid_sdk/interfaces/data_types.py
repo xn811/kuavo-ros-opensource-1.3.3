@@ -269,3 +269,17 @@ class KuavoTwist:
     """
     linear: Tuple[float, float, float]
     angular: Tuple[float, float, float]
+
+
+@dataclass
+class KuavoMotorParam:
+    """Data class representing the motor parameter for the robot.
+
+    Args:
+        Kp (float): Position control proportional gain
+        Kd (float): Velocity control derivative gain
+        id (int): Motor ID
+    """
+    Kp: float
+    Kd: float
+    id: int

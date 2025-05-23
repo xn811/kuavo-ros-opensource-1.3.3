@@ -7,7 +7,7 @@ from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
 from kuavo_humanoid_sdk.interfaces.data_types import (KuavoArmCtrlMode, KuavoIKParams, KuavoPose, 
                                                       KuavoManipulationMpcControlFlow, KuavoManipulationMpcCtrlMode
-                                                      ,KuavoManipulationMpcFrame)
+                                                      ,KuavoManipulationMpcFrame, KuavoMotorParam)
 from kuavo_humanoid_sdk.kuavo.core.ros.sat_utils import RotatingRectangle
 from kuavo_humanoid_sdk.kuavo.core.ros.param import EndEffectorType
 
@@ -16,15 +16,17 @@ try:
     from geometry_msgs.msg import Twist
     from sensor_msgs.msg import JointState, Joy
     from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import (gestureTask,robotHandPosition, robotHeadMotionData, armTargetPoses, switchGaitByName,
-                                footPose, footPoseTargetTrajectories, dexhandCommand)
+                                    footPose, footPoseTargetTrajectories, dexhandCommand, motorParam)
     from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
                             controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest,
                             changeTorsoCtrlMode, changeTorsoCtrlModeRequest, setMmCtrlFrame, setMmCtrlFrameRequest,
-                            setTagId, setTagIdRequest)
+                            setTagId, setTagIdRequest, getMotorParam, getMotorParamRequest,
+                            changeMotorParam, changeMotorParamRequest)
     from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose
     from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
     from std_srvs.srv import SetBool, SetBoolRequest
-except:
+except Exception as e:
+    print(e)
     pass
 
 
@@ -1711,6 +1713,60 @@ class KuavoRobotControl:
         
         msg = get_multiple_steps_msg(body_poses, dt, is_left_first_default, collision_check)
         return self.kuavo_motion_control.pub_step_ctrl(msg)
+    
+    def change_motor_param(self, motor_param:list)->Tuple[bool, str]:
+        """
+            Change motor param
+        """
+        try:
+            service_name = '/hardware/change_motor_param'
+            rospy.wait_for_service(service=service_name, timeout=2.0)
+            change_motor_param_service = rospy.ServiceProxy(service_name, changeMotorParam)
+            
+            # request
+            request = changeMotorParamRequest()
+            for param in motor_param:
+                request.data.append(motorParam(Kp=param.Kp, Kd=param.Kd, id=param.id))
+            
+            # call service
+            response = change_motor_param_service(request)
+            if not response.success:
+                SDKLogger.error(f"Failed to change motor param: {response.message}")
+                return False, response.message
+            return True, 'success'
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        return False, 'failed'
+    
+    def get_motor_param(self)->Tuple[bool, list, str]:
+        try:
+            service_name = '/hardware/get_motor_param'
+            rospy.wait_for_service(service=service_name, timeout=2.0)
+            motor_param_service = rospy.ServiceProxy(service_name, getMotorParam)
+            
+            # request
+            request = getMotorParamRequest()
+            response = motor_param_service(request)
+            if not response.success:
+                SDKLogger.error(f"Failed to get motor param: {response.message}")
+                return False, None, response.message
+            params = []
+            for param in response.data:
+                params.append(KuavoMotorParam(Kp=param.Kp, Kd=param.Kd, id=param.id))
+            return True, params, 'success'
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        except Exception as e:
+            SDKLogger.error(f"Service call failed: {e}")
+        return False, None, 'failed'
+
+    
 """ ------------------------------------------------------------------------------"""    
 
 

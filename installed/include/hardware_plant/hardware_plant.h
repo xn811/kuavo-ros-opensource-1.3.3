@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <unordered_map>
 #include "kuavo_common/common/robot_state.h"
 #include "kuavo_common/common/sensor_data.h"
 #include "kuavo_common/common/kuavo_settings.h"
@@ -53,6 +54,12 @@ IMU_TYPE_HIPNUC = 1,
 IMU_TYPE_XSENS = 2,
 };
 
+struct MotorParam {
+    // this struct is not `JointParam_t`/`MotorParam_t`.
+    uint16_t id;
+    double Kp;
+    double Kd;
+};
 class HardwarePlant
 {
     struct RuiWoJointData
@@ -105,6 +112,9 @@ public:
     void calibrateLoop();
     void calibrateArmJoints();
     void initEndEffector();
+    bool changeMotorParam(const std::vector<MotorParam> &motor_params, std::string &err_msg);
+    bool getMotorParam(std::vector<MotorParam> &motor_params, std::string &err_msg);
+
 
     bool checkLejuClawInitialized();
     bool checkHandInitialized();

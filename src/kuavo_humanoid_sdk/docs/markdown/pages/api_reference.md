@@ -110,6 +110,20 @@ Reset the robot arm.
 * **Return type:**
   bool
 
+#### change_motor_param(motor_param: list) → Tuple[bool, str]
+
+Change motor param
+
+* **Parameters:**
+  **motor_param** (*list*) – List of [`kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam`](#kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam) objects containing:
+  - Kp (float): Position control proportional gain
+  - Kd (float): Velocity control derivative gain
+  - id (int): Motor ID
+* **Returns:**
+  Tuple of success and message
+* **Return type:**
+  Tuple[bool, str]
+
 #### control_arm_joint_positions(joint_positions: list) → bool
 
 Control the position of the arm.
@@ -216,6 +230,15 @@ Disable the head tracking.
 #### enable_head_tracking(target_id: int) → bool
 
 Enable the head tracking.
+
+#### get_motor_param() → Tuple[bool, list]
+
+Get motor param
+
+* **Returns:**
+  Tuple of success and list of [`kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam`](#kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam) objects
+* **Return type:**
+  Tuple[bool, list]
 
 #### jump()
 
@@ -1623,6 +1646,15 @@ VR frame (value: 3)
 #### ManipulationWorldFrame
 
 Manipulation world frame (value: 4)
+
+### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam(Kp: float, Kd: float, id: int)
+
+Data class representing the motor parameter for the robot.
+
+* **Parameters:**
+  * **Kp** (*float*) – Position control proportional gain
+  * **Kd** (*float*) – Velocity control derivative gain
+  * **id** (*int*) – Motor ID
 
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry(position: Tuple[float, float, float], orientation: Tuple[float, float, float, float], linear: Tuple[float, float, float], angular: Tuple[float, float, float])
 

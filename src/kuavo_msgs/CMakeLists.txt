@@ -79,7 +79,7 @@ add_message_files(
   yoloDetection.msg
   AprilTagDetection.msg
   AprilTagDetectionArray.msg
-
+  motorParam.msg
   # motion_capture_ik
   robotArmQVVD.msg
   ikSolveError.msg
@@ -112,6 +112,8 @@ add_service_files(
   handForceLevel.srv
   enableHandTouchSensor.srv
   playmusic.srv
+  changeMotorParam.srv
+  getMotorParam.srv
 
   # motion_capture_ik
   changeArmCtrlMode.srv

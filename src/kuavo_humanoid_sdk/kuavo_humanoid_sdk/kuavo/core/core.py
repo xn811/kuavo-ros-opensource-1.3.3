@@ -562,7 +562,15 @@ class KuavoRobotCore:
                 SDKLogger.warn("[Core] robot manipulation mpc reset failed, change manipulation mpc control flow failed!")
                 return False
         return True
-        
+    """ ------------------------------------------------------------------------"""
+    """ 电机参数设置 """
+    def change_motor_param(self, motor_param:list)-> Tuple[bool, str]:
+        return self._control.change_motor_param(motor_param)
+    
+    def get_motor_param(self)-> Tuple[bool, list]:
+        success, param, _ = self._control.get_motor_param()
+        return success, param
+
     """ ------------------------------------------------------------------------"""
     """ Arm Forward kinematics && Arm Inverse kinematics """
     def arm_ik(self, 

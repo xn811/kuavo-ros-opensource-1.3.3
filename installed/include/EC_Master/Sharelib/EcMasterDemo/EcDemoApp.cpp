@@ -18,6 +18,7 @@
 #include <sys/stat.h> 
 #include <cstdio>
 #include <cassert>
+#include <mutex>
 /*-DEFINES-------------------------------------------------------------------*/
 #define DCM_ENABLE_LOGFILE
 
@@ -189,8 +190,13 @@ clock_t last_restart_time[NUM_SLAVE_MAX] = {0};
 
 static bool g_motor_disabled[NUM_SLAVE_MAX] = {false};  // 被 _disable 的电机Id
 static bool use_anthropomorphic_gait = false;//拟人步态默认关闭
-static std::vector<int32_t> joint_kp_vec;
-static std::vector<int32_t> joint_kd_vec;
+static std::vector<int32_t> joint_kp_write_vec;
+static std::vector<int32_t> joint_kd_write_vec;
+
+std::mutex mtx_joint_kp_read_vec;
+std::mutex mtx_joint_kd_read_vec;
+static std::vector<int32_t> joint_kp_read_vec;
+static std::vector<int32_t> joint_kd_read_vec;
 
 #define IS_MOTOR_DISABLED(id) (g_motor_disabled[id])
 
@@ -774,8 +780,8 @@ static bool motorGetConfig(T_EC_DEMO_APP_CONTEXT *pAppContext)
 
     if (driver_type[i] == YD)
     {
-      int32_t joint_kd = joint_kd_vec[i];
-      int32_t joint_kp = joint_kp_vec[i];
+      int32_t joint_kd = joint_kd_write_vec[i];
+      int32_t joint_kp = joint_kp_write_vec[i];
 
       int32_t init_kd, init_kp, act_kp, act_kd;
       auto kp_read_status = ReadSingleSdo(i, JOINT_CSP_KP, 0, init_kp);
@@ -846,6 +852,107 @@ static bool motorGetConfig(T_EC_DEMO_APP_CONTEXT *pAppContext)
   }
   return true;
 }
+
+static int motorReadJointKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t> &joint_kp)
+{
+  if(driver_type != EcMasterType::YD) {
+    std::cout << "[EcMaster] Invalid driver type, expected YD\n";
+    return 1; // 1 表示驱动类型不支持该操作
+  }
+
+  joint_kp.resize(ids.size(), 0);
+
+  for (uint32_t i = 0; i < ids.size(); i++)
+  {
+    int32_t kp;
+    if (!ReadSingleSdo(ids[i]-1, JOINT_CSP_KP, 0, kp))
+    {
+      std::cout << "Failed to read joint kp, Slave " << ids[i] << std::endl;
+      return 2; // 1 表示读取失败
+    }
+    joint_kp[i] = kp;
+  }
+
+  return 0;
+}
+
+static int motorReadJointKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t> &joint_kd)
+{
+  if(driver_type != EcMasterType::YD) {
+    std::cout << "[EcMaster] Invalid driver type, expected YD\n";
+    return 1; // 1 表示驱动类型不支持该操作
+  }
+
+  joint_kd.resize(ids.size(), 0);
+  for (uint32_t i = 0; i < ids.size(); i++)
+  {
+      int32_t kd;
+      if (!ReadSingleSdo(ids[i]-1, JOINT_CSV_KP, 0, kd))
+      {
+        std::cout << "Failed to read joint kd, Slave " << ids[i] << std::endl;
+        return 2; // 2 表示读取失败
+      }
+      joint_kd[i] = kd;
+  }
+
+  return 0;
+}
+
+static int motorWriteJointKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t> &joint_kp)
+{
+  if(driver_type != EcMasterType::YD) {
+    std::cout << "[EcMaster] Invalid driver type, expected YD\n";
+    return 1; // 1 表示驱动类型不支持该操作
+  }
+
+  if(joint_kp.size() != ids.size())
+  {
+    std::cout << "[EcMaster] Invalid joint kp size, expected " << ids.size() << ", got " << joint_kp.size() << std::endl;
+    return 3; // 3 表示joint kp size不匹配
+  }
+  
+  for(uint32_t i = 0; i < ids.size(); i++) 
+  {
+    int32_t kp = joint_kp[i];
+    bool write_status = writeSingleSdo(ids[i]-1, JOINT_CSP_KP, 0, &kp, false);
+    if(!write_status)
+    {
+      std::cout << "[EcMaster] Failed to write joint kp, Slave " << ids[i] << std::endl;
+      return 2; // 2 表示写入失败
+    }
+  }
+  
+  return 0;
+}
+
+static int motorWriteJointKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t> &joint_kd)
+{
+  if(driver_type != EcMasterType::YD) {
+    std::cout << "[EcMaster] Invalid driver type, expected YD\n";
+    return 1; // 1 表示驱动类型不支持该操作
+  }
+
+  if(joint_kd.size() != ids.size())
+  {
+    std::cout << "[EcMaster] Invalid joint kd size, expected " << ids.size() << ", got "<< joint_kd.size() << std::endl;
+    return 3; // 3 表示joint kd size不匹配
+  }
+
+  for(uint32_t i = 0; i < ids.size(); i++)
+  {
+      int32_t kd = joint_kd[i];
+      bool write_status = writeSingleSdo(ids[i] - 1, JOINT_CSV_KP, 0, &kd, false);
+      if(!write_status)
+      {
+        std::cout << "[EcMaster] Failed to write joint kd, Slave" << ids[i] << std::endl;
+        return 2; // 2 表示写入失败
+      }
+  }
+
+  return 0;
+}
+
+
 
 // void motorGetCurrent(double *current_actual)
 // {
@@ -1355,7 +1462,7 @@ void motorSetkp(const std::vector<int32_t> &joint_kp)
 {
   for (int i = 0; i < joint_kp.size(); i++)
   {
-    joint_kp_vec.push_back(joint_kp[i]);
+    joint_kp_write_vec.push_back(joint_kp[i]);
   }
 }
 
@@ -1363,10 +1470,29 @@ void motorSetkd(const std::vector<int32_t> &joint_kd)
 {
   for (int i = 0; i < joint_kd.size(); i++)
   {
-    joint_kd_vec.push_back(joint_kd[i]);
+    joint_kd_write_vec.push_back(joint_kd[i]);
   }
 }
 
+int motorReadKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t> &joint_kp)
+{
+  return motorReadJointKp(ids, driver_type, joint_kp);
+}
+
+int motorReadKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t> &joint_kd)
+{
+  return motorReadJointKd(ids, driver_type, joint_kd);
+}
+
+int motorWriteKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t> &joint_kp)
+{
+  return motorWriteJointKp(ids, driver_type, joint_kp);
+}
+
+int motorWriteKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t> &joint_kd)
+{
+  return motorWriteJointKd(ids, driver_type, joint_kd);
+}
 bool isMotorEnable(void)
 {
   return motor_enabled;

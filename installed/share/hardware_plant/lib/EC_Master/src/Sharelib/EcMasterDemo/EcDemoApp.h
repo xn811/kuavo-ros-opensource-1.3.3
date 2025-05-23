@@ -192,6 +192,28 @@ extern void motorToPosition(const uint16_t *ids, uint32_t num_id, const double *
 extern void motorSetkp(const std::vector<int32_t>& joint_kp);
 extern void motorSetkd(const std::vector<int32_t>& joint_kd);
 
+/**
+ * @brief 读取电机Kp/Kd
+ * 
+ * @param ids 
+ * @param driver_type 
+ * @param joint_kp 
+ * @return int 0 表示成功，1 表示驱动类型不支持该操作，2 表示读取失败
+ */
+extern int motorReadKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t>& joint_kp);
+extern int motorReadKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, std::vector<int32_t>& joint_kd);
+
+/**
+ * @brief 写入电机Kp/Kd
+ * 
+ * @param ids 
+ * @param driver_type 
+ * @param joint_kp 
+ * @return int 0 表示成功，1 表示驱动类型不支持该操作，2 表示写入失败
+ */ 
+extern int motorWriteKp(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t>& joint_kp);
+extern int motorWriteKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t>& joint_kd);
+
 extern bool isMotorEnable(void);
 extern uint32_t getNumSlave(void);
 void setEcEncoderRange(uint32_t *encoder_range_set, uint16_t num);
