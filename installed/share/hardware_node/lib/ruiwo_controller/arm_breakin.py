@@ -2,16 +2,17 @@ import os
 import yaml
 import time
 from SimpleSDK import RUIWOTools
+import sys
+import threading
 
-# 速度相关参数，方便调整
-MOTION_DURATION = 2 # 每个动作的执行时间（秒）
+# 相关参数
+MOTION_DURATION = 2  # 每个动作的执行时间（秒）
 POS_KP = 30
 POS_KD = 5
 
-# 500Hz 的更新频率
-UPDATE_FREQUENCY = 50  # Hz
-
-UPDATE_INTERVAL = 1 / UPDATE_FREQUENCY  # 秒
+# 更新频率
+UPDATE_FREQUENCY = 50
+UPDATE_INTERVAL = 1 / UPDATE_FREQUENCY
 
 # 定义零点文件路径
 def get_zero_path():
@@ -26,7 +27,7 @@ def read_zero_positions():
         return zeros_config['arms_zero_position'][:12]  # 只取前 12 个值
     else:
         print("[RUIWO motor]:Warning: zero_position file does not exist, will use 0 as zero value.")
-        return [0.0] * 12  # 返回长度为 12 的列表
+        return [0.0] * 12
 
 # 获取用户输入的测试时长
 def get_test_duration():
@@ -94,24 +95,24 @@ def get_robot_version():
             return version
         else:
             print("输入的版本号无效，请输入 41 42 或 45。")
-    return version  # 这行永远不会执行，但因完整性保留
+    return version  # 这行不会执行，因完整性保留
 
 def check_motor_status(joint_ids):
-    disabled_motors = []  # 用于记录失能的电机ID
+    disabled_motors = []  # 记录失能的电机ID
     for dev_id in joint_ids:
         state = ruiwo.enter_motor_state(dev_id)
         if isinstance(state, list):
             # 检查故障码是否为15
-            if state[-2] == 15:  # 倒数第二个元素是故障码
+            if state[-2] == 15:  # 倒数第二个元素为故障码
                 disabled_motors.append(dev_id)  # 记录失能的电机ID
         else:
             print(f"\033[91m电机 {dev_id} 状态获取失败！\033[0m")
-            return False  # 状态获取失败，直接返回False
+            return False, disabled_motors  # 状态获取失败，直接返回False
     # 如果有失能的电机，输出失能的电机列表
     if disabled_motors:
         print(f"\033[91m以下电机失能：{disabled_motors}\033[0m")
-        return False  # 返回False表示有电机失能
-    return True  # 所有电机状态正常
+        return False, disabled_motors  # 返回False表示有电机失能
+    return True, []  # 所有电机状态正常
 
 # 定义长手和短手的动作
 long_arm_actions = [
@@ -189,12 +190,12 @@ ruiwo = RUIWOTools()
 # 打开CAN总线
 open_canbus = ruiwo.open_canbus()
 if not open_canbus:
-    print("[RUIWO motor]:Canbus status:","[",open_canbus,"]")
+    print("[RUIWO motor]:Canbus status:", "[", open_canbus, "]")
     exit(1)
-print("[RUIWO motor]:Canbus status:","[",open_canbus,"]")
+print("[RUIWO motor]:Canbus status:", "[", open_canbus, "]")
 
 # 使能所有关节电机
-enable_all_success = True  # 用于标记是否所有电机都使能成功
+enable_all_success = True  # 标记是否所有电机都使能成功
 for dev_id in joint_ids:
     state = ruiwo.enter_motor_state(dev_id)
     if isinstance(state, list):
@@ -213,6 +214,37 @@ start_time = time.perf_counter()
 # 计算一个完整动作周期所需的时间
 cycle_time = len(base_actions) * MOTION_DURATION
 
+# 标记是否检测到电机失能
+motor_disabled = False
+
+# 标记是否提前结束程序
+early_exit = False
+
+# 标记是否在当前周期结束后退出
+exit_after_cycle = False
+
+# 提示用户可以输入 'q' 提前结束程序
+print("\033[92m提示：在执行过程中，输入 'q' 并回车，可以在当前完整动作周期完成后提前结束程序。\033[0m")
+
+# 创建一个线程安全的标志变量
+early_exit_event = threading.Event()
+
+# 监听键盘输入
+def listen_for_exit():
+    global early_exit, exit_after_cycle
+    while not early_exit:
+        user_input = input()
+        if user_input.strip().lower() == 'q':
+            print(f"{get_timestamp()} 用户请求提前结束程序，将在当前完整动作周期完成后停止。")
+            early_exit_event.set()
+            exit_after_cycle = True
+            early_exit = True
+
+# 启动监听线程
+listen_thread = threading.Thread(target=listen_for_exit)
+listen_thread.daemon = True  # 设置为守护线程，主线程结束时自动退出
+listen_thread.start()
+
 while True:
     current_time = time.perf_counter()
     elapsed_time = current_time - start_time
@@ -227,25 +259,37 @@ while True:
         if remaining_time < cycle_time:
             print(f"{get_timestamp()} 剩余时间不足完成一个动作周期，提前结束。")
             break
-
+            
+        # 检查是否需要在当前周期结束后退出
+        if exit_after_cycle:
+            print(f"{get_timestamp()} 完成当前周期后将退出程序...")
+            
         # 检查所有电机状态，是否出现失能情况
-        if not check_motor_status(joint_ids):
-            print(f"\033[91m检测到电机失能，程序停止！\033[0m")
-            # 失能所有关节电机
-            for dev_id in joint_ids:
-                state = ruiwo.enter_reset_state(dev_id)
-                if isinstance(state, list):
-                    print(f"{get_timestamp()} [RUIWO motor]:ID: {dev_id} Disable:  [Succeed]")
-                else:
-                    print(f"{get_timestamp()} [RUIWO motor]:ID: {dev_id} Disable:  [{state}]")
-            # 关闭CAN总线
-            close_canbus = ruiwo.close_canbus()
-            if close_canbus:
-                print(f"{get_timestamp()} [RUIWO motor]:Canbus status: [Close]")
-            exit(1)  # 退出程序
-        print(f"{get_timestamp()} 开始下一轮动作...")
+        if not motor_disabled:
+            status, disabled_motors = check_motor_status(joint_ids)
+            if not status:
+                motor_disabled = True
+                print(f"\033[91m检测到电机失能，停止当前动作！请检查以下电机：{disabled_motors}。检查完毕后，按 'c' 失能所有电机并退出程序。\033[0m")
+                while True:
+                    user_input = input().strip().lower()
+                    if user_input == 'c':
+                        # 失能所有关节电机
+                        for dev_id in joint_ids:
+                            state = ruiwo.enter_reset_state(dev_id)
+                            if isinstance(state, list):
+                                print(f"{get_timestamp()} [RUIWO motor]:ID: {dev_id} Disable:  [Succeed]")
+                            else:
+                                print(f"{get_timestamp()} [RUIWO motor]:ID: {dev_id} Disable:  [{state}]")
+                        # 关闭CAN总线
+                        close_canbus = ruiwo.close_canbus()
+                        if close_canbus:
+                            print(f"{get_timestamp()} [RUIWO motor]:Canbus status: [Close]")
+                        sys.exit(0)
+        else:
+            print(f"{get_timestamp()} 等待用户检查电机...")
 
-    if elapsed_time >= test_duration:
+    # 检查是否应该退出：时间到或用户请求且完成了当前周期
+    if (elapsed_time >= test_duration) or (exit_after_cycle and (elapsed_time % cycle_time >= cycle_time - MOTION_DURATION)):
         break
 
     # 根据实际时间计算当前应该执行的关键帧索引
@@ -262,26 +306,40 @@ while True:
     steps = MOTION_DURATION * UPDATE_FREQUENCY  # MOTION_DURATION 秒内发送的步数
     step_start_time = elapsed_time % MOTION_DURATION
 
-    for step in range(int(steps)):
-        loop_start = time.perf_counter()
-        for joint_index, dev_id in enumerate(joint_ids):
-            # 计算当前位置到目标位置的插值
-            interpolated_pos = current_positions[joint_index] + (target_positions[joint_index] - current_positions[joint_index]) * (step / steps)
-            zero_position = zero_positions[joint_index]
-            compensated_pos = interpolated_pos + zero_position  # 应用零点补偿
-            state = ruiwo.run_ptm_mode(dev_id, compensated_pos, 0, POS_KP, POS_KD, 0)
-            if isinstance(state, list):
-                pass
-            else:
-                print(f"{get_timestamp()} ID: {dev_id} Run ptm mode:  [{state}]")
+    if not motor_disabled:
+        for step in range(int(steps)):
+            loop_start = time.perf_counter()
+            for joint_index, dev_id in enumerate(joint_ids):
+                # 计算当前位置到目标位置的插值
+                interpolated_pos = current_positions[joint_index] + (target_positions[joint_index] - current_positions[joint_index]) * (step / steps)
+                zero_position = zero_positions[joint_index]
+                compensated_pos = interpolated_pos + zero_position  # 应用零点补偿
+                state = ruiwo.run_ptm_mode(dev_id, compensated_pos, 0, POS_KP, POS_KD, 0)
+                if isinstance(state, list):
+                    pass
+                else:
+                    print(f"{get_timestamp()} ID: {dev_id} Run ptm mode:  [{state}]")
 
-        loop_end = time.perf_counter()
-        elapsed_time = loop_end - loop_start
-        remaining_time = UPDATE_INTERVAL - elapsed_time
-        if remaining_time > 0:
-            time.sleep(remaining_time)
+            loop_end = time.perf_counter()
+            elapsed_time = loop_end - loop_start
+            remaining_time = UPDATE_INTERVAL - elapsed_time
+            if remaining_time > 0:
+                time.sleep(remaining_time)
 
-    print(f"{get_timestamp()} 动作 {current_frame_index + 1} 执行完成，开始向位置 {next_frame_index + 1} 运动")
+        print(f"{get_timestamp()} 动作 {current_frame_index + 1} 执行完成，开始向位置 {next_frame_index + 1} 运动")
+
+# 在程序结束时返回到零点位置
+print(f"{get_timestamp()} 正在返回到零点位置...")
+for joint_index, dev_id in enumerate(joint_ids):
+    zero_position = zero_positions[joint_index]
+    state = ruiwo.run_ptm_mode(dev_id, zero_position, 0, POS_KP, POS_KD, 0)
+    if isinstance(state, list):
+        pass
+    else:
+        print(f"{get_timestamp()} ID: {dev_id} 返回零点：[{state}]")
+
+# 等待返回零点动作完成
+time.sleep(MOTION_DURATION)
 
 # 失能所有关节电机
 for dev_id in joint_ids:
