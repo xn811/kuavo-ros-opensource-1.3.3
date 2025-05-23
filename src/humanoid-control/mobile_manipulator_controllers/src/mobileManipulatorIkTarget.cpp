@@ -45,11 +45,12 @@ class MobileManipulatorIkTarget {
       if (!nodeHandle_.getParam("use_quest3_utils", use_quest3_utils_)) {
         ROS_WARN("Parameter 'use_quest3_utils' not found, using default value: false");
       }
+      ROS_WARN("Waiting for parameter 'com_height'...");
       while (!nodeHandle_.getParam("com_height", comHeight_)) {
-        ROS_WARN("Waiting for parameter 'com_height'...");
+        // ROS_WARN("Waiting for parameter 'com_height'...");
         ros::Duration(0.5).sleep();  // 每0.5秒检查一次
       }
-      ROS_INFO("Got com_height: %f", comHeight_);
+      ROS_INFO(">>>>>>>>>>>>>>>>>>>>> Got com_height: %f <<<<<<<<<<<<<<<<<<<<<<", comHeight_);
 
       ROS_INFO("use_quest3_utils: %d", use_quest3_utils_); 
       if(use_quest3_utils_)

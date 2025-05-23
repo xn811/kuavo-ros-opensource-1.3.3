@@ -68,13 +68,12 @@ namespace mobile_manipulator_controller
     std::cout << "Dummy Sim Base: " << dummySim_ << std::endl;
     std::cout << "Dummy Sim Arm: "  << dummySimArm_ << std::endl;
     
-
+    ROS_WARN_STREAM("com_height parameter is NOT found, waiting for 0.1s.");
     while(!controllerNh_.hasParam("/com_height"))
     {
-      ROS_ERROR_STREAM("com_height parameter is NOT found, waiting for 0.1s.");
       ros::Duration(0.1).sleep();
     }
-    ROS_INFO_STREAM("com_height parameter is founded.");
+    ROS_INFO_STREAM("\033[32m>>>>>>>>>>>>  com_height parameter is founded. <<<<<<<<<<< \033[0m");
     controllerNh_.getParam("/com_height", comHeight_);
     std::cout << "comHeight: " << comHeight_<<std::endl;
     if(controllerNh_.hasParam("/mm/mpcType"))
