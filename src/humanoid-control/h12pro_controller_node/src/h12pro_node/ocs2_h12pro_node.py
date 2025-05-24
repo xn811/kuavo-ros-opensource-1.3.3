@@ -62,6 +62,9 @@ class Config:
 
     CALLBACK_FREQUENCY = 100
     LONG_PRESS_THRESHOLD = 1.0
+
+    SCALE_RIGHT_STICK_Z = 0.2  # 右摇杆上下（上站下蹲）缩放比例
+    SCALE_LEFT_STICK_Y = 0.25  # 左摇杆左右（左右平移）缩放比例
     
     @staticmethod
     def get_default_channels() -> List[int]:
@@ -130,15 +133,16 @@ class H12ToJoyControllerNode:
         self.joy_msg = Joy(axes=[0.0] * 8, buttons=[0] * 11)
         self.channels_msg: Optional[Tuple[int, ...]] = None
         self.joy_pub = rospy.Publisher('/joy', Joy, queue_size=10)
+        self.is_stopping = False    # cd按钮下蹲标志位
 
     @staticmethod
     def _create_channel_mapping() -> Dict[int, ChannelMapping]:
         """Create channel mapping configuration."""
         return {
             1: ChannelMapping(1, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_YAW'], reverse=True),
-            2: ChannelMapping(2, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_Z'], reverse=True, scale=0.2),  # 右摇杆上下（上站下蹲）限制，限制为满值运动时的0.2倍
+            2: ChannelMapping(2, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_Z'], reverse=True, scale=Config.SCALE_RIGHT_STICK_Z),
             3: ChannelMapping(3, axis_index=Config.AXIS_MAPPING['LEFT_STICK_X']),
-            4: ChannelMapping(4, axis_index=Config.AXIS_MAPPING['LEFT_STICK_Y'], reverse=True, scale=0.25),  # 左摇杆左右（左右平移）限制，限制为满值运动时的0.25倍
+            4: ChannelMapping(4, axis_index=Config.AXIS_MAPPING['LEFT_STICK_Y'], reverse=True, scale=Config.SCALE_LEFT_STICK_Y),
             6: ChannelMapping(6, button_index=Config.BUTTON_MAPPING['START'], 
                             is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
             7: ChannelMapping(7, button_index=Config.BUTTON_MAPPING['Y'], 
@@ -168,10 +172,14 @@ class H12ToJoyControllerNode:
         # Process each channel
         for index, channel_value in enumerate(self.channels_msg):
             if mapping := self.channel_mapping.get(index + 1):
+                if index + 1 == 2 and self.is_stopping:
+                    mapping.scale = 1.0
                 if mapping.is_button:
                     self.joy_msg.buttons[mapping.button_index] = mapping.get_current_state(channel_value)
                 else:
                     self.joy_msg.axes[mapping.axis_index] = mapping.get_current_state(channel_value)
+                if index + 1 == 2 and self.is_stopping:
+                    mapping.scale = Config.SCALE_RIGHT_STICK_Z
 
         self.joy_pub.publish(self.joy_msg)
 
@@ -460,9 +468,11 @@ class H12PROControllerNode:
             msg: Channel message for response.
         """
         try:
-            if current_state == "stance":
+            if current_state in ["stance", "walk", "trot"]:
+                self.h12_to_joy_node.is_stopping = True
                 self._gradually_move_right_stick_down()
-          
+                self.h12_to_joy_node.is_stopping = False
+                
             getattr(self.robot_state_machine, "stop")(source=current_state)
             stop_msg = h12proRemoteControllerChannel()
             channels = Config.get_default_channels()
