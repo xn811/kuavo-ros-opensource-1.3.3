@@ -1,4 +1,4 @@
-# beta 分支
+# 1.1.5
 
 ## Breaking Changes
 - 迁移`motion_capture_ik`包中的定义的消息到`kuavo_msgs`中统一维护
