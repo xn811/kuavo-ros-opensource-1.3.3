@@ -336,15 +336,19 @@ def main():
     # 获取机器人版本
     robot_version = get_parameter('robot_version')
     #不同型号机器人的初始位置 (机器人坐标系)
-    if robot_version == 45:
+    if robot_version == 45 or robot_version == 49:
         robot_zero_x = -0.0173
         robot_zero_y = -0.2927
         robot_zero_z = -0.2837
-
+        
     elif robot_version == 42:
         robot_zero_x = -0.0175
         robot_zero_y = -0.25886
         robot_zero_z = -0.20115
+
+    else :
+        print("机器人版本号错误, 仅支持42 45 49")
+
 
     # 设置手臂运动模式为外部控制
     set_arm_control_mode(2)
