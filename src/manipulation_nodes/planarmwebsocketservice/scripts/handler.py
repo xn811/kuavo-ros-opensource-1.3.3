@@ -13,6 +13,7 @@ import threading
 import time
 import math
 import subprocess
+import base64
 from pathlib import Path
 from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2
 
@@ -22,6 +23,7 @@ from std_srvs.srv import Trigger
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
 from kuavo_msgs.msg import sensorsData
+from h12pro_controller_node.msg import UpdateH12CustomizeConfig
 # Replace multiprocessing values with simple variables
 plan_arm_state_progress = 0
 plan_arm_state_status = False
@@ -144,6 +146,7 @@ def traj_callback(msg):
 kuavo_arm_traj_pub = None
 control_hand_pub = None
 control_head_pub = None
+update_h12_config_pub = None
 
 def timer_callback(event):
     global kuavo_arm_traj_pub, control_hand_pub, control_head_pub
@@ -153,10 +156,11 @@ def timer_callback(event):
         control_head_pub.publish(ocs2_head_state)
 
 def init_publishers():
-    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub
+    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, update_h12_config_pub
     kuavo_arm_traj_pub = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=1, tcp_nodelay=True)
     control_hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=1, tcp_nodelay=True)
     control_head_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=1, tcp_nodelay=True)
+    update_h12_config_pub = rospy.Publisher('/update_h12_customize_config', UpdateH12CustomizeConfig, queue_size=1, tcp_nodelay=True)
 
 async def init_ros_node():
     print("Initializing ROS node")
@@ -512,6 +516,120 @@ async def stop_run_node_handler(
     if not process_terminated:
         payload.data["code"] = 1
 
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+def is_player_in_body():
+    # 检查下位机是否有音频播放设备
+    result = False
+    try:
+        result_headphone = subprocess.run("pactl list | grep -i Headphone", shell=True, capture_output=True, text=True)
+        result_speaker = subprocess.run("pactl list | grep -i Speaker", shell=True, capture_output=True, text=True)
+        if result_headphone.stdout.strip() or result_speaker.stdout.strip():
+            # 下位机有音频设备
+            result = True
+    except Exception as e:
+        print(f"An error occurred while checking the music path: {e}")
+    
+    return result
+
+def upload_music_file(music_filename=""):
+    # 将音乐文件上传到上位机指定路径
+    remote_user = "kuavo"
+    remote_host = "192.168.26.12"
+    remote_path = "/home/kuavo/.config/lejuconfig/music"
+
+    encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
+    if encoded_password is None:
+        raise ValueError("Failed to get remote password.")
+    remote_password = base64.b64decode(encoded_password).decode('utf-8')
+
+    if not music_filename:
+        # 将全部音频文件拷贝过去
+        scp_cmd = f"scp -r {MUSIC_FILE_FOLDER}"
+    else:
+        # 拷贝单个音频文件
+        scp_cmd = f"scp {MUSIC_FILE_FOLDER}/{music_filename}"
+    cmd = [
+        "sshpass", "-p", remote_password,
+        scp_cmd,
+        f"{remote_user}@{remote_host}:{remote_path}"
+    ]
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    return result
+    
+
+
+async def check_music_path_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="check_music_path", data={"code": 0, "msg": "msg"}
+    )
+
+    is_reset_cmd = data.get("is_reset_cmd", False)
+    music_filename = data.get("music_filename", "")
+
+    try:
+        if is_player_in_body():
+            # 下位机有音频设备，无需额外操作
+            payload.data["code"] = 0
+            payload.data["msg"] = "Body NUC"
+        else:
+            # 下位机没有音频设备，需要将音频文件拷贝到上位机
+            result = upload_music_file(music_filename)
+            if result.returncode == 0:
+                payload.data["code"] = 0
+                payload.data["msg"] = "Head NUC"
+            else:
+                payload.data["code"] = 1
+                payload.data["msg"] = "Failed to copy music file."
+    except Exception as e:
+        print(f"An error occurred while checking the music path: {e}")
+        payload.data["code"] = 1
+        payload.data["msg"] = e
+    
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+async def update_h12_config_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    global update_h12_config_pub
+    payload = Payload(
+        cmd="update_h12_config", data={"code": 0, "msg": "msg"}
+    )
+
+    # 更新H12遥控器按键配置
+    msg = UpdateH12CustomizeConfig()
+    msg.update_msg = "Update H12 Config"
+    update_h12_config_pub.publish(msg)
+
+    try:
+        # 确认音乐文件在上位机还是下位机播放，并进行相应处理
+        if is_player_in_body():
+            payload.data["code"] = 0
+            payload.data["msg"] = "Body NUC"
+        else:
+            result = upload_music_file("")
+            if result.returncode == 0:
+                payload.data["code"] = 0
+                payload.data["msg"] = "Head NUC"
+            else:
+                payload.data["code"] = 1
+                payload.data["msg"] = "Failed to copy music file."
+    except Exception as e:
+        print(f"An error occurred while updating the H12 config: {e}")
+        payload.data["code"] = 1
+        payload.data["msg"] = e
+    
     response = Response(
         payload=payload,
         target=websocket,

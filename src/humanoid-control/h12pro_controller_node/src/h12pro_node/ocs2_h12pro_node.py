@@ -5,6 +5,7 @@ import time
 import rospy
 from sensor_msgs.msg import Joy
 from h12pro_controller_node.msg import h12proRemoteControllerChannel
+from h12pro_controller_node.msg import UpdateH12CustomizeConfig
 from robot_state.robot_state_machine import robot_state_machine, RobotStateMachine, states
 from transitions.core import MachineError
 from utils.utils import read_json_file
@@ -286,6 +287,15 @@ class H12PROControllerNode:
             queue_size=1, 
             tcp_nodelay=True
         )
+        self.update_h12_customize_config_sub = rospy.Subscriber(
+            "/update_h12_customize_config",
+            UpdateH12CustomizeConfig,
+            self._update_h12_customize_config_callback,
+            queue_size=1
+        )
+    
+    def _update_h12_customize_config_callback(self, msg):
+        self.robot_state_machine.update_customize_config()
         
     def publish_arm_joint_state(self):
         if self.plan_arm_is_finished is False and len(self.should_pub_arm_joint_state.position) > 0:

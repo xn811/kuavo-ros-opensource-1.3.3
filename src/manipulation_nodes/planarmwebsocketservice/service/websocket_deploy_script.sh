@@ -62,6 +62,10 @@ catkin build humanoid_controllers
 catkin build humanoid_plan_arm_trajectory
 catkin build planarmwebsocketservice
 
+# 安装 sshpass，确保远程拷贝音乐文件正常工作
+sudo apt-get update
+sudo apt-get install sshpass
+
 # 重新启动服务
 sudo systemctl daemon-reload
 sudo systemctl enable ${SERVICE_NAME}.service

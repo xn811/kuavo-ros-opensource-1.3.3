@@ -56,6 +56,17 @@ with open(customize_config_path, "r") as f:
 with open(comGaitSwitch_config_path, "r") as f:
     comGaitSwitch_config_data = json.load(f)
 
+# 更新遥控器按键配置文件
+def update_h12_customize_config():
+    global customize_config_data
+    try:
+        with open(customize_config_path, "r") as f:
+            customize_config_data = json.load(f)
+        rospy.loginfo(f" ---------- customize_config_data ---------- : {customize_config_data}")
+    except Exception as e:
+        rospy.logerr(f"Error: Could not find {customize_config_path}")
+        raise Exception(f"Error: Could not find {customize_config_path}")
+
 # 手臂状态定义
 ROBOT_ACTION_STATUS = 0 # 手臂完成状态 | 0 没开始 | 1 执行中 |  2 完成
 def robot_action_state_callback(msg):
