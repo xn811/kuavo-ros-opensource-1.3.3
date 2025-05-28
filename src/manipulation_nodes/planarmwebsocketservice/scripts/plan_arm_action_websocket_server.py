@@ -16,6 +16,8 @@ import asyncio
 import socket
 import signal
 import argparse
+import pwd
+from pathlib import Path
 from queue import Empty
 from typing import Set
 
@@ -45,7 +47,17 @@ ROBOT_USERNAME = "lab"
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
 ROBOT_UPLOAD_FOLDER = package_path + "/upload_files"
-ROBOT_ACTION_FILE_FOLDER = package_path + "/action_files"
+sudo_user = os.environ.get("SUDO_USER")
+if sudo_user:
+    user_info = pwd.getpwnam(sudo_user)
+    home_path = user_info.pw_dir
+else:
+    home_path = os.path.expanduser("~")
+ROBOT_ACTION_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'action_files')
+try:
+    Path(ROBOT_ACTION_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"创建 ROBOT_ACTION_FILE_FOLDER 目录时出错: {e}")
 
 robot_info = {
     "data": {

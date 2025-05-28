@@ -34,7 +34,6 @@ active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
 
-ACTION_FILE_FOLDER = package_path + "/action_files"
 UPLOAD_FILES_FOLDER = package_path + "/upload_files" 
 
 # 下位机音乐文件存放路径，如果不存在则进行创建
@@ -46,8 +45,10 @@ else:
     home_path = os.path.expanduser("~")
 
 MUSIC_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'music')
+ACTION_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'action_files')
 try:
     Path(MUSIC_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(ACTION_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
 except Exception as e:
     print(f"创建目录时出错: {e}")
 
