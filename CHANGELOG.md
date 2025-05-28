@@ -1,3 +1,27 @@
+# Beta
+
+## Breaking Changes
+- 无
+
+## 文档相关
+- 示教功能文档补充说明示教模式启动机器人需要按‘o’后才开始记录，[文档链接](./src/manipulation_nodes/teach_pendant/readme.md)
+- 运动控制 API 文档新增电机Kp/Kd 参数 ROS 服务接口描述，[文档链接](./docs/运动控制API.md)
+- Kuavo Humanoid SDK 增加搬箱子策略模块使用文档，[文档链接](./src/kuavo_humanoid_sdk/README.md)
+
+## 新增功能
+- 新增机器人 collision 碰撞对，实现横向移动保护
+- Kuavo Humanoid SDK 新增修改和获取电机Kp/Kd 参数接口以及使用示例，目前仅支持`youda`驱动类型的电机
+- 新增修改和获取电机Kp/Kd 参数 ROS 服务接口，目前仅支持`youda`驱动类型的电机
+- Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
+
+## 修复问题
+- 修复半身控制模式下，启动机器人时手臂突然抽搐的错误
+- 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
+
+## 其他改进
+- 取消 MobileManipulatorController 启动时一直打印等待`com_height`参数的日志
+- 取消 MobileManipulatorController 节点启动时一直刷屏提示等待接收观测数据
+
 # 1.1.5
 
 ## Breaking Changes
