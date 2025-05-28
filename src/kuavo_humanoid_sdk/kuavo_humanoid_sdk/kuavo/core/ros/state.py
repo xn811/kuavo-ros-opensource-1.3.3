@@ -10,20 +10,20 @@ try:
     from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
     from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, getCurrentGaitName, getCurrentGaitNameRequest
     from kuavo_humanoid_sdk.msg.ocs2_msgs.msg import mpc_observation
-    from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (changeArmCtrlMode, changeArmCtrlModeRequest,setMmCtrlFrame, setMmCtrlFrameRequest,
-                                                   changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
-
 except:
     pass
-from collections import deque
-from typing import Tuple, Optional
-import copy
-from kuavo_humanoid_sdk.common.logger import SDKLogger
-from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
-from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
+
 from kuavo_humanoid_sdk.interfaces.data_types import (KuavoImuData, KuavoJointData, KuavoOdometry, KuavoManipulationMpcFrame, 
                                                       KuavoArmCtrlMode, EndEffectorState, KuavoDexHandTouchState,
                                                       KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow)
+from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
+from kuavo_humanoid_sdk.common.logger import SDKLogger
+from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
+from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (changeArmCtrlMode, changeArmCtrlModeRequest,setMmCtrlFrame, setMmCtrlFrameRequest,
+                                                   changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
+from collections import deque
+from typing import Tuple, Optional
+
 class GaitManager:
     def __init__(self, max_size: int = 20):
         self._max_size = max_size
@@ -169,51 +169,51 @@ class KuavoRobotStateCore:
         return self._odom_data.position[2] - self._terrain_height
     
     @property
-    def imu_data(self):
+    def imu_data(self)->KuavoImuData:
         return self._imu_data
     
     @property
-    def joint_data(self):
+    def joint_data(self)->KuavoJointData:
         return self._joint_data
     
     @property
-    def odom_data(self):
+    def odom_data(self)->KuavoOdometry:
         return self._odom_data
 
     @property
-    def arm_control_mode(self):
+    def arm_control_mode(self) -> KuavoArmCtrlMode:
         mode = self._srv_get_arm_ctrl_mode()
         if mode is not None:
             self._arm_ctrl_mode = mode
         return self._arm_ctrl_mode
     
     @property
-    def manipulation_mpc_ctrl_mode(self):
+    def manipulation_mpc_ctrl_mode(self)->KuavoManipulationMpcCtrlMode:
         mode = self._srv_get_manipulation_mpc_ctrl_mode()
         if mode is not None:
             self._manipulation_mpc_ctrl_mode = mode
         return self._manipulation_mpc_ctrl_mode
     
     @property
-    def manipulation_mpc_frame(self):
+    def manipulation_mpc_frame(self)->KuavoManipulationMpcFrame:
         frame = self._srv_get_manipulation_mpc_frame()
         if frame is not None:
             self._manipulation_mpc_frame = frame
         return self._manipulation_mpc_frame
     
     @property
-    def manipulation_mpc_control_flow(self):
+    def manipulation_mpc_control_flow(self)->KuavoManipulationMpcControlFlow:
         flow = self._srv_get_manipulation_mpc_control_flow()
         if flow is not None:
             self._manipulation_mpc_control_flow = flow
         return self._manipulation_mpc_control_flow
     
     @property
-    def eef_state(self):
+    def eef_state(self)->Tuple[EndEffectorState, EndEffectorState]:
         return self._eef_state
     
     @property
-    def dexhand_touch_state(self):
+    def dexhand_touch_state(self)-> Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]:
         if self._ee_type != EndEffectorType.QIANGNAO_TOUCH:
             raise Exception("This robot does not support touch state")
         return self._dexhand_touch_state
@@ -387,7 +387,7 @@ class KuavoRobotStateCore:
         except Exception as e:
             SDKLogger.error(f"Error processing MPC observation: {e}")
 
-    def _srv_get_arm_ctrl_mode(self):
+    def _srv_get_arm_ctrl_mode(self)-> KuavoArmCtrlMode:
         try:
             rospy.wait_for_service('/humanoid_get_arm_ctrl_mode')
             get_arm_ctrl_mode_srv = rospy.ServiceProxy('/humanoid_get_arm_ctrl_mode', changeArmCtrlMode)
@@ -414,7 +414,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Service call failed: {e}")
         return None
 
-    def _srv_get_manipulation_mpc_ctrl_mode(self, ):
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
         try:
             service_name = '/mobile_manipulator_get_mpc_control_mode'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -435,7 +435,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
         return KuavoManipulationMpcCtrlMode.ERROR
 
-    def _srv_get_manipulation_mpc_frame(self, ):
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
         try:
             service_name = '/get_mm_ctrl_frame'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -456,7 +456,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
         return KuavoManipulationMpcFrame.ERROR
 
-    def _srv_get_manipulation_mpc_control_flow(self, ):
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
         try:
             service_name = '/get_mm_wbc_arm_trajectory_control'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -477,7 +477,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
         return KuavoManipulationMpcControlFlow.Error
 
-    def _srv_get_manipulation_mpc_ctrl_mode(self, ):
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
         try:
             service_name = '/mobile_manipulator_get_mpc_control_mode'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -498,7 +498,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
         return KuavoManipulationMpcCtrlMode.ERROR
 
-    def _srv_get_manipulation_mpc_frame(self, ):
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
         try:
             service_name = '/get_mm_ctrl_frame'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -519,7 +519,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
         return KuavoManipulationMpcFrame.ERROR
 
-    def _srv_get_manipulation_mpc_control_flow(self, ):
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
         try:
             service_name = '/get_mm_wbc_arm_trajectory_control'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -540,7 +540,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
         return KuavoManipulationMpcControlFlow.Error
 
-    def _srv_get_manipulation_mpc_ctrl_mode(self, ):
+    def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
         try:
             service_name = '/mobile_manipulator_get_mpc_control_mode'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -561,7 +561,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
         return KuavoManipulationMpcCtrlMode.ERROR
 
-    def _srv_get_manipulation_mpc_frame(self, ):
+    def _srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
         try:
             service_name = '/get_mm_ctrl_frame'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -582,7 +582,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
         return KuavoManipulationMpcFrame.ERROR
 
-    def _srv_get_manipulation_mpc_control_flow(self, ):
+    def _srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
         try:
             service_name = '/get_mm_wbc_arm_trajectory_control'
             rospy.wait_for_service(service_name, timeout=2.0)
@@ -723,12 +723,6 @@ class KuavoRobotStateCoreWebsocket:
 
                 # 获取当前手臂控制模式
                 self._arm_ctrl_mode = self._srv_get_arm_ctrl_mode()
-                
-                # 获取manipulation mpc 相关参数
-                self._manipulation_mpc_frame = self._srv_get_manipulation_mpc_frame()
-                self._manipulation_mpc_ctrl_mode = self._srv_get_manipulation_mpc_ctrl_mode()
-                self._manipulation_mpc_control_flow = self._srv_get_manipulation_mpc_control_flow()
-                
                 self._initialized = True
             except Exception as e:
                 SDKLogger.error(f"Failed to initialize KuavoRobotStateCoreWebsocket: {e}")
@@ -739,51 +733,30 @@ class KuavoRobotStateCoreWebsocket:
         return self._odom_data.position[2] - self._terrain_height
     
     @property
-    def imu_data(self):
+    def imu_data(self)->KuavoImuData:
         return self._imu_data
     
     @property
-    def joint_data(self):
+    def joint_data(self)->KuavoJointData:
         return self._joint_data
     
     @property
-    def odom_data(self):
+    def odom_data(self)->KuavoOdometry:
         return self._odom_data
 
     @property
-    def arm_control_mode(self):
+    def arm_control_mode(self) -> KuavoArmCtrlMode:
         mode = self._srv_get_arm_ctrl_mode()
         if mode is not None:
             self._arm_ctrl_mode = mode
         return self._arm_ctrl_mode
     
     @property
-    def manipulation_mpc_ctrl_mode(self):
-        mode = self._srv_get_manipulation_mpc_ctrl_mode()
-        if mode is not None:
-            self._manipulation_mpc_ctrl_mode = mode
-        return self._manipulation_mpc_ctrl_mode
-    
-    @property
-    def manipulation_mpc_frame(self):
-        frame = self._srv_get_manipulation_mpc_frame()
-        if frame is not None:
-            self._manipulation_mpc_frame = frame
-        return self._manipulation_mpc_frame
-    
-    @property
-    def manipulation_mpc_control_flow(self):
-        flow = self._srv_get_manipulation_mpc_control_flow()
-        if flow is not None:
-            self._manipulation_mpc_control_flow = flow
-        return self._manipulation_mpc_control_flow
-    
-    @property
-    def eef_state(self):
+    def eef_state(self)->Tuple[EndEffectorState, EndEffectorState]:
         return self._eef_state
     
     @property
-    def dexhand_touch_state(self):
+    def dexhand_touch_state(self)-> Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]:
         if self._ee_type != EndEffectorType.QIANGNAO_TOUCH:
             raise Exception("This robot does not support touch state")
         return self._dexhand_touch_state
@@ -792,13 +765,13 @@ class KuavoRobotStateCoreWebsocket:
     def current_observation_time(self) -> float:
         if self._mpc_observation_data is None:
             return None
-        return self._mpc_observation_data['time']
+        return self._mpc_observation_data.time
     
     @property
     def current_gait_mode(self) -> int:
         if self._mpc_observation_data is None:
             return None
-        return self._mpc_observation_data['mode']
+        return self._mpc_observation_data.mode
 
     def gait_name(self)->str:
         return self._srv_get_current_gait_name()
@@ -913,7 +886,7 @@ class KuavoRobotStateCoreWebsocket:
         except Exception as e:
             SDKLogger.error(f"Error processing MPC observation: {e}")
 
-    def _srv_get_arm_ctrl_mode(self):
+    def _srv_get_arm_ctrl_mode(self)-> KuavoArmCtrlMode:
         try:
             service = roslibpy.Service(self.websocket.client, '/humanoid_get_arm_ctrl_mode', 'kuavo_msgs/changeArmCtrlMode')
             request = {}
@@ -935,47 +908,6 @@ class KuavoRobotStateCoreWebsocket:
             SDKLogger.error(f"Service call failed: {e}")
         return None
 
-    def _srv_get_manipulation_mpc_ctrl_mode(self, ):
-        try:
-            service_name = '/mobile_manipulator_get_mpc_control_mode'
-            service = roslibpy.Service(self.websocket.client, service_name, 'kuavo_msgs/changeTorsoCtrlMode')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc control mode: {response.get('message', '')}")
-                return KuavoManipulationMpcCtrlMode.ERROR
-            return KuavoManipulationMpcCtrlMode(response.get('mode', 0))
-        except Exception as e:
-            SDKLogger.error(f"Failed to get manipulation mpc control mode: {e}")
-        return KuavoManipulationMpcCtrlMode.ERROR
-
-    def _srv_get_manipulation_mpc_frame(self, ):
-        try:
-            service_name = '/get_mm_ctrl_frame'
-            service = roslibpy.Service(self.websocket.client, service_name, 'kuavo_msgs/setMmCtrlFrame')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc frame: {response.get('message', '')}")
-                return KuavoManipulationMpcFrame.ERROR
-            return KuavoManipulationMpcFrame(response.get('currentFrame', 0))
-        except Exception as e:
-            SDKLogger.error(f"Failed to get manipulation mpc frame: {e}")
-        return KuavoManipulationMpcFrame.ERROR
-
-    def _srv_get_manipulation_mpc_control_flow(self, ):
-        try:
-            service_name = '/get_mm_wbc_arm_trajectory_control'
-            service = roslibpy.Service(self.websocket.client, service_name, 'kuavo_msgs/changeArmCtrlMode')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {response.get('message', '')}")
-                return KuavoManipulationMpcControlFlow.Error
-            return KuavoManipulationMpcControlFlow(response.get('mode', 0))
-        except Exception as e:
-            SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
-        return KuavoManipulationMpcControlFlow.Error
 
 if __name__ == "__main__":
     state = KuavoRobotStateCore()

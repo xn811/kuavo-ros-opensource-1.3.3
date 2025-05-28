@@ -332,12 +332,9 @@ class ControlRobotArmWebsocket:
     def __init__(self):
         websocket = WebSocketKuavoSDK()
         self._pub_ctrl_arm_traj = roslibpy.Topic(websocket.client, '/kuavo_arm_traj', 'sensor_msgs/JointState')
-        self._pub_ctrl_arm_target_poses = roslibpy.Topic(websocket.client, '/kuavo_arm_target_poses', 'kuavo_msgs/armTargetPoses')
-        self._pub_ctrl_hand_pose_cmd = roslibpy.Topic(websocket.client, '/mm/two_arm_hand_pose_cmd', 'kuavo_msgs/twoArmHandPoseCmd')
         self._pub_ctrl_arm_traj.advertise()
+        self._pub_ctrl_arm_target_poses = roslibpy.Topic(websocket.client, '/kuavo_arm_target_poses', 'kuavo_msgs/armTargetPoses')
         self._pub_ctrl_arm_target_poses.advertise()
-        self._pub_ctrl_hand_pose_cmd.advertise()
-
     def connect(self, timeout:float=1.0)-> bool:
         return True
 
@@ -369,117 +366,6 @@ class ControlRobotArmWebsocket:
             SDKLogger.error(f"publish arm target poses: {e}")
             
         return False
-
-    def pub_end_effector_pose_cmd(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
-        try:
-            msg = {
-                "hand_poses": {
-                    "left_pose": {
-                        "pos_xyz": left_pose.position,
-                        "quat_xyzw": left_pose.orientation
-                    },
-                    "right_pose": {
-                        "pos_xyz": right_pose.position,
-                        "quat_xyzw": right_pose.orientation
-                    }
-                },
-                "frame": frame.value
-            }
-            if frame.value not in [0, 1, 2, 3, 4]:
-                SDKLogger.error(f"Invalid frame: {frame}")
-                return False
-            self._pub_ctrl_hand_pose_cmd.publish(roslibpy.Message(msg))
-            return True
-        except Exception as e:
-            SDKLogger.error(f"publish arm target poses: {e}")
-        return False
-
-    def srv_change_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame)->bool:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/set_mm_ctrl_frame', 'kuavo_msgs/setMmCtrlFrame')
-            request = {
-                "frame": frame.value
-            }
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to change manipulation mpc frame to {frame}: {response.get('message', '')}")
-            return response.get('result', False)
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return False
-    
-    def srv_change_manipulation_mpc_ctrl_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode)->bool:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/mobile_manipulator_mpc_control', 'kuavo_msgs/changeTorsoCtrlMode')
-            request = {
-                "control_mode": ctrl_mode.value
-            }
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to change manipulation mpc control mode to {ctrl_mode}: {response.get('message', '')}")
-            return response.get('result', False)
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return False
-
-    def srv_change_manipulation_mpc_control_flow(self, ctrl_flow: KuavoManipulationMpcControlFlow)-> bool:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/enable_mm_wbc_arm_trajectory_control', 'kuavo_msgs/changeArmCtrlMode')
-            request = {
-                "control_mode": ctrl_flow.value
-            }
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to change manipulation mpc wbc arm trajectory control to {ctrl_flow}: {response.get('message', '')}")
-            return response.get('result', False)
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return False
-
-    def srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/mobile_manipulator_get_mpc_control_mode', 'kuavo_msgs/changeTorsoCtrlMode')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc control mode: {response.get('message', '')}")
-                return KuavoManipulationMpcCtrlMode.ERROR
-            return KuavoManipulationMpcCtrlMode(response.get('mode', 0))
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return KuavoManipulationMpcCtrlMode.ERROR
-
-    def srv_get_manipulation_mpc_frame(self, )->KuavoManipulationMpcFrame:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/get_mm_ctrl_frame', 'kuavo_msgs/setMmCtrlFrame')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc frame: {response.get('message', '')}")
-                return KuavoManipulationMpcFrame.ERROR
-            return KuavoManipulationMpcFrame(response.get('currentFrame', 0))
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return KuavoManipulationMpcFrame.ERROR
-
-    def srv_get_manipulation_mpc_control_flow(self, )->KuavoManipulationMpcControlFlow:
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/get_mm_wbc_arm_trajectory_control', 'kuavo_msgs/changeArmCtrlMode')
-            request = {}
-            response = service.call(request)
-            if not response.get('result', False):
-                SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {response.get('message', '')}")
-                return KuavoManipulationMpcControlFlow.ERROR
-            return KuavoManipulationMpcControlFlow(response.get('mode', 0))
-        except Exception as e:
-            SDKLogger.error(f"Service call failed: {e}")
-        return KuavoManipulationMpcControlFlow.ERROR
 
     def srv_change_arm_ctrl_mode(self, mode: KuavoArmCtrlMode)->bool:
         try:
@@ -921,7 +807,6 @@ class ControlRobotHeadWebsocket:
     def __init__(self):
         websocket = WebSocketKuavoSDK()
         self._pub_ctrl_robot_head = roslibpy.Topic(websocket.client, '/robot_head_motion_data', 'kuavo_msgs/robotHeadMotionData')
-        self._pub_ctrl_robot_head.advertise()
 
     def connect(self, timeout:float=1.0)->bool:
         return True
@@ -935,70 +820,6 @@ class ControlRobotHeadWebsocket:
             return True
         except Exception as e:
             SDKLogger.error(f"[Error] publish robot head: {e}")
-            return False
-
-    def srv_enable_head_tracking(self, target_id: int)->bool:
-        """Enable the head tracking for a specific tag ID.
-        
-        Args:
-            target_id: The ID of the tag to track
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            websocket = WebSocketKuavoSDK()
-            # First set the target tag ID
-            set_tag_service = roslibpy.Service(websocket.client, '/set_target_tag_id', 'kuavo_msgs/setTagId')
-            set_tag_request = {
-                "tag_id": target_id
-            }
-            set_tag_response = set_tag_service.call(set_tag_request)
-            if not set_tag_response.get('success', False):
-                SDKLogger.error(f"Failed to set target tag ID: {set_tag_response.get('message', '')}")
-                return False
-                
-            SDKLogger.info(f"Successfully set target tag ID to {target_id}: {set_tag_response.get('message', '')}")
-            
-            # Then start continuous tracking
-            track_service = roslibpy.Service(websocket.client, '/continuous_track', 'std_srvs/SetBool')
-            track_request = {
-                "data": True
-            }
-            track_response = track_service.call(track_request)
-            if not track_response.get('success', False):
-                SDKLogger.error(f"Failed to start continuous tracking: {track_response.get('message', '')}")
-                return False
-                
-            SDKLogger.info(f"Successfully started continuous tracking: {track_response.get('message', '')}")
-            return True
-            
-        except Exception as e:
-            SDKLogger.error(f"Failed to enable head tracking: {e}")
-            return False
-        
-    def srv_disable_head_tracking(self)->bool:
-        """Disable the head tracking.
-        
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/continuous_track', 'std_srvs/SetBool')
-            request = {
-                "data": False
-            }
-            response = service.call(request)
-            if not response.get('success', False):
-                SDKLogger.error(f"Failed to stop continuous tracking: {response.get('message', '')}")
-                return False
-                
-            SDKLogger.info(f"Successfully stopped continuous tracking: {response.get('message', '')}")
-            return True
-            
-        except Exception as e:
-            SDKLogger.error(f"Failed to disable head tracking: {e}")
             return False
 
 """ Control Robot Motion """
@@ -1074,7 +895,7 @@ class ControlRobotMotion:
             SDKLogger.error(f"[Error] publish cmd pose: {e}")
             return False    
 
-    def pub_cmd_pose_world(self, twist)->bool:
+    def pub_cmd_pose_world(self, twist:Twist)->bool:
         try:
             self._pub_cmd_pose_world.publish(twist)
             return True
@@ -1082,7 +903,7 @@ class ControlRobotMotion:
             SDKLogger.error(f"[Error] publish cmd pose world: {e}")
             return False
 
-    def _create_joy_msg(self):
+    def _create_joy_msg(self)->Joy:
         joy_msg = Joy()
         joy_msg.axes = [0.0] * 8  # Initialize 8 axes
         joy_msg.buttons = [0] * 16  # Initialize 16 buttons
@@ -1142,16 +963,9 @@ class ControlRobotMotionWebsocket:
         websocket = WebSocketKuavoSDK()
         self._pub_cmd_vel = roslibpy.Topic(websocket.client, '/cmd_vel', 'geometry_msgs/Twist')
         self._pub_cmd_pose = roslibpy.Topic(websocket.client, '/cmd_pose', 'geometry_msgs/Twist')
-        self._pub_cmd_pose_world = roslibpy.Topic(websocket.client, '/cmd_pose_world', 'geometry_msgs/Twist')
         self._pub_joy = roslibpy.Topic(websocket.client, '/joy', 'sensor_msgs/Joy')
         self._pub_switch_gait = roslibpy.Topic(websocket.client, '/humanoid_switch_gait_by_name', 'kuavo_msgs/switchGaitByName')
         self._pub_step_ctrl = roslibpy.Topic(websocket.client, '/humanoid_mpc_foot_pose_target_trajectories', 'kuavo_msgs/footPoseTargetTrajectories')
-        self._pub_cmd_vel.advertise()
-        self._pub_cmd_pose.advertise()
-        self._pub_cmd_pose_world.advertise()
-        self._pub_joy.advertise()
-        self._pub_switch_gait.advertise()
-        self._pub_step_ctrl.advertise()
 
     def connect(self, timeout:float=2.0)-> bool:
         return True
@@ -1168,20 +982,19 @@ class ControlRobotMotionWebsocket:
             SDKLogger.error(f"[Error] publish cmd vel: {e}")
             return False
 
-    def pub_cmd_pose(self, msg)->bool:
+    def pub_cmd_pose(self, height:float, pitch:float)->bool:
+        # com_msg = Twist()
+        # com_msg.linear.z = height
+        # com_msg.angular.y = pitch
         try:
+            msg = {
+                "linear": {"x": 0, "y": 0, "z": float(height)},
+                "angular": {"x": 0, "y": float(pitch), "z": 0}
+            }
             self._pub_cmd_pose.publish(roslibpy.Message(msg))
             return True
         except Exception as e:
             SDKLogger.error(f"[Error] publish cmd pose: {e}")
-            return False
-
-    def pub_cmd_pose_world(self, msg)->bool:
-        try:
-            self._pub_cmd_pose_world.publish(roslibpy.Message(msg))
-            return True
-        except Exception as e:
-            SDKLogger.error(f"[Error] publish cmd pose world: {e}")
             return False
 
     def _pub_joy_command(self, button_index: int, command_name: str) -> bool:
@@ -1226,13 +1039,13 @@ class ControlRobotMotionWebsocket:
     def pub_step_ctrl(self, msg)->bool:
         try:
             websocket_msg = {
-                "timeTrajectory": msg["timeTrajectory"],
-                "footIndexTrajectory": msg["footIndexTrajectory"],
+                "timeTrajectory": msg.timeTrajectory,
+                "footIndexTrajectory": msg.footIndexTrajectory,
                 "footPoseTrajectory": [
                     {
-                        "footPose": list(fp["footPose"]),
-                        "torsoPose": list(fp["torsoPose"])
-                    } for fp in msg["footPoseTrajectory"]
+                        "footPose": list(fp.footPose),
+                        "torsoPose": list(fp.torsoPose)
+                    } for fp in msg.footPoseTrajectory
                 ]
             }
             SDKLogger.debug(f"websocket_msg {websocket_msg}")
@@ -1334,7 +1147,7 @@ class KuavoRobotArmIKFKWebsocket:
                params: KuavoIKParams=None) -> list:
         try:
             websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/ik/two_arm_hand_pose_cmd_srv', 'kuavo_msgs/twoArmHandPoseCmdSrv')
+            service = roslibpy.Service(websocket.client, '/ik/two_arm_hand_pose_cmd_srv', 'motion_capture_ik/twoArmHandPoseCmdSrv')
             
             request = {
                 "twoArmHandPoseCmdRequest": {
@@ -1383,7 +1196,7 @@ class KuavoRobotArmIKFKWebsocket:
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         try:
             websocket = WebSocketKuavoSDK()
-            service = roslibpy.Service(websocket.client, '/ik/fk_srv', 'kuavo_msgs/fkSrv')
+            service = roslibpy.Service(websocket.client, '/ik/fk_srv', 'motion_capture_ik/fkSrv')
             request = {"q": q}
             response = service.call(request)
             
@@ -1904,17 +1717,17 @@ class KuavoRobotControlWebsocket:
         SDKLogger.debug(f"Control robot head: {yaw}, {pitch}")
         return self.kuavo_head_control.pub_control_robot_head(yaw, pitch)
     
-    def control_robot_arm_joint_positions(self, joint_data:list)->bool:
+    def control_robot_arm_traj(self, joint_data:list)->bool:
         """
-            Control robot arm joint positions
+            Control robot arm trajectory
             Arguments:
                 - joint_data: list of joint data (degrees)
         """
         return self.kuavo_arm_control.pub_control_robot_arm_traj(joint_data)
     
-    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
+    def control_robot_arm_target_poses(self, times:list, joint_q:list)->bool:
         """
-            Control robot arm joint trajectory
+            Control robot arm target poses
             Arguments:
                 - times: list of times (seconds)
                 - joint_q: list of joint data (degrees)
@@ -1925,58 +1738,6 @@ class KuavoRobotControlWebsocket:
             raise ValueError("Times and joint_q must not be empty.")
         
         return self.kuavo_arm_control.pub_arm_target_poses(times=times, joint_q=joint_q)
-    
-    def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
-        """
-            Control robot end effector pose
-            Arguments:
-                - left_pose: left end effector pose
-                - right_pose: right end effector pose
-                - frame: frame of the end effector pose, 0: keep current frame, 1: world frame, 2: local frame, 3: VR frame, 4: manipulation world frame
-        """
-        return self.kuavo_arm_control.pub_end_effector_pose_cmd(left_pose, right_pose, frame)
-    
-    def change_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame)->bool:
-        """
-            Change manipulation mpc frame
-            Arguments:
-                - frame: frame of the manipulation mpc
-        """
-        return self.kuavo_arm_control.srv_change_manipulation_mpc_frame(frame)
-    
-    def change_manipulation_mpc_ctrl_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode)->bool:
-        """
-            Change manipulation mpc control mode
-            Arguments:
-                - control_mode: control mode of the manipulation mpc
-        """
-        return self.kuavo_arm_control.srv_change_manipulation_mpc_ctrl_mode(ctrl_mode)
-    
-    def change_manipulation_mpc_control_flow(self, ctrl_flow: KuavoManipulationMpcControlFlow)->bool:
-        """
-            Change manipulation mpc wbc arm traj control mode, control signal will be sent to wbc directly
-            Arguments:
-                - control_mode: control mode of the manipulation mpc wbc arm traj
-        """
-        return self.kuavo_arm_control.srv_change_manipulation_mpc_control_flow(ctrl_flow)
-    
-    def get_manipulation_mpc_ctrl_mode(self)->KuavoManipulationMpcCtrlMode:
-        """
-            Get manipulation mpc control mode
-        """
-        return self.kuavo_arm_control.srv_get_manipulation_mpc_ctrl_mode()
-    
-    def get_manipulation_mpc_frame(self)-> KuavoManipulationMpcFrame:
-        """
-            Get manipulation mpc frame
-        """
-        return self.kuavo_arm_control.srv_get_manipulation_mpc_frame()
-    
-    def get_manipulation_mpc_control_flow(self)->KuavoManipulationMpcControlFlow:
-        """
-            Get manipulation mpc wbc arm traj control mode
-        """
-        return self.kuavo_arm_control.srv_get_manipulation_mpc_control_flow()
     
     def change_robot_arm_ctrl_mode(self, mode:KuavoArmCtrlMode)->bool:
         """
@@ -2013,31 +1774,7 @@ class KuavoRobotControlWebsocket:
         return self.kuavo_motion_control.pub_cmd_vel(linear_x, linear_y, angular_z)
     
     def control_torso_height(self, height:float, pitch:float=0.0)->bool:
-        msg = {
-            "linear": {"x": 0.0, "y": 0.0, "z": float(height)},
-            "angular": {"x": 0.0, "y": float(pitch), "z": 0.0}
-        }
-        return self.kuavo_motion_control.pub_cmd_pose(roslibpy.Message(msg))
-
-    def control_command_pose_world(self, target_pose_x:float, target_pose_y:float, target_pose_z:float, target_pose_yaw:float)->bool:
-        """
-            odom下的机器人cmd_pose_world
-        """
-        msg = {
-            "linear": {"x": float(target_pose_x), "y": float(target_pose_y), "z": float(target_pose_z)},
-            "angular": {"x": 0.0, "y": 0.0, "z": float(target_pose_yaw)}
-        }
-        return self.kuavo_motion_control.pub_cmd_pose_world(roslibpy.Message(msg))
-
-    def control_command_pose(self, target_pose_x:float, target_pose_y:float, target_pose_z:float, target_pose_yaw:float)->bool:
-        """
-            base_link下的机器人cmd_pose
-        """
-        msg = {
-            "linear": {"x": float(target_pose_x), "y": float(target_pose_y), "z": float(target_pose_z)},
-            "angular": {"x": 0.0, "y": 0.0, "z": float(target_pose_yaw)}
-        }
-        return self.kuavo_motion_control.pub_cmd_pose(roslibpy.Message(msg))
+        return self.kuavo_motion_control.pub_cmd_pose(height, pitch)
 
     def step_control(self, body_poses:list, dt:float, is_left_first_default:bool=True, collision_check:bool=True)->bool:
         """
@@ -2085,32 +1822,17 @@ def euler_to_rotation_matrix(yaw, pitch, roll):
 def get_foot_pose_traj_msg(time_traj:list, foot_idx_traj:list, foot_traj:list, torso_traj:list):
     num = len(time_traj)
 
-    if GlobalConfig.use_websocket:
-        # WebSocket mode
-        msg = {
-            "timeTrajectory": time_traj,
-            "footIndexTrajectory": foot_idx_traj,
-            "footPoseTrajectory": []
-        }
-        
-        for i in range(num):
-            foot_pose = {
-                "footPose": foot_traj[i],
-                "torsoPose": torso_traj[i]
-            }
-            msg["footPoseTrajectory"].append(foot_pose)
-    else:
-        # ROS mode
-        msg = footPoseTargetTrajectories()
-        msg.timeTrajectory = time_traj
-        msg.footIndexTrajectory = foot_idx_traj
-        msg.footPoseTrajectory = []
+    # 创建消息实例
+    msg = footPoseTargetTrajectories()
+    msg.timeTrajectory = time_traj  # 设置时间轨迹
+    msg.footIndexTrajectory = foot_idx_traj         # 设置脚索引
+    msg.footPoseTrajectory = []  # 初始化脚姿态轨迹
 
-        for i in range(num):
-            foot_pose_msg = footPose()
-            foot_pose_msg.footPose = foot_traj[i]
-            foot_pose_msg.torsoPose = torso_traj[i]
-            msg.footPoseTrajectory.append(foot_pose_msg)
+    for i in range(num):
+        foot_pose_msg = footPose()
+        foot_pose_msg.footPose = foot_traj[i]      # 设置脚姿态
+        foot_pose_msg.torsoPose = torso_traj[i]    # 设置躯干姿态
+        msg.footPoseTrajectory.append(foot_pose_msg)
 
     return msg
 

@@ -76,17 +76,17 @@ class KuavoRobotCore:
             else:
                 self._control = KuavoRobotControl()
                 self._rb_state = KuavoRobotStateCore()
-
-                # robot vision
-                self._robot_vision = KuavoRobotVisionCore()
-                # robot ros tf
-                self._robot_tf_tool = KuavoRobotToolsCore()
     
             # manipulation mpc
             self._manipulation_mpc_frame = KuavoManipulationMpcFrame.KeepCurrentFrame
             self._manipulation_mpc_ctrl_mode = KuavoManipulationMpcCtrlMode.NoControl
             self._manipulation_mpc_control_flow = KuavoManipulationMpcControlFlow.ThroughFullBodyMpc
 
+            # robot vision
+            self._robot_vision = KuavoRobotVisionCore()
+            # robot ros tf
+            self._robot_tf_tool = KuavoRobotToolsCore()
+                
             self._arm_ctrl_mode = KuavoArmCtrlMode.AutoSwing
             
             # register gait changed callback
