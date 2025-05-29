@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime
   geometry_msgs
   std_msgs
+  trajectory_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -91,6 +92,10 @@ add_message_files(
   twoArmHandPoseCmd.msg
   robotHandPosition.msg
   headBodyPose.msg
+  bezierCurveCubicPoint.msg
+  jointBezierTrajectory.msg
+  planArmState.msg
+  RobotActionState.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -123,6 +128,9 @@ add_service_files(
 
   SpeechSynthesis.srv
   setMmCtrlFrame.srv
+  ExecuteArmAction.srv
+  planArmTrajectoryBezierCurve.srv
+  planArmTrajectoryCubicSpline.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -137,6 +145,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs  # Or other packages containing msgs
   geometry_msgs
+  trajectory_msgs
 )
 
 ################################################

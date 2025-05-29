@@ -5,7 +5,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <trajectory_msgs/JointTrajectory.h>
-#include <humanoid_plan_arm_trajectory/planArmState.h>
+#include <kuavo_msgs/planArmState.h>
 #include <std_srvs/Trigger.h>
 
 namespace ocs2 {
@@ -72,7 +72,7 @@ namespace ocs2 {
         bool interpolate_finished_ = false;
         sensor_msgs::JointState joint_state_;
         trajectory_msgs::JointTrajectory traj_;
-        humanoid_plan_arm_trajectory::planArmState arm_traj_state_;
+        kuavo_msgs::planArmState arm_traj_state_;
 
         const std::array<std::string, 14> arm_joint_names_ = {
             "zarm_l1_joint", "zarm_l2_joint", "zarm_l3_joint", "zarm_l4_joint", "zarm_l5_joint", "zarm_l6_joint", "zarm_l7_joint",

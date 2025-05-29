@@ -202,8 +202,8 @@ void BezierCurveInterpolator::createSingleBezierCurve(size_t i, size_t j, std::l
     curve_list.emplace_back(start_time, end_time, std::move(pos_traj), std::move(vel_traj), std::move(acc_traj));
 }
 
-bool BezierCurveInterpolator::planArmTrajectoryBezierCurveCallback(humanoid_plan_arm_trajectory::planArmTrajectoryBezierCurve::Request& req, 
-                                                                    humanoid_plan_arm_trajectory::planArmTrajectoryBezierCurve::Response& res) {
+bool BezierCurveInterpolator::planArmTrajectoryBezierCurveCallback(kuavo_msgs::planArmTrajectoryBezierCurve::Request& req, 
+                                                                    kuavo_msgs::planArmTrajectoryBezierCurve::Response& res) {
     
     std::cout << "BezierCurveInterpolator::planArmTrajectoryBezierCurveCallback" << std::endl;
     current_interpolate_type_ = interpolate_type_;
