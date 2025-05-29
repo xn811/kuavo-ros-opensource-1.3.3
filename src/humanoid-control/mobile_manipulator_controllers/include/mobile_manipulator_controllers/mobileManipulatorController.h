@@ -169,7 +169,7 @@ namespace mobile_manipulator_controller
     ControlType controlType_ = ControlType::None;
     bool velControl_{true};
     Vector6d basePoseDeltaLimit_;
-    Vector6d basePoseCmd_;
+    // Vector6d basePoseCmd_;
     ros::Time basePoseCmdUpdatedTime_;
     double terrain_height_{0};
     bool visualizeMm_{true};

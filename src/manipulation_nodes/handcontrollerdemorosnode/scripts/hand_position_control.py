@@ -2,7 +2,7 @@
 
 import rospy
 import sys
-from motion_capture_ik.msg import twoArmHandPoseCmd, twoArmHandPose, armHandPose
+from kuavo_msgs.msg import twoArmHandPoseCmd, twoArmHandPose, armHandPose
 from std_srvs.srv import SetBool
 from kuavo_msgs.srv import changeTorsoCtrlMode, changeArmCtrlMode
 from visualization_msgs.msg import Marker, MarkerArray

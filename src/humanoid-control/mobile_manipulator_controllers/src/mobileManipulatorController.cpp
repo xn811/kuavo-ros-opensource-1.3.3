@@ -96,22 +96,22 @@ namespace mobile_manipulator_controller
     mmObservation_.input.setZero(info_.inputDim);
 
 
-    auto basePoseCmdCallback = [&](const std_msgs::Float64MultiArray::ConstPtr& msg)
-    {
-      if(msg->data.size() != 6)
-      {
-        ROS_ERROR_STREAM("Invalid base pose command size: " << msg->data.size());
-        return;
-      }
-      basePoseCmd_ = Eigen::Map<const Eigen::VectorXd>(msg->data.data(), msg->data.size());
-      basePoseCmdUpdatedTime_ = ros::Time::now();
-      std::cout << "Received base pose command: " << basePoseCmd_.transpose() << std::endl;
-    };
+    // auto basePoseCmdCallback = [&](const std_msgs::Float64MultiArray::ConstPtr& msg)
+    // {
+    //   if(msg->data.size() != 6)
+    //   {
+    //     ROS_ERROR_STREAM("Invalid base pose command size: " << msg->data.size());
+    //     return;
+    //   }
+    //   basePoseCmd_ = Eigen::Map<const Eigen::VectorXd>(msg->data.data(), msg->data.size());
+    //   basePoseCmdUpdatedTime_ = ros::Time::now();
+    //   std::cout << "Received base pose command: " << basePoseCmd_.transpose() << std::endl;
+    // };
 
     terrainHeightSubscriber_ = controllerNh_.subscribe<std_msgs::Float64>("/humanoid/mpc/terrainHeight", 1,
                                [&](const std_msgs::Float64::ConstPtr& msg){ terrain_height_ = msg->data; });
     humanoidObservationSub_ = controllerNh_.subscribe("/humanoid_wbc_observation", 1, &MobileManipulatorController::humanoidObservationCallback, this);// contain all arm joint
-    basePoseCmdSubscriber_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/base_pose_cmd", 10, basePoseCmdCallback);
+    // basePoseCmdSubscriber_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/base_pose_cmd", 10, basePoseCmdCallback);
     kinematicMpcControlSrv_ = controllerNh_.advertiseService(robotName_ + "_mpc_control", &MobileManipulatorController::controlService, this);
     getKinematicMpcControlModeSrv_ = controllerNh_.advertiseService(robotName_ + "_get_mpc_control_mode", &MobileManipulatorController::getKinematicMpcControlModeService, this);
     mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
@@ -291,18 +291,9 @@ namespace mobile_manipulator_controller
         break;
       case ControlType::ArmOnly:
         break;
+      case ControlType::BaseOnly:
+        break;
       case ControlType::BaseArm:
-        // 最高优先级
-        // if((ros::Time::now() - basePoseCmdUpdatedTime_) < ros::Duration(0.1))// check if base pose command is updated within 0.1 seconds
-        {
-          if(baseDim != basePoseCmd_.size())
-          {
-            ROS_ERROR_STREAM("baseDim != basePoseCmd_.size(): " << baseDim << " != " << basePoseCmd_.size());
-            return;
-          }
-          mmObservationDummy_.state.head(baseDim) = basePoseCmd_;
-          std::cout << "Base Pose Command: " << basePoseCmd_.transpose() << std::endl;
-        }
         break;
       default:
         break;
@@ -596,7 +587,7 @@ namespace mobile_manipulator_controller
     const auto& currentTorsoState = currentHumanoidObservation.state.segment<6>(6);
     ocs2::vector_t desiredArmState = desiredState.tail(info_.armDim);
     ocs2::vector_t desiredArmInput = desiredInput.tail(info_.armDim);
-    limitArmPosition(desiredArmState);
+    // limitArmPosition(desiredArmState);
     const auto& currentArmState = currentHumanoidObservation.state.tail(info_.armDim);
     // std::cout << "Desired torso state: " << desiredTorsoState.transpose() << std::endl;
     auto goalTorsoTargetTrajectories = generateTargetTrajectories(currentTorsoState, desiredTorsoState, currentHumanoidObservation);
@@ -608,8 +599,8 @@ namespace mobile_manipulator_controller
     //   controlBase(mmState, mmInput);
     // else
     // std::cout << "[MobileManipulatorController] mmState: " << mmState.transpose() << std::endl;
-      controlBasePos(mmState, mmInput);
-    humanoidArmTargetTrajectoriesPublisher_.publish(ros_msg_conversions::createTargetTrajectoriesMsg(goalArmTargetTrajectories));
+
+    // humanoidArmTargetTrajectoriesPublisher_.publish(ros_msg_conversions::createTargetTrajectoriesMsg(goalArmTargetTrajectories));
     auto getJointStatesMsg = [&](const vector_t& q_arm, const vector_t& dq_arm)
     {
       
@@ -632,8 +623,25 @@ namespace mobile_manipulator_controller
     
       return std::move(msg);
     };
-
-    armTrajPublisher_.publish(getJointStatesMsg(desiredArmState, desiredArmInput));
+    switch(controlType_)
+    {
+      case ControlType::None:
+        break;
+      case ControlType::ArmOnly:
+        humanoidArmTargetTrajectoriesPublisher_.publish(ros_msg_conversions::createTargetTrajectoriesMsg(goalArmTargetTrajectories));
+        armTrajPublisher_.publish(getJointStatesMsg(desiredArmState, desiredArmInput));
+        break;
+      case ControlType::BaseOnly:
+        // controlBasePos(mmState, mmInput);只控制base没有意义
+        break;
+      case ControlType::BaseArm:
+        controlBasePos(mmState, mmInput);
+        humanoidArmTargetTrajectoriesPublisher_.publish(ros_msg_conversions::createTargetTrajectoriesMsg(goalArmTargetTrajectories));
+        armTrajPublisher_.publish(getJointStatesMsg(desiredArmState, desiredArmInput));
+        break;
+      default:
+        break;
+    }
   }
 
   TargetTrajectories MobileManipulatorController::generateTargetTrajectories(const vector_t& currentState, const vector_t& desiredState, const SystemObservation& currentHumanoidObservation)

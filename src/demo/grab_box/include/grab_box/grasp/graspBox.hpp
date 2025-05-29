@@ -302,7 +302,7 @@ namespace GrabBox
 
       if(current_time_ <= 2*dt_){
         std::cout << "send!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-      if(!changeKinematicMpcControlMode(1))//Arm only control mode
+      if(!changeKinematicMpcControlMode(3))//Base and Arm control mode
         return BT::NodeStatus::FAILURE;
     }
       current_time_ += dt_;
