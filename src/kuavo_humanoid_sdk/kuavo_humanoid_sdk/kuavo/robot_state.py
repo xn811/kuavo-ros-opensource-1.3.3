@@ -6,15 +6,11 @@ from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.data_types import (
     KuavoImuData, KuavoJointData, KuavoOdometry, KuavoArmCtrlMode,EndEffectorState, 
     KuavoManipulationMpcControlFlow, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcFrame)
-from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
-from kuavo_humanoid_sdk.common.global_config import GlobalConfig
+from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 
 class KuavoRobotState:
     def __init__(self, robot_type: str = "kuavo"):
-        if GlobalConfig.use_websocket:
-            self._rs_core = KuavoRobotStateCoreWebsocket()
-        else:
-            self._rs_core = KuavoRobotStateCore()
+        self._rs_core = KuavoRobotStateCore()
 
     @property
     def imu_data(self) -> KuavoImuData:

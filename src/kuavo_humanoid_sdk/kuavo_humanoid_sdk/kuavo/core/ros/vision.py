@@ -10,17 +10,15 @@ from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffecto
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.interfaces.data_types import (AprilTagData)
 
-try:
-    import rospy
-    from std_msgs.msg import Float64
-    from nav_msgs.msg import Odometry
-    from sensor_msgs.msg import JointState
-    from apriltag_ros.msg import AprilTagDetectionArray
-    from geometry_msgs.msg import TransformStamped, PoseStamped
-    import tf2_ros
-    import tf2_geometry_msgs
-except ImportError:
-    pass
+import rospy
+from std_msgs.msg import Float64
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import JointState
+from apriltag_ros.msg import AprilTagDetectionArray
+from geometry_msgs.msg import TransformStamped, PoseStamped
+import tf2_ros
+import tf2_geometry_msgs
+
 
 class KuavoRobotVisionCore:
     """Handles vision-related data processing for Kuavo humanoid robot.

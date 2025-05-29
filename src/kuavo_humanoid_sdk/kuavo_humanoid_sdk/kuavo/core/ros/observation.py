@@ -3,10 +3,10 @@
 from kuavo_humanoid_sdk.interfaces.data_types import (
     KuavoJointCommand, KuavoTwist)
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-
 import rospy
 from geometry_msgs.msg import Twist
 from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import jointCmd
+
 class KuavoRobotObservationCore:
     _instance = None
 
@@ -92,6 +92,3 @@ class KuavoRobotObservationCore:
             list: Position commands for head joints
         """
         return self._joint_cmd.joint_q[-2:]
-
-
-# TODO: 实现 Websocket 接口在这里

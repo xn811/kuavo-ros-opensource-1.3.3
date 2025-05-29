@@ -4,8 +4,7 @@ from typing import Tuple
 from kuavo_humanoid_sdk.interfaces.end_effector import EndEffector
 from kuavo_humanoid_sdk.interfaces.data_types import EndEffectorSide, EndEffectorState, KuavoDexHandTouchState
 from kuavo_humanoid_sdk.kuavo.core.dex_hand_control import DexHandControl
-from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore, KuavoRobotStateCoreWebsocket
-from kuavo_humanoid_sdk.common.global_config import GlobalConfig
+from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 
 class DexterousHand(EndEffector):
     def __init__(self):
@@ -13,10 +12,7 @@ class DexterousHand(EndEffector):
                        'r_thumb', 'r_thumb_aux', 'r_index', 'r_middle', 'r_ring', 'r_pinky',]
         super().__init__(joint_names=joint_names)
         self.dex_hand_control = DexHandControl()
-        if GlobalConfig.use_websocket:
-            self._rb_state = KuavoRobotStateCoreWebsocket()
-        else:
-            self._rb_state = KuavoRobotStateCore()
+        self._rb_state = KuavoRobotStateCore()
 
     def control(self, target_positions:list, target_velocities:list=None, target_torques:list=None)->bool:
         """Set the position of the hand.

@@ -9,8 +9,6 @@ except ImportError:
 import subprocess
 import atexit
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
-import roslibpy
 
 class KuavoROSEnv:
     _instance = None

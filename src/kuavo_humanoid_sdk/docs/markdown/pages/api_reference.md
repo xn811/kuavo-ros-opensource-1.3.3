@@ -6,9 +6,6 @@ Before running any code examples, make sure to start the robot first by executin
 - For simulation: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (Example command)
 - For real robot: `roslaunch humanoid_controllers load_kuavo_real.launch` (Example command)
 
-#### NOTE
-If using websocket mode, you need to start the rosbridge server on robot first: `roslaunch rosbridge_server rosbridge_websocket.launch` (Example command)
-
 # API Reference
 
 ### *class* kuavo_humanoid_sdk.KuavoSDK
@@ -19,7 +16,7 @@ Bases: `object`
 
 Disable all logging output from the SDK.
 
-#### *static* Init(options: int = 1, log_level: str = 'INFO', websocket_mode: bool = False, websocket_host='127.0.0.1', websocket_port=9090, websocket_timeout=5) → bool
+#### *static* Init(options: int = 1, log_level: str = 'INFO') → bool
 
 Initialize the SDK.
 
@@ -30,15 +27,6 @@ Initializes the Kuavo SDK with specified options and configuration.
     Defaults to Options.Normal.
   * **log_level** (*str*) – Logging level to use. Options are “ERROR”, “WARN”, “INFO”, “DEBUG”.
     Defaults to “INFO”.
-  * **websocket_mode** (*bool*) – Whether to use websocket mode for ROS communication.
-    If True, connects to ROS through websocket instead of direct connection.
-    Defaults to False.
-  * **websocket_host** (*str*) – Host address of the rosbridge websocket server.
-    Only used when websocket_mode is True. Defaults to “127.0.0.1”.
-  * **websocket_port** (*int*) – Port number of the rosbridge websocket server.
-    Only used when websocket_mode is True. Defaults to 9090.
-  * **websocket_timeout** (*int*) – Timeout in seconds for the websocket connection.
-    Defaults to 5.
 * **Returns:**
   True if initialization succeeds, False otherwise.
 * **Return type:**

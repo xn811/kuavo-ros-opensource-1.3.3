@@ -6,19 +6,14 @@ import time
 import numpy as np
 from typing import Tuple, Union
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-
-try:
-    import rospy
-    import tf2_ros
-    import tf.transformations as tf_trans
-    from std_msgs.msg import Float64
-    from nav_msgs.msg import Odometry
-    from sensor_msgs.msg import JointState
-    from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
-    from geometry_msgs.msg import TransformStamped
-except ImportError:
-    pass
-
+import rospy
+import tf2_ros
+import tf.transformations as tf_trans
+from std_msgs.msg import Float64
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import JointState
+from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
+from geometry_msgs.msg import TransformStamped
 from kuavo_humanoid_sdk.interfaces.data_types import (PoseQuaternion, HomogeneousMatrix)
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
 

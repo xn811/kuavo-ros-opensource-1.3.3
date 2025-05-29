@@ -1,12 +1,7 @@
-from kuavo_humanoid_sdk.common.global_config import GlobalConfig
-try:
-    import rospy
-except ImportError:
-    pass
+import rospy
 import json
 import xml.etree.ElementTree as ET
 from kuavo_humanoid_sdk.common.logger import SDKLogger
-from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
 # End effector types
 class EndEffectorType:
     QIANGNAO = "qiangnao"
@@ -68,126 +63,6 @@ class RosParameter:
             return None
         return rospy.get_param('/initial_state')
 
-import roslibpy
-class RosParamWebsocket:
-    def __init__(self):
-        self.websocket = WebSocketKuavoSDK()
-        if not self.websocket.client.is_connected:
-            SDKLogger.error("Failed to connect to WebSocket server")
-            raise ConnectionError("Failed to connect to WebSocket server")
-
-    def robot_version(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'robot_version')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("robot_version parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get robot_version: {e}")
-            return None
-    
-    def arm_dof(self)->int:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'armRealDof')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("armRealDof parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get armRealDof: {e}")
-            return None
-    
-    def head_dof(self)->int:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'headRealDof')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("headRealDof parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get headRealDof: {e}")
-            return None
-    
-    def leg_dof(self)->int:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'legRealDof')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("legRealDof parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get legRealDof: {e}")
-            return None
-    
-    def end_effector_type(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'end_effector_type')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("end_effector_type parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get end_effector_type: {e}")
-            return None
-    
-    def humanoid_description(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'humanoid_description')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("humanoid_description parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get humanoid_description: {e}")
-            return None
-
-    def model_path(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'modelPath')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("modelPath parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get modelPath: {e}")
-            return None
-
-    def kuavo_config(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'kuavo_configuration')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("kuavo_configuration parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get kuavo_configuration: {e}")
-            return None
-
-    def initial_state(self)->str:
-        try:
-            param_service = roslibpy.Param(self.websocket.client, 'initial_state')
-            param = param_service.get()
-            if param is None:
-                SDKLogger.error("initial_state parameter not found")
-                return None
-            return param
-        except Exception as e:
-            SDKLogger.error(f"Failed to get initial_state: {e}")
-            return None
-
-# if GlobalConfig.use_websocket:
-#     kuavo_ros_param = RosParamWebsocket()
-# else:
-#     kuavo_ros_param = RosParameter()
 
 def joint_names()->dict:
     leg_link_names = [
@@ -201,10 +76,8 @@ def joint_names()->dict:
     head_link_names = [
         'zhead_1_link', 'zhead_2_link'
     ]
-    if GlobalConfig.use_websocket:
-        kuavo_ros_param = RosParamWebsocket()
-    else:
-        kuavo_ros_param = RosParameter()
+
+    kuavo_ros_param = RosParameter()
 
     robot_desc = kuavo_ros_param.humanoid_description()
     if robot_desc is None:
@@ -263,10 +136,8 @@ kuavo_ros_info = None
 
 def end_frames_names()->dict:
     default = ["torso", "zarm_l7_link", "zarm_r7_link", "zarm_l4_link", "zarm_r4_link"]
-    if GlobalConfig.use_websocket:
-        kuavo_ros_param = RosParamWebsocket()
-    else:
-        kuavo_ros_param = RosParameter()
+
+    kuavo_ros_param = RosParameter()
 
     kuavo_json = kuavo_ros_param.kuavo_config()
     if kuavo_json is None:
@@ -287,10 +158,7 @@ def make_robot_param()->dict:
     if kuavo_ros_info is not None:
         return kuavo_ros_info
     
-    if GlobalConfig.use_websocket:
-        kuavo_ros_param = RosParamWebsocket()
-    else:
-        kuavo_ros_param = RosParameter()
+    kuavo_ros_param = RosParameter()
 
     kuavo_ros_info = {
         'robot_version': kuavo_ros_param.robot_version(),

@@ -15,7 +15,7 @@ import signal
 import sys
 from ocs2_msgs.msg import mpc_observation
 from kuavo_msgs.msg import sensorsData
-from kuavo_ros_interfaces.msg import robotHandPosition, robotHeadMotionData
+from kuavo_msgs.msg import robotHandPosition, robotHeadMotionData
 from sensor_msgs.msg import JointState
 import math
 from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierTrajectory, planArmState

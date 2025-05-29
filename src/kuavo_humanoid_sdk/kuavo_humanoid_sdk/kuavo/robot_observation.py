@@ -3,7 +3,6 @@
 from kuavo_humanoid_sdk.interfaces.data_types import (
     KuavoJointCommand, KuavoTwist)
 from kuavo_humanoid_sdk.kuavo.core.ros.observation import KuavoRobotObservationCore
-from kuavo_humanoid_sdk.common.global_config import GlobalConfig
 
 class KuavoRobotObservation:
     """Class for accessing robot observation data.

@@ -48,8 +48,7 @@ setup(
     ]+find_msg_subpackages("kuavo_humanoid_sdk/msg"),
     install_requires=[
         "numpy", 
-        "transitions",
-        "roslibpy"
+        "transitions"
     ],
     python_requires=">=3.8",
     classifiers=[

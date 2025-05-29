@@ -1,15 +1,12 @@
 import time
 import math
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot,KuavoRobotState
+from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoManipulationMpcFrame
 
-# 进入 websocket 模式需要在 KuavoSDK().Init() 中设置 websocket_mode=True, websocket_host 参数
-# websocket_host 参数为机器人websocket服务器的IP地址，websocket_port 参数为机器人websocket服务器的端口号, 默认为9090
-# 如果机器人没有连接到网络，则需要使用有线连接，并设置 websocket_host 参数为机器人的IP地址
 if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host='127.0.0.1'):# Init!
     print("Init KuavoSDK failed, exit!")
     exit(1)
 
-# 其他代码与直连模式相同，以下为 ctrl_arm_example.py 的测试代码
 robot = KuavoRobot()
 
 def control_arm_traj():
@@ -32,7 +29,7 @@ def control_arm_traj():
         # !!! Convert degrees to radians
         # !!! Convert degrees to radians
         q = [math.radians(angle) for angle in q]
-        robot.control_arm_position(q)
+        robot.control_arm_joint_positions(q)
         time.sleep(0.02)
     
     # fixed arm
@@ -47,7 +44,7 @@ def control_arm_traj():
                 # !!! Convert degrees to radians
                 # !!! Convert degrees to radians
         q_tmp = [math.radians(angle) for angle in q_tmp]
-        robot.control_arm_position(q_tmp)
+        robot.control_arm_joint_positions(q_tmp)
         time.sleep(0.02)
 
     robot.set_auto_swing_arm_mode() # Restore auto arm swing mode
@@ -55,8 +52,8 @@ def control_arm_traj():
     robot.arm_reset() # Reset arm position
 
 
-def control_arm_target_poses():
-    global robt
+def control_arm_joint_trajectory():
+    global robot
     target_poses = [
         [1.0, [20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
         [2.5, [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0]],
@@ -73,8 +70,12 @@ def control_arm_target_poses():
     # !!! Convert degrees to radians
     q_frames = [[math.radians(angle) for angle in pose[1]] for pose in target_poses]
     
-    if not robot.control_arm_target_poses(times, q_frames):
-        print("control_arm_target_poses failed!")
+    if not robot.control_arm_joint_trajectory(times, q_frames):
+        print("control_arm_joint_trajectory failed!")
+
+def control_arm_end_effector_pose():
+    global robot
+    robot.control_robot_end_effector_pose(KuavoPose(position=[0.3, 0.4, 0.9], orientation=[0, -0.67566370964, 0, 0.73720997571945]), KuavoPose(position=[0.3, -0.5, 1.0], orientation=[0, -0.67566370964, 0, 0.73720997571945]), KuavoManipulationMpcFrame.WorldFrame)
 
 if __name__ == "__main__":
 
@@ -87,7 +88,11 @@ if __name__ == "__main__":
     # !!! Move arm trajectory
     control_arm_traj()
     
-    control_arm_target_poses()
+    control_arm_joint_trajectory()
     time.sleep(12)  # !!! Wait for the arm to reach the target pose
     
     robot.arm_reset() # !!! after the arm reaches the target pose, reset the arm position.
+    control_arm_end_effector_pose()
+    time.sleep(3)
+    robot.manipulation_mpc_reset()
+    robot.arm_reset()

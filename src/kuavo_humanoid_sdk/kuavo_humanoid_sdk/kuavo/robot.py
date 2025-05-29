@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from kuavo_humanoid_sdk.common.global_config import GlobalConfig
-
-from kuavo_humanoid_sdk.kuavo.core.ros_env import KuavoROSEnv, KuavoROSEnvWebsocket
+from kuavo_humanoid_sdk.kuavo.core.ros_env import KuavoROSEnv
 from kuavo_humanoid_sdk.interfaces.robot import RobotBase
 from kuavo_humanoid_sdk.common.logger import SDKLogger, disable_sdk_logging
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow
@@ -44,8 +42,7 @@ class KuavoSDK:
        pass
 
     @staticmethod   
-    def Init(options:int=Options.Normal, log_level: str = "INFO", 
-             websocket_mode: bool = False, websocket_host='127.0.0.1', websocket_port=9090, websocket_timeout=5)-> bool:
+    def Init(options:int=Options.Normal, log_level: str = "INFO")-> bool:
         """Initialize the SDK.
         
         Initializes the Kuavo SDK with specified options and configuration.
@@ -55,15 +52,6 @@ class KuavoSDK:
                 Defaults to Options.Normal.
             log_level (str): Logging level to use. Options are "ERROR", "WARN", "INFO", "DEBUG".
                 Defaults to "INFO".
-            websocket_mode (bool): Whether to use websocket mode for ROS communication.
-                If True, connects to ROS through websocket instead of direct connection.
-                Defaults to False.
-            websocket_host (str): Host address of the rosbridge websocket server.
-                Only used when websocket_mode is True. Defaults to "127.0.0.1".
-            websocket_port (int): Port number of the rosbridge websocket server.
-                Only used when websocket_mode is True. Defaults to 9090.
-            websocket_timeout (int): Timeout in seconds for the websocket connection.
-                Defaults to 5.
                 
         Returns:
             bool: True if initialization succeeds, False otherwise.
@@ -72,10 +60,7 @@ class KuavoSDK:
             RuntimeError: If initialization fails due to missing dependencies or
                 connection issues.
         """
-        GlobalConfig.use_websocket = websocket_mode
-        GlobalConfig.websocket_host = websocket_host
-        GlobalConfig.websocket_port = websocket_port
-        GlobalConfig.websocket_timeout = websocket_timeout
+
         SDKLogger.setLevel(log_level.upper())
         # Initialize core components, connect ROS Topics...
         kuavo_core = KuavoRobotCore()
@@ -84,16 +69,11 @@ class KuavoSDK:
         else:
             debug = False   
         # Check if IK option is enabled
-        if GlobalConfig.use_websocket:
-            if options & KuavoSDK.Options.WithIK:
-                if not KuavoROSEnvWebsocket.check_rosnode_exists('/arms_ik_node'):
-                    print("\033[31m\nError:WithIK option is enabled but ik_node is not running, please run `roslaunch motion_capture_ik ik_node.launch`\033[0m")      
-                    exit(1)
-        else:
-            if options & KuavoSDK.Options.WithIK:
-                if not KuavoROSEnv.check_rosnode_exists('/arms_ik_node'):
-                    print("\033[31m\nError:WithIK option is enabled but ik_node is not running, please run `roslaunch motion_capture_ik ik_node.launch`\033[0m")      
-                    exit(1)
+
+        if options & KuavoSDK.Options.WithIK:
+            if not KuavoROSEnv.check_rosnode_exists('/arms_ik_node'):
+                print("\033[31m\nError:WithIK option is enabled but ik_node is not running, please run `roslaunch motion_capture_ik ik_node.launch`\033[0m")      
+                exit(1)
 
 
         if not kuavo_core.initialize(debug=debug):
@@ -111,10 +91,9 @@ class KuavoRobot(RobotBase):
     def __init__(self):
         super().__init__(robot_type="kuavo")
         
-        if not GlobalConfig.use_websocket:
-            kuavo_ros_env = KuavoROSEnv()
-            if not kuavo_ros_env.Init():
-                raise RuntimeError("Failed to initialize ROS environment")
+        kuavo_ros_env = KuavoROSEnv()
+        if not kuavo_ros_env.Init():
+            raise RuntimeError("Failed to initialize ROS environment")
 
         self._robot_info = KuavoRobotInfo()
         self._robot_arm  = KuavoRobotArm()
