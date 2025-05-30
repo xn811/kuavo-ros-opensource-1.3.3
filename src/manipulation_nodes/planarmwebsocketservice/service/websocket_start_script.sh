@@ -49,6 +49,34 @@ while ! rosnode list | grep -q "autostart_arm_trajectory_bezier_demo"; do
 done
 echo "动作执行节点已启动。"
 
+# 检查是否有 wifi 连接
+echo "正在检测 WiFi 连接..."
+
+
+HOTSPOT_IP="192.168.12.1"
+while true; do
+    ssid=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2 || echo "")
+    hotspot_name=$(grep "ROBOT_SERIAL_NUMBER" /etc/environment.d/RRNIS.env | cut -d'=' -f2 || echo "")
+    ap_interface=$(ifconfig | grep -o 'ap[0-9]*' || echo "")
+    ap_ip=$(ifconfig $ap_interface 2>/dev/null | grep 'inet ' | awk '{print $2}' || echo "")
+
+    if [ -n "$ssid" ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') ✅ 检测到机器人已连接的 WiFi：$ssid"
+    fi
+
+    if [ -n "$hotspot_name" ] && [ -n "$ap_interface" ] && [ "$ap_ip" == "$HOTSPOT_IP" ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') ✅ 检测到机器人发射的热点：${hotspot_name}的热点"
+    fi
+
+    if [ -n "$ssid" ] || ([ -n "$hotspot_name" ] && [ -n "$ap_interface" ] && [ "$ap_ip" == "$HOTSPOT_IP" ]); then
+        break
+    else
+        echo "$(date '+%Y-%m-%d %H:%M:%S') ❌ 机器人尚未连接 WiFi 或 发射热点，继续检测中..."
+    fi
+
+    sleep 2
+done
+
 # 启动 websocket 服务节点
 roslaunch planarmwebsocketservice plan_arm_action_websocket_server.launch robot_type:=ocs2
 
