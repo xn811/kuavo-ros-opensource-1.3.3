@@ -1,71 +1,65 @@
 .. _examples:
 
 ************
-Examples
+使用示例
 ************
+.. include:: components/tips_launch_kuavo.rst
 
-.. warning::
-
-    Before running any code examples, make sure to start the robot first by executing either:
-    
-    - For simulation: ``roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch`` (Example command)
-    - For real robot: ``roslaunch humanoid_controllers load_kuavo_real.launch`` (Example command)
-
-Robot Info
+机器人信息
 ===========
-Examples showing how to get basic robot information.
+这个示例展示了如何获取机器人的基本信息。
 
 .. literalinclude:: ../../examples/atomic_skills/robot_info_example.py
   :language: python
 
-Basic Robot Control
-====================
-A basic example showing how to initialize the SDK and control the robot's movement.
+基础机器人控制
+==============
+这个示例展示了如何初始化 SDK 并控制机器人的运动。
 
 .. literalinclude:: ../../examples/atomic_skills/motion_example.py
   :language: python
 
-End Effector Control
-=====================
+末端执行器控制
+==============
 
-LejuClaw Gripper
-----------------
-Examples demonstrating how to control the LejuClaw gripper end effector, including position, velocity and torque control.
+LejuClaw 夹爪
+--------------
+这个示例展示了如何控制夹爪，包括位置、速度和力矩控制。
 
 .. literalinclude:: ../../examples/atomic_skills/lejuclaw_example.py
   :language: python
 
-QiangNao DexHand
+Qiangnao 灵巧手
 ----------------
-Examples showing how to control the QiangNao DexHand, a dexterous robotic hand with multiple degrees of freedom for complex manipulation tasks.
+这个示例展示了如何控制灵巧手/触觉灵巧手。
 
 .. literalinclude:: ../../examples/atomic_skills/dexhand_example.py
   :language: python
 
-Arm Control
-============
-Examples showing arm trajectory control and target pose control.
+手臂控制
+========
+这个示例展示了如何控制机器人手臂运动，包括轨迹控制和目标姿态控制。
 
 .. literalinclude:: ../../examples/atomic_skills/ctrl_arm_example.py
   :language: python
 
-Forward and Inverse Kinematics
-==============================
-Examples demonstrating how to use forward kinematics (FK) to compute end-effector positions from joint angles, and inverse kinematics (IK) to calculate joint angles needed to achieve desired end-effector poses.
+正向和逆向运动学控制
+====================
+这个示例展示了如何使用正向运动学 (FK) 从关节角度计算末端执行器位置，以及如何使用逆向运动学 (IK) 计算实现所需末端执行器姿态所需的关节角度。
 
 .. literalinclude:: ../../examples/atomic_skills/arm_ik_example.py
   :language: python
 
-Head Control
-=============
-Examples showing how to control the robot's head movements, including nodding (pitch) and shaking (yaw) motions.
+头部控制
+========
+这个示例展示了如何控制机器人头部运动，包括点头 (pitch) 和摇头 (yaw) 运动。
 
 .. literalinclude:: ../../examples/atomic_skills/ctrl_head_example.py
   :language: python
 
-Step-by-Step Control
-====================
-Examples showing how to control the robot's movements step by step, including individual foot placement and trajectory control.
+单步控制
+========
+这个示例展示了如何逐步控制机器人的运动，包括单脚的放置和轨迹控制。
 
 .. literalinclude:: ../../examples/atomic_skills/step_control_example.py
   :language: python

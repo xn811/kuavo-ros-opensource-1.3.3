@@ -1,57 +1,57 @@
 <a id="quickstart"></a>
 
-# Quickstart
+# 快速开始
 
 #### WARNING
-Before running any code examples, make sure to start the robot first by executing either:
+在运行任何代码示例之前，请确保已经启动机器人， 否则 SDK 无法正常工作：
 
-- For simulation: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (Example command)
-- For real robot: `roslaunch humanoid_controllers load_kuavo_real.launch` (Example command)
+- 如果是命令行启动，则请确保类似下面的命令已经执行:
+  : - 仿真模式: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (示例命令)
+    - 真实机器人: `roslaunch humanoid_controllers load_kuavo_real.launch` (示例命令)
+- 如果是 h12 遥控器等启动方式，也请确保已经让机器人启动(站立)
 
-## Getting Started
+## 入门指南
 
-Before using the Kuavo SDK, you must first initialize it by calling `KuavoSDK().Init()`. This is required before any other SDK functionality can be used.
+在使用 SDK 之前，您必须首先通过调用 `KuavoSDK().Init()` 来初始化它。这是使用任何其他 SDK 功能之前的必要步骤。
 
-Here’s a minimal example:
+以下是一个最小示例：
 
 ```python3
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
 
-# Initialize the SDK - this is required!
+# 初始化 SDK - 这是必需的！
 if not KuavoSDK().Init():
     print("Init KuavoSDK failed, exit!")
     exit(1)
 
-# Create robot instance after successful initialization
+# 成功初始化后创建机器人实例
 robot = KuavoRobot()
 
 # Now you can use the robot object...
 ```
 
 #### WARNING
-Calling SDK functions without first calling `KuavoSDK().Init()` or when it returns `False` is illegal and may lead to undefined behavior. The consequences are unpredictable and could be dangerous.
+在没有首先调用 `KuavoSDK().Init()` 或当它返回 `False` 时调用 SDK 函数是非法的，可能导致未定义的行为。后果是不可预测的，可能很危险。
 
-### Basic Example
+### 基础示例
 
-Let’s break down this example:
+让我们分解这个示例：
 
-1. First, we import the required modules:
-   - `KuavoSDK` - The main SDK interface
-   - `KuavoRobot` - The robot control interface
-   - `time` - For timing control
-2. In the `main()` function:
-   - We initialize the SDK with `KuavoSDK().Init()` - this is a critical first step
-   - Create a robot instance with `KuavoRobot()`
-3. Basic robot control sequence:
-   - `arm_reset()` - Moves the arms to their default position
-   - `stance()` - Puts the robot in a stable standing position
-   - `trot()` - Switches to a trotting gait mode
-4. Walking control:
-   - We set up a 4-second duration and walking speed of 0.3 m/s
+1. 首先，我们导入所需的模块：
+   - `KuavoSDK` - 主要的 SDK 接口
+   - `KuavoRobot` - 机器人控制接口
+   - `time` - 用于时间控制
+2. 在 `main()` 函数中：
+   - 我们使用 `KuavoSDK().Init()` 初始化 SDK - 这是关键且必须的第一步
+   - 使用 `KuavoRobot()` 创建机器人实例
+3. 基本机器人控制方法：
+   - `arm_reset()` - 将手臂归位
+   - `stance()` - 切换到站立状态模式
+   - `trot()` - 切换到小跑步态模式
+4. 行走控制：
+   - 我们让机器人以 0.3 m/s 的速度行走 4 秒
 
-This example demonstrates the basic workflow of initializing the SDK and controlling the robot’s movement.
-
-Here’s a complete example showing basic robot control after initialization:
+这个示例演示了初始化 SDK 和控制机器人运动的基本工作流程：
 
 ```python
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     main()
 ```
 
-Here’s a complete example showing basic robot get apriltag vision data after initialization:
+以下是一个完整的示例，展示了初始化后获取机器人 apriltag 视觉数据：
 
 ```python
 import time

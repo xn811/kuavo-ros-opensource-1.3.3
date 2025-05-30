@@ -51,8 +51,87 @@ fi
 
 log "操作完成！请重新插入 USB 音频设备以测试规则。"
 
+log "声卡配置完成，进行root用户权限配置。"
+# 注释 /lib/systemd/user/pulseaudio.service 文件中的 ConditionUser=!root 一行
+PULSE_SERVICE_FILE="/lib/systemd/user/pulseaudio.service"
+if [ -f "$PULSE_SERVICE_FILE" ]; then
+    if grep -q "^ConditionUser=!root" "$PULSE_SERVICE_FILE"; then
+        sed -i 's/^ConditionUser=!root/#ConditionUser=!root/' "$PULSE_SERVICE_FILE"
+        log "已注释 $PULSE_SERVICE_FILE 中的 ConditionUser=!root"
+    else
+        log "$PULSE_SERVICE_FILE 中未找到 ConditionUser=!root，无需修改"
+    fi
+else
+    log "未找到 $PULSE_SERVICE_FILE 文件，跳过注释操作"
+fi
+log "正在创建 /root/.asoundrc 配置文件..."
+cat >/root/.asoundrc <<EOF
+pcm.!default {
+  type hw
+  card 1
+}
 
-log "声卡配置完成，等待三秒后进行 5G 模块配置"
+ctl.!default {
+  type hw
+  card 1
+}
+EOF
+log "/root/.asoundrc 配置文件已创建。"
+
+log "执行 alsa force-reload..."
+if ! command -v alsa &> /dev/null; then
+    log "alsa 未安装，正在尝试安装 alsa-utils..."
+    if apt-get install -y alsa-utils; then
+        log "alsa-utils 安装成功。"
+    else
+        log "alsa-utils 安装失败，请手动安装。"
+        exit 1
+    fi
+fi
+
+log "安装sox...."
+if sudo apt-get install -y sox; then
+    log "sox 安装成功。"
+else
+    log "sox 安装失败，请手动安装。"
+    exit 1
+fi  
+
+if sudo alsa force-reload; then
+    log "alsa force-reload 执行成功。"
+else
+    log "alsa force-reload 执行失败，请检查 alsa 是否已正确安装。"
+fi
+
+# 在 /home/lab/.config/lejuconfig/ 目录下创建 music 文件夹
+MUSIC_DIR="/home/lab/.config/lejuconfig/music"
+if [ ! -d "$MUSIC_DIR" ]; then
+    mkdir -p "$MUSIC_DIR"
+    log "已创建目录 $MUSIC_DIR"
+else
+    log "目录 $MUSIC_DIR 已存在，无需创建"
+fi
+
+# 将当前目录下的 music 文件夹中的所有文件拷贝到 /home/lab/.config/lejuconfig/music 目录下
+SRC_MUSIC_DIR="./music"
+MUSIC_DIR="/home/lab/.config/lejuconfig/music"
+
+if [ -d "$SRC_MUSIC_DIR" ]; then
+    cp -rf "$SRC_MUSIC_DIR/"* "$MUSIC_DIR"/
+    log "已将 $SRC_MUSIC_DIR 下的文件拷贝到 $MUSIC_DIR"
+else
+    log "未找到 $SRC_MUSIC_DIR 目录，跳过文件拷贝"
+fi
+
+log "将 root 用户加入 audio 组..."
+if sudo usermod -aG audio root; then
+    log "root 用户已加入 audio 组。"
+else
+    log "root 用户加入 audio 组失败。"
+    exit 1
+fi
+
+log "root 用户权限配置完成，等待三秒后进行 5G 模块配置"
 log "3...  "
 sleep 1
 log "2..."

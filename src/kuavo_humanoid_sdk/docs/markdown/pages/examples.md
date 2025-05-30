@@ -1,16 +1,18 @@
 <a id="examples"></a>
 
-# Examples
+# 使用示例
 
 #### WARNING
-Before running any code examples, make sure to start the robot first by executing either:
+在运行任何代码示例之前，请确保已经启动机器人， 否则 SDK 无法正常工作：
 
-- For simulation: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (Example command)
-- For real robot: `roslaunch humanoid_controllers load_kuavo_real.launch` (Example command)
+- 如果是命令行启动，则请确保类似下面的命令已经执行:
+  : - 仿真模式: `roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch` (示例命令)
+    - 真实机器人: `roslaunch humanoid_controllers load_kuavo_real.launch` (示例命令)
+- 如果是 h12 遥控器等启动方式，也请确保已经让机器人启动(站立)
 
-## Robot Info
+## 机器人信息
 
-Examples showing how to get basic robot information.
+这个示例展示了如何获取机器人的基本信息。
 
 ```python
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobotInfo
@@ -35,9 +37,9 @@ if __name__ == "__main__":
     main()
 ```
 
-## Basic Robot Control
+## 基础机器人控制
 
-A basic example showing how to initialize the SDK and control the robot’s movement.
+这个示例展示了如何初始化 SDK 并控制机器人的运动。
 
 ```python
 import time
@@ -152,11 +154,11 @@ if __name__ == "__main__":
     main()
 ```
 
-## End Effector Control
+## 末端执行器控制
 
-### LejuClaw Gripper
+### LejuClaw 夹爪
 
-Examples demonstrating how to control the LejuClaw gripper end effector, including position, velocity and torque control.
+这个示例展示了如何控制夹爪，包括位置、速度和力矩控制。
 
 ```python
 from kuavo_humanoid_sdk import KuavoSDK, LejuClaw
@@ -202,9 +204,9 @@ if __name__ == "__main__":
     main()
 ```
 
-### QiangNao DexHand
+### Qiangnao 灵巧手
 
-Examples showing how to control the QiangNao DexHand, a dexterous robotic hand with multiple degrees of freedom for complex manipulation tasks.
+这个示例展示了如何控制灵巧手/触觉灵巧手。
 
 ```python
 from kuavo_humanoid_sdk import KuavoSDK, DexterousHand
@@ -241,9 +243,9 @@ if __name__ == "__main__":
     main()
 ```
 
-## Arm Control
+## 手臂控制
 
-Examples showing arm trajectory control and target pose control.
+这个示例展示了如何控制机器人手臂运动，包括轨迹控制和目标姿态控制。
 
 ```python
 import time
@@ -346,9 +348,9 @@ if __name__ == "__main__":
     robot.arm_reset()
 ```
 
-## Forward and Inverse Kinematics
+## 正向和逆向运动学控制
 
-Examples demonstrating how to use forward kinematics (FK) to compute end-effector positions from joint angles, and inverse kinematics (IK) to calculate joint angles needed to achieve desired end-effector poses.
+这个示例展示了如何使用正向运动学 (FK) 从关节角度计算末端执行器位置，以及如何使用逆向运动学 (IK) 计算实现所需末端执行器姿态所需的关节角度。
 
 ```python
 import time
@@ -394,9 +396,9 @@ if __name__ == "__main__":
         robot.arm_reset()    
 ```
 
-## Head Control
+## 头部控制
 
-Examples showing how to control the robot’s head movements, including nodding (pitch) and shaking (yaw) motions.
+这个示例展示了如何控制机器人头部运动，包括点头 (pitch) 和摇头 (yaw) 运动。
 
 ```python
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
@@ -454,9 +456,9 @@ if __name__ == "__main__":
     main()
 ```
 
-## Step-by-Step Control
+## 单步控制
 
-Examples showing how to control the robot’s movements step by step, including individual foot placement and trajectory control.
+这个示例展示了如何逐步控制机器人的运动，包括单脚的放置和轨迹控制。
 
 ```python
 import time

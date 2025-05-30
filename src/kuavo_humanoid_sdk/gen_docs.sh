@@ -1,7 +1,8 @@
 #!/bin/bash
 # Script to generate documentation for Kuavo Humanoid SDK
-SCRIPT_DIR=$(dirname "")
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
 PROJECT_DIR=$(realpath "$SCRIPT_DIR/../..")
+SDK_PROJECT_DIR="$PROJECT_DIR/src/kuavo_humanoid_sdk"  # project: kuavo_humanoid_sdk
 DEVEL_DIR="$PROJECT_DIR/devel/.private"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERSION=$(git -C "$PROJECT_DIR" describe --tags --always 2>/dev/null)
@@ -138,7 +139,7 @@ check_ros_env
 copy_ros_msgs
 
 echo "Generating HTML documentation..."
-sphinx-build -b html docs/ "docs/html"
+sphinx-build -b html -D language=zh_CN docs/ "docs/html"
 echo "HTML documentation generated successfully in docs/html"
 
 echo -e "\nGenerating Markdown documentation..."

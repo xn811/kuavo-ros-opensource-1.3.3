@@ -3,37 +3,37 @@
 from kuavo_humanoid_sdk.kuavo.core.audio import KuavoRobotAudioCore   
 
 class KuavoRobotAudio:
-    """Audio system interface for controlling audio playback functionality of Kuavo humanoid robot.
+    """Kuavo 机器人音频系统接口，用于控制音频播放功能。
     
-    Provides functionality to play music files.
+    提供音乐文件播放功能。
     """
     
     def __init__(self):
-        """Initialize the audio system."""
+        """初始化音频系统。"""
         self.audio = KuavoRobotAudioCore()
 
     def play_audio(self, file_name: str, volume: float = 0.5, speed: float = 1.0) -> bool:
-        """Play the specified audio file.
+        """播放指定的音频文件。
         
         Args:
-            file_name (str): Name of the audio file to play
+            file_name (str): 要播放的音频文件名
                 
         Returns:
-            bool: True if the play request was successfully sent, False otherwise
+            bool: 如果播放请求成功发送返回True，否则返回False
         """
         return self.audio.play_audio(file_name, volume, speed)
     
     def stop_music(self):
-        """Stop the currently playing audio."""
+        """停止当前正在播放的音频。"""
         return self.audio.stop_music()
     
     def text_to_speech(self, text: str, volume: float = 0.5) -> bool:
-        """Synthesize and play the specified text.
+        """将指定文本合成并播放。
         
         Args:
-            text (str): Text to be played
+            text (str): 要播放的文本
                 
         Returns:
-            bool: True if the play request was successfully sent, False otherwise
+            bool: 如果播放请求成功发送返回True，否则返回False
         """
         return self.audio.text_to_speech(text, volume)

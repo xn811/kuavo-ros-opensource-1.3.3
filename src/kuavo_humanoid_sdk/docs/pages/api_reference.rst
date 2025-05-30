@@ -1,19 +1,10 @@
 .. _api-reference:
-
-.. warning::
-
-    Before running any code examples, make sure to start the robot first by executing either:
-    
-    - For simulation: ``roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch`` (Example command)
-    - For real robot: ``roslaunch humanoid_controllers load_kuavo_real.launch`` (Example command)
-
-.. note::
-    If using websocket mode, you need to start the rosbridge server on robot first: ``roslaunch rosbridge_server rosbridge_websocket.launch`` (Example command)
+.. include:: components/tips_launch_kuavo.rst
 
 
-*************
-API Reference
-*************
+************
+API 接口
+************
 .. currentmodule:: kuavo_humanoid_sdk
 
 .. autoclass:: KuavoSDK
@@ -80,7 +71,4 @@ API Reference
     :members:
     :undoc-members:
     :show-inheritance:
-
-.. automodule:: kuavo_humanoid_sdk.interfaces.data_types
-    :members:
 

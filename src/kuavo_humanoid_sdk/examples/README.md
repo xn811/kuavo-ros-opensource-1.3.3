@@ -17,7 +17,7 @@ l_front_orientation = [0.38, -0.45, -0.56, 0.57]
 
 使用 `robot.control_arm_joint_trajectory` 函数将手从当前位置移动到指定的位置和状态。
 
-使用函数 `obot_state.arm_joint_state().position` 获取机器人当前关节角度，调用 ` robot.arm_fk ` 计算该电机角度下手末端的位置。
+使用函数 `robot_state.arm_joint_state().position` 获取机器人当前关节角度，调用 ` robot.arm_fk ` 计算该电机角度下手末端的位置。
 
 ---
 
@@ -118,9 +118,6 @@ l_front_orientation = [0.38, -0.45, -0.56, 0.57]
    - 通过 `robot_obs.arm_position_command` 获取当前手臂关节的目标位置
    - 每0.5秒打印一次位置信息
    - 可以通过Ctrl+C终止程序运行
-
-命令行输出示例：
-
 
 ---
 

@@ -8,80 +8,76 @@ from apriltag_ros.msg import AprilTagDetectionArray
 
 
 class KuavoRobotVision:
-    """Vision system interface for Kuavo humanoid robot.
+    """Kuavo机器人视觉系统接口。
     
-    Provides access to AprilTag detection data from different coordinate frames.
-    
+    提供从不同坐标系获取AprilTag检测数据的接口。
     """
     
     def __init__(self, robot_type: str = "kuavo"):
-        """Initialize the vision system.
+        """初始化视觉系统。
         
         Args:
-            robot_type (str, optional): Robot type identifier. Defaults to "kuavo".
+            robot_type (str, optional): 机器人类型标识符。默认为"kuavo"
         """
         if not hasattr(self, '_initialized'):
             self._vision_core = KuavoRobotVisionCore()
 
     def get_data_by_id(self, target_id: int, data_source: str = "base") -> dict:
-        """Get AprilTag detection data for a specific ID from specified source.
+        """获取指定ID的AprilTag检测数据。
         
         Args:
-            target_id (int): AprilTag ID to retrieve
-            data_source (str, optional): Data source frame. Can be "base", "camera", 
-                or "odom". Defaults to "base".
+            target_id (int): 要检索的AprilTag ID
+            data_source (str, optional): 数据源坐标系。可以是"base"、"camera"或"odom"。默认为"base"。
                 
         Returns:
-            dict: Detection data containing position, orientation and metadata
+            dict: 包含位置、方向和元数据的检测数据
         """
         return self._vision_core._get_data_by_id(target_id, data_source)
     
     def get_data_by_id_from_camera(self, target_id: int) -> dict:
-        """Get AprilTag data from camera coordinate frame.
+        """从相机坐标系获取AprilTag数据。
         
         Args:
-            target_id (int): AprilTag ID to retrieve
+            target_id (int): 要检索的AprilTag ID
             
         Returns:
-            dict: See get_data_by_id() for return format
+            dict: 包含位置、方向和元数据的检测数据。参见 :meth:`get_data_by_id` 的返回格式说明。
         """
         return self._vision_core._get_data_by_id(target_id, "camera")
     
     def get_data_by_id_from_base(self, target_id: int) -> dict:
-        """Get AprilTag data from base coordinate frame.
+        """从基座坐标系获取AprilTag数据。
         
         Args:
-            target_id (int): AprilTag ID to retrieve
+            target_id (int): 要检索的AprilTag ID
             
         Returns:
-            dict: See get_data_by_id() for return format
+            dict: 包含位置、方向和元数据的检测数据。参见 :meth:`get_data_by_id` 的返回格式说明。
         """
         return self._vision_core._get_data_by_id(target_id, "base")
     
     def get_data_by_id_from_odom(self, target_id: int) -> dict:
-        """Get AprilTag data from odom coordinate frame.
+        """从里程计坐标系获取AprilTag数据。
         
         Args:
-            target_id (int): AprilTag ID to retrieve
+            target_id (int): 要检索的AprilTag ID
             
         Returns:
-            dict: See get_data_by_id() for return format
+            dict: 包含位置、方向和元数据的检测数据。参见 :meth:`get_data_by_id` 的返回格式说明。
         """
         return self._vision_core._get_data_by_id(target_id, "odom")
     
     @property
     def apriltag_data_from_camera(self) -> AprilTagData:
-        """AprilTagData: All detected AprilTags in camera frame (property)"""
+        """AprilTagData: 相机坐标系中检测到的所有AprilTag（属性）"""
         return self._vision_core.apriltag_data_from_camera
     
     @property
     def apriltag_data_from_base(self) -> AprilTagData:
-        """AprilTagData: All detected AprilTags in camera frame (property)"""
+        """AprilTagData: 基座坐标系中检测到的所有AprilTag（属性）"""
         return self._vision_core.apriltag_data_from_base
     
     @property
     def apriltag_data_from_odom(self) -> AprilTagData:
-        """AprilTagData: All detected AprilTags in camera frame (property)"""
+        """AprilTagData: 里程计坐标系中检测到的所有AprilTag（属性）"""
         return self._vision_core.apriltag_data_from_odom
-    
-
