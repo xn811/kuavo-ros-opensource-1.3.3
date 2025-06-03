@@ -175,6 +175,7 @@ namespace humanoid_controller
     void stopping(const ros::Time & /*time*/) { mpcRunning_ = false; }
     void applySensorData();
     void applySensorData(const SensorData &data);
+    void updatakinematics(const SensorData &sensor_data, bool is_initialized_);
 
   protected:
     virtual void updateStateEstimation(const ros::Time &time, bool is_init = false);
@@ -187,6 +188,7 @@ namespace humanoid_controller
     void sensorsDataCallback(const kuavo_msgs::sensorsData::ConstPtr &msg);
     void startMpccallback(const std_msgs::Bool::ConstPtr &msg);
 
+    void robotlocalizationCallback(const nav_msgs::Odometry::ConstPtr &msg);
     bool enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
     bool enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
     bool getMmArmCtrlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
@@ -213,8 +215,10 @@ namespace humanoid_controller
     void dexhandStateCallback(const sensor_msgs::JointState::ConstPtr &msg);
 
     ros::Time last_time_;
+    ros::Time last_sensor_data_time_;
     ros::Time current_time_;
     std::queue<SensorData> sensorDataQueue;
+    std::queue<nav_msgs::Odometry> robotlocalizationDataQueue;
     std::mutex sensor_data_mutex_;
 
     std::thread keyboardThread_;
@@ -288,11 +292,14 @@ namespace humanoid_controller
     ros::Publisher wbcTimeCostPub_;
     ros::Publisher feettargetTrajectoriesPublisher_;
     ros::Publisher stop_pub_;
+    ros::Publisher imuPub_;
+    ros::Publisher kinematicPub_;
     ros::Publisher lHandWrenchPub_;
     ros::Publisher rHandWrenchPub_;
     ros::Publisher standUpCompletePub_;
     ros::Subscriber jointPosVelSub_;
     ros::Subscriber sensorsDataSub_;
+    ros::Subscriber robotLocalizationSub_;
     ros::Subscriber jointAccSub_;
     ros::Subscriber imuSub_;
     ros::Subscriber mpcStartSub_;
@@ -358,8 +365,9 @@ namespace humanoid_controller
 
     bool is_simplified_model_ = false;// 是否是简化的MPC模型
     TargetTrajectories currentArmTargetTrajectories_;// 当前手臂的目标轨迹，简化模型的关节target将会从这里读取
-
+    int seq_ = 0;
     SensorData sensor_data_head_;
+    Eigen::Quaterniond robot_quat_state_update_;
     vector_t desire_head_pos_ = vector_t::Zero(2);
     vector_t desire_arm_q_prev_;
     vector_t jointPos_, jointVel_;
@@ -374,6 +382,7 @@ namespace humanoid_controller
     vector_t motor_c2t_;
     bool init_input_ = false;
     Eigen::Quaternion<scalar_t> quat_;
+    Eigen::Quaternion<scalar_t> quat_init;
     contact_flag_t contactFlag_;
     vector3_t angularVel_, linearAccel_;
     matrix3_t orientationCovariance_, angularVelCovariance_, linearAccelCovariance_;

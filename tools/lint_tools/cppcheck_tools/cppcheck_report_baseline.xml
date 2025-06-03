@@ -597,15 +597,15 @@
             <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/controllerNodelet.cpp" line="52" column="49" />
         </error>
         <error id="redundantInitialization" severity="style" msg="Redundant initialization for 'curState'. The initialized value is overwritten before it is read." verbose="Redundant initialization for 'curState'. The initialized value is overwritten before it is read." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="878" column="16" info="curState is overwritten" />
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="873" column="23" info="curState is initialized" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="953" column="16" info="curState is overwritten" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="948" column="23" info="curState is initialized" />
         </error>
         <error id="redundantInitialization" severity="style" msg="Redundant initialization for 'desiredState'. The initialized value is overwritten before it is read." verbose="Redundant initialization for 'desiredState'. The initialized value is overwritten before it is read." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="879" column="20" info="desiredState is overwritten" />
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="874" column="27" info="desiredState is initialized" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="954" column="20" info="desiredState is overwritten" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="949" column="27" info="desiredState is initialized" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'updated_joint_torque' is assigned a value that is never used." verbose="Variable 'updated_joint_torque' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="1756" column="44" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/humanoidController.cpp" line="1833" column="44" />
         </error>
         <error id="noConstructor" severity="style" msg="The class 'HumanoidPlaybackNodelet' does not have a constructor although it has private member variables." verbose="The class 'HumanoidPlaybackNodelet' does not have a constructor although it has private member variables. Member variables of builtin types are left uninitialized when the class is instantiated. That may cause bugs or undefined behavior." cwe="398">
             <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/playBackNodelet.cpp" line="901" column="1" />
@@ -628,26 +628,35 @@
         <error id="constStatement" severity="warning" msg="Found suspicious operator ','" verbose="Found suspicious operator ','" cwe="398">
             <location file="/root/kuavo_ws/src/humanoid-control/humanoid_controllers/src/playBackNodelet.cpp" line="248" column="121" />
         </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'leg_r6_link' is assigned a value that is never used." verbose="Variable 'leg_r6_link' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/LinearKalmanFilter.cpp" line="89" column="23" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'base_link' is assigned a value that is never used." verbose="Variable 'base_link' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/LinearKalmanFilter.cpp" line="147" column="21" />
+        </error>
+        <error id="constStatement" severity="warning" msg="Found suspicious operator ','" verbose="Found suspicious operator ','" cwe="398">
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/LinearKalmanFilter.cpp" line="97" column="31" />
+        </error>
         <error id="unreadVariable" severity="style" msg="Variable 'Jac_i' is assigned a value that is never used." verbose="Variable 'Jac_i' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="313" column="18" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="316" column="18" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'beta' is assigned a value that is never used." verbose="Variable 'beta' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="382" column="27" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="385" column="27" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'Jac_i' is assigned a value that is never used." verbose="Variable 'Jac_i' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="443" column="18" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="446" column="18" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'index' is assigned a value that is never used." verbose="Variable 'index' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="448" column="17" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="451" column="17" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'delayed_flag' is assigned a value that is never used." verbose="Variable 'delayed_flag' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="697" column="25" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="700" column="25" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'avgValue' is assigned a value that is never used." verbose="Variable 'avgValue' is assigned a value that is never used." cwe="563">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="794" column="25" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="797" column="25" />
         </error>
         <error id="variableScope" severity="style" msg="The scope of the variable 'index' can be reduced." verbose="The scope of the variable 'index' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
-            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="448" column="11" />
+            <location file="/root/kuavo_ws/src/humanoid-control/humanoid_estimation/src/StateEstimateBase.cpp" line="451" column="11" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'armDofDiff' is assigned a value that is never used." verbose="Variable 'armDofDiff' is assigned a value that is never used." cwe="563">
             <location file="/root/kuavo_ws/src/humanoid-control/humanoid_interface/src/HumanoidInterface.cpp" line="553" column="22" />
@@ -1047,7 +1056,7 @@
             <location file="/root/kuavo_ws/src/humanoid-control/humanoid_wbc/src/WbcBase.cpp" line="465" column="52" />
         </error>
         <error id="variableScope" severity="style" msg="The scope of the variable 'is_mpc_updated' can be reduced." verbose="The scope of the variable 'is_mpc_updated' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
-            <location file="/root/kuavo_ws/src/humanoid-control/mobile_manipulator_controllers/src/mobileManipulatorController.cpp" line="322" column="10" />
+            <location file="/root/kuavo_ws/src/humanoid-control/mobile_manipulator_controllers/src/mobileManipulatorController.cpp" line="313" column="10" />
         </error>
         <error id="constStatement" severity="warning" msg="Found suspicious operator ','" verbose="Found suspicious operator ','" cwe="398">
             <location file="/root/kuavo_ws/src/humanoid-control/mobile_manipulator_controllers/src/mobileManipulatorController.cpp" line="249" column="66" />
@@ -12067,103 +12076,52 @@
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_diag_ref.c" line="130" column="11" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2308" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="43" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2420" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="144" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2532" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="245" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2648" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="346" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2764" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="447" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2880" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="474" column="11" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2996" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="574" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3108" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="676" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3220" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="703" column="11" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3336" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="812" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3452" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="922" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3564" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="949" column="11" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3676" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1058" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3788" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1167" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3900" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1194" column="11" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4016" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1294" column="10" />
-        </error>
-        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4231" column="10" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1396" column="10" />
@@ -12200,6 +12158,57 @@
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2198" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2308" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2420" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2532" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2648" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2764" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2880" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="2996" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3108" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3220" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3336" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3452" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3564" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3676" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3788" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="3900" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4016" column="10" />
+        </error>
+        <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4231" column="10" />
         </error>
         <error id="unreadVariable" severity="style" msg="Variable 'pA' is assigned a value that is never used." verbose="Variable 'pA' is assigned a value that is never used." cwe="563">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4375" column="11" />
@@ -12678,15 +12687,6 @@
         <error id="variableScope" severity="style" msg="The scope of the variable 'c_11' can be reduced." verbose="The scope of the variable 'c_11' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4368" column="9" />
         </error>
-        <error id="variableScope" severity="style" msg="The scope of the variable 'ii' can be reduced." verbose="The scope of the variable 'ii' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4138" column="6" />
-        </error>
-        <error id="variableScope" severity="style" msg="The scope of the variable 'c_10' can be reduced." verbose="The scope of the variable 'c_10' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4141" column="3" />
-        </error>
-        <error id="variableScope" severity="style" msg="The scope of the variable 'c_11' can be reduced." verbose="The scope of the variable 'c_11' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
-            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4141" column="9" />
-        </error>
         <error id="variableScope" severity="style" msg="The scope of the variable 'f_10' can be reduced." verbose="The scope of the variable 'f_10' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1685" column="3" />
         </error>
@@ -12704,6 +12704,15 @@
         </error>
         <error id="variableScope" severity="style" msg="The scope of the variable 'f_10' can be reduced." verbose="The scope of the variable 'f_10' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="1994" column="3" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'ii' can be reduced." verbose="The scope of the variable 'ii' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4138" column="6" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'c_10' can be reduced." verbose="The scope of the variable 'c_10' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4141" column="3" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'c_11' can be reduced." verbose="The scope of the variable 'c_11' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_blas3_ref.c" line="4141" column="9" />
         </error>
         <error id="clarifyCondition" severity="style" msg="Boolean result is used in bitwise operation. Clarify expression with parentheses." verbose="Suspicious expression. Boolean result is used in bitwise operation. The operator '!' and the comparison operators have higher precedence than bitwise operators. It is recommended that the expression is clarified with parentheses." cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_sqp/blasfeo_catkin/download/blasfeo_ref/x_lapack_ref.c" line="65" column="11" />
@@ -25322,6 +25331,118 @@
         <error id="shadowVariable" severity="style" msg="Local variable 'dt' shadows outer variable" verbose="Local variable 'dt' shadows outer variable" cwe="398">
             <location file="/root/kuavo_ws/src/ocs2/ocs2_test_tools/ocs2_qp_solver/test/testOcs2QpSolver.cpp" line="59" column="12" info="Shadow variable" />
             <location file="/root/kuavo_ws/src/ocs2/ocs2_test_tools/ocs2_qp_solver/test/testOcs2QpSolver.cpp" line="53" column="35" info="Shadowed declaration" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'cartesian_z' can be reduced." verbose="The scope of the variable 'cartesian_z' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="412" column="12" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'zone_tmp' can be reduced." verbose="The scope of the variable 'zone_tmp' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="420" column="11" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'nortp_tmp' can be reduced." verbose="The scope of the variable 'nortp_tmp' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="421" column="12" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'cartesian_z' can be reduced." verbose="The scope of the variable 'cartesian_z' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="645" column="14" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'zone_tmp' can be reduced." verbose="The scope of the variable 'zone_tmp' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="654" column="13" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'northp_tmp' can be reduced." verbose="The scope of the variable 'northp_tmp' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="655" column="14" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'cartesian_z' can be reduced." verbose="The scope of the variable 'cartesian_z' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="871" column="12" />
+        </error>
+        <error id="variableScope" severity="style" msg="The scope of the variable 'k_tmp' can be reduced." verbose="The scope of the variable 'k_tmp' can be reduced. Warning: Be careful when fixing this message, especially when there are inner loops. Here is an example where cppcheck will write that the scope for 'i' can be reduced:\012void f(int x)\012{\012    int i = 0;\012    if (x) {\012        // it's safe to move 'int i = 0;' here\012        for (int n = 0; n &lt; 10; ++n) {\012            // it is possible but not safe to move 'int i = 0;' here\012            do_something(&amp;i);\012        }\012    }\012}\012When you see this message it is always safe to reduce the variable scope 1 level." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/navsat_transform.cpp" line="883" column="14" />
+        </error>
+        <error id="exceptRethrowCopy" severity="style" msg="Throwing a copy of the caught exception instead of rethrowing the original exception." verbose="Rethrowing an exception with 'throw e;' creates an unnecessary copy of 'e'. To rethrow the caught exception without unnecessary copying or slicing, use a bare 'throw;'." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/ros_filter.cpp" line="1672" column="15" />
+        </error>
+        <error id="exceptRethrowCopy" severity="style" msg="Throwing a copy of the caught exception instead of rethrowing the original exception." verbose="Rethrowing an exception with 'throw e;' creates an unnecessary copy of 'e'. To rethrow the caught exception without unnecessary copying or slicing, use a bare 'throw;'." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/ros_filter.cpp" line="1725" column="15" />
+        </error>
+        <error id="shadowVariable" severity="style" msg="Local variable 'ex' shadows outer variable" verbose="Local variable 'ex' shadows outer variable" cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/ros_filter_utilities.cpp" line="130" column="38" info="Shadow variable" />
+            <location file="/root/kuavo_ws/src/robot_localization/src/ros_filter_utilities.cpp" line="114" column="37" info="Shadowed declaration" />
+        </error>
+        <error id="exceptRethrowCopy" severity="style" msg="Throwing a copy of the caught exception instead of rethrowing the original exception." verbose="Rethrowing an exception with 'throw e;' creates an unnecessary copy of 'e'. To rethrow the caught exception without unnecessary copying or slicing, use a bare 'throw;'." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/src/ros_robot_localization_listener.cpp" line="132" column="13" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="100" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="142" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="307" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="353" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="517" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="594" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="726" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="808" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="886" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ekf_localization_node_interfaces.cpp" line="966" column="31" />
+        </error>
+        <error id="passedByValue" severity="performance" msg="Function parameter 'UTMZone' should be passed by const reference." verbose="Parameter 'UTMZone' is passed by value. It could be passed as a const reference which is usually faster and recommended in C++." cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_navsat_conversions.cpp" line="41" column="46" />
+        </error>
+        <error id="redundantAssignment" severity="style" msg="Variable 'vroll' is reassigned a value before the old one has been used." verbose="Variable 'vroll' is reassigned a value before the old one has been used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="57" column="11" info="vroll is overwritten" />
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="55" column="54" info="vroll is assigned" />
+        </error>
+        <error id="redundantAssignment" severity="style" msg="Variable 'odom_msg.pose.pose.position.y' is reassigned a value before the old one has been used." verbose="Variable 'odom_msg.pose.pose.position.y' is reassigned a value before the old one has been used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="68" column="35" info="odom_msg.pose.pose.position.y is overwritten" />
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="67" column="35" info="odom_msg.pose.pose.position.y is assigned" />
+        </error>
+        <error id="shadowVariable" severity="style" msg="Local variable 'q' shadows outer variable" verbose="Local variable 'q' shadows outer variable" cwe="398">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="103" column="23" info="Shadow variable" />
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ros_robot_localization_listener_publisher.cpp" line="59" column="21" info="Shadowed declaration" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="101" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="143" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="308" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="354" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="518" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="595" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="727" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="809" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="887" column="31" />
+        </error>
+        <error id="unreadVariable" severity="style" msg="Variable 'filteredSub' is assigned a value that is never used." verbose="Variable 'filteredSub' is assigned a value that is never used." cwe="563">
+            <location file="/root/kuavo_ws/src/robot_localization/test/test_ukf_localization_node_interfaces.cpp" line="967" column="31" />
         </error>
         </errors>
 </results>
