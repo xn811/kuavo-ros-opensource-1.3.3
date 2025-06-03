@@ -18,19 +18,19 @@
     - 灵巧手(qiangnao): 位置、速度、力矩
     - 触觉灵巧手(qiangnao_touch): 位置、速度、力矩、触觉状态
     - 末端执行器位置和姿态
-  - 运动状态: 站立、行走、步态控制、小跑
+  - 运动状态: 站立、行走、自定义单步控制
 
 - 运动控制
   - 手臂控制
     - 关节位置控制
-    - 通过逆运动学的末端执行器6D控制
+    - 通过逆运动学(IK)的末端执行器6D控制
     - 用于计算末端执行器位姿的正运动学(FK)
     - 复杂动作的关键帧序列控制
   - 末端执行器控制
     - 夹持器控制(可配置速度和力矩的位置控制)
     - 灵巧手控制
       - 位置控制
-      - 预定义手势(OK、666、握拳等)
+      - 预定义手势(OK、666、握拳等)控制
   - 头部控制
     - 位置控制
   - 躯干控制
@@ -40,7 +40,7 @@
     - 站立
     - 踏步
     - 行走(xy 和 yaw 偏航速度控制)
-    - 单步控制
+    - 自定义单步控制
 - 机器人基本信息
   - 机器人类型(kuavo)
   - 机器人版本
@@ -55,7 +55,7 @@
   - 停止播放音频
   - TTS 文本合成音频
 - 视觉接口
-  - 获取 AprilTag 检测数据
+  - 获取指定坐标系下的 AprilTag 检测数据
 - 观测接口
    - 获取机器人控制指令
 - 搬箱子策略模块
@@ -247,7 +247,7 @@ https://gitee.com/leju-robot/kuavo-ros-opensource/tree/master/src/kuavo_humanoid
 
 ### 单步控制示例
 
-展示如何逐步控制机器人运动的示例，包括单个脚步放置和轨迹控制。
+展示如何控制机器人按照自定义落足点轨迹运动的示例。
 
 [https://gitee.com/leju-robot/kuavo-ros-opensource/tree/master/src/kuavo_humanoid_sdk/examples/step_control_example.py](https://gitee.com/leju-robot/kuavo-ros-opensource/tree/master/src/kuavo_humanoid_sdk/examples/step_control_example.py)
 

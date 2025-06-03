@@ -9,17 +9,17 @@ PyPI 项目地址: https://pypi.org/project/kuavo-humanoid-sdk/
 
 ## 安装
 **提示：对于本 SDK 目前存在两个版本，正式发布版与beta内测版, 他们的区别是：**
-- 正式发布版：稳定版，对应[kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/)的`master` 分支提供的功能，
-- beta内测版：该版本较正式版会激进一些，同时也会提供更丰富的功能，对应[kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/)的`beta` 分支提供的功能。
+- 正式发布版：稳定版，对应 [kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/) 的 `master` 分支提供的功能，
+- beta内测版：该版本较正式版会激进一些，同时也会提供更丰富的功能，对应 [kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/) 的 `beta` 分支提供的功能。
 
-**温馨提示：请务必明确您需要安装的版本，如果您的SDK版本与`kuavo-ros-opensource`未匹配，可能会出现某些功能不可用的错误。**
+**温馨提示：请务必明确您需要安装的版本，如果您的SDK版本与 `kuavo-ros-opensource` 未匹配，可能会出现某些功能不可用的错误。**
 
-安装最新的**正式版** Kuavo Humanoid SDK，可以使用 pip：
+安装最新的 **正式版** Kuavo Humanoid SDK，可以使用 pip：
 ```bash
 pip install kuavo-humanoid-sdk
 ```
 
-安装最新的**beta版** Kuavo Humanoid SDK，可以使用 pip：
+安装最新的 **beta版** Kuavo Humanoid SDK，可以使用 pip：
 ```bash
 pip install --pre kuavo-humanoid-sdk
 
@@ -58,17 +58,17 @@ pip uninstall kuavo_humanoid_sdk && pip install kuavo_humanoid_sdk
 pip install --upgrade --pre kuavo_humanoid_sdk
 ```
 
-## 描述
+## 文档
 
 有关详细的 SDK 文档和使用示例，请参阅 [sdk_description.md](sdk_description.md)。
 
-## 文档
-文档提供两种格式：
+此外我们还提供了两种格式的文档：
 - HTML 格式：[docs/html](docs/html), **需要自己执行脚本生成**
 - Markdown 格式：[docs/markdown](docs/markdown)
 
 我们推荐您自己执行文档脚本生成文档到本地, 文档会输出到`docs/html`和`docs/markdown`文件夹:
 ```bash
+catkin build kuavo_msgs ocs2_msgs motion_capture_ik
 chmod +x ./gen_docs.sh
 ./gen_docs.sh
 ```
