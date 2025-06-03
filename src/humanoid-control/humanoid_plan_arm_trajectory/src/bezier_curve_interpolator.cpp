@@ -39,6 +39,17 @@ void BezierCurveInterpolator::reset() {
 
 void BezierCurveInterpolator::initializeLimitations() {
     std::string urdf_file_path;
+
+    // Wait for urdfFile parameter
+    ros::Rate wait_rate(1);
+    while (ros::ok()) {
+        if (nh_->hasParam("urdfFile")) {
+            break;
+        }
+        ROS_WARN("Waiting for 'urdfFile' parameter to be set...");
+        wait_rate.sleep();
+    }
+    
     if (!nh_->getParam("urdfFile", urdf_file_path)) {
         ROS_ERROR("Failed to get param 'urdfFile'");
         return;
