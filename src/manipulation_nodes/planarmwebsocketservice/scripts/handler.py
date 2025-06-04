@@ -541,7 +541,7 @@ def upload_music_file(music_filename=""):
     # 将音乐文件上传到上位机指定路径
     remote_user = "kuavo"
     remote_host = "192.168.26.12"
-    remote_path = "/home/kuavo/.config/lejuconfig/music"
+    remote_path = "/home/kuavo/.config/lejuconfig/"
 
     encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
     if encoded_password is None:
@@ -550,16 +550,17 @@ def upload_music_file(music_filename=""):
 
     if not music_filename:
         # 将全部音频文件拷贝过去
-        scp_cmd = f"scp -r {MUSIC_FILE_FOLDER}"
+        scp_cmd = ["scp", "-r", MUSIC_FILE_FOLDER]
     else:
         # 拷贝单个音频文件
-        scp_cmd = f"scp {MUSIC_FILE_FOLDER}/{music_filename}"
+        scp_cmd = ["scp", MUSIC_FILE_FOLDER, music_filename]
     cmd = [
         "sshpass", "-p", remote_password,
-        scp_cmd,
+        *scp_cmd,
         f"{remote_user}@{remote_host}:{remote_path}"
     ]
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    # print(f"cmd: {cmd}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
 
     return result
     

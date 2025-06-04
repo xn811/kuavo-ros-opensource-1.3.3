@@ -4,21 +4,31 @@
 - 无
 
 ## 文档相关
+- Kuavo Humanoid SDK 更新使用示例和搬箱子案例文档中文描述，[文档链接](./src/kuavo_humanoid_sdk/README.md)
+- Kuavo Humanoid SDK 更新所有使用文档为中文格式，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - 示教功能文档补充说明示教模式启动机器人需要按‘o’后才开始记录，[文档链接](./src/manipulation_nodes/teach_pendant/readme.md)
 - 运动控制 API 文档新增电机Kp/Kd 参数 ROS 服务接口描述，[文档链接](./docs/运动控制API.md)
 - Kuavo Humanoid SDK 增加搬箱子策略模块使用文档，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 
 ## 新增功能
+- Kuavo Humanoid SDK 拆分 websocket 为单独模块 Kuavo Humanoid Websocket SDK，原先 SDK 将不支持在 Windows 系统下运行
 - 新增机器人 collision 碰撞对，实现横向移动保护
 - Kuavo Humanoid SDK 新增修改和获取电机Kp/Kd 参数接口以及使用示例，目前仅支持`youda`驱动类型的电机
 - 新增修改和获取电机Kp/Kd 参数 ROS 服务接口，目前仅支持`youda`驱动类型的电机
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复 VR 手柄无法控制灵巧手手指的问题
+- 修复 h12 自启服务启动时贝塞尔插值器获取参数失败问题
+- 增加运动学 yaw 滤波，修复 imu yaw 角度漂移问题
+- 修复桌面软件自启动服务存在`urdfFile`参数配置找不到的问题
+- 修复桌面软件连接机器人热点后，无法显示机器人 IP 地址和无法连接问题
+- 修复桌面软件上传文件存放路径错误的问题，存放路径为 `$HOME/.config/lejuconfig/action_files`
 - 修复半身控制模式下，启动机器人时手臂突然抽搐的错误
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
+- 优化上下位机 DHCP 配置工具，默认下位机为DHCP分配主机并增加声卡 udev 规则配置
 - 取消 MobileManipulatorController 启动时一直打印等待`com_height`参数的日志
 - 取消 MobileManipulatorController 节点启动时一直刷屏提示等待接收观测数据
 
