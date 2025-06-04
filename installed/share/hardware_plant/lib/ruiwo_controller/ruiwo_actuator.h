@@ -62,6 +62,7 @@ public:
     int initialize();
     void enable();
     void disable();
+    bool disableMotor(int motorIndex);
     void close();
     void join();
     // void set_positions(const std::vector<uint8_t> &ids, const std::vector<double> &positions ,std::vector<double> vel ,std::vector<double> pos_kp ,std::vector<double> pos_kd,std::vector<double> torque);

@@ -77,7 +77,7 @@ public:
     void Update(RobotState_t state_des, Eigen::VectorXd actuation);
     void joint2motor(const RobotState_t &state_des_, const Eigen::VectorXd &actuation, Eigen::VectorXd &cmd_out);
     void motor2joint(SensorData_t sensor_data_motor, SensorData_t &sensor_data_joint);
-    void GetC2Tcoeff(double *ret_c2t_coeff);
+    void GetC2Tcoeff(double *ret_c2t_coeff, size_t size);
     void cmds2Cmdr(const Eigen::VectorXd &cmd_s, uint32_t na_src, Eigen::VectorXd &cmd_r, uint32_t na_r);
     bool readSensor(SensorData_t &sensor_data);
     void setState(SensorData_t &sensor_data_motor, SensorData_t &sensor_data_joint);
@@ -99,7 +99,8 @@ public:
     bool checkJointPos(const std::vector<JointParam_t> &joint_data, std::vector<uint8_t> ids, std::string &msg);
     void jointFiltering(std::vector<JointParam_t> &joint_data, double dt);
     void setDefaultJointPos(std::vector<double> default_joint_pos);
-    
+
+    bool diableMotor(int motorIndex);
     void setEcmasterDriverType(std::string type = "elmo");
     static void signalHandler(int sig);
     bool setCurrentPositionAsOffset();
@@ -139,8 +140,15 @@ public:
     uint32_t num_head_joints = 2;
     char initial_input_cmd_ = '\0';
     std::string end_effector_type_;
+
+    double peakTimeWin_{0.0};
+    double lockRotorTimeWin_{0.0};
+    double speedTimeWin_{0.0};
     std::vector<double_t> joint_velocity_limits_;
-    std::vector<double_t> joint_current_limits_;
+    std::vector<double_t> joint_lock_rotor_limits_;
+    std::vector<double_t> joint_peak_limits_;
+    std::vector<double_t> min_joint_position_limits;
+    std::vector<double_t> max_joint_position_limits;
 
     std::unique_ptr<eef_controller::TouchDexhandContrller> dexhand_actuator;
     std::string gesture_filepath_;
@@ -190,8 +198,6 @@ private:
     std::unordered_map<int, int> ec_index_map_;
 
     std::vector<double> c2t_coeff;
-    std::vector<double_t> min_joint_position_limits;
-    std::vector<double_t> max_joint_position_limits;
     KuavoCommon *kuavo_common_ptr_;
     KuavoSettings kuavo_settings_;
     HardwareSettings motor_info;

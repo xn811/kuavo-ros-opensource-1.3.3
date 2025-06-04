@@ -387,6 +387,13 @@ void RuiWoActuator::disable()
     }
     PyGILState_Release(gstate);
 }
+
+bool RuiWoActuator::disableMotor(int motorIndex)
+{
+    // TODO Not implemented
+    std::cout << "python interface disimplemented" << std::endl;
+}
+
 // set_positions接口
 void RuiWoActuator::set_positions(const std::vector<uint8_t> &ids, const std::vector<double> &positions,const std::vector<double> &torque,const std::vector<double> &velocity)
 {

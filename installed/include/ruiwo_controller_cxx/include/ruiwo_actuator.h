@@ -122,6 +122,7 @@ public:
     int initialize();
     void enable();
     void disable();
+    bool disableMotor(int motorIndex);
     void close();
 
     void go_to_zero();

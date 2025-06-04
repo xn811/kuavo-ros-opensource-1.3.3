@@ -162,12 +162,17 @@ namespace HighlyDynamic
         hardware_settings.imu_invert = robot_config.getValue<bool>("imu_invert");
         hardware_settings.imu_in_torso = robot_config.getValue<Eigen::VectorXd>("imu_in_torso");
 
+        hardware_settings.peak_timeWin = robot_config.getValue<double>("peak_protection");
+        hardware_settings.speed_timeWin = robot_config.getValue<double>("speed_protection");
+        hardware_settings.lock_rotor_timeWin = robot_config.getValue<double>("locked_rotor_protection");
+
         hardware_settings.resizeMotor(hardware_settings.num_joints);
         std::vector<std::string> MOTORS_TYPE = robot_config.getValue<std::vector<std::string>>("MOTORS_TYPE");
         std::vector<double> min_limits = robot_config.getValue<std::vector<double>>("min_joint_position_limits");
         std::vector<double> max_limits = robot_config.getValue<std::vector<double>>("max_joint_position_limits");
         std::vector<double> vel_limits = robot_config.getValue<std::vector<double>>("joint_velocity_limits");
-        std::vector<double> current_limits = robot_config.getValue<std::vector<double>>("joint_current_limits");
+        std::vector<double> lock_rotor_limits = robot_config.getValue<std::vector<double>>("joint_torque_limits");
+        std::vector<double> peak_limits = robot_config.getValue<std::vector<double>>("joint_peak_torque_limits");
 
 
         auto endsWith = [](std::string& s, const std::string& suffix) -> bool {
@@ -215,7 +220,8 @@ namespace HighlyDynamic
             hardware_settings.min_joint_position_limits[i] = min_limits[i];
             hardware_settings.max_joint_position_limits[i] = max_limits[i];
             hardware_settings.joint_velocity_limits[i] = vel_limits[i];
-            hardware_settings.joint_current_limits[i] = current_limits[i];
+            hardware_settings.joint_lock_rotor_limits[i] = lock_rotor_limits[i];
+             hardware_settings.joint_peak_limits[i] = peak_limits[i];
         }
 
         std::vector<std::string> end_effector_type = robot_config.getValue<std::vector<std::string>>("EndEffectorType");
