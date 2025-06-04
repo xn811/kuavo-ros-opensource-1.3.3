@@ -111,6 +111,8 @@ class TestKuavoGraspBox:
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
         ))
 
@@ -128,7 +130,7 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is True
-        mock_robot.control_robot_end_effector_pose.assert_called_once()
+        assert mock_robot.control_robot_end_effector_pose.call_count == 21
         assert mock_robot.set_manipulation_mpc_mode.call_count == 2
         mock_robot.set_manipulation_mpc_control_flow.assert_called_once()
 
@@ -147,7 +149,7 @@ class TestKuavoGraspBox:
         )
 
         # 模拟_get_target_pose返回None
-        grasp_box._get_target_pose = MagicMock(return_value=(None, None))
+        grasp_box._get_target_pose = MagicMock(return_value=(None, None, None, None))
 
         # 模拟robot方法
         mock_robot.control_robot_end_effector_pose = MagicMock(return_value=False)
@@ -183,6 +185,8 @@ class TestKuavoGraspBox:
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
         ))
 
@@ -199,7 +203,7 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is True
-        assert mock_robot.control_robot_end_effector_pose.call_count == 3  # 应该被调用3次
+        assert mock_robot.control_robot_end_effector_pose.call_count == 40
         assert mock_robot.set_manipulation_mpc_mode.call_count == 2
         mock_robot.set_manipulation_mpc_control_flow.assert_called_once()
         
@@ -218,7 +222,7 @@ class TestKuavoGraspBox:
         )
 
         # 模拟_get_target_pose方法
-        grasp_box._get_target_pose = MagicMock(return_value=(None,None))
+        grasp_box._get_target_pose = MagicMock(return_value=(None,None,None,None))
 
         # 模拟control_arm_move_to_target方法
         grasp_box.control_arm_move_to_target = MagicMock(return_value=False)
@@ -306,6 +310,8 @@ class TestKuavoGraspBox:
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
         ))
 
@@ -322,7 +328,7 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is True
-        assert mock_robot.control_robot_end_effector_pose.call_count == 2  # 应该被调用2次
+        assert mock_robot.control_robot_end_effector_pose.call_count == 41
         assert mock_robot.set_manipulation_mpc_mode.call_count == 2
         mock_robot.set_manipulation_mpc_control_flow.assert_called_once()
 
@@ -343,6 +349,8 @@ class TestKuavoGraspBox:
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
         ))
 
@@ -359,7 +367,7 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is False
-        mock_robot.control_robot_end_effector_pose.assert_called_once()  # 第一次调用失败就返回了
+        assert mock_robot.control_robot_end_effector_pose.call_count == 21
         mock_robot.set_manipulation_mpc_mode.assert_called_once()
         mock_robot.set_manipulation_mpc_control_flow.assert_not_called()
 

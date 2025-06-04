@@ -30,7 +30,7 @@ def main():
     box_info = BoxInfo(
         pose=KuavoPose(
             position=(0.0, -1.0, 0.9),  # 箱子位置
-            orientation=(0.0, 0.0, 0.0, 1.0)  # 箱子朝向
+            orientation=(0.0, 0.0, -0.7071, 0.7071)  # 箱子朝向
         ),
         size=(0.3, 0.2, 0.15),  # 箱子尺寸(长、宽、高)，单位：米
         mass=1.0  # 箱子重量，单位：千克
@@ -39,8 +39,8 @@ def main():
     # 创建放置位置的箱子信息
     placement_box_info = BoxInfo(
         pose=KuavoPose(
-            position=(0.0, 1.0, 0.9),  # 目标放置位置坐标
-            orientation=(0, 0, 0.7071, 0.7071)  # 目标放置方向（四元数）
+            position=(0.0, 1.0, 0.8),  # 目标放置位置坐标
+            orientation=(0.0, 0.0, 0.7071, 0.7071)  # 目标放置方向（四元数）
         ),
         size=(0.3, 0.2, 0.15),  # 使用相同尺寸
         mass=1.0  # 使用相同质量
@@ -74,7 +74,7 @@ def main():
         print("\n2. 走路接近目标...")
         approach_success = grasp_strategy.walk_approach_target(
             target_april_tag,
-            target_distance=0.6,  # 与目标箱子保持0.6米的距离
+            target_distance=0.7,  # 与目标箱子保持0.7米的距离
             approach_speed=0.2    # 接近速度0.2米/秒
         )
         
@@ -128,6 +128,9 @@ def main():
             print("❌ 移动到放置位置失败")
             return
         time.sleep(1.0)  # 短暂暂停
+
+        # grasp_strategy.robot.arm_reset()
+        # return
         # 步骤6：放下箱子
         print("\n6. 放下箱子...")
         transport_down_success = grasp_strategy.arm_transport_target_down(

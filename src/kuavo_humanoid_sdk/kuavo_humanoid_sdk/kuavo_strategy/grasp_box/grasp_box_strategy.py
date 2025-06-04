@@ -45,7 +45,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         self.search_timeout = 20.0  # 搜索超时时间(秒)
         self.approach_timeout = 30.0  # 接近超时时间(秒)
         self.grasp_height_offset = 0.2  # 抓取高度偏移量(米)
-        self.grasp_orientation = [0, -0.67566370964, 0, 0.73720997571945]
+        self.grasp_horizontal_offset = -0.2  # 手指与箱子表面的偏移量，取反为远离箱子 | 取正为靠近箱子
         # 存放头部寻找AprilTag的目标，初始化为异常ID 9999
         self.head_find_target_current_info_pose = AprilTagData(
             id=[9999],  # 异常ID
@@ -342,6 +342,354 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 临时返回True，等待接口实现后修改
         return True
 
+    # 添加四元数乘法函数
+    @staticmethod
+    def _quaternion_multiply(q1, q2):
+        """
+        四元数乘法，用于组合旋转
+        q1, q2: 两个四元数 [x, y, z, w]
+        """
+        x1, y1, z1, w1 = q1
+        x2, y2, z2, w2 = q2
+        
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
+        z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+        
+        return [x, y, z, w]
+    
+    def _quaternion_rotate(self, q, v):
+        """
+        使用四元数旋转向量
+        q: 四元数 [x, y, z, w]
+        v: 三维向量 [x, y, z]
+        """
+        q = np.array(q)
+        v = np.array(v)
+        q_conj = np.array([-q[0], -q[1], -q[2], q[3]])
+        v_quat = np.array([v[0], v[1], v[2], 0.0])
+        rotated = KuavoGraspBox._quaternion_multiply(KuavoGraspBox._quaternion_multiply(q, v_quat), q_conj)
+        return rotated[:3]
+    
+    # 坐标转换函数
+    def _transform_to_odom(self, pose, transform):
+        """将姿态从base_link转换到odom坐标系"""
+        # 位置转换（显式转换为numpy数组）
+        pos_base = np.array(pose.position)
+        transform_pos = np.array(transform.position)
+        
+        # 使用显式类型转换确保运算正确
+        rotated_pos = self._quaternion_rotate(
+            np.array(transform.orientation),  # 确保四元数是numpy数组
+            pos_base
+        )
+        pos_odom = transform_pos + rotated_pos
+        
+        # 姿态转换（显式转换为numpy数组）
+        transform_quat = np.array(transform.orientation)
+        pose_quat = np.array(pose.orientation)
+        rot_odom = KuavoGraspBox._quaternion_multiply(transform_quat, pose_quat)
+        
+        # 转换为Python原生类型
+        return KuavoPose(
+            position=tuple(pos_odom.tolist()),
+            orientation=rot_odom  # rot_odom 已经是列表，不需要转换
+        )
+
+    @staticmethod
+    def _interpolate_poses(start_pose, end_pose, num_points=20):
+        """
+        在两个笛卡尔空间姿态之间进行三次样条插值
+        
+        Args:
+            start_pose: 起始KuavoPose
+            end_pose: 终点KuavoPose
+            num_points: 插值点数量
+            
+        Returns:
+            插值后的KuavoPose列表
+        """
+        # 提取位置
+        start_pos = np.array(start_pose.position)
+        end_pos = np.array(end_pose.position)
+        
+        # 提取四元数
+        start_quat = np.array(start_pose.orientation)
+        end_quat = np.array(end_pose.orientation)
+        
+        # 确保四元数方向一致（避免绕远路）
+        if np.dot(start_quat, end_quat) < 0:
+            end_quat = -end_quat
+        
+        # 生成参数t
+        t = np.linspace(0, 1, num_points)
+        
+        # 位置插值 - 使用三次样条
+        # 为了进行三次样条插值，我们需要在t, x, y, z上分别拟合样条
+        
+        # 四元数插值 - 球面线性插值 (SLERP)
+        interp_poses = []
+        for i in range(num_points):
+            # 位置插值
+            pos = start_pos * (1 - t[i]) + end_pos * t[i]
+            pos = (pos[0], pos[1], pos[2])
+            
+            # 四元数球面插值
+            # 计算四元数之间的夹角
+            cos_half_theta = np.dot(start_quat, end_quat)
+            cos_half_theta = np.clip(cos_half_theta, -1.0, 1.0)  # 确保在有效范围内
+            
+            if abs(cos_half_theta) >= 1.0:
+                # 如果四元数几乎相同，直接使用起始四元数
+                quat = start_quat
+            else:
+                half_theta = np.arccos(cos_half_theta)
+                sin_half_theta = np.sqrt(1.0 - cos_half_theta * cos_half_theta)
+                
+                # 如果夹角足够大，使用SLERP插值
+                if abs(sin_half_theta) < 0.001:
+                    # 夹角太小，使用线性插值
+                    quat = start_quat * (1 - t[i]) + end_quat * t[i]
+                    quat = quat / np.linalg.norm(quat)  # 归一化
+                else:
+                    # SLERP公式
+                    ratio_a = np.sin((1 - t[i]) * half_theta) / sin_half_theta
+                    ratio_b = np.sin(t[i] * half_theta) / sin_half_theta
+                    quat = start_quat * ratio_a + end_quat * ratio_b
+                    quat = quat / np.linalg.norm(quat)  # 归一化
+            
+            # 创建新的KuavoPose
+            interp_poses.append(KuavoPose(
+                position=pos,
+                orientation=quat.tolist()
+            ))
+        
+        return interp_poses
+
+    def _execute_trajectory(self, left_poses, right_poses, total_time=2.0):
+        """
+        执行左右手轨迹
+        
+        Args:
+            grasp_strategy: 抓取策略对象
+            left_poses: 左手KuavoPose列表
+            right_poses: 右手KuavoPose列表
+            total_time: 总执行时间(秒)
+        """
+
+        num_points = min(len(left_poses), len(right_poses))
+        time_per_point = total_time / (num_points - 1) if num_points > 1 else total_time
+        
+        for i in range(num_points):
+            self.robot.control_robot_end_effector_pose(
+                left_pose=left_poses[i],
+                right_pose=right_poses[i],
+                frame=KuavoManipulationMpcFrame.WorldFrame,
+            )
+            if i < num_points - 1:  # 最后一个点不需要延时
+                time.sleep(time_per_point)
+    
+    def _get_target_pose(self, target_info:BoxInfo, traj_type="grasp", **kwargs):
+        """获取起始位置和目标位置
+        
+        Args:
+            target_info: 目标信息，包含位置、尺寸等
+            traj_type: 轨迹类型：
+                - "grasp": 抓取轨迹
+                - "lift": 抬起轨迹
+                - "place": 放置轨迹
+
+        Returns:
+            tuple: (left_pose_init, right_pose_init, left_pose_target, right_pose_target)
+        """
+        # 计算抓取姿态
+        box_position = list(target_info.pose.position)
+        box_orientation = list(target_info.pose.orientation)
+        print(f"原始世界坐标系下的位置: {box_position}")
+        print(f"原始世界坐标系下的姿态: {box_orientation}")
+
+        box_size = target_info.size    # (length, width, height)
+        
+        if box_position is None:
+            return None, None, None, None
+        else:
+            # 将四元数转换为yaw角
+            qx, qy, qz, qw = box_orientation
+            box_yaw = np.arctan2(2*(qw*qz + qx*qy), qw**2 + qx**2 - qy**2 - qz**2)
+
+            # 计算箱子侧面的位置（基于box_yaw旋转）
+            half_width = box_size[1] / 2.0
+            grasp_height = box_position[2]  # 通常在箱子高度的中间位置抓取
+
+            right_hand_position = ( # left_hand_position
+                box_position[0] + half_width * np.sin(box_yaw),
+                box_position[1] - half_width * np.cos(box_yaw),
+                grasp_height
+            )
+            left_hand_position = ( # right_hand_position
+                box_position[0] - half_width * np.sin(box_yaw),
+                box_position[1] + half_width * np.cos(box_yaw),
+                grasp_height
+            )
+            # 基础抓取姿态（只考虑roll和pitch）
+            base_left_orientation = [0.06163, -0.70442, -0.06163, 0.70442]  # roll 10度 Pitch -90度
+            base_right_orientation = [-0.06163, -0.70442, 0.06163, 0.70442]  # roll -10度 Pitch -90度
+
+             # 创建yaw旋转的四元数
+            yaw_quat = [0, 0, np.sin(box_yaw/2), np.cos(box_yaw/2)]
+            
+            # 合并四元数：结合基础姿态和yaw旋转
+            left_grasp_orientation = KuavoGraspBox._quaternion_multiply(yaw_quat, base_left_orientation)
+            right_grasp_orientation = KuavoGraspBox._quaternion_multiply(yaw_quat, base_right_orientation)
+            
+            # 计算基础姿态
+            # 1. 贴合箱子侧面左右手的末端位姿
+            left_hand_pose = KuavoPose(
+                position=left_hand_position,
+                orientation=left_grasp_orientation
+            )
+            right_hand_pose = KuavoPose(
+                position=right_hand_position,
+                orientation=right_grasp_orientation
+            )
+
+            # 2. 预抓取姿态
+            left_pre_grasp = KuavoPose(
+                position=(
+                    left_hand_pose.position[0] + self.grasp_horizontal_offset * np.sin(box_yaw),
+                    left_hand_pose.position[1] - self.grasp_horizontal_offset * np.cos(box_yaw),
+                    left_hand_pose.position[2]
+                ),
+                orientation=left_hand_pose.orientation
+            )
+            
+            right_pre_grasp = KuavoPose(
+                position=(
+                    right_hand_pose.position[0] - self.grasp_horizontal_offset * np.sin(box_yaw),
+                    right_hand_pose.position[1] + self.grasp_horizontal_offset * np.cos(box_yaw),
+                    right_hand_pose.position[2]
+                ),
+                orientation=right_hand_pose.orientation
+            )
+
+            # 3. 抓取姿态（不只是贴合箱子，抓紧）
+            left_grasp = KuavoPose(
+                position=(
+                    left_hand_pose.position[0] + 0.05 * np.sin(box_yaw),
+                    left_hand_pose.position[1] - 0.05 * np.cos(box_yaw),
+                    left_hand_pose.position[2]
+                ),
+                orientation=left_hand_pose.orientation
+            )
+            
+            right_grasp = KuavoPose(
+                position=(
+                    right_hand_pose.position[0] - 0.05 * np.sin(box_yaw),
+                    right_hand_pose.position[1] + 0.05 * np.cos(box_yaw),
+                    right_hand_pose.position[2]
+                ),
+                orientation=right_hand_pose.orientation
+            )
+
+            # 4. 抬起姿态（抓取后向上）
+            left_lift = KuavoPose(
+                position=(
+                    left_grasp.position[0],
+                    left_grasp.position[1],
+                    left_grasp.position[2] + self.grasp_height_offset
+                ),
+                orientation=left_grasp.orientation
+            )
+            
+            right_lift = KuavoPose(
+                position=(
+                    right_grasp.position[0],
+                    right_grasp.position[1],
+                    right_grasp.position[2] + self.grasp_height_offset
+                ),
+                orientation=right_grasp.orientation
+            )
+
+            # 5. 收臂姿态
+            # 定义base_link坐标系下的目标姿态
+            l_arm_base_target_pose = KuavoPose(
+                position=(0.499, 0.121, 0.270),
+                orientation=[-0.107, -0.758, 0.063, 0.641]
+            )
+            r_arm_base_target_pose = KuavoPose(
+                position=(0.499, -0.121, 0.270),
+                orientation=[-0.026, -0.765, 0.049, 0.642]
+            )
+
+            # 获取base_link到odom的坐标变换
+            base_to_odom = self.tools.get_tf_transform("odom", "base_link")
+            
+            # 添加调试信息
+            print(f"base_to_odom position type: {type(base_to_odom.position)}")
+            print(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
+
+            # 确保返回的是可迭代对象
+            if not isinstance(base_to_odom.position, (list, tuple, np.ndarray)):
+                raise ValueError("TF变换位置信息格式错误")
+            if not isinstance(base_to_odom.orientation, (list, tuple, np.ndarray)):
+                raise ValueError("TF变换姿态信息格式错误")
+            
+            # 转换目标姿态到odom坐标系
+            left_pull = self._transform_to_odom(l_arm_base_target_pose, base_to_odom)
+            right_pull = self._transform_to_odom(r_arm_base_target_pose, base_to_odom)
+
+            # 6. 放置姿态（放下箱子）
+            l_arm_put_away_base_pose = KuavoPose(
+                position=(0.499, 0.351, 0.160),
+                orientation=[-0.107, -0.758, 0.063, 0.641]
+            )
+            r_arm_put_away_base_pose = KuavoPose(
+                position=(0.499, -0.351, 0.160),
+                orientation=[-0.026, -0.765, 0.049, 0.642]
+            )
+            base_to_odom = self.tools.get_tf_transform("odom", "base_link")
+            # 添加调试信息
+            print(f"base_to_odom position type: {type(base_to_odom.position)}")
+            print(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
+            # 转换目标姿态到odom坐标系
+            left_place = self._transform_to_odom(l_arm_put_away_base_pose, base_to_odom)
+            right_place = self._transform_to_odom(r_arm_put_away_base_pose, base_to_odom)
+
+            # 7. 松开手臂
+            left_release = KuavoPose(
+                position=(
+                    left_place.position[0],
+                    left_place.position[1] - self.grasp_horizontal_offset,
+                    left_place.position[2]
+                ),
+                orientation=left_place.orientation
+            )
+            
+            right_release = KuavoPose(
+                position=(
+                    right_place.position[0],
+                    right_place.position[1] + self.grasp_horizontal_offset,
+                    right_place.position[2]
+                ),
+                orientation=right_place.orientation
+            )
+
+            # 根据轨迹类型返回对应的姿态
+            if traj_type == "grasp":
+                return left_pre_grasp, right_pre_grasp, left_grasp, right_grasp
+            elif traj_type == "lift":
+                return left_grasp, right_grasp, left_lift, right_lift
+            elif traj_type == "pull":
+                return left_lift, right_lift, left_pull, right_pull
+            elif traj_type == "place":
+                return left_pull, right_pull, left_place, right_place
+            elif traj_type == "release":
+                return left_place, right_place, left_release, right_release
+            else:
+                print(f"未知的轨迹类型: {traj_type}")
+                return None, None, None, None
+
     def arm_move_to_target(self, target_info:BoxInfo, arm_mode="manipulation_mpc", **kwargs):
         """手臂移动到目标位置
         
@@ -358,78 +706,29 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         else:
             self.robot.set_fixed_arm_mode()
 
-        left_pose, right_pose = self._get_target_pose(target_info)
+        # 获取预抓取轨迹
+        left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="grasp")
+        if left_pose_init is None:
+            return False
 
-        if left_pose is None:
-            return False
-        
-        # 控制手臂移动到目标位置
+        # 控制手臂移动到预抓取位置
         if not self.robot.control_robot_end_effector_pose(
-            left_pose,
-            right_pose,
-            KuavoManipulationMpcFrame.LocalFrame
-        ) or not self._check_target_reachable(left_pose) or not self._check_target_reachable(right_pose):
+            left_pose_init,
+            right_pose_init,
+            KuavoManipulationMpcFrame.WorldFrame
+        ):
             return False
         
+        print("执行预抓取姿态到抓取姿态的轨迹...")
+        left_traj_grasp = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
+        right_traj_grasp = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
+        self._execute_trajectory(left_traj_grasp, right_traj_grasp)
+
         time.sleep(2)
         self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
         self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
         
         return True
-    
-    def _get_target_pose(self, target_info:BoxInfo, **kwargs):
-        """获取目标位置和抓取姿态
-        
-        Args:
-            target_info: 目标信息，包含位置、尺寸等
-        Returns:
-            left_pose: 左臂抓取位置
-            right_pose: 右臂抓取位置
-        """
-        # 计算抓取姿态
-        box_position = list(target_info.pose.position)
-        print(f"原始世界坐标系下的位置: {box_position}")
-        
-        # 转换为齐次坐标
-        box_position_homogeneous = np.array(box_position + [1.0])
-        print(f"齐次坐标: {box_position_homogeneous}")
-
-        # 获取从世界坐标系到局部坐标系的变换矩阵
-        transform = self.tools.get_tf_transform("base_link", "odom", return_type="homogeneous")
-        if transform is not None:
-            # 从HomogeneousMatrix对象中获取矩阵数据
-            transform_matrix = transform.matrix
-            print(f"变换矩阵:\n{transform_matrix}")
-            
-            # 应用坐标变换
-            box_position_local = transform_matrix @ box_position_homogeneous
-            print(f"变换后的齐次坐标: {box_position_local}")
-            
-            # 移除齐次坐标的第四个元素
-            grasp_position = box_position_local[:3].tolist()
-            print(f"最终局部坐标系下的位置: {grasp_position}")
-        else:
-            print("警告：无法获取变换矩阵，使用原始位置作为抓取位置")
-            return None, None
-        
-        # odom->base_link->LocalFrame
-        grasp_position[2] += self.state.com_height
-        
-        # 计算末端位姿
-        left_pose = KuavoPose(
-            position=[grasp_position[0],
-                    grasp_position[1] + target_info.size[1] + self.grasp_height_offset,
-                    grasp_position[2] - target_info.size[2] / 2],
-            orientation=self.grasp_orientation
-        )
-        
-        right_pose = KuavoPose(
-            position=[grasp_position[0],
-                    grasp_position[1] - target_info.size[1] - self.grasp_height_offset,
-                    grasp_position[2] - target_info.size[2] / 2],
-            orientation=self.grasp_orientation
-        )
-        return left_pose, right_pose
 
     def _check_box_lifting_status(self, target_info:BoxInfo) -> bool:
         """检查箱子是否成功抬起
@@ -477,42 +776,28 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         else:
             self.robot.set_fixed_arm_mode()
 
-        left_pose, right_pose = self._get_target_pose(target_info)
-
-        if left_pose is None:
+        # 获取抬起轨迹
+        left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="lift")
+        if left_pose_init is None:
             return False
-        
-        # Convert position tuples to lists for modification
-        left_pose.position = list(left_pose.position)
-        right_pose.position = list(right_pose.position)
-        
-        left_pose.position[1] -= (target_info.size[1] / 4 + self.grasp_height_offset)
-        right_pose.position[1] += (target_info.size[1] / 4 + self.grasp_height_offset)
-        self.robot.control_robot_end_effector_pose(
-            left_pose,
-            right_pose,
-            KuavoManipulationMpcFrame.LocalFrame
-        )
-        time.sleep(1.0)
 
-        left_pose.position[1] -= target_info.size[1] / 4
-        right_pose.position[1] += target_info.size[1] / 4
-        self.robot.control_robot_end_effector_pose(
-            left_pose,
-            right_pose,
-            KuavoManipulationMpcFrame.LocalFrame
-        )
-        time.sleep(1.0)
+        # 执行抬起轨迹
+        left_traj_lift = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
+        right_traj_lift = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
+        self._execute_trajectory(left_traj_lift, right_traj_lift)
 
-        left_pose.position[2] += self.grasp_height_offset * 2
-        right_pose.position[2] += self.grasp_height_offset * 2
-        
-        if not self.robot.control_robot_end_effector_pose(
-            left_pose,
-            right_pose,
-            KuavoManipulationMpcFrame.LocalFrame
-        ) and self._check_box_lifting_status(target_info):
-            
+        time.sleep(1)
+
+        left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="pull")
+        if left_pose_init is None:
+            return False
+
+        # 执行收臂轨迹
+        left_traj_pull = KuavoGraspBox._interpolate_poses(left_pose_target, left_pose_init)
+        right_traj_pull = KuavoGraspBox._interpolate_poses(right_pose_target, right_pose_init)
+        self._execute_trajectory(left_traj_pull, right_traj_pull)
+
+        if not self._check_box_lifting_status(target_info):
             return False
         
         time.sleep(2)
@@ -606,8 +891,6 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         return True
 
-    
-
     def arm_transport_target_down(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
         """实现手臂放下箱子的功能
         
@@ -624,50 +907,36 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         else:
             self.robot.set_fixed_arm_mode()
             
-        # 计算放置位置
-        left_pose, right_pose = self._get_target_pose(target_info)
+        # 获取放置轨迹
+        left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="place")
+        if left_pose_init is None:
+            return False
 
-        if left_pose is None:
-            return False
-        
-        # 将position元组转换为列表
-        left_pose.position = list(left_pose.position)
-        right_pose.position = list(right_pose.position)
-        left_pose.position[1] -= (target_info.size[1] / 2 + self.grasp_height_offset)
-        right_pose.position[1] += (target_info.size[1] / 2 + self.grasp_height_offset)
-        
-        # 控制手臂移动到放置位置
-        if not self.robot.control_robot_end_effector_pose(
-            left_pose,
-            right_pose,
-            KuavoManipulationMpcFrame.LocalFrame
-        ):
-            print("移动到放置位置失败")
-            return False
+        # 执行放置轨迹
+        left_traj_place = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
+        right_traj_place = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
+        self._execute_trajectory(left_traj_place, right_traj_place)
         
         time.sleep(2)
         
-         # 抬起手臂离开箱子
-        left_pose.position[1] += self.grasp_height_offset
-        right_pose.position[1] -= self.grasp_height_offset
-        
-        lift_pose_l = KuavoPose(
-            position=left_pose.position,
-            orientation=left_pose.orientation
-        )
-        lift_pose_r = KuavoPose(
-            position=right_pose.position,
-            orientation=right_pose.orientation
-        )
-        
-        if not self.robot.control_robot_end_effector_pose(
-            lift_pose_l,
-            lift_pose_r,
-            KuavoManipulationMpcFrame.LocalFrame
-        ):
-            print("抬起手臂离开箱子失败")
+        # 放开箱子
+        left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="release")
+        if left_pose_init is None:
             return False
-            
+
+        # 控制手臂离开箱子
+        if not self.robot.control_robot_end_effector_pose(
+            left_pose_init,
+            right_pose_init,
+            KuavoManipulationMpcFrame.WorldFrame
+        ):
+            return False
+        
+        # 执行松手轨迹
+        left_traj_release = KuavoGraspBox._interpolate_poses(left_pose_target, left_pose_init)
+        right_traj_release = KuavoGraspBox._interpolate_poses(right_pose_target, right_pose_init)
+        self._execute_trajectory(left_traj_release, right_traj_release)
+        
         time.sleep(2)
         self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
         self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
