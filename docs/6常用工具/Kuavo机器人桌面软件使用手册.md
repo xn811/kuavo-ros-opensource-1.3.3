@@ -127,6 +127,11 @@
 
 ![挥手握拳抬头](images/挥手握拳抬头.jpg)
 ## 连接机器人 
+> 如希望实现此功能，先在机器人下位机运行下面脚本
+```bash
+cd <kuavo-ros-opensource/>/src/manipulation_nodes/planarmwebsocketservice/service/
+./websocket_deploy_script.sh
+```
 ### 热点连接和WIFI连接
 - 热点连接是指Windows电脑连接上机器人发出的热点，热点名为下面格式（“机器人编号”+的热点）：
 
@@ -143,7 +148,7 @@
 ![alt text](images/连接广播.png)
 
 ### 设置机器人网络
-- 如果是第一次拿到机器人，可以选择先连接机器人热点，在选择设置然后设置机器人网络：
+- 如果是第一次拿到机器人，可以选择先连接机器人热点，在选择设置然后设置机器人网络，切换到WIFI，Windows的热点也要对应更换为WIFI：
 
 ![alt text](images/设置网络.png)
 
