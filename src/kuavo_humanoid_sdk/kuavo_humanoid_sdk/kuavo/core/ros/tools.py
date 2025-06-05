@@ -135,6 +135,22 @@ class KuavoRobotToolsCore:
         
         return rot_matrix.astype(np.float32)  # 确保矩阵数据类型一致
 
+    def get_link_pose(self, link_name: str, target_frame: str = "base_link") -> Union[PoseQuaternion, None]:
+        """获取指定关节链接的位姿（核心实现）
+        
+        Args:
+            link_name (str): 关节链接名称
+            target_frame (str): 目标坐标系
+            
+        Returns:
+            PoseQuaternion: 包含位置和姿态的四元数表示
+        """
+        return self._get_tf_tree_transform(
+            target_frame,
+            link_name,
+            return_type="pose_quaternion"
+        )
+
 # if __name__ == "__main__":
 #     robot_tools = KuavoRobotToolsCore()
 #     time.sleep(0.1)

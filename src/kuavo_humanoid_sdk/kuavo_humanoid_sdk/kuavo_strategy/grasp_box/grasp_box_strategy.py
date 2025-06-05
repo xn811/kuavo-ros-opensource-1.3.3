@@ -55,6 +55,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
                 orientation=(0.0, 0.0, 0.0, 1.0)  # 默认朝向（无旋转）
             )]
         )
+        # 新增安全参数
+        self.orientation_safety_threshold = math.radians(20)  # 20度安全阈值
+        # 新增位置安全参数
+        self.workspace_radius = 0.92  # 工作空间半径0.92米
             
     def head_find_target(self, target_info:AprilTagData, max_search_time=None, search_pattern="rotate_head", **kwargs):
         """使用头部旋转寻找AprilTag目标
@@ -397,6 +401,46 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             orientation=rot_odom  # rot_odom 已经是列表，不需要转换
         )
 
+    def _transform_to_base_link(self, pose):
+        """将姿态从odom坐标系转换到base_link坐标系
+        
+        Args:
+            pose: KuavoPose类型，表示odom坐标系下的位姿
+            
+        Returns:
+            KuavoPose: base_link坐标系下的位姿
+        """
+        try:
+            # 获取odom到base_link的变换
+            odom_to_base = self.tools.get_tf_transform("base_link", "odom")
+            
+            # 位置转换
+            pos_odom = np.array(pose.position)
+            odom_pos = np.array(odom_to_base.position)
+            
+            # 使用四元数旋转
+            rotated_pos = self._quaternion_rotate(
+                np.array(odom_to_base.orientation),
+                pos_odom
+            )
+            pos_base = rotated_pos + odom_pos
+            
+            # 姿态转换
+            odom_quat = np.array(odom_to_base.orientation)
+            pose_quat = np.array(pose.orientation)
+            # 注意：这里需要先旋转odom_quat的共轭，再与pose_quat相乘
+            odom_quat_conj = np.array([-odom_quat[0], -odom_quat[1], -odom_quat[2], odom_quat[3]])
+            rot_base = KuavoGraspBox._quaternion_multiply(odom_quat_conj, pose_quat)
+            
+            # 返回转换后的位姿
+            return KuavoPose(
+                position=tuple(pos_base.tolist()),
+                orientation=rot_base
+            )
+        except Exception as e:
+            print(f"坐标转换出错: {str(e)}")
+            return None
+
     @staticmethod
     def _interpolate_poses(start_pose, end_pose, num_points=20):
         """
@@ -614,11 +658,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             # 5. 收臂姿态
             # 定义base_link坐标系下的目标姿态
             l_arm_base_target_pose = KuavoPose(
-                position=(0.499, 0.121, 0.270),
+                position=(0.499, 0.121, 0.370),
                 orientation=[-0.107, -0.758, 0.063, 0.641]
             )
             r_arm_base_target_pose = KuavoPose(
-                position=(0.499, -0.121, 0.270),
+                position=(0.499, -0.121, 0.370),
                 orientation=[-0.026, -0.765, 0.049, 0.642]
             )
 
@@ -690,17 +734,84 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
                 print(f"未知的轨迹类型: {traj_type}")
                 return None, None, None, None
 
-    def arm_move_to_target(self, target_info:BoxInfo, arm_mode="manipulation_mpc", **kwargs):
-        """手臂移动到目标位置
+    def _check_orientation_safety(self, target_orientation, threshold=None):
+        """检查目标朝向与机器人当前朝向的安全性"""
+        if threshold is None:
+            threshold = self.orientation_safety_threshold
+            
+        # 获取当前机器人朝向
+        current_orientation = self.state.robot_orientation()
+        current_yaw = self._extract_yaw_from_quaternion(current_orientation)
+        
+        # 提取目标朝向的yaw角
+        target_yaw = self._extract_yaw_from_quaternion(target_orientation)
+        
+        # 计算角度差
+        angle_diff = abs(target_yaw - current_yaw)
+        angle_diff = min(2*math.pi - angle_diff, angle_diff)  # 取最小角度差
+        
+        print(f"[安全检查] 当前朝向: {math.degrees(current_yaw):.1f}°, 目标朝向: {math.degrees(target_yaw):.1f}°, 差异: {math.degrees(angle_diff):.1f}°")
+        
+        if angle_diff > threshold:
+            print(f"❌ 方向偏差超过安全阈值({math.degrees(threshold):.1f}°)，终止操作！")
+            return False
+        return True
+
+    def _check_position_safety(self, target_info: BoxInfo) -> bool:
+        """检查目标位置是否在工作空间内"""
+        try:
+            # 将目标位置转换到base_link坐标系
+            target_pose_base = self._transform_to_base_link(target_info.pose)
+            # 获取左右臂关节位置（base_link坐标系）
+            l_joint_pos = self.tools.get_link_position("zarm_l1_link")
+            r_joint_pos = self.tools.get_link_position("zarm_r1_link")
+            # 计算目标到左右臂关节的水平距离
+            target_pos = np.array(target_pose_base.position)
+            l_distance = np.linalg.norm(target_pos[:2] - l_joint_pos[:2])
+            r_distance = np.linalg.norm(target_pos[:2] - r_joint_pos[:2])
+            
+            print(f"[位置安全检查] 左臂距离: {l_distance:.2f}m, 右臂距离: {r_distance:.2f}m, 安全阈值: {self.workspace_radius:.2f}m")
+            
+            # 检查是否在安全范围内
+            if l_distance > self.workspace_radius or r_distance > self.workspace_radius:
+                print(f"❌ 目标位置超出工作空间范围({self.workspace_radius}m)")
+                return False
+            return True
+        except Exception as e:
+            print(f"位置安全检查出错: {str(e)}")
+            return False
+
+    def _check_height_safety(self, target_info: BoxInfo) -> bool:
+        """检查目标位置的高度是否在机器人工作范围内
         
         Args:
             target_info: 目标信息，包含位置、尺寸等
-            approach_speed: 接近速度(米/秒)
-            arm_mode: 手臂控制模式
+            
         Returns:
-            bool: 是否成功移动到目标位置
+            bool: 高度是否在安全范围内
         """
-        # 设置手臂控制模式
+        target_height = target_info.pose.position[2]
+        min_height = 0.5  # 最小工作高度
+        max_height = 1.8  # 最大工作高度
+        
+        print(f"[高度安全检查] 目标高度: {target_height:.2f}m, 工作范围: {min_height:.2f}m - {max_height:.2f}m")
+        
+        if target_height < min_height or target_height > max_height:
+            print(f"❌ 目标高度 {target_height:.2f}m 超出工作范围({min_height:.2f}m - {max_height:.2f}m)，终止操作！")
+            return False
+        return True
+
+    def arm_move_to_target(self, target_info:BoxInfo, arm_mode="manipulation_mpc", **kwargs):
+        """添加安全保护检查"""
+        # 统一的安全检查
+        if not self._check_orientation_safety(target_info.pose.orientation):
+            return False
+        if not self._check_position_safety(target_info):
+            return False
+        if not self._check_height_safety(target_info):
+            return False
+        
+        # 原有代码保持不变
         if arm_mode == "manipulation_mpc":
             self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
         else:
@@ -761,16 +872,16 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         return True
 
     def arm_transport_target_up(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
-        """实现手臂搬起箱子的功能
+        """添加安全检查"""
+        # 统一的安全检查
+        if not self._check_orientation_safety(target_info.pose.orientation):
+            return False
+        if not self._check_position_safety(target_info):  # 添加位置检查
+            return False
+        if not self._check_height_safety(target_info):
+            return False
         
-        Args:
-            target_info: 目标信息，包含位置、尺寸等
-            arm_mode: 手臂控制模式
-            
-        Returns:
-            bool: 是否成功搬起目标
-        """
-        # 设置手臂控制模式
+        # 原有代码保持不变
         if arm_mode == "manipulation_mpc":
             self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
         else:
@@ -793,8 +904,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             return False
 
         # 执行收臂轨迹
-        left_traj_pull = KuavoGraspBox._interpolate_poses(left_pose_target, left_pose_init)
-        right_traj_pull = KuavoGraspBox._interpolate_poses(right_pose_target, right_pose_init)
+        left_traj_pull = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)    # left_pose_init left_pose_target
+        right_traj_pull = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target) #  right_pose_init right_pose_target
         self._execute_trajectory(left_traj_pull, right_traj_pull)
 
         if not self._check_box_lifting_status(target_info):
@@ -892,16 +1003,16 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         return True
 
     def arm_transport_target_down(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
-        """实现手臂放下箱子的功能
+        """添加安全检查"""
+        # 统一的安全检查
+        if not self._check_orientation_safety(target_info.pose.orientation):
+            return False
+        if not self._check_position_safety(target_info):  # 添加位置检查
+            return False
+        if not self._check_height_safety(target_info):
+            return False
         
-        Args:
-            target_info: 目标放置位置信息
-            arm_mode: 手臂控制模式
-            
-        Returns:
-            bool: 是否成功放下目标
-        """
-        # 设置手臂控制模式
+        # 原有代码保持不变
         if arm_mode == "manipulation_mpc":
             self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
         else:
@@ -922,25 +1033,15 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 放开箱子
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="release")
         if left_pose_init is None:
-            return False
-
-        # 控制手臂离开箱子
-        if not self.robot.control_robot_end_effector_pose(
-            left_pose_init,
-            right_pose_init,
-            KuavoManipulationMpcFrame.WorldFrame
-        ):
-            return False
-        
-        # 执行松手轨迹
-        left_traj_release = KuavoGraspBox._interpolate_poses(left_pose_target, left_pose_init)
-        right_traj_release = KuavoGraspBox._interpolate_poses(right_pose_target, right_pose_init)
-        self._execute_trajectory(left_traj_release, right_traj_release)
+            return False        
         
         time.sleep(2)
         self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
         self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
-        
+        time.sleep(1)
+        self.robot.manipulation_mpc_reset()
+        self.robot.arm_reset() 
+        time.sleep(1)
         return True
 
     def _wait_for_orientation(self, target_angle, max_wait_time=10.0, angle_threshold=0.1):
@@ -1022,6 +1123,4 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             print(f"机器人已到达目标位置!")
             return True
         else:
-            return False
-
             return False

@@ -101,12 +101,15 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),  # 调整高度到0.8m
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )
+
+        # 添加高度安全检查的mock
+        grasp_box._check_height_safety = MagicMock(return_value=True)
 
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
@@ -115,6 +118,10 @@ class TestKuavoGraspBox:
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
             KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
         ))
+
+        # 模拟安全检查方法
+        grasp_box._check_orientation_safety = MagicMock(return_value=True)
+        grasp_box._check_position_safety = MagicMock(return_value=True)
 
         # 模拟robot方法
         mock_robot.control_robot_end_effector_pose = MagicMock(return_value=True)
@@ -133,6 +140,8 @@ class TestKuavoGraspBox:
         assert mock_robot.control_robot_end_effector_pose.call_count == 21
         assert mock_robot.set_manipulation_mpc_mode.call_count == 2
         mock_robot.set_manipulation_mpc_control_flow.assert_called_once()
+        grasp_box._check_orientation_safety.assert_called_once()
+        grasp_box._check_position_safety.assert_called_once()
 
     def test_arm_move_to_target_failure(self, setup_grasp_box):
         """测试手臂移动到目标位置失败"""
@@ -141,12 +150,19 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),  # 调整高度到0.8m
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )
+
+        # 添加高度安全检查的mock
+        grasp_box._check_height_safety = MagicMock(return_value=True)
+
+        # 模拟安全检查方法返回False
+        grasp_box._check_orientation_safety = MagicMock(return_value=False)
+        grasp_box._check_position_safety = MagicMock(return_value=True)
 
         # 模拟_get_target_pose返回None
         grasp_box._get_target_pose = MagicMock(return_value=(None, None, None, None))
@@ -165,8 +181,10 @@ class TestKuavoGraspBox:
         # 验证结果
         assert result is False
         mock_robot.control_robot_end_effector_pose.assert_not_called()
-        mock_robot.set_manipulation_mpc_mode.assert_called_once()
+        mock_robot.set_manipulation_mpc_mode.assert_not_called()
         mock_robot.set_manipulation_mpc_control_flow.assert_not_called()
+        grasp_box._check_orientation_safety.assert_called_once()
+        grasp_box._check_position_safety.assert_not_called()
 
     def test_arm_transport_target_up_success(self, setup_grasp_box):
         """测试抓取成功"""
@@ -175,12 +193,17 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),  # 调整高度到0.8m
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )
+
+        # 添加安全检查的mock
+        grasp_box._check_orientation_safety = MagicMock(return_value=True)
+        grasp_box._check_position_safety = MagicMock(return_value=True)
+        grasp_box._check_height_safety = MagicMock(return_value=True)
 
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
@@ -214,12 +237,17 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),  # 调整高度到0.8m
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )
+
+        # 添加安全检查的mock
+        grasp_box._check_orientation_safety = MagicMock(return_value=True)
+        grasp_box._check_position_safety = MagicMock(return_value=True)
+        grasp_box._check_height_safety = MagicMock(return_value=True)
 
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(None,None,None,None))
@@ -300,25 +328,42 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),  # 调整高度到0.8m
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )   
 
+        # 添加安全检查的mock
+        grasp_box._check_orientation_safety = MagicMock(return_value=True)
+        grasp_box._check_position_safety = MagicMock(return_value=True)
+        grasp_box._check_height_safety = MagicMock(return_value=True)
+
         # 模拟_get_target_pose方法
-        grasp_box._get_target_pose = MagicMock(return_value=(
-            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
-            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
-            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
-            KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
-        ))
+        grasp_box._get_target_pose = MagicMock(side_effect=[
+            # 第一次调用返回放置轨迹的位姿
+            (
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
+            ),
+            # 第二次调用返回释放轨迹的位姿
+            (
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0)),
+                KuavoPose(position=(0.0, 0.0, 0.0),orientation=(0.0, 0.0, 0.0, 1.0))
+            )
+        ])
 
         # 模拟robot方法
         mock_robot.control_robot_end_effector_pose = MagicMock(return_value=True)
         mock_robot.set_manipulation_mpc_mode = MagicMock()
         mock_robot.set_manipulation_mpc_control_flow = MagicMock()
+        mock_robot.manipulation_mpc_reset = MagicMock()
+        mock_robot.arm_reset = MagicMock()
 
         # 调用方法
         result = grasp_box.arm_transport_target_down(
@@ -328,9 +373,14 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is True
-        assert mock_robot.control_robot_end_effector_pose.call_count == 41
+        assert mock_robot.control_robot_end_effector_pose.call_count == 20  # 修改为20次
         assert mock_robot.set_manipulation_mpc_mode.call_count == 2
         mock_robot.set_manipulation_mpc_control_flow.assert_called_once()
+        grasp_box._check_orientation_safety.assert_called_once()
+        grasp_box._check_position_safety.assert_called_once()
+        grasp_box._check_height_safety.assert_called_once()
+        mock_robot.manipulation_mpc_reset.assert_called_once()
+        mock_robot.arm_reset.assert_called_once()
 
     def test_arm_transport_target_down_failure(self, setup_grasp_box):
         """测试放下失败"""
@@ -339,12 +389,17 @@ class TestKuavoGraspBox:
         # 创建测试用的目标信息
         test_box = BoxInfo(
             pose=KuavoPose(
-                position=(1.0, 0.0, 0.0),
+                position=(1.0, 0.0, 0.8),
                 orientation=(0.0, 0.0, 0.0, 1.0)
             ),
             size=(0.1, 0.1, 0.1),
             mass=1.0
         )   
+
+        # 修改安全检查的mock，让其中一个返回False
+        grasp_box._check_orientation_safety = MagicMock(return_value=False)  # 改为False
+        grasp_box._check_position_safety = MagicMock(return_value=True)
+        grasp_box._check_height_safety = MagicMock(return_value=True)
 
         # 模拟_get_target_pose方法
         grasp_box._get_target_pose = MagicMock(return_value=(
@@ -367,9 +422,12 @@ class TestKuavoGraspBox:
 
         # 验证结果
         assert result is False
-        assert mock_robot.control_robot_end_effector_pose.call_count == 21
-        mock_robot.set_manipulation_mpc_mode.assert_called_once()
+        mock_robot.control_robot_end_effector_pose.assert_not_called()
+        mock_robot.set_manipulation_mpc_mode.assert_not_called()
         mock_robot.set_manipulation_mpc_control_flow.assert_not_called()
+        grasp_box._check_orientation_safety.assert_called_once()
+        grasp_box._check_position_safety.assert_not_called()  # 由于orientation检查失败，这个应该不会被调用
+        grasp_box._check_height_safety.assert_not_called()    # 由于orientation检查失败，这个应该不会被调用
 
     def test_head_find_target_success_rotate_head(self, setup_grasp_box):
         """测试头部旋转成功找到目标（仅头部旋转模式）"""

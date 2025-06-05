@@ -117,8 +117,15 @@ def main():
         # grasp_strategy.robot.arm_reset()
         time.sleep(1.0)  # 展示一下成功提起的状态
 
-        # 步骤5：移动到放置位置
-        print("\n5. 移动到放置位置...")
+
+        # 步骤5：关闭头部追踪
+        print("\n5. 关闭头部追踪...")
+        grasp_strategy.robot.disable_head_tracking()
+        print("✅ 已关闭头部追踪")
+        time.sleep(1.0)  # 短暂暂停
+
+        # 步骤6：移动到放置位置
+        print("\n6. 移动到放置位置...")
         move_success = grasp_strategy.walk_to_pose(
             placement_box_info,
             target_distance=0.6,
@@ -129,10 +136,8 @@ def main():
             return
         time.sleep(1.0)  # 短暂暂停
 
-        # grasp_strategy.robot.arm_reset()
-        # return
-        # 步骤6：放下箱子
-        print("\n6. 放下箱子...")
+        # 步骤7：放下箱子
+        print("\n7. 放下箱子...")
         transport_down_success = grasp_strategy.arm_transport_target_down(
             placement_box_info,
             arm_mode="manipulation_mpc"
@@ -143,9 +148,7 @@ def main():
             return
             
         print("✅ 成功放下箱子")
-        time.sleep(1.0)  # 短暂暂停
-        grasp_strategy.robot.arm_reset()
-        
+        time.sleep(1.0)  # 短暂暂停        
         print("\n========== 箱子抓取任务完成 ==========")
         
     except Exception as e:
