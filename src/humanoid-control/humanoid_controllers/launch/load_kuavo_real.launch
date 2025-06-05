@@ -31,6 +31,8 @@
     <arg name="stand_up_protect" default="true"/>
     <arg name="redundant_imu" default="false"/>
     <arg name="ruiwo_cxx_sdk" default="true"/>
+    <arg name="arm_move_spd"      default="1.2"/>
+
     <!-- The file defining gait definition -->
 
     <!-- Set with_coredump parameter based on coredump value -->
@@ -72,6 +74,11 @@
     
     <!-- teach_pendant=1, teach pendant mode -->
     <param name="teach_pendant"  value="$(arg teach_pendant)"/>
+    <param name="arm_move_spd"  value="$(arg arm_move_spd)"/>
+
+    <!-- MPC调度相关参数 -->
+    <param name="/mpc/schedule/enable" value="false"/>
+    <param name="/mpc/schedule/start_time" value="-1.0"/>
 
     <group if="$(eval arg('teach_pendant') == 1)">
       <param name="stand_up_protect" value="false"/>

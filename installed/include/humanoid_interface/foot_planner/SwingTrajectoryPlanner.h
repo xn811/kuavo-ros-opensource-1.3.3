@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "ocs2_core/thread_support/BufferedValue.h"
+#include "humanoid_interface/foot_planner/InverseKinematics.h"
 
 namespace ocs2 {
 namespace humanoid {
@@ -280,7 +281,7 @@ class SwingTrajectoryPlanner {
   inline bool getFinalYawSingleStepMode() const { return final_yaw_single_step_mode_; }
   inline void setFinalYawSingleStepMode(bool mode) { final_yaw_single_step_mode_ = mode; }
   inline double getFinalYawSingleStepTime() const { return final_yaw_single_step_time_; }
-
+  void setInverseKinematics(std::shared_ptr<InverseKinematics> inverseKinematics) { inverseKinematics_ = inverseKinematics; }
  private:
   vector3_t calNextFootPos(int feet, scalar_t current_time, scalar_t stop_time,
                                                          scalar_t next_middle_time, const vector_t &next_middle_body_pos,
@@ -373,6 +374,7 @@ class SwingTrajectoryPlanner {
   double target_yaw_ = 0.0;
   bool final_yaw_single_step_mode_ = false;
   double final_yaw_single_step_time_ = 0.0;
+  std::shared_ptr<InverseKinematics> inverseKinematics_;
 };
 
 SwingTrajectoryPlanner::Config loadSwingTrajectorySettings(const std::string& fileName,

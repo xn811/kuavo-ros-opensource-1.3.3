@@ -20,6 +20,8 @@ from sensor_msgs.msg import JointState
 import math
 from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierTrajectory, planArmState
 from trajectory_msgs.msg import JointTrajectory
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 rospack = rospkg.RosPack()
 pkg_path = rospack.get_path('h12pro_controller_node')
@@ -224,6 +226,11 @@ class H12PROControllerNode:
         self.should_pub_head_motion_data = robotHeadMotionData()
         self.start_way = rospy.get_param("start_way", "auto")
         self.real_robot = rospy.get_param("real_robot", False)
+        
+        # 添加线程池
+        self.executor = ThreadPoolExecutor(max_workers=2)
+        self._state_transition_lock = threading.Lock()
+        
         self._setup_ros_components()
         
     def _setup_ros_components(self) -> None:
@@ -535,6 +542,7 @@ class H12PROControllerNode:
             source: Source state.
             msg: Channel message for response.
         """
+        # 准备状态转换参数
         kwargs = {
             "trigger": trigger,
             "source": source,
@@ -542,16 +550,26 @@ class H12PROControllerNode:
         }
         if "arm_pose" in trigger:
             kwargs["current_arm_joint_state"] = self.current_arm_joint_state
-        getattr(self.robot_state_machine, trigger)(**kwargs)
-        
-        if trigger in Config.VALID_STATES:
-            new_msg = h12proRemoteControllerChannel()
-            channels = Config.get_default_channels()
-            channels[Config.TRIGGER_CHANNEL_MAP[trigger]] = Config.H12_AXIS_RANGE_MAX
-            new_msg.channels = tuple(channels)
             
-            self.h12_to_joy_node.update_channels_msg(msg=new_msg)
-            self.h12_to_joy_node.process_channels()
+        # 提交到线程池执行状态转换
+        def state_transition_task():
+            with self._state_transition_lock:
+                try:
+                    getattr(self.robot_state_machine, trigger)(**kwargs)
+                    
+                    # 如果是有效状态,更新消息
+                    if trigger in Config.VALID_STATES:
+                        new_msg = h12proRemoteControllerChannel()
+                        channels = Config.get_default_channels()
+                        channels[Config.TRIGGER_CHANNEL_MAP[trigger]] = Config.H12_AXIS_RANGE_MAX
+                        new_msg.channels = tuple(channels)
+                        
+                        self.h12_to_joy_node.update_channels_msg(msg=new_msg)
+                        self.h12_to_joy_node.process_channels()
+                except Exception as e:
+                    rospy.logerr(f"Error in state transition task: {e}")
+                    
+        self.executor.submit(state_transition_task)
 
     def _handle_joystick_input(self, msg: h12proRemoteControllerChannel) -> None:
         """Handle joystick input when no state transition occurs."""
@@ -609,6 +627,11 @@ class H12PROControllerNode:
         except Exception as e:
             rospy.logwarn(f"Error handling switch {key}: {e}")
             return None
+
+    def __del__(self):
+        """Cleanup resources."""
+        if hasattr(self, 'executor'):
+            self.executor.shutdown(wait=True)
 
 class ConfigError(Exception):
     """Custom exception for configuration errors."""

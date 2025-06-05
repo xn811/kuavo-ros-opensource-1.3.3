@@ -27,7 +27,7 @@
     <arg name="wbc_only"           default="false"/>
     <arg name="play_back"          default="false"/>  
     <arg name="joystick_type"      default="sim"/>
-    <arg name="arm_move_spd"      default="3.0"/>
+    <arg name="arm_move_spd"      default="1.2"/>
     <arg name="start_way"          default="manual"/>
     <arg name="use_estimator_contact"   default="false"/>
     <arg name="visualize_humanoid" default="true"/>
@@ -69,6 +69,9 @@
     <node pkg="humanoid_controllers" type="collect_launch_info.sh" name="collect_launch_info" />
     
     <param name="teach_pendant"  value="$(arg teach_pendant)"/>
+    <!-- MPC调度相关参数 -->
+    <param name="/mpc/schedule/enable" value="false"/>
+    <param name="/mpc/schedule/start_time" value="-1.0"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">

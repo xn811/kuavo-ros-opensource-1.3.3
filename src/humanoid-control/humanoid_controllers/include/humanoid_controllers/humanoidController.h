@@ -306,6 +306,7 @@ namespace humanoid_controller
     ros::Subscriber observation_sub_;
     ros::Subscriber gait_scheduler_sub_;
     ros::Subscriber head_sub_;
+    ros::Subscriber head_array_sub_;
     ros::Subscriber arm_joint_traj_sub_;
     ros::Subscriber mm_arm_joint_traj_sub_;
     ros::Subscriber arm_target_traj_sub_;//最终的手臂目标位置

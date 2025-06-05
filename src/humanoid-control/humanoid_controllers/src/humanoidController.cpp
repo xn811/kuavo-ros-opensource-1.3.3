@@ -482,6 +482,28 @@ namespace humanoid_controller
               gaitManagerPtr_->add(current_gait_.startTime, current_gait_.name);
             std::cout << "[controller] receive current gait name: " << current_gait_.name << " start time: " << current_gait_.startTime << std::endl; });
       head_sub_ = controllerNh_.subscribe("/robot_head_motion_data", 10, &humanoidController::headCmdCallback, this);
+      // Add new subscriber for Float64MultiArray head control
+      auto headArrayCallback = [this](const std_msgs::Float64MultiArray::ConstPtr& msg) {
+          if (msg->data.size() == 2) {
+              if (msg->data[0] < head_joint_limits_[0].first || msg->data[0] > head_joint_limits_[0].second 
+                  || msg->data[1] < head_joint_limits_[1].first || msg->data[1] > head_joint_limits_[1].second) 
+              {
+                  std::cout << "\033[1;31m[headArrayCallback] Invalid robot head motion data. Head joints must be in the range [" 
+                      << head_joint_limits_[0].first << ", " << head_joint_limits_[0].second << "] and [" 
+                      << head_joint_limits_[1].first << ", " << head_joint_limits_[1].second << "].\033[0m" << std::endl;
+                  return;
+              }
+              head_mtx.lock();
+              desire_head_pos_[0] = msg->data[0];
+              desire_head_pos_[1] = msg->data[1];
+              head_mtx.unlock();
+          }
+          else {
+              ROS_WARN("Invalid robot head motion array data. Expected 2 elements, but received %lu elements.", msg->data.size());
+          }
+      };
+
+      head_array_sub_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/robot_head_motion_array", 10, headArrayCallback);
       hand_wrench_sub_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/hand_wrench_cmd", 10, [&](const std_msgs::Float64MultiArray::ConstPtr &msg)
         {
           if(msg->data.size() != 12)

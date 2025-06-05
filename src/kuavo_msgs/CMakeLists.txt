@@ -96,6 +96,8 @@ add_message_files(
   jointBezierTrajectory.msg
   planArmState.msg
   RobotActionState.msg
+  qv.msg
+  fullBodyTargetTrajectories.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -131,6 +133,7 @@ add_service_files(
   ExecuteArmAction.srv
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
+  SetJoyTopic.srv
 )
 
 ## Generate actions in the 'action' folder
