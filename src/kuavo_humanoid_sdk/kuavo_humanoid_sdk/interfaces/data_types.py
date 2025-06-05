@@ -254,3 +254,23 @@ class KuavoMotorParam:
     """速度控制微分增益"""
     id: int
     """电机ID"""
+
+
+@dataclass
+class AprilTagDetection:
+    """表示AprilTag检测结果的数据类"""
+    @dataclass
+    class Point:
+        x: float
+        y: float
+        z: float
+
+    @dataclass
+    class Quaternion:
+        x: float
+        y: float
+        z: float
+        w: float
+
+    position: Point
+    orientation: Quaternion

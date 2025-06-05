@@ -117,14 +117,14 @@ class KuavoRobotStateCore:
                 angular = (0.0, 0.0, 0.0)
             )
             self._eef_state = (EndEffectorState(
-                position = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
-                velocity = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
-                effort = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                position = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                velocity = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                effort = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
                 state=EndEffectorState.GraspingState.UNKNOWN
             ), EndEffectorState(
-                position = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
-                velocity = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
-                effort = [0.0] * 12 if kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                position = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                velocity = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
+                effort = [0.0] * 12 if kuavo_info['end_effector_type'] is not None and kuavo_info['end_effector_type'].startswith('qiangnao') else [0.0] * 2,
                 state=EndEffectorState.GraspingState.UNKNOWN
             ))
                             

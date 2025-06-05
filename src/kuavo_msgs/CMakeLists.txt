@@ -98,6 +98,9 @@ add_message_files(
   RobotActionState.msg
   qv.msg
   fullBodyTargetTrajectories.msg
+
+  # kuavo_tf2_web_republisher
+  TFArray.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -134,6 +137,9 @@ add_service_files(
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
   SetJoyTopic.srv
+
+  # kuavo_tf2_web_republisher
+  RepublishTFs.srv
 )
 
 ## Generate actions in the 'action' folder

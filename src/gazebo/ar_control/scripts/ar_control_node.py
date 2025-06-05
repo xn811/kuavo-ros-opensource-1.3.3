@@ -7,6 +7,8 @@ import tf2_ros
 import tf2_geometry_msgs
 from kuavo_msgs.msg import robotHeadMotionData  # 头部电机控制
 from joint_state_publisher import JointStatePublisher
+import copy
+from geometry_msgs.msg import TransformStamped, PoseStamped
 
 class ARControlNode(object):
     def __init__(self):
@@ -16,6 +18,7 @@ class ARControlNode(object):
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
         self._head_traj_pub = rospy.Publisher("/robot_head_motion_data", robotHeadMotionData, queue_size=10)
         self.publisher = rospy.Publisher('/robot_tag_info', AprilTagDetectionArray, queue_size=10)
+        self.publisher_odom = rospy.Publisher('/robot_tag_info_odom', AprilTagDetectionArray, queue_size=10)
         self.subscription = rospy.Subscriber('/tag_detections', AprilTagDetectionArray, self.tag_callback)
     def pub_kuavo_head_traj(self, from_joint_state, target_joint_state):
         # 头部包含两个电机，数据格式为长度为 2 的数组
@@ -39,6 +42,10 @@ class ARControlNode(object):
         new_msg = AprilTagDetectionArray()
         new_msg.header.stamp = rospy.Time.now()
         new_msg.header.frame_id = 'base_link'
+
+        new_msg_odom = AprilTagDetectionArray()
+        new_msg_odom.header.stamp = rospy.Time.now()
+        new_msg_odom.header.frame_id = 'odom'
     
         for detection in msg.detections:
             # Make sure the detection's pose has a valid frame_id
@@ -68,6 +75,36 @@ class ARControlNode(object):
     
                 # Broadcast transform to tf
                 self.broadcast_transform(transformed_pose, detection.id)
+
+                # 转换到odom坐标系
+                try:
+                    transform_to_odom = self.tf_buffer.lookup_transform(
+                        'odom',
+                        'base_link',
+                        rospy.Time(0),
+                        rospy.Duration(1.0)
+                    )
+                    
+                    # 创建PoseStamped消息用于转换
+                    pose_stamped = PoseStamped()
+                    pose_stamped.header.frame_id = 'base_link'
+                    pose_stamped.header.stamp = rospy.Time.now()
+                    pose_stamped.pose = transformed_pose.pose
+                    
+                    # 执行转换
+                    transformed_pose_odom = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform_to_odom)
+                    
+                    # 创建新的检测消息
+                    detection_odom = copy.deepcopy(detection)
+                    detection_odom.pose.pose.pose = transformed_pose_odom.pose
+                    detection_odom.pose.header.frame_id = 'odom'
+                    
+                    # 添加到odom消息中
+                    new_msg_odom.detections.append(detection_odom)
+                    
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                    rospy.logwarn(f"TF Error: {e} - Cannot transform from base_link to odom")
+                    continue
             
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 rospy.logwarn("TF Error: {} - Cannot transform from {} to base_link".format(e, detection.pose.header.frame_id))
@@ -75,7 +112,7 @@ class ARControlNode(object):
     
         # 发布消息
         self.publisher.publish(new_msg)
-    
+        self.publisher_odom.publish(new_msg_odom)
 
     def broadcast_transform(self, pose, tag_id):
         transform_stamped = TransformStamped()

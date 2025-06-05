@@ -1,7 +1,7 @@
 import time
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
 from kuavo_humanoid_sdk import KuavoRobotState
-from kuavo_humanoid_sdk import KuavoRobotTools
+from kuavo_humanoid_sdk import KuavoRobotToolsWebsocket
 
 def main():
     if not KuavoSDK().Init():# Init!
@@ -10,7 +10,7 @@ def main():
 
     robot = KuavoRobot() 
     robot_state = KuavoRobotState()
-    robot_tools = KuavoRobotTools()
+    robot_tools = KuavoRobotToolsWebsocket()
 
     # Stance
     robot.stance()

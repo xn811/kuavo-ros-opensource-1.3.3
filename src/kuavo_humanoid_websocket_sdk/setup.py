@@ -49,7 +49,7 @@ setup(
     install_requires=[
         "numpy", 
         "transitions",
-        "roslibpy"
+        "roslibpy",
     ],
     python_requires=">=3.8",
     classifiers=[
