@@ -105,6 +105,7 @@ vim src/dynamic_biped/launch/sensor_apriltag_only_enable.launch
     </include>
     <!-- tf2_ros 静态转换 发布urdf里面的head_camera 和 相机坐标系下的camera_link 进行对齐 -->
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_to_real_frame" args="0 0 0 0 0 0 camera camera_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_torso" args="0 0 0 0 0 0 base_link torso" />
     <!-- 启动 apriltag_ros continuous_detection -->
     <include file="$(find apriltag_ros)/launch/continuous_detection.launch">
       <arg name="camera_name" value="/camera/color" />
@@ -150,6 +151,7 @@ standalone_tags:
 - 按照上述步骤配置环境，启动机器人后，也启动头部NUC相机，然后运行
 ```bash
 source devel/setup.bash
+sudo chmod -R 777 /home/lab/.config/lejuconfig/
 python3 ./scripts/joint_cali/head_cali.py --use_cali_tool
 ```
 - 脚本会自动读取`scripts/joint_cali/config/head_cali_config.yaml`中的参数，默认id为0，tag_pose_in_base为[0.305, 0, 0.2]，如果标定工具的参数发生了变化，请修改该文件。
@@ -181,10 +183,12 @@ ssh -XC lab@192.168.x.xx
 
 ```bash
 # 激活环境
-source ~/kuavo_venv/joint_cali/bin/activate
-export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=/opt/openrobots/lib/python3/dist-packages:$PYTHONPATH
-python3 ./scripts/joint_cali/arm_cali.py --real
+source /home/lab/kuavo_venv/joint_cali/bin/activate
+source devel/setup.bash
+unset LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/lab/kuavo_venv/joint_cali/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/ros/noetic/lib:$LD_LIBRARY_PATH
+python3 ./scripts/joint_cali/arm_cail_noui.py --real
 ```
 
 + 如果下载了docker镜像，则使用如下命令：

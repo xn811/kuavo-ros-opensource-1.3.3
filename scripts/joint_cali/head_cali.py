@@ -331,7 +331,8 @@ def main():
     delta_head = head_cali.cali_head(target_pose, base_pose=use_cali_tool)
     print("delta_head:", delta_head)
     # 用户交互，决定是否写入文件
-    input("Press Enter to employ modified values..., or ctrl+c to exit.")
+    # input("Press Enter to employ modified values..., or ctrl+c to exit.")
+    input("按下回车键继续保存文件，或者ctrl+c退出")
     # load arm_zero.yaml file
     arm_zero_file_path = "/home/lab/.config/lejuconfig/arms_zero.yaml"
     modify_arm_zero_yaml(arm_zero_file_path, delta_head)
