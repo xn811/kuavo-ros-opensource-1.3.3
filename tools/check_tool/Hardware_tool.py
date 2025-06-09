@@ -472,7 +472,7 @@ def handTouch_usb():
 def ruiwo_zero():
         
     kuavo_ros_file_path = folder_path +"/ruiwo_zero_set.sh" 
-    kuavo_open_file_path = folder_path +"../../installed/share/hardware_node/lib/ruiwo_controller/setZero.sh" 
+    kuavo_open_file_path = folder_path +"../../installed/share/hardware_plant/lib/ruiwo_controller/setZero.sh" 
     
 
     if os.path.exists(kuavo_ros_file_path):
@@ -526,7 +526,7 @@ def update_kuavo():
 def arm_setzero():
 
     kuavo_ros_file_path = folder_path +"/arm_setzero.sh" 
-    kuavo_open_file_path = folder_path +"../../installed/share/hardware_node/lib/ruiwo_controller/arm_setzero.sh" 
+    kuavo_open_file_path = folder_path +"../../installed/share/hardware_plant/lib/ruiwo_controller/arm_setzero.sh" 
     
     if os.path.exists(kuavo_ros_file_path):
         command = "bash "+ kuavo_ros_file_path
@@ -542,7 +542,7 @@ def arm_setzero():
 def arm_breakin():
 
     kuavo_ros_file_path = folder_path + "/arm_breakin.sh" 
-    kuavo_open_file_path = folder_path + "../../installed/share/hardware_node/lib/ruiwo_controller/arm_breakin.sh" 
+    kuavo_open_file_path = folder_path + "../../installed/share/hardware_plant/lib/ruiwo_controller/arm_breakin.sh" 
     
     if os.path.exists(kuavo_ros_file_path):
         command = "bash "+ kuavo_ros_file_path

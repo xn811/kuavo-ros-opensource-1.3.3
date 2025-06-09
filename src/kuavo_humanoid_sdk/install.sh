@@ -136,8 +136,9 @@ done
 pushd $SCRIPT_DIR
 # Install the package editably
 if KUAVO_HUMANOID_SDK_VERSION="$VERSION" pip install -e ./; then
-    echo "-------------------------------------------"
+    echo -e "\033[32m\n🎉🎉🎉 Installation successful! \033[0m"
+    echo -e "\033[32m-------------------------------------------\033[0m"
     pip show kuavo_humanoid_sdk
-    echo "-------------------------------------------"
+    echo -e "\033[32m-------------------------------------------\033[0m"
 fi
 popd
