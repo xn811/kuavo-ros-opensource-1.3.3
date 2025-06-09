@@ -165,13 +165,48 @@ class MusicPlayerNode:
         except Exception as e:
             print(f"检查声卡状态时出错: {str(e)}")
             return False
+ # 异步方式：启动一个线程监控音乐进程，播放结束后自动恢复pyaudio
+    def monitor_music_process(self, proc):
+        try:
+            proc.wait()
+            try:
+                self.p = pyaudio.PyAudio()
+                self.stream = self.p.open(format=pyaudio.paInt16,
+                                            channels=1,
+                                            rate=self.rate,
+                                            output=True,
+                                            frames_per_buffer=self.chunk_size)
+                rospy.loginfo("音乐播放结束，已重新打开pyaudio")
+            except Exception as e:
+                rospy.logerr(f"重新打开pyaudio时出错: {e}")
+        except Exception as e:
+            rospy.logerr(f"监控音乐进程时出错: {e}")
 
     def play_music_callback(self, req):
-        try:   
+        try:
+            # 1. 回调开始时释放pyaudio资源
+            try:
+                if self.stream is not None:
+                    self.stream.stop_stream()
+                    self.stream.close()
+                    self.stream = None
+                if self.p is not None:
+                    self.p.terminate()
+                    self.p = None
+                rospy.loginfo("已释放pyaudio资源，准备播放本地音乐")
+            except Exception as e:
+                rospy.logwarn(f"释放pyaudio资源时出错: {e}")
+
             music_file = os.path.join(self.music_directory, f"{req.music_number}")
-            play_command = ['play', '-q', music_file,'vol', str(req.volume), 'speed', str(req.speed)]
-            self.current_music_process.append(subprocess.Popen(play_command))
-            rospy.loginfo(f"播放本地音乐 {music_file}，音量 {req.volume}%，速度 {req.speed}倍，进程ID: {self.current_music_process[-1].pid}")
+            volume = req.volume / 100
+            play_command = ['play', '-q', music_file, 'vol', str(volume)]
+            process = subprocess.Popen(play_command)
+            self.current_music_process.append(process)
+            rospy.loginfo(f"播放本地音乐 {music_file}，音量 {req.volume}%，进程ID: {process.pid}")
+            monitor_thread = threading.Thread(target=self.monitor_music_process, args=(process,))
+            monitor_thread.daemon = True
+            monitor_thread.start()
+
             return playmusicResponse(success_flag=True)
         except Exception as e:
             rospy.logerr(f"播放音乐出错: {str(e)}")

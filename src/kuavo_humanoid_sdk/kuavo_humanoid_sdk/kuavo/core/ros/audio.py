@@ -40,7 +40,6 @@ class Audio:
             request.music_number = file_name
             volume = min(max(volume , 0), 1.0)
             request.volume = volume
-            request.speed = speed
             response = play_music_service(request)
             SDKLogger.info(f"[Robot Audio] Requested to play audio file: {file_name}")
             return True
