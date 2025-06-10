@@ -16,7 +16,7 @@ class AudioWebsocket:
         self._audio_stop_publisher = roslibpy.Topic(websocket.client, 'stop_music', 'std_msgs/Bool')
         self._audio_stop_publisher.advertise()
 
-    def play_audio(self, file_name: str, volume: float = 0.5, speed: float = 1.0) -> bool:
+    def play_audio(self, file_name: str, volume: int = 100, speed: float = 1.0) -> bool:
         """Play the specified audio file through WebSocket.
         
         Args:
@@ -31,11 +31,10 @@ class AudioWebsocket:
             websocket = WebSocketKuavoSDK()
             service = roslibpy.Service(websocket.client, 'play_music', 'kuavo_msgs/playmusic')
             
-            volume = min(max(volume, 0), 1.0)
+            volume = min(max(volume, 0), 100)
             request = {
                 "music_number": file_name,
-                "volume": volume,
-                "speed": speed
+                "volume": volume
             }
             
             response = service.call(request)

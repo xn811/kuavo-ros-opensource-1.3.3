@@ -12,7 +12,7 @@ class KuavoRobotAudioCore:
     def __init__(self):
         self.robot_audio = Audio()
 
-    def play_audio(self, music_number: str, volume: float = 0.5, speed: float = 1.0) -> bool:
+    def play_audio(self, music_number: str, volume: int = 100, speed: float = 1.0) -> bool:
         """
         play music
         """
