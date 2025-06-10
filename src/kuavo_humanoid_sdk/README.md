@@ -85,6 +85,17 @@ catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
 **运行**：
 
 ⚠️ 在运行之前, 需要确认机器人版本`ROBOT_VERSION=45`，否则会机器人末端控制会有问题
+
+⚠️ 在运行之前, 需要先关闭`basePitchLimits`保护参数，否则会导致机器人搬运时摔倒
+
+即修改`src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info`中:
+```
+basePitchLimits
+{
+  enable                 false
+```
+
+启动:
 ```
 # 启动gazebo场景
 roslaunch humanoid_controllers load_kuavo_gazebo_manipulate.launch joystick_type:=bt2pro

@@ -131,6 +131,13 @@ else
     exit 1
 fi
 
+if sudo usermod -aG audio lab; then
+    log "lab 用户已加入 audio 组。"
+else
+    log "lab 用户加入 audio 组失败。"
+    exit 1
+fi
+
 log "root 用户权限配置完成，等待三秒后进行 5G 模块配置"
 log "3...  "
 sleep 1

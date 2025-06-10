@@ -106,6 +106,18 @@ gazebo 仿真运行
 .. warning::
     在运行之前, 需要确认机器人版本 ``ROBOT_VERSION=45`` ，否则会机器人末端控制会有问题
 
+.. warning::
+    在运行之前, 需要先关闭`basePitchLimits`保护参数，否则会导致机器人搬运时摔倒
+    即修改`src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info`中:
+
+    .. code-block:: text
+
+        basePitchLimits
+        {
+            enable                 false
+            ...
+        }
+
 启动仿真环境:
 
 .. code-block:: bash
@@ -160,6 +172,18 @@ gazebo 仿真运行
 
 下位机运行
 ^^^^^^^^^^^^
+.. warning::
+    在运行之前, 需要先关闭`basePitchLimits`保护参数，否则会导致机器人搬运时摔倒
+    即修改`src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info`中:
+
+    .. code-block:: text
+
+        basePitchLimits
+        {
+            enable                 false
+            ...
+        }
+
 
 .. code-block:: bash
 

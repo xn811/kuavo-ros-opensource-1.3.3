@@ -809,7 +809,7 @@ Kuavo机器人策略基础类，提供策略执行的抽象接口
 * **Return type:**
   bool
 
-#### *abstract* walk_approach_target(target_info, target_distance=0.5, \*\*kwargs)
+#### *abstract* walk_approach_target(target_id, target_distance=0.5, \*\*kwargs)
 
 走/接近特定的目标到指定距离
 
@@ -822,13 +822,14 @@ Kuavo机器人策略基础类，提供策略执行的抽象接口
 * **Return type:**
   bool
 
-#### *abstract* walk_to_pose(target_info, target_distance=0.5, \*\*kwargs)
+#### *abstract* walk_to_pose(target_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), target_distance=0.5, timeout=10.0, \*\*kwargs)
 
 走到指定距离的目标位置
 
 * **Parameters:**
-  * **target_info** – 目标信息，包含位置、姿态等
+  * **target_pose** – 目标位姿
   * **target_distance** – 与目标的期望距离(米)
+  * **timeout** – 超时时间(秒)
   * **\*\*kwargs** – 其他参数
 * **Returns:**
   是否成功接近目标
@@ -839,7 +840,7 @@ Kuavo机器人策略基础类，提供策略执行的抽象接口
 
 ### 箱子信息数据结构
 
-### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.BoxInfo(pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), size: Tuple[float, float, float] = (0.3, 0.2, 0.15), mass: float = 1.0)
+### *class* kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy.BoxInfo(pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose) | None = None, size: Tuple[float, float, float] = (0.4, 0.3, 0.22), mass: float = 2.0)
 
 Bases: `object`
 
@@ -868,11 +869,36 @@ Bases: `object`
 * **Type:**
   float
 
-#### mass *: float* *= 1.0*
+#### *classmethod* from_apriltag(tag_info: dict, xyz_offset: Tuple[float, float, float] = (0.0, 0.0, 0.0), size: Tuple[float, float, float] = (0.4, 0.3, 0.22), mass: float = 2.0)
+
+从粘贴在箱子正面的 AprilTag 信息创建 BoxInfo 实例
+
+#### WARNING
+必须正确粘贴 AprilTag，AprilTag 朝向请参考: [https://chev.me/arucogen/](https://chev.me/arucogen/)
+
+错误的粘贴方向会导致箱子位姿错乱。
+
+* **Parameters:**
+  * **tag_info** (*dict*) – 从 `KuavoRobotVision.get_data_by_id_from_odom()` 获取的 AprilTag 信息
+  * **xyz_offset** (*Tuple* *[**float* *,* *float* *,* *float* *]* *,* *optional*) – 
+
+    相对与 AprilTag中心点的偏移量(右手坐标系)
+
+    例如：
+    1. 箱子粘贴在货架上，需要把箱子放下距离货架的高度 -0.5m 则 xyz_offset=(size[1]/2, 0.0, -0.5)
+    2. 箱子粘贴在箱子正面，为了得到箱子中心点，因此偏移量为箱子宽度的一半 则 xyz_offset=(size[1]/2, 0.0, 0.0)
+  * **size** (*Tuple* *[**float* *,* *float* *,* *float* *]* *,* *optional*) – 箱子尺寸(长,宽,高). 默认为 (0.4, 0.3, 0.22)
+  * **mass** (*float* *,* *optional*) – 箱子质量(kg). 默认为 2.0
+* **Returns:**
+  新的 BoxInfo 实例
+* **Return type:**
+  BoxInfo
+
+#### mass *: float* *= 2.0*
 
 #### pose *: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)*
 
-#### size *: Tuple[float, float, float]* *= (0.3, 0.2, 0.15)*
+#### size *: Tuple[float, float, float]* *= (0.4, 0.3, 0.22)*
 
 ### 箱子抓取策略类
 
@@ -913,12 +939,14 @@ logic:
   3. 无论如何都使用头部搜索模式尝试找到目标
   4. 找到apriltag_data_from_odom之后，马上开始头部追踪
 
-#### walk_approach_target(target_info: [AprilTagData](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData), target_distance=0.5, approach_speed=0.15, \*\*kwargs)
+#### publish_grasp_markers(event)
 
-走路接近AprilTag目标
+#### walk_approach_target(target_id: int, target_distance=0.5, approach_speed=0.15, \*\*kwargs)
+
+走路接近 ID 为 target_id 的 AprilTag 目标
 
 * **Parameters:**
-  * **target_info** – AprilTag的信息
+  * **target_id** – 目标 AprilTag ID
   * **target_distance** – 与目标的期望距离(米)
   * **approach_speed** – 接近速度(米/秒)
 * **Returns:**
@@ -926,7 +954,7 @@ logic:
 * **Return type:**
   bool
 
-#### walk_to_pose(target_info: BoxInfo, target_distance=0.5, approach_speed=0.15, \*\*kwargs)
+#### walk_to_pose(target_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), target_distance=0.5, approach_speed=0.15, timeout=10.0, \*\*kwargs)
 
 让机器人走到指定的位姿
 
@@ -934,6 +962,7 @@ logic:
   * **target_pose** – 目标位姿
   * **target_distance** – 与目标的期望距离(米)
   * **approach_speed** – 接近速度(米/秒)
+  * **timeout** – 超时时间(秒)
 * **Returns:**
   是否成功到达目标位姿
 * **Return type:**
@@ -979,6 +1008,18 @@ catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
 
 #### WARNING
 在运行之前, 需要确认机器人版本 `ROBOT_VERSION=45` ，否则会机器人末端控制会有问题
+
+#### WARNING
+在运行之前, 需要先关闭\`basePitchLimits\`保护参数，否则会导致机器人搬运时摔倒
+即修改\`src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info\`中:
+
+```text
+basePitchLimits
+{
+    enable                 false
+    ...
+}
+```
 
 启动仿真环境:
 
@@ -1030,6 +1071,18 @@ catkin build humanoid_controllers grab_box
 #### 运行
 
 #### 下位机运行
+
+#### WARNING
+在运行之前, 需要先关闭\`basePitchLimits\`保护参数，否则会导致机器人搬运时摔倒
+即修改\`src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info\`中:
+
+```text
+basePitchLimits
+{
+    enable                 false
+    ...
+}
+```
 
 ```bash
 source devel/setup.bash
