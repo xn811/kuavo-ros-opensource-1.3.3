@@ -620,8 +620,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             # 3. 抓取姿态（不只是贴合箱子，抓紧）
             left_grasp = KuavoPose(
                 position=(
-                    left_hand_pose.position[0] + 0.05 * np.sin(box_yaw),
-                    left_hand_pose.position[1] - 0.05 * np.cos(box_yaw),
+                    left_hand_pose.position[0], # + 0.05 * np.sin(box_yaw),
+                    left_hand_pose.position[1], # - 0.05 * np.cos(box_yaw),
                     left_hand_pose.position[2]
                 ),
                 orientation=left_hand_pose.orientation
@@ -629,8 +629,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             
             right_grasp = KuavoPose(
                 position=(
-                    right_hand_pose.position[0] - 0.05 * np.sin(box_yaw),
-                    right_hand_pose.position[1] + 0.05 * np.cos(box_yaw),
+                    right_hand_pose.position[0], # - 0.05 * np.sin(box_yaw),
+                    right_hand_pose.position[1], # + 0.05 * np.cos(box_yaw),
                     right_hand_pose.position[2]
                 ),
                 orientation=right_hand_pose.orientation
@@ -871,12 +871,12 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 临时返回True，等待接口实现后修改
         return True
 
-    def arm_transport_target_up(self, target_info:BoxInfo, arm_mode="manipulation_mpc"):
+    def arm_transport_target_up(self, target_info:BoxInfo, arm_mode="manipulation_mpc", sim_mode=False):
         """添加安全检查"""
         # 统一的安全检查
         if not self._check_orientation_safety(target_info.pose.orientation):
             return False
-        if not self._check_position_safety(target_info):  # 添加位置检查
+        if not self._check_position_safety(target_info):
             return False
         if not self._check_height_safety(target_info):
             return False
@@ -886,6 +886,34 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.BaseArm)
         else:
             self.robot.set_fixed_arm_mode()
+
+        # 智能计算夹持力参数
+        g = 9.8  # 重力加速度
+        force_ratio = 0.34   # 经验系数（根据1.5kg对应5N得出：5/(1.5*9.8)≈0.34）
+        
+        # 计算基础Z向力（考虑安全系数和经验比例）
+        force_z_base = target_info.mass * g * force_ratio
+        force_z = -abs(force_z_base)  # z方向负值表示向上施加力
+        
+        # 侧向夹持力计算（基于Z向力的比例）
+        lateral_ratio = 3.0  # 侧向力与垂直力的比例（根据15N/5N=3得出）
+        lateral_force = abs(force_z) * lateral_ratio
+        
+        # 判断是否为仿真模式
+        if sim_mode:
+            force_z = 0
+            left_force = 0
+            right_force = 0
+        else:
+            left_force = 15   # 左手侧向力（正值为夹紧方向）
+            right_force = -15 # 右手侧向力（负值为夹紧方向）
+        
+        # 提起箱子调用末端力（使用计算得到的力）
+        self.robot.control_hand_wrench(
+            [0, left_force,  force_z, 0, 0, 0],   # 左手力
+            [0, right_force, force_z, 0, 0, 0]    # 右手力
+        )
+        time.sleep(2)
 
         # 获取抬起轨迹
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="lift")
@@ -1030,6 +1058,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         time.sleep(2)
         
+        # 箱子已经放到平面
+        self.robot.control_hand_wrench([0,0,0,0,0,0],
+                                       [0,0,0,0,0,0])
+        time.sleep(2)
+
         # 放开箱子
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="release")
         if left_pose_init is None:
@@ -1040,6 +1073,12 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
         time.sleep(1)
         self.robot.manipulation_mpc_reset()
+
+        # 机器人往后退 0.5m
+        self.robot.control_command_pose(-0.5, 0, 0, 0)
+        time.sleep(1)
+
+        # 手臂归中
         self.robot.arm_reset() 
         time.sleep(1)
         return True

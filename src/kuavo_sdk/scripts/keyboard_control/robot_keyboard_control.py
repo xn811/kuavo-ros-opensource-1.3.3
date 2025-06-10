@@ -738,7 +738,9 @@ class KeyBoardRobotController:
                         self.update_response()
                     else :
                         self.update_joy(key)
-                        self.joy_pub.publish(self.joy_msg)
+                        
+                if self.robot_mode_flag == 2:
+                    self.joy_pub.publish(self.joy_msg)
 
             # 手臂恢复控制模式为一
             set_arm_control_mode(1)
