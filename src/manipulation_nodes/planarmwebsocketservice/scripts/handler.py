@@ -529,7 +529,8 @@ def is_player_in_body():
     try:
         result_headphone = subprocess.run("pactl list | grep -i Headphone", shell=True, capture_output=True, text=True)
         result_speaker = subprocess.run("pactl list | grep -i Speaker", shell=True, capture_output=True, text=True)
-        if result_headphone.stdout.strip() or result_speaker.stdout.strip():
+        result_audio = subprocess.run("sudo aplay -l | grep -i Audio", shell=True, capture_output=True, text=True)
+        if result_headphone.stdout.strip() or result_speaker.stdout.strip() or result_audio.stdout.strip():
             # 下位机有音频设备
             result = True
     except Exception as e:
