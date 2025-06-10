@@ -185,21 +185,6 @@ Bases: `RobotBase`
 #### NOTE
 此命令会将机器人状态改变为’command_pose_world’。
 
-#### control_hand_wrench(left_wrench: list, right_wrench: list) → bool
-
-控制机器人末端力/力矩
-
-* **Parameters:**
-  * **left_wrench** (*list*) – 左手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-  * **right_wrench** (*list*) – 右手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-    单位:
-    Fx,Fy,Fz: 牛顿(N)
-    Tx,Ty,Tz: 牛·米(N·m)
-* **Returns:**
-  控制成功返回True, 否则返回False
-* **Return type:**
-  bool
-
 #### control_head(yaw: float, pitch: float) → bool
 
 控制机器人的头部。
@@ -830,21 +815,6 @@ Kuavo机器人手臂控制类。
 * **Return type:**
   bool
 
-#### control_hand_wrench(left_wrench: list, right_wrench: list) → bool
-
-控制机器人末端力/力矩
-
-* **Parameters:**
-  * **left_wrench** (*list*) – 左手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-  * **right_wrench** (*list*) – 右手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-    单位:
-    Fx,Fy,Fz: 牛顿(N)
-    Tx,Ty,Tz: 牛·米(N·m)
-* **Returns:**
-  控制成功返回True, 否则返回False
-* **Return type:**
-  bool
-
 #### control_robot_end_effector_pose(left_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), frame: [KuavoManipulationMpcFrame](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
 
 控制机器人末端执行器姿态。
@@ -1096,18 +1066,6 @@ Bases: `object`
   变换数据或None
 * **Return type:**
   Union[[PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
-
-#### get_link_position(link_name: str, reference_frame: str = 'base_link') → Tuple[float, float, float] | None
-
-获取指定机械臂关节链接的位置
-
-* **Parameters:**
-  * **link_name** (*str*) – 关节链接名称，如”zarm_l1_link”
-  * **reference_frame** (*str*) – 参考坐标系，默认为base_link
-* **Returns:**
-  三维位置坐标(x,y,z)，失败返回None
-* **Return type:**
-  Tuple[float, float, float] | None
 
 #### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 

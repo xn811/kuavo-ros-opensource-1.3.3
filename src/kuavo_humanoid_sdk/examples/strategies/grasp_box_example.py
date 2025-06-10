@@ -5,14 +5,6 @@ from kuavo_humanoid_sdk import KuavoRobot, KuavoRobotState, KuavoRobotTools, Kua
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, AprilTagData, PoseQuaternion
 from kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy import KuavoGraspBox, BoxInfo
 
-"""
-    安全须知:
-    请注意
-    实物机器人当中因为搬箱子需要用到末端力控制, 请把 arm_transport_target_up 当中的sim_mode设置为False
-    仿真机器人当中因为物理性质差异，所以不需要用到末端力控制 请把 arm_transport_target_up 当中的sim_mode设置为True
-
-    长春一汽绿色箱子质量为1.5kg, 请根据实际情况修改箱子质量
-"""
 def main():
     print("初始化机器人...")
     # 初始化机器人及相关组件
@@ -41,7 +33,7 @@ def main():
             orientation=(0.0, 0.0, -0.7071, 0.7071)  # 箱子朝向
         ),
         size=(0.3, 0.2, 0.15),  # 箱子尺寸(长、宽、高)，单位：米
-        mass=1.5  # 箱子重量，单位：千克
+        mass=1.0  # 箱子重量，单位：千克
     )
     
     # 创建放置位置的箱子信息
@@ -51,7 +43,7 @@ def main():
             orientation=(0.0, 0.0, 0.7071, 0.7071)  # 目标放置方向（四元数）
         ),
         size=(0.3, 0.2, 0.15),  # 使用相同尺寸
-        mass=1.5  # 使用相同质量
+        mass=1.0  # 使用相同质量
     )
     
     time.sleep(1)
@@ -113,8 +105,7 @@ def main():
         print("\n4. 提起箱子...")
         transport_up_success = grasp_strategy.arm_transport_target_up(
             box_info,
-            arm_mode="manipulation_mpc",
-            sim_mode=True
+            arm_mode="manipulation_mpc"
         )
         
         if not transport_up_success:

@@ -21,7 +21,6 @@ from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecut
 from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose
 from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
 from std_srvs.srv import SetBool, SetBoolRequest
-from std_msgs.msg import Float64MultiArray
 
 
 
@@ -191,7 +190,6 @@ class ControlRobotArm:
         self._pub_ctrl_arm_traj = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=10)
         self._pub_ctrl_arm_target_poses = rospy.Publisher('/kuavo_arm_target_poses', armTargetPoses, queue_size=10)
         self._pub_ctrl_hand_pose_cmd = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
-        self._pub_hand_wrench = rospy.Publisher('/hand_wrench_cmd', Float64MultiArray, queue_size=10)
 
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
@@ -408,32 +406,6 @@ class ControlRobotArm:
         except Exception as e:
             SDKLogger.error(f"[Error] get arm ctrl mode: {e}")
         return None
-    
-    def pub_hand_wrench_cmd(self, left_wrench, right_wrench):
-        """
-        发布末端力控制命令
-        参数:
-            left_wrench: 左手6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-            right_wrench: 右手6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
-            Fx: 沿X轴的线性力
-            Fy: 沿Y轴的线性力
-            Fz: 沿Z轴的线性力
-            Tx: 绕X轴的力矩
-            Ty: 绕Y轴的力矩
-            Tz: 绕Z轴的力矩
-        """
-        if len(left_wrench) != 6 or len(right_wrench) != 6:
-            SDKLogger.error("Wrench data must be 6-dimensional")
-            return False
-            
-        try:
-            msg = Float64MultiArray()
-            msg.data = list(left_wrench) + list(right_wrench)
-            self._pub_hand_wrench.publish(msg)
-            return True
-        except Exception as e:
-            SDKLogger.error(f"Publish hand wrench failed: {e}")
-            return False
         
 """ Control Robot Head """
 class ControlRobotHead:
@@ -1203,8 +1175,8 @@ class KuavoRobotControl:
             SDKLogger.error(f"Service call failed: {e}")
         return False, None, 'failed'
 
-    def control_hand_wrench(self, left_wrench: list, right_wrench: list) -> bool:
-        return self.kuavo_arm_control.pub_hand_wrench_cmd(left_wrench, right_wrench)
+    
+""" ------------------------------------------------------------------------------"""    
 
 
 
