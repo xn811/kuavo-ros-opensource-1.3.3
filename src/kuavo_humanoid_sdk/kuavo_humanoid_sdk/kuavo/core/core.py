@@ -450,6 +450,9 @@ class KuavoRobotCore:
         
         return self._control.control_robot_end_effector_pose(left_pose, right_pose, frame)
 
+    def control_hand_wrench(self, left_wrench: list, right_wrench: list) -> bool:
+        return self._control.control_hand_wrench(left_wrench, right_wrench)
+    
     def change_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame)->bool:
         timeout = 1.0
         count = 0
