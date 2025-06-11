@@ -4,8 +4,16 @@ from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot, KuavoRobotState
 from kuavo_humanoid_sdk import KuavoPose
  
 if __name__ == "__main__":
+
+    import argparse 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Websocket host address')
+    parser.add_argument('--port', type=int, default=9090, help='Websocket port')
+    args = parser.parse_args()
+    
     # !!! Initialize Kuavo SDK with IK module !!!
-    if not KuavoSDK.Init(options=KuavoSDK.Options.WithIK, websocket_mode=True, websocket_host='127.0.0.1'): # Init! Important! if U use IK, you must use this option!
+    if not KuavoSDK.Init(options=KuavoSDK.Options.WithIK, websocket_mode=True, websocket_host=args.host, websocket_port=args.port): # Init! Important! if U use IK, you must use this option!
         print("Failed to initialize Kuavo SDK")
         exit(1)
         

@@ -50,6 +50,8 @@ setup(
         "numpy", 
         "transitions",
         "roslibpy",
+        "argparse",
+        "transforms3d"
     ],
     python_requires=">=3.8",
     classifiers=[
