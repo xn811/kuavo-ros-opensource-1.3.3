@@ -11,7 +11,89 @@ from typing import Tuple
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+class KuavoGraspBoxUtils:
+    @staticmethod
+    def extract_yaw_from_quaternion(quaternion: Tuple[float, float, float, float])-> float:
+        """从四元数中提取yaw角
+        
+        Args:
+            quaternion: 四元数 (x, y, z, w)
+            
+        Returns:
+            float: yaw角（弧度）
+        """
+        if not quaternion or len(quaternion) != 4:
+            print("无法获取有效的四元数")
+            return 0.0
+            
+        # 计算yaw角 (围绕z轴的旋转)
+        # 四元数到欧拉角的简化计算，仅提取yaw
+        x, y, z, w = quaternion
+        yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+        return yaw      
 
+    @staticmethod
+    def util_euler_to_quat(euler):
+        # x, y, z, w
+        """将欧拉角转换为四元数"""
+        quat = R.from_euler('xyz', euler, degrees=False).as_quat()
+        return [quat[0], quat[1], quat[2], quat[3]]
+    
+    @staticmethod
+    def extract_tag_pose(tag_info)-> KuavoPose:
+        if (tag_info is not None and isinstance(tag_info, dict) and 
+                            'poses' in tag_info and len(tag_info['poses']) > 0):
+            tag_pose = KuavoPose(
+                position=(tag_info['poses'][0].position.x,
+                            tag_info['poses'][0].position.y, 
+                            tag_info['poses'][0].position.z),
+                    orientation=(tag_info['poses'][0].orientation.x,
+                            tag_info['poses'][0].orientation.y,
+                            tag_info['poses'][0].orientation.z,
+                            tag_info['poses'][0].orientation.w)
+                )
+            return tag_pose
+        else:
+            raise ValueError(f"未找到 AprilTag ID 为 {tag_info['id']} 的位姿信息, 无法创建 BoxInfo 实例")
+
+    @staticmethod
+    def get_box_world_pose(tag_pose, box_in_tag_xyz):
+        """根据目标信息和目标距离计算目标位姿
+        p_wa ： tag的世界系下位置
+        R_wa ： tag的世界系下旋转矩阵
+
+        注意： box的朝向默认和tag的朝向一致
+        xyz轴上可以有平移
+        注意看好实际中tag的轴朝向
+        """
+        pose = KuavoGraspBoxUtils.extract_tag_pose(tag_pose)
+        p_wa = np.array([pose.position[0], pose.position[1], pose.position[2]])
+        quat_wa = np.array([pose.orientation[0], pose.orientation[1], pose.orientation[2], pose.orientation[3]])  # x,y,z,w
+        R_wa = R.from_quat(quat_wa).as_matrix()
+
+        p_at = np.array(box_in_tag_xyz, np.float32)
+        tag_z_uni = np.array([0, 0, 1], np.float32)  # tag的z轴朝向
+        p_z_w = R_wa @ tag_z_uni  # tag的z轴在世界系下的朝向
+
+        print(f'---------------- p_z_w {p_z_w}')
+        yaw = math.atan2(p_z_w[1], p_z_w[0])
+        yaw += math.pi
+        yaw = KuavoGraspBoxUtils.util_cast_to_pi(yaw)
+
+        print(f'---------------- yaw {yaw}')
+
+        p_at_w = R_wa @ p_at
+        p_wt = p_wa + p_at_w
+
+        return p_wt, yaw
+    
+    def util_cast_to_pi(yaw):   
+        while yaw > math.pi:
+            yaw -= 2 * math.pi
+        while yaw < -math.pi:
+            yaw += 2 * math.pi
+        return yaw
+    
 @dataclass
 class BoxInfo:
     """箱子信息数据类
@@ -24,8 +106,64 @@ class BoxInfo:
         mass (float): 箱子的质量 单位: 千克 
     """
     pose: KuavoPose
-    size: Tuple[float, float, float] = (0.3, 0.2, 0.15)  # 默认箱子尺寸
-    mass: float = 1.0  # 默认箱子质量(kg)
+    size: Tuple[float, float, float] = (0.4, 0.3, 0.22)  # 默认箱子尺寸
+    mass: float = 2.0  # 默认箱子质量(kg)
+    
+    def __init__(self, pose: KuavoPose = None, size: Tuple[float, float, float] = (0.4, 0.3, 0.22), mass: float = 2.0):
+        """初始化箱子信息
+
+        Args:
+            pose (KuavoPose, optional): 箱子的位姿信息. 默认为 None
+            size (Tuple[float, float, float], optional): 箱子尺寸(长,宽,高). 默认为 (0.4, 0.3, 0.22)
+            mass (float, optional): 箱子质量(kg). 默认为 2.0
+        """
+        self.pose = pose
+        self.size = size
+        self.mass = mass
+
+    @classmethod
+    def from_apriltag(cls, tag_info: dict, xyz_offset: Tuple[float, float, float] = (0.0, 0.0, 0.0), size: Tuple[float, float, float] = (0.4, 0.3, 0.22), mass: float = 2.0):
+        """从粘贴在箱子正面的 AprilTag 信息创建 BoxInfo 实例
+
+        Warning:
+            必须正确粘贴 AprilTag，AprilTag 朝向请参考: https://chev.me/arucogen/
+            
+            错误的粘贴方向会导致箱子位姿错乱。
+
+        Args:
+            tag_info (dict): 从 :meth:`KuavoRobotVision.get_data_by_id_from_odom` 获取的 AprilTag 信息
+            xyz_offset (Tuple[float, float, float], optional): 相对与 AprilTag中心点的偏移量(右手坐标系) \n
+                例如：\n
+                1. 箱子粘贴在货架上，需要把箱子放下距离货架的高度 -0.5m 则 xyz_offset=(size[1]/2, 0.0, -0.5) \n
+                2. 箱子粘贴在箱子正面，为了得到箱子中心点，因此偏移量为箱子宽度的一半 则 xyz_offset=(size[1]/2, 0.0, 0.0) \n
+            size (Tuple[float, float, float], optional): 箱子尺寸(长,宽,高). 默认为 (0.4, 0.3, 0.22) \n
+            mass (float, optional): 箱子质量(kg). 默认为 2.0
+
+        Returns:
+            BoxInfo: 新的 BoxInfo 实例
+        """
+        # tag 的右手坐标系: z 轴正方向朝向tag面对的方向，xy为平面坐标系
+        box_in_tag_xyz = [-xyz_offset[1], xyz_offset[2], -xyz_offset[0]]
+        pos_world, yaw_world = KuavoGraspBoxUtils.get_box_world_pose(tag_info, box_in_tag_xyz=box_in_tag_xyz)
+
+        pose = KuavoPose(
+            position=pos_world,
+            orientation=KuavoGraspBoxUtils.util_euler_to_quat([0, 0, yaw_world])
+        )
+        return cls(pose, size, mass)
+
+    def __str__(self) -> str:
+        """返回箱子信息的字符串表示
+        
+        Returns:
+            str: 格式化的箱子信息字符串
+        """
+        return (
+            f"\n位置: ({self.pose.position[0]:.3f}, {self.pose.position[1]:.3f}, {self.pose.position[2]:.3f})"
+            f"\n朝向: ({self.pose.orientation[0]:.3f}, {self.pose.orientation[1]:.3f}, {self.pose.orientation[2]:.3f}, {self.pose.orientation[3]:.3f})"
+            f"\n尺寸: {self.size[0]:.2f}m × {self.size[1]:.2f}m × {self.size[2]:.2f}m"
+            f"\n质量: {self.mass:.1f}kg"
+        )
     
 class KuavoGraspBox(KuavoRobotStrategyBase):
     """箱子抓取策略类，继承自基础策略类"""
@@ -105,7 +243,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             target_angle = math.atan2(dy, dx)
             
             # 获取机器人当前朝向的yaw角
-            robot_yaw = self._extract_yaw_from_quaternion(robot_orientation)
+            robot_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(robot_orientation)
             
             # 计算目标与机器人朝向的角度差
             angle_diff = target_angle - robot_yaw
@@ -198,8 +336,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         """
         # 这里简化实现，实际应用需要进行四元数计算
         # 提取两个朝向的yaw角并比较差异
-        yaw1 = self._extract_yaw_from_quaternion(orientation1)
-        yaw2 = self._extract_yaw_from_quaternion(orientation2)
+        yaw1 = KuavoGraspBoxUtils.extract_yaw_from_quaternion(orientation1)
+        yaw2 = KuavoGraspBoxUtils.extract_yaw_from_quaternion(orientation2)
         
         # 计算角度差异
         diff = abs(yaw1 - yaw2)
@@ -207,25 +345,6 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             diff -= 2 * math.pi
         
         return abs(diff) < threshold
-
-    def _extract_yaw_from_quaternion(self, quaternion):
-        """从四元数中提取yaw角
-        
-        Args:
-            quaternion: 四元数 (x, y, z, w)
-            
-        Returns:
-            float: yaw角（弧度）
-        """
-        if not quaternion or len(quaternion) != 4:
-            print("无法获取有效的四元数")
-            return 0.0
-            
-        # 计算yaw角 (围绕z轴的旋转)
-        # 四元数到欧拉角的简化计算，仅提取yaw
-        x, y, z, w = quaternion
-        yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-        return yaw
 
     def _track_target_with_head(self, target_data):
         """使用头部追踪目标
@@ -254,11 +373,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 控制头部指向目标（输入为弧度）
         self.robot.control_head(yaw=yaw_rad, pitch=pitch_rad)
     
-    def walk_approach_target(self, target_info:AprilTagData, target_distance=0.5, approach_speed=0.15, **kwargs):
-        """走路接近AprilTag目标
+    def walk_approach_target(self, target_id:int, target_distance=0.5, approach_speed=0.15, **kwargs):
+        """走路接近 ID 为 `target_id` 的 AprilTag 目标
         
         Args:
-            target_info: AprilTag的信息
+            target_id: 目标 AprilTag ID
             target_distance: 与目标的期望距离(米)
             approach_speed: 接近速度(米/秒)
             
@@ -267,10 +386,9 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         """
         approach_success = False
         start_time = time.time()
-        tag_id = target_info.id[0]
-        target_data = self.vision.get_data_by_id_from_odom(tag_id)
+        target_data = self.vision.get_data_by_id_from_odom(target_id)
         if target_data is None:
-            print(f"未找到目标ID: {tag_id} 的目标数据!")
+            print(f"未找到目标ID: {target_id} 的目标数据!")
             return False
         target_pose = target_data["poses"][0]
         print(f"target_pose in _approach_target: {target_pose}")
@@ -741,10 +859,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             
         # 获取当前机器人朝向
         current_orientation = self.state.robot_orientation()
-        current_yaw = self._extract_yaw_from_quaternion(current_orientation)
+        current_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(current_orientation)
         
         # 提取目标朝向的yaw角
-        target_yaw = self._extract_yaw_from_quaternion(target_orientation)
+        target_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(target_orientation)
         
         # 计算角度差
         angle_diff = abs(target_yaw - current_yaw)
@@ -985,24 +1103,24 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         print(f"等待机器人到达目标位姿超时!")
         return False
     
-    def walk_to_pose(self, target_info: BoxInfo, target_distance=0.5, approach_speed=0.15, **kwargs):
+    def walk_to_pose(self, target_pose:KuavoPose, target_distance=0.5, approach_speed=0.15, timeout=10.0, **kwargs):
         """让机器人走到指定的位姿
         
         Args:
             target_pose: 目标位姿
             target_distance: 与目标的期望距离(米)
             approach_speed: 接近速度(米/秒)
-            
+            timeout: 超时时间(秒)
         Returns:
             bool: 是否成功到达目标位姿
         """
         # 获取目标位置和朝向
-        target_position = target_info.pose.position
-        target_orientation = target_info.pose.orientation
+        target_position = target_pose.position
+        target_orientation = target_pose.orientation
         print(f"target_position: {target_position}, target_orientation: {target_orientation}")
         
         # 从四元数中提取yaw角
-        target_yaw = self._extract_yaw_from_quaternion(target_orientation)
+        target_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(target_orientation)
         print(f"target_yaw: {target_yaw}")
         
         # 计算偏移后的位置
@@ -1024,7 +1142,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         if not self._arrive_pose(
             new_target_position,
-            target_yaw
+            target_yaw,
+            timeout
         ):
             return False
         
@@ -1123,7 +1242,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         """
         # 获取当前机器人朝向
         current_orientation = self.state.robot_orientation()
-        current_yaw = self._extract_yaw_from_quaternion(current_orientation)
+        current_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(current_orientation)
         
         # 计算角度差
         angle_diff = yaw_angle_target - current_yaw

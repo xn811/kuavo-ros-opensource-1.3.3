@@ -1041,7 +1041,7 @@ Kuavo 机器人音频系统接口，用于控制音频播放功能。
 
 提供音乐文件播放功能。
 
-#### play_audio(file_name: str, volume: float = 0.5, speed: float = 1.0) → bool
+#### play_audio(file_name: str, volume: int = 100, speed: float = 1.0) → bool
 
 播放指定的音频文件。
 

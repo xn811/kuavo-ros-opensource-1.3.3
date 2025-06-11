@@ -79,7 +79,7 @@ chmod +x ./gen_docs.sh
 ## 搬箱子案例
 **编译**：
 ```
-catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
+catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control grab_box
 ```
 
 **运行**：
@@ -125,12 +125,6 @@ standalone_tags:
         {id: 9, size: 0.088, name: 'tag_9'},
     ]
 ```
-🚨 每次启动gazebo场景后需要手动打光：
-
-需要在机器人腰部位置附近给个点光源，否则会找不到tag
-
-![](docs/images/gazebo.jpg)
-
 
 **测试**
 ```

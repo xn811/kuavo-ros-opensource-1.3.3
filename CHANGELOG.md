@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- Kuavo Humanoid SDK 更新使用文档描述搬箱子策略模块需要关闭 `basePitchLimits`，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - Kuavo Humanoid SDK 更新使用示例和搬箱子案例文档中文描述，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - Kuavo Humanoid SDK 更新所有使用文档为中文格式，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - 示教功能文档补充说明示教模式启动机器人需要按‘o’后才开始记录，[文档链接](./src/manipulation_nodes/teach_pendant/readme.md)
@@ -11,6 +12,14 @@
 - Kuavo Humanoid SDK 增加搬箱子策略模块使用文档，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 
 ## 新增功能
+- Kuavo Humanoid SDK 原子技能接口增加末端力控制，搬运箱子策略模块放下箱子后添加安全后退保护，搬运箱子案例添加末端力控制夹紧箱子
+- 新增数据截断和关节保护使能参数,默认不启动
+- 新增电机跟随性测试工具，[使用文档](./tools/check_tool/selfCheckScripts/README.md)
+- 新增太极，舞蹈动作案例以及全身控制接口，案例[使用文档](./src/demo/full_body_demo/readme.md)
+- Kuavo Humanoid SDK websocket 版新增适配视觉模块，使用方法与非websocket版本一致
+- Kuavo Humanoid SDK 原子策略模块抓取相关策略添加安全保护模组
+- 新增关节保护数据截断功能，扭矩峰值保护从瞬时修改为时间窗口触发
+- 新增视觉零点标定工具，[使用文档链接](./scripts/joint_cali/README_One_button_start.md)
 - Kuavo Humanoid SDK 拆分 websocket 为单独模块 Kuavo Humanoid Websocket SDK，原先 SDK 将不支持在 Windows 系统下运行
 - 新增机器人 collision 碰撞对，实现横向移动保护
 - Kuavo Humanoid SDK 新增修改和获取电机Kp/Kd 参数接口以及使用示例，目前仅支持`youda`驱动类型的电机
@@ -18,6 +27,17 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- Kuavo Humanoid SDK 修复音频模块的消息格式错误问题
+- 修复半身/轮臂机器人会触发 WBC pullup 问题
+- 修复手臂轨迹规划demo不能控制手指和头部关节
+- 修复播放音频的时候流式播放和音频文件播放设备占用冲突的问题
+- 修复 humanoid_estimation 包中 ymal 配置缺失问题
+- 修复 v47-v49 机器人无法使用遥操作的问题
+- 修复 cmd_pose_world 接口时转弯出现躯干不动的现象
+- 修复 mujoco 仿真关节名称不存在时计算关节组大小错误问题
+- 增加运动学 yaw 滤波以修复 IMU 偏航角偏移问题
+- 修复 kuavo.json 中头部错误的位置阈值
+- kuavo Humanoid SDK 搬箱子策略修复下蹲情况下抓箱子位置错误的问题, 抓取动作全部由局部系改为世界系
 - 修复 VR 手柄无法控制灵巧手手指的问题
 - 修复 h12 自启服务启动时贝塞尔插值器获取参数失败问题
 - 增加运动学 yaw 滤波，修复 imu yaw 角度漂移问题

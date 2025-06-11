@@ -130,11 +130,6 @@ gazebo 仿真运行
     # 启动ar_tag转换码操作和virtual操作
     roslaunch ar_control robot_strategies.launch  
 
-.. note::
-    每次启动gazebo场景后需要手动打光, 需要在机器人腰部位置附近给个点光源, 否则会找不到 tag, 如下图所示:
-
-    .. image:: ../../docs/images/gazebo.jpg
-
 实物运行
 --------------
 

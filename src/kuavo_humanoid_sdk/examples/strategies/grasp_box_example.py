@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import time
 import numpy as np
-from kuavo_humanoid_sdk import KuavoRobot, KuavoRobotState, KuavoRobotTools, KuavoRobotVision
+from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot, KuavoRobotState, KuavoRobotTools, KuavoRobotVision
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, AprilTagData, PoseQuaternion
 from kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy import KuavoGraspBox, BoxInfo
 
@@ -14,6 +14,10 @@ from kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy import Kuavo
     长春一汽绿色箱子质量为1.5kg, 请根据实际情况修改箱子质量
 """
 def main():
+    if not KuavoSDK.Init(options=KuavoSDK.Options.Normal, log_level="DEBUG"):
+        print("❌ 初始化失败")
+        return
+
     print("初始化机器人...")
     # 初始化机器人及相关组件
     robot = KuavoRobot()
@@ -53,7 +57,7 @@ def main():
         size=(0.3, 0.2, 0.15),  # 使用相同尺寸
         mass=1.5  # 使用相同质量
     )
-    
+    robot.arm_reset()
     time.sleep(1)
     # 执行完整抓取策略
     try:
@@ -81,8 +85,8 @@ def main():
         # for i in range(1):
         print("\n2. 走路接近目标...")
         approach_success = grasp_strategy.walk_approach_target(
-            target_april_tag,
-            target_distance=0.7,  # 与目标箱子保持0.7米的距离
+            target_april_tag.id[0],
+            target_distance=0.7,  # 与目标箱子保持0.6米的距离
             approach_speed=0.2    # 接近速度0.2米/秒
         )
         
@@ -136,7 +140,7 @@ def main():
         # 步骤6：移动到放置位置
         print("\n6. 移动到放置位置...")
         move_success = grasp_strategy.walk_to_pose(
-            placement_box_info,
+            placement_box_info.pose,
             target_distance=0.6,
             approach_speed=0.2,
         )

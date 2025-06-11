@@ -92,7 +92,10 @@
       <rosparam command="load" file="$(find humanoid_estimation)/params/ekf_template.yaml" />
     </node>
     <group unless="$(arg play_back)">
-      <include file="$(find gazebo_sim)/launch/gazebo-sim.launch"/>
+      <include file="$(find gazebo_sim)/launch/gazebo-sim.launch">
+        <arg name="use_grab_box_scene" value="false"/>
+        <arg name="world_name" value="$(find gazebo_sim)/worlds/grab_box.world"/>
+      </include>
     </group>
       <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
    <group if="$(arg use_joystick)">
