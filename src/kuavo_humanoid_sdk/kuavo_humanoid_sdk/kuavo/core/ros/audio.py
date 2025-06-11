@@ -21,7 +21,7 @@ class Audio:
         """Initialize the audio system."""
         self._audio_stop_publisher = rospy.Publisher('stop_music', Bool, queue_size=10)
         rospy.sleep(0.5)  # Wait for publisher initialization
-    def play_audio(self, file_name: str,volume: float = 0.5,speed: float = 1.0) -> bool:
+    def play_audio(self, file_name: str, volume: int = 100, speed: float = 1.0) -> bool:
         """Play the specified audio file.
         
         Args:
@@ -38,7 +38,7 @@ class Audio:
             # Call service
             request = playmusicRequest()
             request.music_number = file_name
-            volume = min(max(volume , 0), 1.0)
+            volume = min(max(volume , 0), 100)
             request.volume = volume
             response = play_music_service(request)
             SDKLogger.info(f"[Robot Audio] Requested to play audio file: {file_name}")

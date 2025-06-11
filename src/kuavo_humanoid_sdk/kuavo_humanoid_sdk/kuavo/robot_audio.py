@@ -12,7 +12,7 @@ class KuavoRobotAudio:
         """初始化音频系统。"""
         self.audio = KuavoRobotAudioCore()
 
-    def play_audio(self, file_name: str, volume: float = 0.5, speed: float = 1.0) -> bool:
+    def play_audio(self, file_name: str, volume: int = 100, speed: float = 1.0) -> bool:
         """播放指定的音频文件。
         
         Args:
