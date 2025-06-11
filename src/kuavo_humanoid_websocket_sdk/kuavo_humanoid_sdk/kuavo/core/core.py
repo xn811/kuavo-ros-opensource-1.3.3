@@ -318,13 +318,13 @@ class KuavoRobotCore:
         if not self._control.step_control(body_poses, dt, is_left_first_default, collision_check):
             return False
         
-        # Wait for gait to switch to custom_gait
-        start_time = time.time()
-        while not self._rb_state.is_gait('custom_gait'):
-            if time.time() - start_time > 1.0:  # 1.0s timeout
-                SDKLogger.warn("[Core] Timeout waiting for gait to switch to custom_gait")
-                return False
-            time.sleep(0.01)
+        # # Wait for gait to switch to custom_gait
+        # start_time = time.time()
+        # while not self._rb_state.is_gait('custom_gait'):
+        #     if time.time() - start_time > 1.0:  # 1.0s timeout
+        #         SDKLogger.warn("[Core] Timeout waiting for gait to switch to custom_gait")
+        #         return False
+        #     time.sleep(0.01)
 
         return True
 
