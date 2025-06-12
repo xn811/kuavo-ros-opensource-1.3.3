@@ -1,16 +1,23 @@
 import time
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
 from kuavo_humanoid_sdk import KuavoRobotState
-from kuavo_humanoid_sdk import KuavoRobotToolsWebsocket
+from kuavo_humanoid_sdk import KuavoRobotTools
 
 def main():
-    if not KuavoSDK().Init():# Init!
+    import argparse 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Websocket host address')
+    parser.add_argument('--port', type=int, default=9090, help='Websocket port')
+    args = parser.parse_args()
+
+    if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host=args.host, websocket_port=args.port):# Init!
         print("Init KuavoSDK failed, exit!")
         exit(1)
 
     robot = KuavoRobot() 
     robot_state = KuavoRobotState()
-    robot_tools = KuavoRobotToolsWebsocket()
+    robot_tools = KuavoRobotTools()
 
     # Stance
     robot.stance()

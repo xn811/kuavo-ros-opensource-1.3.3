@@ -3,7 +3,14 @@ from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot
 from kuavo_humanoid_sdk import KuavoRobotState
 from kuavo_humanoid_sdk import KuavoRobotVision
 def main():
-    if not KuavoSDK().Init():# Init!
+    import argparse 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Websocket host address')
+    parser.add_argument('--port', type=int, default=9090, help='Websocket port')
+    args = parser.parse_args()
+
+    if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host=args.host, websocket_port=args.port):# Init!
         print("Init KuavoSDK failed, exit!")
         exit(1)
 
@@ -18,8 +25,9 @@ def main():
     if robot_state.wait_for_stance(timeout=100.0):
         print("Robot is in stance state")
 
-    # 获取Apriltag数据
-    time.sleep(0.1)
+    # 等待获取Apriltag数据
+    time.sleep(5)
+    
     print("Apriltag data from camera:")
     print(robot_vision.apriltag_data_from_camera)
     print("Apriltag data from base:")

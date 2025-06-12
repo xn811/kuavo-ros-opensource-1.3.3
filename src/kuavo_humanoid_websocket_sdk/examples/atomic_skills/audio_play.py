@@ -1,11 +1,19 @@
 import time
 from kuavo_humanoid_sdk import KuavoSDK,KuavoRobotAudio
-
-if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host='127.0.0.1'):# Init!
-    print("Init KuavoSDK failed, exit!")
-    exit(1)
     
 if __name__ == "__main__":
+
+    import argparse 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Websocket host address')
+    parser.add_argument('--port', type=int, default=9090, help='Websocket port')
+    args = parser.parse_args()
+
+    if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host=args.host, websocket_port=args.port):# Init!
+        print("Init KuavoSDK failed, exit!")
+        exit(1)
+
     kuavo_robot = KuavoRobotAudio()
     kuavo_robot.play_audio("2_抱拳.wav")
     time.sleep(3)

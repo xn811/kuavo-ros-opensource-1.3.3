@@ -11,7 +11,14 @@ def signal_handler(sig, frame):
     running = False
 
 def main():
-    if not KuavoSDK().Init(websocket_mode=True, websocket_host='127.0.0.1'):# Init!
+    import argparse 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Websocket host address')
+    parser.add_argument('--port', type=int, default=9090, help='Websocket port')
+    args = parser.parse_args()
+
+    if not KuavoSDK().Init(log_level='INFO', websocket_mode=True, websocket_host=args.host, websocket_port=args.port):# Init!
         print("Init KuavoSDK failed, exit!")
         exit(1)
 
