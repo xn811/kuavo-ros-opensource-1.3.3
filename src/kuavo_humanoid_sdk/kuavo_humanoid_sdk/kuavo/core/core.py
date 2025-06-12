@@ -26,8 +26,6 @@ from transitions import Machine, State
 
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoArmCtrlMode, KuavoIKParams, KuavoPose, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow
 from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl
-from kuavo_humanoid_sdk.kuavo.core.ros.vision import KuavoRobotVisionCore
-from kuavo_humanoid_sdk.kuavo.core.ros.tools import KuavoRobotToolsCore
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
 from kuavo_humanoid_sdk.common.logger import SDKLogger
@@ -71,11 +69,6 @@ class KuavoRobotCore:
 
             self._control = KuavoRobotControl()
             self._rb_state = KuavoRobotStateCore()
-
-            # robot vision
-            self._robot_vision = KuavoRobotVisionCore()
-            # robot ros tf
-            self._robot_tf_tool = KuavoRobotToolsCore()
     
             # manipulation mpc
             self._manipulation_mpc_frame = KuavoManipulationMpcFrame.KeepCurrentFrame

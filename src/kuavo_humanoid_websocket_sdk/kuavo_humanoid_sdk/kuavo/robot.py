@@ -76,6 +76,8 @@ class KuavoSDK:
         WebSocketKuavoSDK.websocket_port = websocket_port
         WebSocketKuavoSDK.websocket_timeout = websocket_timeout
         SDKLogger.setLevel(log_level.upper())
+        SDKLogger.debug(f" ================= Kuavo Humanoid Websocket SDK =================")
+
         # Initialize core components, connect ROS Topics...
         kuavo_core = KuavoRobotCore()
         if log_level.upper() == 'DEBUG':

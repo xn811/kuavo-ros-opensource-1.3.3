@@ -18,6 +18,32 @@
 
 标签物理尺寸列表，单位为米（浮点数）
 
+### *class* kuavo_humanoid_sdk.interfaces.data_types.AprilTagDetection(position: [Point](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagDetection.Point), orientation: [Quaternion](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagDetection.Quaternion))
+
+表示AprilTag检测结果的数据类
+
+#### *class* Point(x: float, y: float, z: float)
+
+#### x *: float*
+
+#### y *: float*
+
+#### z *: float*
+
+#### *class* Quaternion(x: float, y: float, z: float, w: float)
+
+#### w *: float*
+
+#### x *: float*
+
+#### y *: float*
+
+#### z *: float*
+
+#### orientation *: [Quaternion](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagDetection.Quaternion)*
+
+#### position *: [Point](#kuavo_humanoid_sdk.interfaces.data_types.AprilTagDetection.Point)*
+
 ### *class* kuavo_humanoid_sdk.interfaces.data_types.EndEffectorSide(value)
 
 表示末端执行器类型的枚举类。

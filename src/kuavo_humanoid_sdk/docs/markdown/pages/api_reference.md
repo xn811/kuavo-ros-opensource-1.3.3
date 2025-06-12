@@ -1011,7 +1011,7 @@ Kuavo 机器人音频系统接口，用于控制音频播放功能。
 
 提供音乐文件播放功能。
 
-#### play_audio(file_name: str, volume: float = 0.5, speed: float = 1.0) → bool
+#### play_audio(file_name: str, volume: int = 100, speed: float = 1.0) → bool
 
 播放指定的音频文件。
 
@@ -1066,6 +1066,18 @@ Bases: `object`
   变换数据或None
 * **Return type:**
   Union[[PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
+
+#### get_link_position(link_name: str, reference_frame: str = 'base_link') → Tuple[float, float, float] | None
+
+获取指定机械臂关节链接的位置
+
+* **Parameters:**
+  * **link_name** (*str*) – 关节链接名称，如”zarm_l1_link”
+  * **reference_frame** (*str*) – 参考坐标系，默认为base_link
+* **Returns:**
+  三维位置坐标(x,y,z)，失败返回None
+* **Return type:**
+  Tuple[float, float, float] | None
 
 #### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 

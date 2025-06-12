@@ -65,26 +65,26 @@ A comprehensive Python SDK for controlling Kuavo humanoid robots. This SDK provi
 
 Install the latest **​stable version** of Kuavo Humanoid SDK using pip:
 ```bash
-pip install kuavo-humanoid-sdk  
+pip install kuavo-humanoid-sdk-ws
 ```
 
 Install the latest **​beta version** of Kuavo Humanoid SDK using pip:
 ```bash
-pip install --pre kuavo-humanoid-sdk  
+pip install --pre kuavo-humanoid-sdk-ws
 ```
 
 For local development installation (editable mode), use:
 ```bash
-cd src/kuavo_humanoid_sdk  
+cd src/kuavo_humanoid_sdk_ws  
 chmod +x install.sh  
 ./install.sh   
 ```
 ## Upgrade Instructions
 Before upgrading, you can check the currently installed version with:
 ```bash
-pip show kuavo-humanoid-sdk  
+pip show kuavo-humanoid-sdk-ws
 # Output:  
-Name: kuavo-humanoid-sdk  
+Name: kuavo-humanoid-sdk-ws  
 Version: 0.1.2  
 ...  
 ```
@@ -93,26 +93,26 @@ Version: 0.1.2
 
 To upgrade from a stable version to the latest stable version:
 ```bash
-pip install --upgrade kuavo_humanoid_sdk  
+pip install --upgrade kuavo-humanoid-sdk-ws
 ```
 
 To upgrade from a beta version to the latest stable version:
 ```bash
-pip install --upgrade --force-reinstall kuavo_humanoid_sdk  
+pip install --upgrade --force-reinstall kuavo-humanoid-sdk-ws
 # or  
-pip uninstall kuavo_humanoid_sdk && pip install kuavo_humanoid_sdk  
+pip uninstall kuavo-humanoid-sdk-ws && pip install kuavo-humanoid-sdk-ws
 ```
 
 To upgrade from a stable/beta version to the latest beta version:
 ```bash
-pip install --upgrade --pre kuavo_humanoid_sdk  
+pip install --upgrade --pre kuavo-humanoid-sdk-ws
 ```
 
 ## Package Information
 
 You can check the package information using pip:
 ```bash
-pip show kuavo-humanoid-sdk
+pip show kuavo-humanoid-sdk-ws
 ```
 
 ## Quick Start
@@ -165,7 +165,7 @@ The documentation is available in two formats:
 
 We recommend that you generate the documentation locally by running the documentation script. The documentation will be output to the `docs/html` and `docs/markdown` folders:
 ```bash
-cd <kuavo-ros-opensource>/src/kuavo_humanoid_sdk
+cd <kuavo-ros-opensource>/src/kuavo_humanoid_sdk_ws
 chmod +x gen_docs.sh
 ./gen_docs.sh
 ```

@@ -1,4 +1,3 @@
-import roslibpy
 import time
 from typing import Tuple
 import copy
@@ -11,7 +10,7 @@ from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, getCurre
 from kuavo_humanoid_sdk.msg.ocs2_msgs.msg import mpc_observation
 from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (changeArmCtrlMode, changeArmCtrlModeRequest,setMmCtrlFrame, setMmCtrlFrameRequest, changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
 from collections import deque
-from typing import Tuple, Optional
+from typing import Tuple
 import copy
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
@@ -130,7 +129,7 @@ class KuavoRobotStateCore:
                             
             # gait manager
             self._gait_manager = GaitManager()
-            self._prev_gait_name = self.gait_name
+            self._prev_gait_name = self.gait_name()
 
             # Wait for first MPC observation data
             self._mpc_observation_data = None
@@ -383,7 +382,7 @@ class KuavoRobotStateCore:
 
     def _srv_get_arm_ctrl_mode(self)-> KuavoArmCtrlMode:
         try:
-            rospy.wait_for_service('/humanoid_get_arm_ctrl_mode')
+            rospy.wait_for_service('/humanoid_get_arm_ctrl_mode', timeout=1.0)
             get_arm_ctrl_mode_srv = rospy.ServiceProxy('/humanoid_get_arm_ctrl_mode', changeArmCtrlMode)
             req = changeArmCtrlModeRequest()
             resp = get_arm_ctrl_mode_srv(req)

@@ -1,10 +1,7 @@
 import roslibpy
 import time
-from typing import Tuple
 import copy
 from collections import deque
-from typing import Tuple, Optional
-import copy
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.common.websocket_kuavo_sdk import WebSocketKuavoSDK
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param, EndEffectorType
@@ -146,7 +143,7 @@ class KuavoRobotStateCoreWebsocket:
                                 
                 # gait manager
                 self._gait_manager = GaitManager()
-                self._prev_gait_name = self.gait_name
+                self._prev_gait_name = self.gait_name()
 
                 # Wait for first MPC observation data
                 self._mpc_observation_data = None

@@ -704,6 +704,18 @@ Bases: `object`
 * **Return type:**
   Union[[PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion), [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix), None]
 
+#### get_link_position(link_name: str, reference_frame: str = 'base_link') → Tuple[float, float, float] | None
+
+获取指定机械臂关节链接的位置
+
+* **Parameters:**
+  * **link_name** (*str*) – 关节链接名称，如”zarm_l1_link”
+  * **reference_frame** (*str*) – 参考坐标系，默认为base_link
+* **Returns:**
+  三维位置坐标(x,y,z)，失败返回None
+* **Return type:**
+  Tuple[float, float, float] | None
+
 #### get_tf_transform(target_frame: str, source_frame: str, return_type: str = 'pose_quaternion') → [PoseQuaternion](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.PoseQuaternion) | [HomogeneousMatrix](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.HomogeneousMatrix) | None
 
 获取指定坐标系之间的变换。
@@ -857,40 +869,15 @@ Bases: [`KuavoRobotStrategyBase`](#kuavo_humanoid_sdk.kuavo_strategy.kuavo_strat
 
 #### arm_move_to_target(target_info: BoxInfo, arm_mode='manipulation_mpc', \*\*kwargs)
 
-手臂移动到目标位置
-
-* **Parameters:**
-  * **target_info** – 目标信息，包含位置、尺寸等
-  * **approach_speed** – 接近速度(米/秒)
-  * **arm_mode** – 手臂控制模式
-* **Returns:**
-  是否成功移动到目标位置
-* **Return type:**
-  bool
+添加安全保护检查
 
 #### arm_transport_target_down(target_info: BoxInfo, arm_mode='manipulation_mpc')
 
-实现手臂放下箱子的功能
-
-* **Parameters:**
-  * **target_info** – 目标放置位置信息
-  * **arm_mode** – 手臂控制模式
-* **Returns:**
-  是否成功放下目标
-* **Return type:**
-  bool
+添加安全检查
 
 #### arm_transport_target_up(target_info: BoxInfo, arm_mode='manipulation_mpc')
 
-实现手臂搬起箱子的功能
-
-* **Parameters:**
-  * **target_info** – 目标信息，包含位置、尺寸等
-  * **arm_mode** – 手臂控制模式
-* **Returns:**
-  是否成功搬起目标
-* **Return type:**
-  bool
+添加安全检查
 
 #### head_find_target(target_info: [AprilTagData](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.AprilTagData), max_search_time=None, search_pattern='rotate_head', \*\*kwargs)
 
@@ -1077,7 +1064,7 @@ def main():
     box_info = BoxInfo(
         pose=KuavoPose(
             position=(0.0, -1.0, 0.9),  # 箱子位置
-            orientation=(0.0, 0.0, 0.0, 1.0)  # 箱子朝向
+            orientation=(0.0, 0.0, -0.7071, 0.7071)  # 箱子朝向
         ),
         size=(0.3, 0.2, 0.15),  # 箱子尺寸(长、宽、高)，单位：米
         mass=1.0  # 箱子重量，单位：千克
@@ -1086,8 +1073,8 @@ def main():
     # 创建放置位置的箱子信息
     placement_box_info = BoxInfo(
         pose=KuavoPose(
-            position=(0.0, 1.0, 0.9),  # 目标放置位置坐标
-            orientation=(0, 0, 0.7071, 0.7071)  # 目标放置方向（四元数）
+            position=(0.0, 1.0, 0.8),  # 目标放置位置坐标
+            orientation=(0.0, 0.0, 0.7071, 0.7071)  # 目标放置方向（四元数）
         ),
         size=(0.3, 0.2, 0.15),  # 使用相同尺寸
         mass=1.0  # 使用相同质量
@@ -1121,7 +1108,7 @@ def main():
         print("\n2. 走路接近目标...")
         approach_success = grasp_strategy.walk_approach_target(
             target_april_tag,
-            target_distance=0.6,  # 与目标箱子保持0.6米的距离
+            target_distance=0.7,  # 与目标箱子保持0.7米的距离
             approach_speed=0.2    # 接近速度0.2米/秒
         )
         
@@ -1164,8 +1151,15 @@ def main():
         # grasp_strategy.robot.arm_reset()
         time.sleep(1.0)  # 展示一下成功提起的状态
 
-        # 步骤5：移动到放置位置
-        print("\n5. 移动到放置位置...")
+
+        # 步骤5：关闭头部追踪
+        print("\n5. 关闭头部追踪...")
+        grasp_strategy.robot.disable_head_tracking()
+        print("✅ 已关闭头部追踪")
+        time.sleep(1.0)  # 短暂暂停
+
+        # 步骤6：移动到放置位置
+        print("\n6. 移动到放置位置...")
         move_success = grasp_strategy.walk_to_pose(
             placement_box_info,
             target_distance=0.6,
@@ -1175,8 +1169,9 @@ def main():
             print("❌ 移动到放置位置失败")
             return
         time.sleep(1.0)  # 短暂暂停
-        # 步骤6：放下箱子
-        print("\n6. 放下箱子...")
+
+        # 步骤7：放下箱子
+        print("\n7. 放下箱子...")
         transport_down_success = grasp_strategy.arm_transport_target_down(
             placement_box_info,
             arm_mode="manipulation_mpc"
@@ -1187,9 +1182,7 @@ def main():
             return
             
         print("✅ 成功放下箱子")
-        time.sleep(1.0)  # 短暂暂停
-        grasp_strategy.robot.arm_reset()
-        
+        time.sleep(1.0)  # 短暂暂停        
         print("\n========== 箱子抓取任务完成 ==========")
         
     except Exception as e:

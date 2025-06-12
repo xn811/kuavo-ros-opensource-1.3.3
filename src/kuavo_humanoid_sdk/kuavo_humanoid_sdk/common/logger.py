@@ -8,6 +8,9 @@ def setup_logger():
     log_suffix = f'log/kuavo_humanoid_sdk'
     log_dir = f'/var/{log_suffix}'
     try:
+        # Check if we have write permission for /var directory
+        if not os.access('/var/log/', os.W_OK):
+            log_dir = f'./{log_suffix}'
         Path(log_dir).mkdir(parents=True, exist_ok=True)
     except Exception as e:
         # If creation in /var fails, create in current directory
