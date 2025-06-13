@@ -16,17 +16,17 @@ PyPI 项目地址: https://pypi.org/project/kuavo-humanoid-sdk/
 
 安装最新的**正式版** Kuavo Humanoid SDK，可以使用 pip：
 ```bash
-pip install kuavo-humanoid-sdk
+pip install kuavo-humanoid-sdk-ws
 ```
 
 安装最新的**beta版** Kuavo Humanoid SDK，可以使用 pip：
 ```bash
-pip install --pre kuavo-humanoid-sdk
+pip install --pre kuavo-humanoid-sdk-ws
 
 ```
 对于本地开发安装（可编辑模式），请使用：
 ```bash
-cd src/kuavo_humanoid_sdk
+cd src/kuavo_humanoid_sdk_ws
 chmod +x install.sh
 ./install.sh
 ```
@@ -35,9 +35,9 @@ chmod +x install.sh
 
 在升级更新之前，您可以先执行以下命令来查看当前安装的版本：
 ```bash
-pip show kuavo-humanoid-sdk
+pip show kuavo-humanoid-sdk-ws
 # Output:
-Name: kuavo-humanoid-sdk
+Name: kuavo-humanoid-sdk-ws
 Version: 0.1.2
 ...
 ```
@@ -45,17 +45,17 @@ Version: 0.1.2
 
 **当前为正式版**，升级到最新正式版:
 ```bash
-pip install --upgrade kuavo_humanoid_sdk
+pip install --upgrade kuavo-humanoid-sdk-ws
 ```
 **当前为beta版**，升级到最新正式版:
 ```bash
-pip install --upgrade --force-reinstall kuavo_humanoid_sdk
+pip install --upgrade --force-reinstall kuavo-humanoid-sdk-ws
 # 或者
-pip uninstall kuavo_humanoid_sdk && pip install kuavo_humanoid_sdk
+pip uninstall kuavo-humanoid-sdk-ws && pip install kuavo-humanoid-sdk-ws
 ```
 **当前为正式版/beta版**，升级到最新beta版:
 ```bash
-pip install --upgrade --pre kuavo_humanoid_sdk
+pip install --upgrade --pre kuavo-humanoid-sdk-ws
 ```
 
 ## 描述

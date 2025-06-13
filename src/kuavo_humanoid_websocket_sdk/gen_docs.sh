@@ -22,7 +22,7 @@ copy_ros_msg() {
             rm -rf "$dest_dir/$msg_pkg"
         fi
         mkdir "$dest_dir/$msg_pkg"
-        cp -r "$src_dir/$msg_pkg" "$dest_dir"
+        cp -r "$src_dir/$msg_pkg" "$dest_dir" && chmod -R a+w "$dest_dir/$msg_pkg"
 
         # Create __init__.py file with import statements
         echo "import os

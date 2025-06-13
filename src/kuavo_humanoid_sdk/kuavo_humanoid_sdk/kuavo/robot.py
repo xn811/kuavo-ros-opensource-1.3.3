@@ -58,6 +58,11 @@ class KuavoSDK:
         """
 
         SDKLogger.setLevel(log_level.upper())
+        SDKLogger.debug(f" ================= Kuavo Humanoid SDK =================")
+        kuavo_ros_env = KuavoROSEnv()
+        if not kuavo_ros_env.Init():
+            raise RuntimeError("Failed to initialize ROS environment")
+        
         # Initialize core components, connect ROS Topics...
         kuavo_core = KuavoRobotCore()
         if log_level.upper() == 'DEBUG':
@@ -87,10 +92,6 @@ class KuavoRobot(RobotBase):
     def __init__(self):
         super().__init__(robot_type="kuavo")
         
-        kuavo_ros_env = KuavoROSEnv()
-        if not kuavo_ros_env.Init():
-            raise RuntimeError("Failed to initialize ROS environment")
-
         self._robot_info = KuavoRobotInfo()
         self._robot_arm  = KuavoRobotArm()
         self._robot_head = KuavoRobotHead()
