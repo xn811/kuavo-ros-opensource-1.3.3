@@ -103,6 +103,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/接入deepseek大模型语音交互案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/大模型联网搜索与视觉推理案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/二维码抓取水瓶案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/基于人脸识别的简易语音交互案例',
           ],
         },
         {
