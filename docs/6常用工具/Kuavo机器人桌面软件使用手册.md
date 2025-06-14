@@ -127,11 +127,17 @@
 
 ![挥手握拳抬头](images/挥手握拳抬头.jpg)
 ## 连接机器人 
-> 如希望实现此功能，先在机器人下位机运行下面脚本
+> 如希望实现此功能，先在机器人下位机运行下面命令
 ```bash
-cd <kuavo-ros-opensource/>/src/manipulation_nodes/planarmwebsocketservice/service/
+cd <kuavo-ros-opensource>/src/manipulation_nodes/planarmwebsocketservice/service/
+chmod +x websocket_deploy_script.sh 
 ./websocket_deploy_script.sh
+# 等待上面成功运行，然后运行下面命令
+cd <kuavo-ros-opensource>/tools/user_groups_tools/
+chmod +x add_user_groups.sh
+./add_user_groups.sh
 ```
+
 ### 热点连接和WIFI连接
 - 热点连接是指Windows电脑连接上机器人发出的热点，热点名为下面格式（“机器人编号”+的热点）：
 

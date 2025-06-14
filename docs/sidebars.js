@@ -71,9 +71,11 @@ const sidebars = {
           label: 'KUAVO Humanoid SDK接口',
           items: [
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/kuavo-humanoid-sdk介绍',
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/Websockts通信',
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/头部以及手部控制接口',
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/机器人信息获取接口',
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/机器人移动以及步态接口',
+            'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-sdk接口/音频播放接口',
           ],
         },
       ],
@@ -101,6 +103,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/接入deepseek大模型语音交互案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/大模型联网搜索与视觉推理案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/二维码抓取水瓶案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/基于人脸识别的简易语音交互案例',
           ],
         },
         {
