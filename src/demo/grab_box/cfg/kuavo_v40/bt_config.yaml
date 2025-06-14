@@ -5,29 +5,37 @@
 # bt_xml_file: "grab_box_in_shelves.xml"
 # bt_xml_file: "grab_put_box_in_shelves.xml"
 # bt_xml_file: "grab_multi_boxes_test.xml"
-bt_xml_file: "grab_put_box_in_shelves_with_force.xml"
+# bt_xml_file: "grab_put_box_in_shelves_with_force.xml"
 # bt_xml_file: "test/cmd_pose_world.xml"
+# bt_xml_file: "grab_put_box_in_shelves_with_force2.xml"
+# bt_xml_file: "multi_grab_put_box_in_shelves_with_force.xml"
+bt_xml_file: "repeat_grab_put_box_in_shelves_with_force.xml"
+
+bt_xml_file_reset: "../reset.xml"
 
 tick_rate: 100
 normal_torso_pitch: 3 # deg
 arm_move_time:    0.6 # s
+safe_space: [2.0, -4.0, 1.2, -1.2] # [x_+, x_-, y_+, y_-]
 grasp_box:
   ik_to_wbc:      true
   max_hand_dis:   0.02
   hand_move_spd:  0.15
+  box_holdon_move_spd:  0.4
   torso_move_spd: [0.1, 30] # m/s, deg/s
   pre_x:          0.1
   pre_y:          0.15
   bias_y:         0.00
   grab_up_height: 0.1
-  grasp_force:    15.0
+  # grasp_force:    15.0
   grasp_zyx_agl:  [35, 0, -15] # deg: y+: -> 
-  grab_traj:      [0.00, 0.15, 0.0, 0.0, 0.0, 0.0,  # pre-grasp2
-                   0.00, 0.00, 0.0, 0.0, 15.0, 0.0,  # grasp
-                   0.00, 0.00, 0.1, 0.0, 15.0, 0.0,  # lift-up
-                   -0.05, 0.00, 0.13, 0.0, 15.0, 0.0,] # take back
-  put_traj:       [0.00, 0.00, 0.0, 0.0, 15.0, 0.0,  # put
-                   0.00, 0.08, 0.1, 0.0, 0.0, 0.0,] # loose
+  grab_traj:      [0.00, 0.15, 0.00, 0.0, 0.00, 0.000,  # pre-grasp2
+                   0.00, 0.00, 0.00, 0.0, 15.0, -5.00,  # grasp
+                   0.00, 0.00, 0.10, 0.0, 15.0, -5.00,  # lift-up
+                  0.00, 0.00, 0.13, 0.0, 15.0, -5.00,] # take back
+  put_traj:       [0.00, 0.00, 0.00, 0.0, 15.0, -5.00,  # put
+                   0.00, 0.08, 0.10, 0.0, 0.00, 0.000,] # loose
+  box_holdon_pose: [0.4, 0.0, 0.15, 0.0, 10.0, -5.00] # x, y, z, force_x, force_y, force_z 
 singleStepToDestination:
   step_dt:              0.4 # s
   pub_wait_time:        0.1 # the time to wait after publishing a new step cmd
@@ -57,4 +65,4 @@ box_tag_ok:
   timeout: 0.5 # if the time-diff is larger than this, the box tag is considered not ok
 cmdPoseWorldMoveToDestination:
   xy_threshold:  0.2 # m
-  yaw_threshold: 10  # deg
+  yaw_threshold: 20  # deg

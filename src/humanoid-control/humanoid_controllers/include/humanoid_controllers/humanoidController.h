@@ -187,7 +187,9 @@ namespace humanoid_controller
     virtual void setupStateEstimate(const std::string &taskFile, bool verbose);
     void sensorsDataCallback(const kuavo_msgs::sensorsData::ConstPtr &msg);
     void startMpccallback(const std_msgs::Bool::ConstPtr &msg);
-
+    // void checkArmControlModeAndUpdateArmJoint();
+    bool armJointSynchronizationCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
+    
     void robotlocalizationCallback(const nav_msgs::Odometry::ConstPtr &msg);
     bool enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
     bool enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
@@ -296,6 +298,7 @@ namespace humanoid_controller
     ros::Publisher kinematicPub_;
     ros::Publisher lHandWrenchPub_;
     ros::Publisher rHandWrenchPub_;
+
     ros::Publisher standUpCompletePub_;
     ros::Subscriber jointPosVelSub_;
     ros::Subscriber sensorsDataSub_;
@@ -316,6 +319,8 @@ namespace humanoid_controller
     ros::Publisher mpcPolicyPublisher_;
 
     ros::Subscriber dexhand_state_sub_;
+
+    ros::ServiceServer armJointSynchronizationSrv_;
     ros::Subscriber enable_mpc_sub_;
     ros::Subscriber enable_wbc_sub_;
 

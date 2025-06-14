@@ -469,9 +469,9 @@ namespace humanoid_controller
         }
         currentArmTargetTrajectories_ = targetTrajectories;
       };
-      if (is_simplified_model_)// 简化模型需要直接从全部target的topic中去获取被简化关节的target
+      if (is_simplified_model_ || only_half_up_body_)// 简化模型需要直接从全部target的topic中去获取被简化关节的target
         arm_target_traj_sub_ =
-            controllerNh_.subscribe<ocs2_msgs::mpc_target_trajectories>(robotName_ + "_mpc_arm_commanded", 3, armTargetTrajectoriesCallback);
+            controllerNh_.subscribe<ocs2_msgs::mpc_target_trajectories>(robotName_ + ((only_half_up_body_)?"_mpc_target_arm" : "_mpc_arm_commanded"), 3, armTargetTrajectoriesCallback);
 
       gait_scheduler_sub_ = controllerNh_.subscribe<kuavo_msgs::gaitTimeName>(robotName_ + "_mpc_gait_time_name", 10, [this](const kuavo_msgs::gaitTimeName::ConstPtr &msg)
                                                                               {
@@ -511,7 +511,8 @@ namespace humanoid_controller
           for(int i = 0; i < 12; i++)
             hand_wrench_cmd_(i) = msg->data[i];
         }
-      ); 
+      );
+      armJointSynchronizationSrv_ = controllerNh_.advertiseService("/arm_joint_synchronization", &humanoidController::armJointSynchronizationCallback, this); 
       enableArmCtrlSrv_ = controllerNh_.advertiseService("/enable_wbc_arm_trajectory_control", &humanoidController::enableArmTrajectoryControlCallback, this);
       enableMmArmCtrlSrv_ = controllerNh_.advertiseService("/enable_mm_wbc_arm_trajectory_control", &humanoidController::enableMmArmTrajectoryControlCallback, this);
       getMmArmCtrlSrv_ = controllerNh_.advertiseService("/get_mm_wbc_arm_trajectory_control", &humanoidController::getMmArmCtrlCallback, this);
@@ -786,8 +787,31 @@ namespace humanoid_controller
   bool humanoidController::enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
       use_mm_arm_joint_trajectory_ = req.control_mode;
+      // if(use_mm_arm_joint_trajectory_)
+      {
+        mm_arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
+        mm_arm_joint_trajectory_.vel = vector_t::Zero(armNumReal_);
+      }
+      // arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
       res.result = true;
       return true;
+  }
+
+  bool humanoidController::armJointSynchronizationCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
+  {
+    if (req.control_mode)
+    {
+      // arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
+      mm_arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
+      res.result = true;
+      res.message = "Successfully synchronize arm joint trajectory";
+    }
+    else
+    {
+      res.result = true;
+      res.message = "disable arm joint synchronization";
+    }
+    return true;
   }
 
   bool humanoidController::getMmArmCtrlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
@@ -1328,7 +1352,6 @@ namespace humanoid_controller
       
     }
     currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
-
     if (use_ros_arm_joint_trajectory_)
     {
       // TODO: feedback in planner
@@ -1364,6 +1387,8 @@ namespace humanoid_controller
           optimizedState2WBC_mrt_.tail(armNumReal_) = mm_arm_joint_trajectory_.pos;
       }
     }
+
+
     // // use filter output
     optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
     optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
@@ -1770,7 +1795,6 @@ namespace humanoid_controller
     jointCurrentWBC_ = data.jointTorque_;
 
     quat_ = quat_init.inverse() * data.quat_;
-    
     angularVel_ = data.angularVel_;
     linearAccel_ = data.linearAccel_;
     orientationCovariance_ = data.orientationCovariance_;
@@ -1828,8 +1852,8 @@ namespace humanoid_controller
     // std::cout << "mode: " << modeNumber2String(est_mode) << std::endl;
     last_time_ = current_time_;
     ros::Duration period = ros::Duration(diff_time);
-    // std::cout << "diff_time: " << period.toSec() << std::endl;
     // std::cout << "diff_time: " << diff_time << std::endl;
+    // std::cout << "diff_time: " << period.toSec() << std::endl;
 
     vector_t activeTorque_ = jointTorque_;
     vector_t activeTorqueWBC_ =  jointCurrentWBC_;
@@ -2397,3 +2421,4 @@ namespace humanoid_controller
 } // namespace humanoid_controller
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidController)
 // PLUGINLIB_EXPORT_CLASS(humanoid_controller::humanoidCheaterController)
+

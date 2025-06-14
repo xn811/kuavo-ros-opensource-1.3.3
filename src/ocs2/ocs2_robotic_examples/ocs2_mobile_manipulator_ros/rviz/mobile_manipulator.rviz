@@ -6,8 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1
-        - /TF1
         - /TF1/Frames1
+        - /PoseArray1
+        - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 725
   - Class: rviz/Selection
@@ -73,50 +74,15 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         dummy_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        l_b_claw_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_b_claw_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_b_claw_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_b_finger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_f_claw_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_f_claw_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_f_claw_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_f_finger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         l_foot_heel:
           Alpha: 1
           Show Axes: false
@@ -203,46 +169,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         lr_foot_toe:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_b_claw_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_b_claw_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_b_claw_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_b_finger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_f_claw_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_f_claw_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_f_claw_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_f_finger:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -362,6 +288,16 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        zhead_1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        zhead_2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -379,25 +315,11 @@ Visualization Manager:
           Value: true
         camera:
           Value: false
+        camera_base:
+          Value: true
         command:
           Value: true
         dummy_link:
-          Value: false
-        l_b_claw_1:
-          Value: false
-        l_b_claw_2:
-          Value: false
-        l_b_claw_3:
-          Value: false
-        l_b_finger:
-          Value: false
-        l_f_claw_1:
-          Value: false
-        l_f_claw_2:
-          Value: false
-        l_f_claw_3:
-          Value: false
-        l_f_finger:
           Value: false
         l_foot_heel:
           Value: false
@@ -437,8 +359,6 @@ Visualization Manager:
           Value: false
         mm/base_link:
           Value: true
-        mm/head:
-          Value: false
         mm/leg_l1_link:
           Value: false
         mm/leg_l2_link:
@@ -463,6 +383,8 @@ Visualization Manager:
           Value: false
         mm/leg_r6_link:
           Value: false
+        mm/world:
+          Value: true
         mm/zarm_l1_link:
           Value: false
         mm/zarm_l2_link:
@@ -493,26 +415,12 @@ Visualization Manager:
           Value: false
         mm/zarm_r7_link:
           Value: false
-        neck_motor:
-          Value: false
+        mm/zhead_1_link:
+          Value: true
+        mm/zhead_2_link:
+          Value: true
         odom:
           Value: true
-        r_b_claw_1:
-          Value: false
-        r_b_claw_2:
-          Value: false
-        r_b_claw_3:
-          Value: false
-        r_b_finger:
-          Value: false
-        r_f_claw_1:
-          Value: false
-        r_f_claw_2:
-          Value: false
-        r_f_claw_3:
-          Value: false
-        r_f_finger:
-          Value: false
         r_foot_heel:
           Value: false
         r_foot_toe:
@@ -559,6 +467,10 @@ Visualization Manager:
           Value: false
         zarm_r7_link:
           Value: true
+        zhead_1_link:
+          Value: true
+        zhead_2_link:
+          Value: true
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -566,8 +478,6 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        dummy_link:
-          {}
         odom:
           base_link:
             leg_l1_link:
@@ -606,12 +516,6 @@ Visualization Manager:
                           {}
                         rr_foot_toe:
                           {}
-            neck_motor:
-              head:
-                camera:
-                  {}
-                radar:
-                  {}
             zarm_l1_link:
               zarm_l2_link:
                 zarm_l3_link:
@@ -619,18 +523,6 @@ Visualization Manager:
                     zarm_l5_link:
                       zarm_l6_link:
                         zarm_l7_link:
-                          l_b_claw_1:
-                            l_b_claw_2:
-                              l_b_finger:
-                                {}
-                          l_b_claw_3:
-                            {}
-                          l_f_claw_1:
-                            l_f_claw_2:
-                              l_f_finger:
-                                {}
-                          l_f_claw_3:
-                            {}
                           zarm_l7_end_effector:
                             {}
             zarm_r1_link:
@@ -640,21 +532,19 @@ Visualization Manager:
                     zarm_r5_link:
                       zarm_r6_link:
                         zarm_r7_link:
-                          r_b_claw_1:
-                            r_b_claw_2:
-                              r_b_finger:
-                                {}
-                          r_b_claw_3:
-                            {}
-                          r_f_claw_1:
-                            r_f_claw_2:
-                              r_f_finger:
-                                {}
-                          r_f_claw_3:
-                            {}
                           zarm_r7_end_effector:
                             {}
-          world:
+            zhead_1_link:
+              zhead_2_link:
+                camera:
+                  {}
+                camera_base:
+                  {}
+                radar:
+                  {}
+          dummy_link:
+            {}
+          mm/world:
             command:
               {}
             mm/base_link:
@@ -672,9 +562,6 @@ Visualization Manager:
                       mm/leg_r5_link:
                         mm/leg_r6_link:
                           {}
-              mm/neck_motor:
-                mm/head:
-                  {}
               mm/zarm_l1_link:
                 mm/zarm_l2_link:
                   mm/zarm_l3_link:
@@ -692,6 +579,9 @@ Visualization Manager:
                         mm/zarm_r6_link:
                           mm/zarm_r7_link:
                             {}
+              mm/zhead_1_link:
+                mm/zhead_2_link:
+                  {}
       Update Interval: 0
       Value: true
     - Class: rviz/MarkerArray
@@ -742,7 +632,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/planed_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -780,7 +670,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/exec_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -788,7 +678,7 @@ Visualization Manager:
       Marker Topic: /grasp_box/solved_two_hand_trajectory
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -800,8 +690,8 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
+      Axes Length: 0.10000000149011612
+      Axes Radius: 0.05000000074505806
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -811,7 +701,7 @@ Visualization Manager:
       Queue Size: 10
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
-      Shape: Arrow
+      Shape: Axes
       Topic: /tag_world_pose
       Unreliable: false
       Value: true
@@ -862,7 +752,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.637781143188477
+      Distance: 5.045795440673828
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -878,9 +768,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4253993332386017
+      Pitch: 0.5453997254371643
       Target Frame: <Fixed Frame>
-      Yaw: 6.008608341217041
+      Yaw: 5.798601150512695
     Saved: ~
 Window Geometry:
   Displays:

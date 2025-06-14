@@ -6,7 +6,7 @@
   <arg name="rviz"               default="false"/>
   <arg name="rviz_mm"            default="true"/>
   <arg name="sqp_mpc"            default="1"/>
-
+  <arg name="with_mm_ik"         default="false"/>
   <arg name="send_srv"           default="1"/>
   <arg name="ee_type"            default="qiangnao"/>
   <arg name="control_torso"      default="0" /> <!-- 0: do NOT control, 1: control torso  -->
@@ -18,6 +18,7 @@
     <arg name="joystick_type"      value="$(arg joystick_type)"/>
     <arg name="rviz"               value="$(arg rviz)"/>
     <arg name="visualize_humanoid" value="$(arg visualize_humanoid)"/>
+    <arg name="with_mm_ik"         value="$(arg with_mm_ik)"/>
   </include>
 
   <include file="$(find mobile_manipulator_controllers)/launch/mobile_manipulator_controller.launch">

@@ -38,11 +38,11 @@ public:
   void set_intial_state(const vector_t& state) override;
   
   vector_t update(const ros::Time& time, const ros::Duration& period) override;
-  nav_msgs::Odometry updateKinematics(const ros::Time &time, const Eigen::Quaterniond &imu_quat, const ros::Duration &period) override;
   void setFixFeetHeights(bool isFix) 
   {
     isFixHeight_ = isFix;
   }
+  nav_msgs::Odometry updateKinematics(const ros::Time &time, const Eigen::Quaterniond &imu_quat, const ros::Duration &period) override;
 
   void loadSettings(const std::string& taskFile, bool verbose);
   void reset() override;

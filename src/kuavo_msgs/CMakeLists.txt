@@ -96,6 +96,7 @@ add_message_files(
   jointBezierTrajectory.msg
   planArmState.msg
   RobotActionState.msg
+  tagDataArray.msg
   qv.msg
   fullBodyTargetTrajectories.msg
 
@@ -133,6 +134,7 @@ add_service_files(
 
   SpeechSynthesis.srv
   setMmCtrlFrame.srv
+  GetTargetPartPoseInCamera.srv
   ExecuteArmAction.srv
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
