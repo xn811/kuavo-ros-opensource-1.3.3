@@ -5,6 +5,9 @@ from SimpleSDK import RUIWOTools
 import sys
 import threading
 
+# 动作参数缩放因子
+SCALE_FACTOR = 0.8
+
 # 相关参数
 MOTION_DURATION = 2  # 每个动作的执行时间（秒）
 POS_KP = 30
@@ -30,9 +33,7 @@ def read_zero_positions():
         return [0.0] * 12
 
 # 获取用户输入的测试时长
-def get_test_duration():
-    # 计算完成一个完整动作周期所需的时间
-    cycle_time = len(base_actions) * MOTION_DURATION
+def get_test_duration(cycle_time):
     while True:
         try:
             duration = int(input(f"\n请输入测试时长（大于 {cycle_time:.1f} 秒）："))
@@ -83,12 +84,19 @@ def get_robot_version():
             if line.startswith("export ROBOT_VERSION=") and "#" not in line:
                 version = line.split("=")[1].strip()
                 print(f"---------- 检测到 ROBOT_VERSION = {version} ----------")
-                if version in ["41", "42", "45"]:
+                if version in ["40", "41", "42", "43", "44", "45", "46", "47", "48", "49"]:
                     return version
                 else:
                     print(f"[RUIWO motor]:Warning: ROBOT_VERSION '{version}' 不是有效值。")
                     break
-    print("[RUIWO motor]:Warning: ROBOT_VERSION 未找到或无效，需要手动输入。")
+    print("[RUIWO motor]:Warning: ROBOT_VERSION 未找到或无效，需要手动选择模式。")
+    return None  # 返回None表示需要手动选择
+
+# 获取机器人模式（长手/短手）
+def get_robot_mode():
+    print("\n请选择机器人模式：")
+    print("1. 长手模式")
+    print("2. 短手模式")
     while True:
         version = input("请输入机器人版本号（41 42 或 45）：").strip()
         if version in ["41", "42", "45"]:
@@ -138,16 +146,29 @@ short_arm_actions = [
 # 读取机器人的版本号
 robot_version = get_robot_version()
 
-# 根据版本号选择动作
-if robot_version == "41" or robot_version == "42":
-    base_actions = short_arm_actions
-    print("现在将要执行 KUAVO 机器的短手版。")
-elif robot_version == "45":
-    base_actions = long_arm_actions
-    print("现在将要执行 KUAVO 机器的长手版。")
+# 根据版本号或手动选择确定动作
+if robot_version:
+    if robot_version in ["40", "41", "42"]:
+        base_actions = short_arm_actions
+        print("现在将要执行 KUAVO 机器的短手版。")
+    elif robot_version in ["43", "44", "45", "46", "47", "48", "49"]:
+        base_actions = long_arm_actions
+        print("现在将要执行 KUAVO 机器的长手版。")
+    else:
+        print(f"[RUIWO motor]:Error: 未知的 ROBOT_VERSION '{robot_version}'，程序退出。")
+        exit(1)
 else:
-    print(f"[RUIWO motor]:Error: 未知的 ROBOT_VERSION '{robot_version}'，程序退出。")
-    exit(1)
+    # 版本号无效，手动选择模式
+    robot_mode = get_robot_mode()
+    if robot_mode == "short":
+        base_actions = short_arm_actions
+        print("现在将要执行 KUAVO 机器的短手版。")
+    elif robot_mode == "long":
+        base_actions = long_arm_actions
+        print("现在将要执行 KUAVO 机器的长手版。")
+    else:
+        print("[RUIWO motor]:Error: 未知的机器模式，程序退出。")
+        exit(1)
 
 # 等待用户确认
 input("请确认机器型号无误后，按回车键继续...")
@@ -157,7 +178,6 @@ joint_ids = read_joint_ids()
 
 # 读取零点位置
 zero_positions = read_zero_positions()
-
 # 读取电机正反转配置
 reverse_addresses = read_motor_reverse_config()
 
@@ -166,27 +186,27 @@ full_base_actions = []
 left_joint_ids = joint_ids[:6]
 right_joint_ids = joint_ids[6:]
 for action in base_actions:
-    left_action = action
+    # 对左手动作应用缩放因子
+    left_action = [pos * SCALE_FACTOR for pos in action]
     right_action = []
     for i in range(len(left_action)):
         left_id = left_joint_ids[i]
         right_id = right_joint_ids[i]
         # 判断两个关节在反向列表中的情况
         if (left_id in reverse_addresses) ^ (right_id in reverse_addresses):
-            # 一个在反向列表，一个不在，说明是镜像安装，右手取反
-            right_action.append(-action[i])
+            # 一个在反向列表，一个不在，说明是镜像安装，右手取反并应用缩放因子
+            right_action.append(-action[i] * SCALE_FACTOR)
         elif (left_id in reverse_addresses) and (right_id in reverse_addresses):
-            # 两个都在反向列表，说明是倒着安装，右手取反
-            right_action.append(-action[i])
+            # 两个都在反向列表，说明是倒着安装，右手取反并应用缩放因子
+            right_action.append(-action[i] * SCALE_FACTOR)
         else:
-            # 两个都不在反向列表，右手取反以实现对称运动
-            right_action.append(-action[i])
+            # 两个都不在反向列表，右手取反以实现对称运动并应用缩放因子
+            right_action.append(-action[i] * SCALE_FACTOR)
     full_action = left_action + right_action
     full_base_actions.append(full_action)
 
 # 创建对象
 ruiwo = RUIWOTools()
-
 # 打开CAN总线
 open_canbus = ruiwo.open_canbus()
 if not open_canbus:
@@ -207,12 +227,43 @@ if not enable_all_success:
     print("有电机使能失败，程序退出。")
     exit(1)  # 退出程序
 
-# 获取用户输入的测试时长
-test_duration = get_test_duration()
-start_time = time.perf_counter()
-
 # 计算一个完整动作周期所需的时间
 cycle_time = len(base_actions) * MOTION_DURATION
+# 获取用户输入的测试时长
+test_duration = get_test_duration(cycle_time)
+start_time = time.perf_counter()
+
+# 标记是否检测到电机失能
+motor_disabled = False
+
+# 标记是否提前结束程序
+early_exit = False
+
+# 标记是否在当前周期结束后退出
+exit_after_cycle = False
+
+# 提示用户可以输入 'q' 提前结束程序
+print("\033[92m提示：在执行过程中，输入 'q' 并回车，可以在当前完整动作周期完成后提前结束程序。\033[0m")
+
+# 创建一个线程安全的标志变量
+early_exit_event = threading.Event()
+
+# 监听键盘输入
+def listen_for_exit():
+    global early_exit, exit_after_cycle
+    while not early_exit:
+        user_input = input()
+        if user_input.strip().lower() == 'q':
+            print(f"{get_timestamp()} 用户请求提前结束程序，将在当前完整动作周期完成后停止。")
+            early_exit_event.set()
+            exit_after_cycle = True
+            early_exit = True
+
+# 启动监听线程
+listen_thread = threading.Thread(target=listen_for_exit)
+listen_thread.daemon = True  # 设置为守护线程，主线程结束时自动退出
+listen_thread.start()
+
 
 # 标记是否检测到电机失能
 motor_disabled = False
@@ -302,7 +353,6 @@ while True:
     # 检查长度是否匹配
     if len(current_positions) != len(joint_ids) or len(target_positions) != len(joint_ids):
         raise ValueError(f"动作 {current_frame_index + 1} 的位置列表长度不匹配。当前长度: {len(current_positions)}，目标长度: {len(target_positions)}，关节数量: {len(joint_ids)}")
-
     steps = MOTION_DURATION * UPDATE_FREQUENCY  # MOTION_DURATION 秒内发送的步数
     step_start_time = elapsed_time % MOTION_DURATION
 
@@ -310,7 +360,7 @@ while True:
         for step in range(int(steps)):
             loop_start = time.perf_counter()
             for joint_index, dev_id in enumerate(joint_ids):
-                # 计算当前位置到目标位置的插值
+                # 计算当前位置到目标位置的插值，已经包含缩放因子
                 interpolated_pos = current_positions[joint_index] + (target_positions[joint_index] - current_positions[joint_index]) * (step / steps)
                 zero_position = zero_positions[joint_index]
                 compensated_pos = interpolated_pos + zero_position  # 应用零点补偿
@@ -325,7 +375,6 @@ while True:
             remaining_time = UPDATE_INTERVAL - elapsed_time
             if remaining_time > 0:
                 time.sleep(remaining_time)
-
         print(f"{get_timestamp()} 动作 {current_frame_index + 1} 执行完成，开始向位置 {next_frame_index + 1} 运动")
 
 # 在程序结束时返回到零点位置
