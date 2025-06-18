@@ -10,11 +10,8 @@
 - 示教功能文档补充说明示教模式启动机器人需要按‘o’后才开始记录，[文档链接](./src/manipulation_nodes/teach_pendant/readme.md)
 - 运动控制 API 文档新增电机Kp/Kd 参数 ROS 服务接口描述，[文档链接](./docs/运动控制API.md)
 - Kuavo Humanoid SDK 增加搬箱子策略模块使用文档，[文档链接](./src/kuavo_humanoid_sdk/README.md)
-- 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
-- Kuavo Humanoid SDK Websocket 版新增 SDK 启动并站立和停止机器人功能
-- Kuavo Humanoid SDK 新增搬箱子策略模块测试案例， gazebo 仿真场景默认开启灯光
 - Kuavo Humanoid SDK 原子技能接口增加末端力控制，搬运箱子策略模块放下箱子后添加安全后退保护，搬运箱子案例添加末端力控制夹紧箱子
 - 新增数据截断和关节保护使能参数,默认不启动
 - 新增电机跟随性测试工具，[使用文档](./tools/check_tool/selfCheckScripts/README.md)
@@ -30,9 +27,6 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
-- 修复半身VR XA切换控制模式手臂不插值，导致机器人手臂抽搐
-- 修复 h12 遥控器以及 root 用户启动时无法收集到 git 仓库信息问题
-- 修复行为树搬箱子案例中，在控制手臂的情况下，初始状态会出现抖动的问题
 - Kuavo Humanoid SDK 修复音频模块的消息格式错误问题
 - 修复半身/轮臂机器人会触发 WBC pullup 问题
 - 修复手臂轨迹规划demo不能控制手指和头部关节
@@ -54,7 +48,6 @@
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
-- 增加时频域分析脚本，用于分析手臂末端的运动跟踪性能，从时域和频域的角度定量的分析跟踪效果、各环节间的延迟
 - 优化上下位机 DHCP 配置工具，默认下位机为DHCP分配主机并增加声卡 udev 规则配置
 - 取消 MobileManipulatorController 启动时一直打印等待`com_height`参数的日志
 - 取消 MobileManipulatorController 节点启动时一直刷屏提示等待接收观测数据
