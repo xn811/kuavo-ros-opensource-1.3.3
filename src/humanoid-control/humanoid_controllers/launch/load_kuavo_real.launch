@@ -79,6 +79,7 @@
     <!-- MPC调度相关参数 -->
     <param name="/mpc/schedule/enable" value="false"/>
     <param name="/mpc/schedule/start_time" value="-1.0"/>
+    <param name="/timeout_warning_ms" value="20"/>
 
     <group if="$(eval arg('teach_pendant') == 1)">
       <param name="stand_up_protect" value="false"/>

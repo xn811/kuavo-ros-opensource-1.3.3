@@ -155,6 +155,10 @@ namespace humanoid_controller
     kuavo_settings_ = drake_interface_->getKuavoSettings();
     scalar_t comHeight = drake_interface_->getIntialHeight();
     ros::param::set("/com_height", comHeight);
+    if (ros::param::has("/timeout_warning_ms"))
+    {
+      ros::param::get("/timeout_warning_ms", timeout_warning_ms_);
+    }
     auto &motor_info = kuavo_settings_.hardware_settings;
     headNum_ = motor_info.num_head_joints;
     armNumReal_ = motor_info.num_arm_joints;
@@ -1695,16 +1699,7 @@ namespace humanoid_controller
       robotVisualizer_->updateHandJointPositions(dexhand_joint_pos_);
     }
 
-    //Publish the observation. Only needed for the command interface
-    const auto t6 = Clock::now();
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count() > 1000)
-    {
-      std::cout << "t1-t2: " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " ms" << std::endl;
-      std::cout << "t2-t3: " << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count() << " ms" << std::endl;
-      std::cout << "t3-t4: " << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count() << " ms" << std::endl;
-      std::cout << "t4-t5: " << std::chrono::duration_cast<std::chrono::milliseconds>(t5 - t4).count() << " ms" << std::endl;
-      std::cout << "t5-t6: " << std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t5).count() << " ms" << std::endl;
-    }
+   
 
     // publish time cost
     std_msgs::Float64 msg;
@@ -1717,6 +1712,19 @@ namespace humanoid_controller
     ros_logger_->publishValue("/monitor/time_cost/controller_loop_time", (ros::Time::now().toSec() - last_ros_time) * 1000);
     last_ros_time = ros::Time::now().toSec();
     lastObservation_ = currentObservation_;
+
+     //Publish the observation. Only needed for the command interface
+    const auto t6 = Clock::now();
+    auto time_cost = std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t1).count();
+    if (time_cost > timeout_warning_ms_)
+    {
+      std::cerr << "humanoidController::controllerLoop time cost: "<< time_cost << " ms" << std::endl;
+      std::cerr << "t1-t2: " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " ms" << std::endl;
+      std::cerr << "t2-t3: " << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count() << " ms" << std::endl;
+      std::cerr << "t3-t4: " << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count() << " ms" << std::endl;
+      std::cerr << "t4-t5: " << std::chrono::duration_cast<std::chrono::milliseconds>(t5 - t4).count() << " ms" << std::endl;
+      std::cerr << "t5-t6: " << std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t5).count() << " ms" << std::endl;
+    }
   }
 
   void humanoidController::applySensorData()

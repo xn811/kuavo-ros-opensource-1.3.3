@@ -452,6 +452,7 @@ namespace humanoid_controller
     ros::Publisher sensor_data_raw_pub_;
     feet_array_t<vector3_t> foot_pos_desired_;
     bool visualizeHumanoid_ = true;
+    double timeout_warning_ms_ = 1000;
 
     std::vector<std::pair<double, double> > head_joint_limits_ = {{-80, 80}, {-25, 25}};
 
