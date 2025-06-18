@@ -100,7 +100,7 @@ namespace ocs2
         if (estContactforce_.size() < 12)
           return false;
           
-        double new_total_est_contact_force_ = estContactforce_[2] + estContactforce_[8];
+        double new_total_est_contact_force_ = std::max(estContactforce_[2], 0.0) + std::max(estContactforce_[8], 0.0);
         // ros_logger_->publishValue("/state_estimate/checkPullUp/new_total_est_contact_force_", new_total_est_contact_force_);
         total_est_contact_force_ = total_est_contact_force_ * (1 - alpha) + new_total_est_contact_force_ * alpha;
         ros_logger_->publishValue("/state_estimate/checkPullUp/total_est_contact_force_", total_est_contact_force_);

@@ -93,7 +93,7 @@ class KuavoGraspBoxUtils:
         while yaw < -math.pi:
             yaw += 2 * math.pi
         return yaw
-    
+
 @dataclass
 class BoxInfo:
     """箱子信息数据类
@@ -102,19 +102,19 @@ class BoxInfo:
     
     Attributes:
         pose (KuavoPose): 箱子的位姿信息
-        size (Tuple[float, float, float]): 箱子的尺寸 (长, 宽, 高) 单位: 米
+        size (Tuple[float, float, float]): 箱子的尺寸 ( 宽, 长, 高) 单位: 米
         mass (float): 箱子的质量 单位: 千克 
     """
     pose: KuavoPose
-    size: Tuple[float, float, float] = (0.4, 0.3, 0.22)  # 默认箱子尺寸
-    mass: float = 2.0  # 默认箱子质量(kg)
-    
-    def __init__(self, pose: KuavoPose = None, size: Tuple[float, float, float] = (0.4, 0.3, 0.22), mass: float = 2.0):
+    size: Tuple[float, float, float] = (0.3, 0.4, 0.22)  # 默认箱子尺寸
+    mass: float = 1.5  # 默认箱子质量(kg)
+
+    def __init__(self, pose: KuavoPose = None, size: Tuple[float, float, float] = (0.3, 0.4, 0.22), mass: float = 2.0):
         """初始化箱子信息
 
         Args:
             pose (KuavoPose, optional): 箱子的位姿信息. 默认为 None
-            size (Tuple[float, float, float], optional): 箱子尺寸(长,宽,高). 默认为 (0.4, 0.3, 0.22)
+            size (Tuple[float, float, float], optional): 箱子尺寸(长,宽,高). 默认为 (0.3, 0.4, 0.22)
             mass (float, optional): 箱子质量(kg). 默认为 2.0
         """
         self.pose = pose
@@ -151,19 +151,6 @@ class BoxInfo:
             orientation=KuavoGraspBoxUtils.util_euler_to_quat([0, 0, yaw_world])
         )
         return cls(pose, size, mass)
-
-    def __str__(self) -> str:
-        """返回箱子信息的字符串表示
-        
-        Returns:
-            str: 格式化的箱子信息字符串
-        """
-        return (
-            f"\n位置: ({self.pose.position[0]:.3f}, {self.pose.position[1]:.3f}, {self.pose.position[2]:.3f})"
-            f"\n朝向: ({self.pose.orientation[0]:.3f}, {self.pose.orientation[1]:.3f}, {self.pose.orientation[2]:.3f}, {self.pose.orientation[3]:.3f})"
-            f"\n尺寸: {self.size[0]:.2f}m × {self.size[1]:.2f}m × {self.size[2]:.2f}m"
-            f"\n质量: {self.mass:.1f}kg"
-        )
     
 class KuavoGraspBox(KuavoRobotStrategyBase):
     """箱子抓取策略类，继承自基础策略类"""
@@ -182,8 +169,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 箱子抓取相关的配置参数
         self.search_timeout = 20.0  # 搜索超时时间(秒)
         self.approach_timeout = 30.0  # 接近超时时间(秒)
-        self.grasp_height_offset = 0.2  # 抓取高度偏移量(米)
-        self.grasp_horizontal_offset = -0.2  # 手指与箱子表面的偏移量，取反为远离箱子 | 取正为靠近箱子
+        self.grasp_height_offset = 0.15  # 抓取高度偏移量(米)
+        self.grasp_horizontal_offset = -0.20  # 手指与箱子表面的偏移量，取反为远离箱子 | 取正为靠近箱子
         # 存放头部寻找AprilTag的目标，初始化为异常ID 9999
         self.head_find_target_current_info_pose = AprilTagData(
             id=[9999],  # 异常ID
@@ -287,7 +274,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         # 执行头部搜索模式，无论search_pattern是什么
         # 定义头部搜索参数（角度制）
-        pitch_angles_deg = [12, -12]  # 两档pitch角度：抬头和低头，角度制
+        pitch_angles_deg = [25, -25]  # 两档pitch角度：抬头和低头，角度制
         yaw_angles_deg = [-30, -15, 0, 15, 30]  # 左右扫描的yaw角度，角度制
         
         # 在超时前循环搜索
@@ -775,12 +762,20 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
 
             # 5. 收臂姿态
             # 定义base_link坐标系下的目标姿态
+            # l_arm_base_target_pose = KuavoPose(
+            #     position=(0.499, 0.121, 0.370),
+            #     orientation=[-0.107, -0.758, 0.063, 0.641]
+            # )
+            # r_arm_base_target_pose = KuavoPose(
+            #     position=(0.499, -0.121, 0.370),
+            #     orientation=[-0.026, -0.765, 0.049, 0.642]
+            # )
             l_arm_base_target_pose = KuavoPose(
-                position=(0.499, 0.121, 0.370),
+                position=(0.4, half_width, 0.370),
                 orientation=[-0.107, -0.758, 0.063, 0.641]
             )
             r_arm_base_target_pose = KuavoPose(
-                position=(0.499, -0.121, 0.370),
+                position=(0.4, -half_width, 0.370),
                 orientation=[-0.026, -0.765, 0.049, 0.642]
             )
 
@@ -803,11 +798,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
 
             # 6. 放置姿态（放下箱子）
             l_arm_put_away_base_pose = KuavoPose(
-                position=(0.499, 0.351, 0.160),
+                position=(0.419, half_width, 0.160),
                 orientation=[-0.107, -0.758, 0.063, 0.641]
             )
             r_arm_put_away_base_pose = KuavoPose(
-                position=(0.499, -0.351, 0.160),
+                position=(0.419, -half_width, 0.160),
                 orientation=[-0.026, -0.765, 0.049, 0.642]
             )
             base_to_odom = self.tools.get_tf_transform("odom", "base_link")
@@ -819,10 +814,19 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             right_place = self._transform_to_odom(r_arm_put_away_base_pose, base_to_odom)
 
             # 7. 松开手臂
+            """
+                left_hand_pose.position[0] + self.grasp_horizontal_offset * np.sin(box_yaw),
+                left_hand_pose.position[1] - self.grasp_horizontal_offset * np.cos(box_yaw),
+                left_hand_pose.position[2]
+
+                right_hand_pose.position[0] - self.grasp_horizontal_offset * np.sin(box_yaw),
+                right_hand_pose.position[1] + self.grasp_horizontal_offset * np.cos(box_yaw),
+                right_hand_pose.position[2]
+            """
             left_release = KuavoPose(
                 position=(
-                    left_place.position[0],
-                    left_place.position[1] - self.grasp_horizontal_offset,
+                    left_place.position[0] + self.grasp_horizontal_offset * np.sin(box_yaw),
+                    left_place.position[1] - self.grasp_horizontal_offset * np.cos(box_yaw),
                     left_place.position[2]
                 ),
                 orientation=left_place.orientation
@@ -830,11 +834,24 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             
             right_release = KuavoPose(
                 position=(
-                    right_place.position[0],
-                    right_place.position[1] + self.grasp_horizontal_offset,
+                    right_place.position[0] - self.grasp_horizontal_offset * np.sin(box_yaw),
+                    right_place.position[1] + self.grasp_horizontal_offset * np.cos(box_yaw),
                     right_place.position[2]
                 ),
                 orientation=right_place.orientation
+            )
+
+            # 8.获取一下当前最近更新的位置，用于后续的轨迹计算
+            left_current_position, left_current_orientation = self.tools.get_link_position(link_name="zarm_l7_end_effector", reference_frame="odom")
+            right_current_position, right_current_orientation = self.tools.get_link_position(link_name="zarm_r7_end_effector", reference_frame="odom")
+
+            left_current = KuavoPose(
+                position=left_current_position,
+                orientation=left_current_orientation
+            )
+            right_current = KuavoPose(
+                position=right_current_position,
+                orientation=right_current_orientation
             )
 
             # 根据轨迹类型返回对应的姿态
@@ -843,9 +860,9 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             elif traj_type == "lift":
                 return left_grasp, right_grasp, left_lift, right_lift
             elif traj_type == "pull":
-                return left_lift, right_lift, left_pull, right_pull
+                return left_current, right_current, left_pull, right_pull
             elif traj_type == "place":
-                return left_pull, right_pull, left_place, right_place
+                return left_current, right_current, left_place, right_place
             elif traj_type == "release":
                 return left_place, right_place, left_release, right_release
             else:
@@ -880,14 +897,20 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         try:
             # 将目标位置转换到base_link坐标系
             target_pose_base = self._transform_to_base_link(target_info.pose)
-            # 获取左右臂关节位置（base_link坐标系）
-            l_joint_pos = self.tools.get_link_position("zarm_l1_link")
-            r_joint_pos = self.tools.get_link_position("zarm_r1_link")
-            # 计算目标到左右臂关节的水平距离
+            
+            # 获取左右臂关节位置（需要解包位置和姿态）
+            l_pos, _ = self.tools.get_link_position("zarm_l1_link")  # 解包位置和姿态
+            r_pos, _ = self.tools.get_link_position("zarm_r1_link")  # 只取位置部分
+            
+            # 转换为numpy数组
             target_pos = np.array(target_pose_base.position)
+            l_joint_pos = np.array(l_pos)
+            r_joint_pos = np.array(r_pos)
+
+            # 计算水平距离（只取x,y坐标）
             l_distance = np.linalg.norm(target_pos[:2] - l_joint_pos[:2])
             r_distance = np.linalg.norm(target_pos[:2] - r_joint_pos[:2])
-            
+
             print(f"[位置安全检查] 左臂距离: {l_distance:.2f}m, 右臂距离: {r_distance:.2f}m, 安全阈值: {self.workspace_radius:.2f}m")
             
             # 检查是否在安全范围内
@@ -951,12 +974,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         print("执行预抓取姿态到抓取姿态的轨迹...")
         left_traj_grasp = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
         right_traj_grasp = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
-        self._execute_trajectory(left_traj_grasp, right_traj_grasp)
-
-        time.sleep(2)
-        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
-        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
-        
+        self._execute_trajectory(left_traj_grasp, right_traj_grasp)       
         return True
 
     def _check_box_lifting_status(self, target_info:BoxInfo) -> bool:
@@ -1039,31 +1057,44 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             return False
 
         # 执行抬起轨迹
+        print("执行抬起轨迹")
         left_traj_lift = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
         right_traj_lift = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
         self._execute_trajectory(left_traj_lift, right_traj_lift)
+        time.sleep(2)
+        
+        # 暂时关闭
+        self.robot.manipulation_mpc_reset()
+        time.sleep(2)
+        
+        # 机器人往后退
+        self.robot.stance()
+        time.sleep(2)
+        self.robot.control_command_pose(-0.5, 0, 0, 0)
+        time.sleep(5) # 等待机器人执行到位 
 
-        time.sleep(1)
-
+        # 执行收臂轨迹
+        print("执行收臂轨迹")
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="pull")
         if left_pose_init is None:
             return False
-
-        # 执行收臂轨迹
+        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
+        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
         left_traj_pull = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)    # left_pose_init left_pose_target
         right_traj_pull = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target) #  right_pose_init right_pose_target
         self._execute_trajectory(left_traj_pull, right_traj_pull)
 
         if not self._check_box_lifting_status(target_info):
             return False
-        
-        time.sleep(2)
-        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
-        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
-        
+
+        # 暂时关闭
+        self.robot.manipulation_mpc_reset()
+        time.sleep(5)
+
         return True
+
     
-    def _arrive_pose(self, target_position: list, target_yaw: float, timeout: float = 10.0) -> bool:
+    def _arrive_pose(self, target_position: list, target_yaw: float, timeout: float = 20.0) -> bool:
         """控制机器人移动到指定位姿并等待到达
         
         Args:
@@ -1186,20 +1217,29 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="release")
         if left_pose_init is None:
             return False        
-        
+
+        # 执行放开轨迹
+        left_traj_place = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
+        right_traj_place = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
+        self._execute_trajectory(left_traj_place, right_traj_place)
         time.sleep(2)
-        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)
-        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.ThroughFullBodyMpc)
-        time.sleep(1)
+        
         self.robot.manipulation_mpc_reset()
+        time.sleep(2)
 
         # 机器人往后退 0.5m
+        self.robot.stance()
+        time.sleep(2)
         self.robot.control_command_pose(-0.5, 0, 0, 0)
-        time.sleep(1)
+        time.sleep(5)
 
         # 手臂归中
+        self.robot.disable_head_tracking()
+        self.robot.stance()
+        time.sleep(0.5)
         self.robot.arm_reset() 
-        time.sleep(1)
+        time.sleep(2)
+
         return True
 
     def _wait_for_orientation(self, target_angle, max_wait_time=10.0, angle_threshold=0.1):

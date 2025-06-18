@@ -75,7 +75,7 @@ class KuavoRobotTools:
                 return_type="pose_quaternion"
             )
             if transform:
-                return transform.position
+                return transform.position, transform.orientation
             return None
         except Exception as e:
             SDKLogger.error(f"获取{link_name}位置失败: {str(e)}")

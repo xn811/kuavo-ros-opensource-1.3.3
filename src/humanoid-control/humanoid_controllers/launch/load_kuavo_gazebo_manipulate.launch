@@ -93,7 +93,7 @@
     </node>
     <group unless="$(arg play_back)">
       <include file="$(find gazebo_sim)/launch/gazebo-sim.launch">
-        <arg name="use_grab_box_scene" value="false"/>
+        <arg name="use_grab_box_scene" value="true"/>
         <arg name="world_name" value="$(find gazebo_sim)/worlds/grab_box.world"/>
       </include>
     </group>
