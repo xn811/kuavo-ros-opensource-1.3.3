@@ -72,6 +72,7 @@
     <!-- MPC调度相关参数 -->
     <param name="/mpc/schedule/enable" value="false"/>
     <param name="/mpc/schedule/start_time" value="-1.0"/>
+    <param name="/timeout_warning_ms" value="20"/>
 
     <!-- mpc node -->
     <group if="$(arg use_external_mpc)">
