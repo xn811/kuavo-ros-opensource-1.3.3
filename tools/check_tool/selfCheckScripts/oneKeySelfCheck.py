@@ -45,7 +45,16 @@ target_logs = [
     "测试手臂电机成功!!!",
     "测试手臂电机失败!!!",
     "当前cali位置是否正确，[y/n] 输入[y]进入到准备姿态(执行完后可以输入[x]退出程序)",
-    "输入x退出程序："
+    "输入x退出程序：",
+    # 新增电机跟随测试相关的关键词
+    "正在测试电机对:",
+    "左电机误差方差:",
+    "右电机误差方差:",
+    "相似性：",
+    "本轮电机对测试结果：",
+    "test complete.",
+    "Switching to joint pair",
+    "电机对进度:"
 ]
 
 # 获取当前脚本所在的目录
@@ -136,6 +145,7 @@ def input_thread(process):
                 
                 # 如果输入x则退出
                 if user_input.lower() == 'x':
+                    print("收到退出命令，正在结束测试...")
                     roslaunch_running = False
                     break
                     
@@ -228,6 +238,8 @@ def run_motor_follow_test():
                     ]
     if not check_package_compiled(package_name_list):
         return 1
+    
+    process = None  # 初始化process变量
     try:
         if installedFound:
             print("exe in installed")
@@ -247,8 +259,23 @@ def run_motor_follow_test():
             print_colored_text("未找到编译产物！", color="red", bold=True)
             return 1  # 提前返回，避免后续代码执行
 
-                # 定义输出文件路径
+        # 定义输出文件路径
         output_file_path = "./motorTest/motor_follow_output.log"
+
+        # 确保输出目录存在
+        os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+
+        # 初始化进度跟踪变量
+        current_pair = 0
+        total_pairs = 13  # 总共13对电机
+        test_results = []
+        test_details = []  # 存储每对电机的详细信息
+        current_pair_progress = {"left": 0, "right": 0}  # 当前电机对的周期进度
+        current_motor_pair = None  # 当前测试的电机对索引
+        
+        print_colored_text("=== 电机跟随性测试开始 ===", color="green", bold=True)
+        print_colored_text(f"总共需要测试 {total_pairs} 对电机", color="blue", bold=True)
+        print_colored_text("=" * 50, color="blue")
 
         # 打开文件以写入模式
         with open(output_file_path, 'w') as output_file:
@@ -271,6 +298,7 @@ def run_motor_follow_test():
             clickable_link = f"\x1b]8;;file://{output_file_path}\x1b\\{output_file_path}\x1b]8;;\x1b\\"
             print(f"电机跟随性测试已启动，输出已保存到 {clickable_link}")
             print("按Ctrl+C退出，或输入x结束测试...")
+            print()
 
             # 启动输入线程处理用户输入
             motor_thread = threading.Thread(target=input_thread,args=(process,),daemon=True)
@@ -286,7 +314,176 @@ def run_motor_follow_test():
                     # 检查是否为目标日志信息
                     for target_log in target_logs:
                         if target_log in line:
-                            print(line.strip())
+                            line_stripped = line.strip()
+                            
+                            # 处理不同的输出类型
+                            if "电机对进度:" in line_stripped:
+                                # 解析电机对进度
+                                try:
+                                    # 格式: "电机对进度: 1 | 左周期: 4/10 | 右周期: 6/10"
+                                    parts = line_stripped.split("|")
+                                    if len(parts) >= 3:
+                                        pair_info = parts[0].split(":")
+                                        left_info = parts[1].split(":")
+                                        right_info = parts[2].split(":")
+                                        
+                                        pair_num = int(pair_info[1].strip())
+                                        left_cycle = int(left_info[1].strip().split("/")[0])
+                                        right_cycle = int(right_info[1].strip().split("/")[0])
+                                        
+                                        # 更新当前电机对进度
+                                        current_pair_progress["left"] = left_cycle
+                                        current_pair_progress["right"] = right_cycle
+                                        
+                                        # 计算当前电机对的完成百分比
+                                        left_progress = (left_cycle / 10) * 100
+                                        right_progress = (right_cycle / 10) * 100
+                                        avg_progress = (left_progress + right_progress) / 2
+                                        
+                                        # 显示当前电机对进度
+                                        left_bar = "█" * int(left_progress / 5) + "░" * (20 - int(left_progress / 5))
+                                        right_bar = "█" * int(right_progress / 5) + "░" * (20 - int(right_progress / 5))
+                                        
+                                        print(f"\r🔄 电机对 {pair_num}: 左电机 [{left_bar}] {left_cycle}/10 | 右电机 [{right_bar}] {right_cycle}/10 | 平均: {avg_progress:.1f}%", end="", flush=True)
+                                except:
+                                    pass
+                            
+                            elif "Switching to joint pair" in line_stripped:
+                                # 这是测试开始的信号，更新进度
+                                print()  # 换行，结束当前进度条
+                                current_pair += 1
+                                progress = (current_pair / total_pairs) * 100
+                                progress_bar = "█" * int(progress / 2) + "░" * (50 - int(progress / 2))
+                                print_colored_text(f"🔄 开始测试第 {current_pair} 对电机", color="yellow", bold=True)
+                                print_colored_text(f"总进度: [{progress_bar}] {progress:.1f}% ({current_pair}/{total_pairs})", color="cyan")
+                                # 重置当前电机对进度
+                                current_pair_progress = {"left": 0, "right": 0}
+                            
+                            elif "正在测试电机对:" in line_stripped:
+                                # 提取电机对编号并显示
+                                try:
+                                    parts = line_stripped.split(":")
+                                    if len(parts) >= 2:
+                                        motor_info = parts[1].strip()
+                                        current_motor_pair = motor_info  # 记录当前电机对
+                                        print_colored_text(f"📊 分析电机对: {motor_info}", color="blue", bold=True)
+                                except:
+                                    print_colored_text(f"📊 {line_stripped}", color="blue", bold=True)
+                            
+                            elif "左电机误差方差:" in line_stripped or "右电机误差方差:" in line_stripped:
+                                if "[异常]" in line_stripped:
+                                    print_colored_text(f"❌ {line_stripped}", color="red")
+                                else:
+                                    print_colored_text(f"✅ {line_stripped}", color="green")
+                            
+                            elif "相似性：" in line_stripped:
+                                if "[异常]" in line_stripped:
+                                    print_colored_text(f"❌ {line_stripped}", color="red")
+                                else:
+                                    print_colored_text(f"✅ {line_stripped}", color="green")
+                            
+                            elif "本轮电机对测试结果：" in line_stripped:
+                                if "异常" in line_stripped:
+                                    print_colored_text(f"❌ {line_stripped}", color="red", bold=True)
+                                    test_results.append("异常")
+                                    # 记录异常电机对的详细信息
+                                    if current_motor_pair:
+                                        test_details.append({
+                                            "pair": current_pair,
+                                            "motors": current_motor_pair,
+                                            "result": "异常"
+                                        })
+                                else:
+                                    print_colored_text(f"✅ {line_stripped}", color="green", bold=True)
+                                    test_results.append("正常")
+                                    # 记录正常电机对的详细信息
+                                    if current_motor_pair:
+                                        test_details.append({
+                                            "pair": current_pair,
+                                            "motors": current_motor_pair,
+                                            "result": "正常"
+                                        })
+                                print()  # 添加空行分隔
+                            
+                            elif "test complete." in line_stripped:
+                                print()  # 确保换行
+                                print_colored_text(f"🎉 {line_stripped}", color="green", bold=True)
+                                print_colored_text("=" * 50, color="blue")
+                                
+                                # 显示测试总结
+                                print_colored_text("=== 电机跟随性测试总结 ===", color="green", bold=True)
+                                normal_count = test_results.count("正常")
+                                abnormal_count = test_results.count("异常")
+                                print_colored_text(f"总测试对数: {len(test_results)}", color="blue")
+                                print_colored_text(f"正常: {normal_count} 对", color="green")
+                                print_colored_text(f"异常: {abnormal_count} 对", color="red")
+                                
+                                if abnormal_count == 0:
+                                    print_colored_text("🎉 所有电机对测试通过！", color="green", bold=True)
+                                else:
+                                    print_colored_text(f"⚠️  有 {abnormal_count} 对电机测试异常，请检查相关电机", color="red", bold=True)
+                                    
+                                    # 显示异常电机组的详细信息
+                                    print_colored_text("\n📋 异常电机组详情:", color="yellow", bold=True)
+                                    abnormal_pairs = [detail for detail in test_details if detail["result"] == "异常"]
+                                    for i, detail in enumerate(abnormal_pairs, 1):
+                                        print_colored_text(f"  {i}. 电机组 {detail['pair']}: 电机 {detail['motors']}", color="red")
+                                
+                                # 询问用户是否显示图像
+                                print_colored_text("=" * 50, color="blue")
+                                print_colored_text("📊 测试数据已保存，是否生成波形图像？", color="yellow", bold=True)
+                                print_colored_text("图像将显示每对电机的输入信号和响应信号对比", color="cyan")
+                                print_colored_text("输入 'y' 生成图像，输入其他键跳过", color="cyan")
+                                
+                                try:
+                                    user_choice = input("请选择 (y/其他): ").strip().lower()
+                                    if user_choice == 'y':
+                                        print_colored_text("🔄 正在生成波形图像...", color="yellow", bold=True)
+                                        
+                                        # 切换到motorTest目录
+                                        motor_test_dir = os.path.join(current_dir, "motorTest")
+                                        if os.path.exists(motor_test_dir):
+                                            # 保存当前工作目录
+                                            original_cwd = os.getcwd()
+                                            try:
+                                                # 切换到motorTest目录
+                                                os.chdir(motor_test_dir)
+                                                
+                                                # 运行drawWaveform脚本
+                                                draw_waveform_script = os.path.join(motor_test_dir, "drawWaveform.py")
+                                                if os.path.exists(draw_waveform_script):
+                                                    result = subprocess.run(['python3', draw_waveform_script], 
+                                                                          capture_output=True, text=True)
+                                                    
+                                                    if result.returncode == 0:
+                                                        print_colored_text("✅ 波形图像生成成功！", color="green", bold=True)
+                                                        print_colored_text("📁 图像保存位置:", color="blue")
+                                                        print_colored_text("   - 组合图像: ./motorTest/grouped_images/", color="cyan")
+                                                        
+                                                        # 检查是否有异常电机，如果有则特别提醒
+                                                        if abnormal_count > 0:
+                                                            print_colored_text(f"💡 建议查看异常电机的波形图像进行详细分析", color="yellow")
+                                                    else:
+                                                        print_colored_text("❌ 波形图像生成失败", color="red", bold=True)
+                                                        if result.stderr:
+                                                            print_colored_text(f"错误信息: {result.stderr}", color="red")
+                                                else:
+                                                    print_colored_text("❌ 未找到 drawWaveform.py 脚本", color="red", bold=True)
+                                            finally:
+                                                # 恢复原始工作目录
+                                                os.chdir(original_cwd)
+                                        else:
+                                            print_colored_text("❌ 未找到 motorTest 目录", color="red", bold=True)
+                                    else:
+                                        print_colored_text("⏭️  跳过图像生成", color="blue")
+                                except KeyboardInterrupt:
+                                    print_colored_text("\n⏭️  用户取消，跳过图像生成", color="blue")
+                                except Exception as e:
+                                    print_colored_text(f"❌ 图像生成过程中出错: {e}", color="red", bold=True)
+                            
+                            else:
+                                # 其他目标日志信息
+                                print(line_stripped)
 
             # 等待进程结束
             process.wait()
@@ -295,8 +492,17 @@ def run_motor_follow_test():
     except Exception as e:
         print_colored_text(f"发生错误: {e}", color="red", bold=True)
     finally:
+        # 确保进程已终止
+        if process and process.poll() is None:
+            try:
+                process.terminate()
+                process.wait(timeout=2)
+                if process.poll() is None:
+                    process.kill()
+            except Exception as e:
+                print(f"终止进程时出错: {e}")
         roslaunch_running = False
-    
+
 
 def run_roslaunch():
     global roslaunch_running
@@ -309,6 +515,8 @@ def run_roslaunch():
                     ]
     if not check_package_compiled(package_name_list):
         return 1
+    
+    process = None  # 初始化process变量
     try:
         # 构造完整的启动命令
         print("develFound:", develFound)
@@ -382,6 +590,7 @@ def run_roslaunch():
             process.wait(timeout=2)
             if process.poll() is None:
                 process.kill()
+        roslaunch_running = False
 
 
 if __name__ == "__main__":
@@ -395,18 +604,25 @@ if __name__ == "__main__":
             print("3. h12遥控器信号检测")
             print("4. 电机跟随性测试")
             print("0. 退出")
-            choice = input("输入选项: ")
+            try:
+                choice = input("输入选项: ")
 
-            if choice == '1':
-                run_roslaunch()  # 启动roslaunch（假设其内部有独立的退出逻辑）
-            elif choice == '2':
-                subprocess.run(['python3', OneKeyCheckSalveComputer_path])
-            elif choice == '3':
-                h12_remote_control_detection()
-            elif choice == '4':
-                run_motor_follow_test()
-            elif choice == '0':
-                print("退出程序。")
+                if choice == '1':
+                    run_roslaunch()  # 启动roslaunch（假设其内部有独立的退出逻辑）
+                elif choice == '2':
+                    subprocess.run(['python3', OneKeyCheckSalveComputer_path])
+                elif choice == '3':
+                    h12_remote_control_detection()
+                elif choice == '4':
+                    run_motor_follow_test()
+                elif choice == '0':
+                    print("退出程序。")
+                    run_flag = False
+                else:
+                    print_colored_text(f"无效的选项，请重新输入...", color="yellow", bold=True)
+            except KeyboardInterrupt:
+                print("\n收到Ctrl+C，退出程序。")
                 run_flag = False
-            else:
-                print_colored_text(f"无效的选项，请重新输入...", color="yellow", bold=True)
+            except Exception as e:
+                print_colored_text(f"发生错误: {e}", color="red", bold=True)
+                print("返回主菜单...")
