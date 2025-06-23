@@ -123,24 +123,18 @@ gazebo 仿真运行
     在运行之前, 需要确认机器人版本 ``ROBOT_VERSION=45`` ，否则会机器人末端控制会有问题
 
 .. warning::
-    在运行之前, 需要先关闭 ``basePitchLimits`` 保护参数，否则会导致机器人搬运时摔倒
-    即修改 ``src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info`` 中:
-
-    .. code-block:: text
-
-        basePitchLimits
-        {
-            enable                 false
-            ...
-        }
-
-.. warning::
     在运行之前, 需要修改 ``src/demo/grab_box/cfg/kuavo_v45/bt_config.yaml`` 中的 ``safe_space`` 参数:
 
     .. code-block:: yaml
     
         safe_space: [2.0, -4.0, 1.2, -1.2] # [x_+, x_-, y_+, y_-]
+    
+    更改为:
 
+    .. code-block:: yaml
+    
+        safe_space: [20.0, -20.0, 12, -12] # [x_+, x_-, y_+, y_-]
+        
 .. note::
     案例中箱子的 AprilTag ID 为 1, 货架桌子上的 AprilTag ID 为 0, 请根据你的实际场景修改示例代码中的 AprilTag ID
 
@@ -242,22 +236,17 @@ gazebo 仿真运行
 下位机运行
 ^^^^^^^^^^^^
 .. warning::
-    在运行之前, 需要先关闭 ``basePitchLimits`` 保护参数，否则会导致机器人搬运时摔倒
-    即修改 ``src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info`` 中:
-
-    .. code-block:: text
-
-        basePitchLimits
-        {
-            enable                 false
-            ...
-        }
-.. warning::
     在运行之前, 需要修改 ``src/demo/grab_box/cfg/kuavo_v45/bt_config.yaml`` 中的 ``safe_space`` 参数:
 
     .. code-block:: yaml
     
         safe_space: [2.0, -4.0, 1.2, -1.2] # [x_+, x_-, y_+, y_-]
+    
+    更改为:
+
+    .. code-block:: yaml
+    
+        safe_space: [20.0, -20.0, 12, -12] # [x_+, x_-, y_+, y_-]
 
 .. note::
     案例中箱子的 AprilTag ID 为 1, 货架桌子上的 AprilTag ID 为 0, 请根据你的实际场景修改示例代码中的 AprilTag ID

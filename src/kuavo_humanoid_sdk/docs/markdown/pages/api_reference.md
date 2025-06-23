@@ -229,6 +229,16 @@ Bases: `RobotBase`
 
 禁用头部跟踪。
 
+#### enable_base_pitch_limit(enable: bool) → Tuple[bool, str]
+
+开启/关闭机器人 basePitch 限制
+
+#### NOTE
+该接口用于关闭或开启机器人 basePitch 保护功能，关闭状态下可以进行比较大幅度的前后倾动作而不会触发保护导致摔倒。
+
+* **Parameters:**
+  **enable** (*bool*) – 开启/关闭
+
 #### enable_head_tracking(target_id: int) → bool
 
 启用头部跟踪 April Tag
@@ -675,6 +685,15 @@ Bases: `object`
     * angular (tuple): 角速度 (x, y, z)，单位为rad/s
 * **Return type:**
   [KuavoOdometry](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)
+
+#### pitch_limit_enabled() → bool
+
+获取机器人 basePitch 限制状态, 如果开启则返回True，否则返回False。
+
+* **Returns:**
+  如果机器人 basePitch 限制开启返回True，否则返回False。
+* **Return type:**
+  bool
 
 #### robot_orientation() → Tuple[float, float, float, float]
 

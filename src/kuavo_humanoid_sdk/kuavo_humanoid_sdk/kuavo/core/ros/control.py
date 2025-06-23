@@ -1205,9 +1205,32 @@ class KuavoRobotControl:
 
     def control_hand_wrench(self, left_wrench: list, right_wrench: list) -> bool:
         return self.kuavo_arm_control.pub_hand_wrench_cmd(left_wrench, right_wrench)
-
-
-
+    
+    def enable_base_pitch_limit(self, enable: bool) -> Tuple[bool, str]:
+        res_msg = 'failed'
+        try:
+            service_name = '/humanoid/mpc/enable_base_pitch_limit'
+            rospy.wait_for_service(service=service_name, timeout=2.0)
+            pitch_limit_service = rospy.ServiceProxy(service_name, SetBool)
+            
+            # request
+            request = SetBoolRequest()
+            request.data = enable
+            response = pitch_limit_service(request)
+            if not response.success:
+                SDKLogger.error(f"Failed to enable pitch limit: {response.message}")
+                return False, response.message
+            return True, 'success'
+        except rospy.ServiceException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+            res_msg = str(e)
+        except rospy.ROSException as e:
+            SDKLogger.error(f"Service call failed: {e}")
+            res_msg = str(e)
+        except Exception as e:
+            SDKLogger.error(f"Service call failed: {e}")
+            res_msg = str(e)
+        return False, res_msg
 
 def euler_to_rotation_matrix(yaw, pitch, roll):
     # 计算各轴的旋转矩阵

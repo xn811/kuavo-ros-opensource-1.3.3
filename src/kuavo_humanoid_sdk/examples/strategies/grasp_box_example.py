@@ -62,6 +62,25 @@ def main(real: bool = True):
     try:
         SDKLogger.info("========== 开始执行箱子抓取策略 ==========")
         
+        # !!! Important: 关闭 basePitch 限制, 否则无法进行大幅度的前后倾动作 会导致摔倒
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        grasp_strategy.robot.enable_base_pitch_limit(False)  # 关闭 basePitch 限制
+        # Retry up to 3 times to check pitch limit status
+        for i in range(3):
+            if not robot_state.pitch_limit_enabled():
+                SDKLogger.info("✅ 已关闭 basePitch 限制")
+                break
+            else:
+                if i < 2:  # Don't log on last attempt
+                    SDKLogger.info(f"⚠️ 第{i+1}次检查 basePitch 限制状态...")
+                time.sleep(0.5)  # Brief pause between retries
+        else:  # Loop completed without break
+            SDKLogger.info("❌ 关闭 basePitch 限制失败")
+            return
+        # ----------------------------------------------------------- 
+            
         # 步骤1：使用头部寻找目标
         SDKLogger.info("1. 寻找目标箱子...")
         grasp_strategy.robot.disable_head_tracking()

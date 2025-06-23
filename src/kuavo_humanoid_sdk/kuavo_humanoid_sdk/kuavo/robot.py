@@ -471,7 +471,18 @@ class KuavoRobot(RobotBase):
             Tuple[bool, list]: 成功标志和 :class:`kuavo_humanoid_sdk.interfaces.data_types.KuavoMotorParam` 对象列表的元组
         """
         return self._kuavo_core.get_motor_param()
+
+    def enable_base_pitch_limit(self, enable: bool) -> Tuple[bool, str]:
+        """开启/关闭机器人 basePitch 限制
         
+        Note:
+             该接口用于关闭或开启机器人 basePitch 保护功能，关闭状态下可以进行比较大幅度的前后倾动作而不会触发保护导致摔倒。
+
+        Args:
+            enable (bool): 开启/关闭
+        """
+        return self._kuavo_core.enable_base_pitch_limit(enable)
+
 if __name__ == "__main__":
     robot = KuavoRobot()
     robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)

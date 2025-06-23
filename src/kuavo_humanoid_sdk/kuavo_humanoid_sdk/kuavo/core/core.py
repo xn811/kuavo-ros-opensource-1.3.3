@@ -579,6 +579,11 @@ class KuavoRobotCore:
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         return self._control.arm_fk(q)
     
+    """ ------------------------------------------------------------------------"""
+    """ Base Pitch Limit Control """
+    def enable_base_pitch_limit(self, enable: bool) -> Tuple[bool, str]:
+        return self._control.enable_base_pitch_limit(enable)
+    """ ------------------------------------------------------------------------"""
     """ Callbacks """
     def _humanoid_gait_changed(self, current_time: float, gait_name: str):
         if self.state != gait_name:

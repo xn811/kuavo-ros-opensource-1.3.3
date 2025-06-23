@@ -199,6 +199,16 @@ Bases: `RobotBase`
 
 禁用头部跟踪。
 
+#### enable_base_pitch_limit(enable: bool) → Tuple[bool, str]
+
+开启/关闭机器人 basePitch 限制
+
+#### NOTE
+该接口用于关闭或开启机器人 basePitch 保护功能，关闭状态下可以进行比较大幅度的前后倾动作而不会触发保护导致摔倒。
+
+* **Parameters:**
+  **enable** (*bool*) – 开启/关闭
+
 #### enable_head_tracking(target_id: int) → bool
 
 启用头部跟踪 April Tag
@@ -627,6 +637,15 @@ Bases: `object`
 * **Return type:**
   [KuavoOdometry](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoOdometry)
 
+#### pitch_limit_enabled() → bool
+
+获取机器人 basePitch 限制状态, 如果开启则返回True，否则返回False。
+
+* **Returns:**
+  如果机器人 basePitch 限制开启返回True，否则返回False。
+* **Return type:**
+  bool
+
 #### robot_orientation() → Tuple[float, float, float, float]
 
 返回 Kuavo 机器人在世界坐标系中的方向。
@@ -1022,22 +1041,16 @@ catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
 在运行之前, 需要确认机器人版本 `ROBOT_VERSION=45` ，否则会机器人末端控制会有问题
 
 #### WARNING
-在运行之前, 需要先关闭 `basePitchLimits` 保护参数，否则会导致机器人搬运时摔倒
-即修改 `src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info` 中:
-
-```text
-basePitchLimits
-{
-    enable                 false
-    ...
-}
-```
-
-#### WARNING
 在运行之前, 需要修改 `src/demo/grab_box/cfg/kuavo_v45/bt_config.yaml` 中的 `safe_space` 参数:
 
 ```yaml
 safe_space: [2.0, -4.0, 1.2, -1.2] # [x_+, x_-, y_+, y_-]
+```
+
+更改为:
+
+```yaml
+safe_space: [20.0, -20.0, 12, -12] # [x_+, x_-, y_+, y_-]
 ```
 
 #### NOTE
@@ -1136,22 +1149,16 @@ roslaunch kuavo_tf2_web_republisher start_websocket_server.launch
 #### 下位机运行
 
 #### WARNING
-在运行之前, 需要先关闭 `basePitchLimits` 保护参数，否则会导致机器人搬运时摔倒
-即修改 `src/humanoid-control/humanoid_controllers/config/kuavo_v45/mpc/task.info` 中:
-
-```text
-basePitchLimits
-{
-    enable                 false
-    ...
-}
-```
-
-#### WARNING
 在运行之前, 需要修改 `src/demo/grab_box/cfg/kuavo_v45/bt_config.yaml` 中的 `safe_space` 参数:
 
 ```yaml
 safe_space: [2.0, -4.0, 1.2, -1.2] # [x_+, x_-, y_+, y_-]
+```
+
+更改为:
+
+```yaml
+safe_space: [20.0, -20.0, 12, -12] # [x_+, x_-, y_+, y_-]
 ```
 
 #### NOTE
@@ -1244,6 +1251,25 @@ def main(real: bool = True):
     try:
         SDKLogger.info("========== 开始执行箱子抓取策略 ==========")
         
+        # !!! Important: 关闭 basePitch 限制, 否则无法进行大幅度的前后倾动作 会导致摔倒
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        SDKLogger.info("⚠️ 重要提示: basePitch 限制需要关闭!!!")
+        grasp_strategy.robot.enable_base_pitch_limit(False)  # 关闭 basePitch 限制
+        # Retry up to 3 times to check pitch limit status
+        for i in range(3):
+            if not robot_state.pitch_limit_enabled():
+                SDKLogger.info("✅ 已关闭 basePitch 限制")
+                break
+            else:
+                if i < 2:  # Don't log on last attempt
+                    SDKLogger.info(f"⚠️ 第{i+1}次检查 basePitch 限制状态...")
+                time.sleep(0.5)  # Brief pause between retries
+        else:  # Loop completed without break
+            SDKLogger.info("❌ 关闭 basePitch 限制失败")
+            return
+        # ----------------------------------------------------------- 
+            
         # 步骤1：使用头部寻找目标
         SDKLogger.info("1. 寻找目标箱子...")
         grasp_strategy.robot.disable_head_tracking()

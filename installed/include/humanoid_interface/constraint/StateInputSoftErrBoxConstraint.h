@@ -34,9 +34,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_core/Types.h>
 #include <ocs2_core/cost/StateInputCost.h>
 #include <ocs2_core/penalties/penalties/PenaltyBase.h>
+#include "humanoid_interface/reference_manager/SwitchedModelReferenceManager.h"
 
 namespace ocs2 {
 
+namespace humanoid
+{
 /**
  *   Implements the cost penalty for state-input box constraints
  */
@@ -69,7 +72,7 @@ class StateInputSoftErrBoxConstraint final : public StateInputCost {
    * @param stateBoxConstraints : box constraint specification for states
    * @param inputBoxConstraints : box constraint specification for inputs
    */
-  StateInputSoftErrBoxConstraint(std::vector<BoxConstraint> stateBoxConstraints, std::vector<BoxConstraint> inputBoxConstraints);
+  StateInputSoftErrBoxConstraint(const SwitchedModelReferenceManager& referenceManager, std::vector<BoxConstraint> stateBoxConstraints, std::vector<BoxConstraint> inputBoxConstraints);
 
   ~StateInputSoftErrBoxConstraint() override = default;
 
@@ -106,6 +109,9 @@ class StateInputSoftErrBoxConstraint final : public StateInputCost {
   std::vector<BoxConstraint> stateBoxConstraints_;
   std::vector<BoxConstraint> inputBoxConstraints_;
   scalar_t offset_;
+  const SwitchedModelReferenceManager* referenceManagerPtr_;
+
 };
 
+}  // namespace humanoid
 }  // namespace ocs2

@@ -121,6 +121,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   void setMatrixR(const matrix_t& R) { gait_R_ = R; }
   matrix_t getMatrixQ(void) { return gait_Q_; }
   matrix_t getMatrixR(void) { return gait_R_; }
+  bool enablePitchLimit() const { return enable_pitch_limit_; }
+  void setEnablePitchLimit(bool enable) { enable_pitch_limit_ = enable; }
 
   inline bool getUpdatedR() const override{ return updated_R_; }
   inline bool getUpdatedQ() const override{ return updated_Q_; }
@@ -176,6 +178,10 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   bool torsoControlModeSrvCallback(kuavo_msgs::changeTorsoCtrlMode::Request &req, kuavo_msgs::changeTorsoCtrlMode::Response &res);
 
+  bool enablePitchLimitCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+
+  bool pitchLimitStatusCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+  
   bool getArmControlModeCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
     res.result = true;
@@ -276,6 +282,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::ServiceServer footPoseTargetTrajectoriesService_;
   ros::ServiceServer current_mode_service_;
   ros::ServiceServer stopSingleStepControlService_;
+  ros::ServiceServer enable_pitch_limit_service_;
+  ros::ServiceServer pitch_limit_status_service_;
+
   vector_t cmdVel_;
   vector_t cmdPose_;
   vector_t cmdPoseWorld_;
@@ -367,6 +376,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
                                 TargetTrajectories& targetTrajectories,
                                 const feet_array_t<vector3_t>& currentFeet);
 
+  bool enable_pitch_limit_ = false;
 };
 
 }  // namespace humanoid
