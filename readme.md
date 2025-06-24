@@ -103,6 +103,7 @@ roslaunch humanoid_controllers load_kuavo_isaac_sim.launch  # 启动控制器、
 
 ##### 末端执行器配置
 在运行实物之前, 您需要先修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`中EndEffectorType为您实物机器人的执行器类型:
+- `none`: 无末端执行器或者需要屏蔽末端执行器时使用
 - `qiangnao` : 灵巧手, 默认值
 - `lejuclaw` : 二指夹爪
 - `qiangnao_touch` : 触觉灵巧手

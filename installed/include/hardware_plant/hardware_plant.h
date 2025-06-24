@@ -16,7 +16,6 @@
 #include "jodell_claw_driver.h"
 #include "dynamixel_interface.h"
 #include "ankle_solver.h"
-#include "hand_controller.h"
 #include "lejuclaw_controller.h"
 #include "claw_types.h"
 #include "gesture_types.h"
@@ -118,18 +117,13 @@ public:
 
 
     bool checkLejuClawInitialized();
-    bool checkHandInitialized();
-    bool executeGestures(const std::vector<eef_controller::GestureExecuteInfo>& gesture_tasks, std::string& err_msg);
-    std::vector<eef_controller::GestureInfoMsg> listGestures();
-    bool isGestureExecuting();
     bool controlLejuClaw(eef_controller::ControlClawRequest& req, eef_controller::ControlClawResponse& res);
     bool controlLejuClaw(eef_controller::lejuClawCommand& command);
     eef_controller::ClawState getLejuClawState();
 
     void setHardwareParam(const HardwareParam& param) { hardware_param_ = param; }
     HardwareParam& getHardwareParam() { return hardware_param_; }
-    const std::array<eef_controller::BrainCoController::HandStatus, 2>&  getHandControllerStatus();
-    eef_controller::FingerStatusPtrArray getHandControllerWithTouchStatus();
+    eef_controller::FingerStatusPtrArray getHandControllerStatus();
 
     bool th_running_ = false;
     int hardware_status_ = -1;
@@ -150,7 +144,7 @@ public:
     std::vector<double_t> min_joint_position_limits;
     std::vector<double_t> max_joint_position_limits;
 
-    std::unique_ptr<eef_controller::TouchDexhandContrller> dexhand_actuator;
+    std::unique_ptr<eef_controller::DexhandController> dexhand_actuator;
     std::string gesture_filepath_;
 
 private:
