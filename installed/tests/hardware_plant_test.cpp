@@ -94,11 +94,11 @@ public:
 
         output_joint_move_to_request(joint_values, joint_type);
 
-        hardware_plant_->jointMoveTo(joint_values, 60.0, 0.02);
+        hardware_plant_->jointMoveTo(joint_values, 30.0, 0.02);
 
         std::this_thread::sleep_for(std::chrono::seconds(2));
         
-        hardware_plant_->jointMoveTo(init_joints_q, 60.0, 0.02);
+        hardware_plant_->jointMoveTo(init_joints_q, 30.0, 0.02);
         
     }
 
