@@ -540,9 +540,15 @@ def is_player_in_body():
 
 def upload_music_file(music_filename=""):
     # 将音乐文件上传到上位机指定路径
-    # TODO: 需要根据 DHCP 等判断结果确定上位机 IP 地址及用户名
+    # TODO: 上位机是 AGX 用户名为 leju_kuavo 但这种情况下音频设备在下位机，不需要拷贝文件
+
+    result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+    if result.returncode == 0:
+        remote_host = "192.168.26.12"
+    else:
+        remote_host = "192.168.26.1"
+
     remote_user = "kuavo"
-    remote_host = "192.168.26.12"
     remote_path = "/home/kuavo/.config/lejuconfig/"
 
     encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
@@ -551,11 +557,11 @@ def upload_music_file(music_filename=""):
     remote_password = base64.b64decode(encoded_password).decode('utf-8')
 
     if not music_filename:
-        # 将全部音频文件拷贝过去
-        scp_cmd = ["scp", "-r", MUSIC_FILE_FOLDER]
+        # 将全部音频文件拷贝过去, scp 命令中添加 -o StrictHostKeyChecking=no 参数，跳过主机验证，防止传输失败
+        scp_cmd = ["scp", "-r", "-o", "StrictHostKeyChecking=no", MUSIC_FILE_FOLDER]
     else:
         # 拷贝单个音频文件
-        scp_cmd = ["scp", MUSIC_FILE_FOLDER, music_filename]
+        scp_cmd = ["scp", "-o", "StrictHostKeyChecking=no", MUSIC_FILE_FOLDER, music_filename]
     cmd = [
         "sshpass", "-p", remote_password,
         *scp_cmd,
@@ -642,9 +648,15 @@ async def update_h12_config_handler(
 
 # 登录到上位机上面执行下载指令
 def download_data_pilot_to_head():
-    # TODO: 需要根据 DHCP 等判断结果确定上位机 IP 地址及用户名
+    # TODO: 上位机是 AGX 用户名为 leju_kuavo 但这种情况下音频设备在下位机，不需要拷贝文件
+
+    result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+    if result.returncode == 0:
+        remote_host = "192.168.26.12"
+    else:
+        remote_host = "192.168.26.1"
+
     remote_user = "leju_kuavo"
-    remote_host = "192.168.26.12"
     remote_path = "/home/leju_kuavo/kuavo_data_pilot/src/kuavo_data_pilot_bin/dist/app"
     encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
     if encoded_password is None:
