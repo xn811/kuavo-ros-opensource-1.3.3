@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 新增行为树搬箱子 README 说明文档，[文档链接](./src/demo/grab_box/README.md)
 - Kuavo Humanoid SDK 更新使用文档描述搬箱子策略模块需要关闭 `basePitchLimits`，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - Kuavo Humanoid SDK 更新使用示例和搬箱子案例文档中文描述，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - Kuavo Humanoid SDK 更新所有使用文档为中文格式，[文档链接](./src/kuavo_humanoid_sdk/README.md)
@@ -13,6 +14,10 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- 非触觉灵巧手新增 ROS 控制话题:`/dexhand/command`, `/dexhand/left/command`, `/dexhand/right/command`, 支持位置和速度控制模式， [详细文档](./docs/运动控制API.md)
+- 非触觉灵巧手新增更改握力级别 ROS 服务接口:`/dexhand/change_force_level` `, [详细文档](./docs/运动控制API.md)
+- 新增非触觉灵巧手 Protobuf SDK 替换旧版 hand_sdk 支持位置/速度控制，握力级别变更，获取手指真实状态等接口 
+- Kuavo Humanoid SDK 原子技能增加 BasePitchLimits 开启/关闭和获取状态接口，避免执行搬箱子策略过程中触发保护而摔倒
 - Kuavo Humanoid SDK Websocket 版新增 SDK 启动并站立和停止机器人功能
 - Kuavo Humanoid SDK 新增搬箱子策略模块测试案例， gazebo 仿真场景默认开启灯光
 - Kuavo Humanoid SDK 原子技能接口增加末端力控制，搬运箱子策略模块放下箱子后添加安全后退保护，搬运箱子案例添加末端力控制夹紧箱子
@@ -30,6 +35,8 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复所有版本机器人的 gazebo urdf 中 friction 参数错误问题，更正为 0.0 防止手臂控制有静差
+- 修复 pick_and_place 功能包, 运行时无法控制灵巧手问题
 - 修复半身VR XA切换控制模式手臂不插值，导致机器人手臂抽搐
 - 修复 h12 遥控器以及 root 用户启动时无法收集到 git 仓库信息问题
 - 修复行为树搬箱子案例中，在控制手臂的情况下，初始状态会出现抖动的问题
@@ -54,6 +61,7 @@
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
+- 新增 USB WIFI 信号稳定性测试工具和 VR 传输数据用量测试工具， [使用文档](./tools/wifi_benchmark/README.md)
 - 增加时频域分析脚本，用于分析手臂末端的运动跟踪性能，从时域和频域的角度定量的分析跟踪效果、各环节间的延迟
 - 优化上下位机 DHCP 配置工具，默认下位机为DHCP分配主机并增加声卡 udev 规则配置
 - 取消 MobileManipulatorController 启动时一直打印等待`com_height`参数的日志
