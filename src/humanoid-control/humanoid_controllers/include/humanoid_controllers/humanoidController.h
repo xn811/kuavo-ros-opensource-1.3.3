@@ -448,6 +448,9 @@ namespace humanoid_controller
     bool updateSensorDataFromShm();      // 从共享内存更新传感器数据
     void publishJointCmdToShm(const kuavo_msgs::jointCmd& jointCmdMsg);         // 发布关节命令到共享内存
     
+    // CPU内核隔离设置
+    void setupCpuIsolation();  // 从ROS参数获取隔离CPU索引并设置线程亲和性
+    
     // 传感器数据发布
     ros::Publisher sensor_data_raw_pub_;
     feet_array_t<vector3_t> foot_pos_desired_;
