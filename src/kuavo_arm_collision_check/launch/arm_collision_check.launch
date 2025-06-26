@@ -1,0 +1,9 @@
+<launch>
+
+    <!-- Set global parameters -->
+    <param name="arm_collision_freq" type="double" value="5.0" />
+    <param name="publish_collision_markers" type="bool" value="false" />
+
+    <!-- Start the arm_collision_checker node -->
+    <node name="arm_collision_checker" pkg="kuavo_arm_collision_check" type="arm_collision_checker" output="screen"/>
+</launch> 

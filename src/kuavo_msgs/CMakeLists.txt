@@ -102,6 +102,9 @@ add_message_files(
 
   # kuavo_tf2_web_republisher
   TFArray.msg
+
+  # kuavo_arm_collision_check
+  armCollisionCheckInfo.msg
 )
 
 ## Generate services in the 'srv' folder
