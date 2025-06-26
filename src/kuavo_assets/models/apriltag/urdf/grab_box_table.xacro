@@ -243,7 +243,7 @@
   <joint name="world_to_box_tag_joint" type="fixed">
     <parent link="world"/>
     <child link="apriltag_box_base"/>
-    <origin xyz="0.0 -1.7 1.1" rpy="0 0 0"/>
+    <origin xyz="0.0 -1.7 1.05" rpy="0 0 0"/>
   </joint>
 
   <joint name="world_to_table_joint" type="fixed">

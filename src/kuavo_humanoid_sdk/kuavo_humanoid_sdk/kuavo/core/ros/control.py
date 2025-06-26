@@ -196,16 +196,17 @@ class ControlRobotArm:
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
         publishers = [
-            (self._pub_ctrl_arm_traj, "arm trajectory publisher"),
-            (self._pub_ctrl_arm_target_poses, "arm target poses publisher")
+            (self._pub_ctrl_arm_traj, "arm trajectory publisher", False),
+            (self._pub_ctrl_arm_target_poses, "arm target poses publisher", False)
         ]
         
         success = True
-        for pub, name in publishers:
+        for pub, name, required in publishers:
             while pub.get_num_connections() == 0:
                 if (rospy.Time.now() - start_time).to_sec() > timeout:
                     SDKLogger.error(f"Timeout waiting for {name} connection, '{pub.name}'")
-                    success = False
+                    if required:
+                        success = False
                     break
                 rospy.sleep(0.1)
         return success
@@ -443,13 +444,15 @@ class ControlRobotHead:
     def connect(self, timeout:float=1.0)->bool:
         start_time = rospy.Time.now()
         publishers = [
-            # (self._pub_ctrl_robot_head, "robot head publisher") # not need check!
+            (self._pub_ctrl_robot_head, "robot head publisher", False) # not need check!
         ]
-        for pub, name in publishers:
+        for pub, name, required in publishers:
             while pub.get_num_connections() == 0:
                 if (rospy.Time.now() - start_time).to_sec() > timeout:
                     SDKLogger.error(f"Timeout waiting for {name} connection, '{pub.name}'")
-                    return False
+                    if required:
+                        return False
+                    break
                 rospy.sleep(0.1)
         return True
     def pub_control_robot_head(self, yaw:float, pitch:float)->bool:
@@ -657,23 +660,25 @@ class ControlRobotMotion:
         self._pub_switch_gait = rospy.Publisher('/humanoid_switch_gait_by_name', switchGaitByName, queue_size=10)
         self._pub_step_ctrl = rospy.Publisher('/humanoid_mpc_foot_pose_target_trajectories', footPoseTargetTrajectories, queue_size=10)
 
-    def connect(self, timeout:float=2.0)-> bool:
+    def connect(self, timeout:float=3.0)-> bool:
         start_time = rospy.Time.now()
         publishers = [
             # (self._pub_joy, "joy publisher"),
-            (self._pub_cmd_vel, "cmd_vel publisher"),
-            (self._pub_cmd_pose, "cmd_pose publisher"),
-            (self._pub_step_ctrl, "step_ctrl publisher"),
-            (self._pub_switch_gait, "switch_gait publisher"),
-            (self._pub_cmd_pose_world, "cmd_pose_world publisher"),
+            # pub name required
+            (self._pub_cmd_vel, "cmd_vel publisher", False),
+            (self._pub_cmd_pose, "cmd_pose publisher", False),
+            (self._pub_step_ctrl, "step_ctrl publisher", False),
+            (self._pub_switch_gait, "switch_gait publisher", False),
+            (self._pub_cmd_pose_world, "cmd_pose_world publisher", False),
         ]
         
         success = True
-        for pub, name in publishers:
+        for pub, name, required in publishers:
             while pub.get_num_connections() == 0:
                 if (rospy.Time.now() - start_time).to_sec() > timeout:
                     SDKLogger.error(f"Timeout waiting for {name} connection, '{pub.name}'")
-                    success = False
+                    if required:
+                        success = False
                     break
                 rospy.sleep(0.1)
         return success

@@ -6,6 +6,7 @@ from kuavo_humanoid_sdk.interfaces.data_types import KuavoManipulationMpcFrame, 
 from kuavo_humanoid_sdk.interfaces.data_types import EndEffectorSide
 from kuavo_humanoid_sdk.interfaces.data_types import AprilTagData, HomogeneousMatrix, PoseQuaternion
 from kuavo_humanoid_sdk import KuavoRobot, KuavoRobotState, KuavoRobotTools, KuavoRobotVision
+from kuavo_humanoid_sdk.common.logger import SDKLogger
 from dataclasses import dataclass
 from typing import Tuple
 import numpy as np
@@ -23,7 +24,7 @@ class KuavoGraspBoxUtils:
             float: yaw角（弧度）
         """
         if not quaternion or len(quaternion) != 4:
-            print("无法获取有效的四元数")
+            SDKLogger.error("无法获取有效的四元数")
             return 0.0
             
         # 计算yaw角 (围绕z轴的旋转)
@@ -75,12 +76,12 @@ class KuavoGraspBoxUtils:
         tag_z_uni = np.array([0, 0, 1], np.float32)  # tag的z轴朝向
         p_z_w = R_wa @ tag_z_uni  # tag的z轴在世界系下的朝向
 
-        print(f'---------------- p_z_w {p_z_w}')
+        SDKLogger.debug(f'---------------- p_z_w {p_z_w}')
         yaw = math.atan2(p_z_w[1], p_z_w[0])
         yaw += math.pi
         yaw = KuavoGraspBoxUtils.util_cast_to_pi(yaw)
 
-        print(f'---------------- yaw {yaw}')
+        SDKLogger.debug(f'---------------- yaw {yaw}')
 
         p_at_w = R_wa @ p_at
         p_wt = p_wa + p_at_w
@@ -213,7 +214,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         target_id = target_info.id[0]
         
         if target_id > 9999:
-            print(f"target_id: {target_id} 大于 9999, 无效的AprilTag家族ID")
+            SDKLogger.error(f"target_id: {target_id} 大于 9999, 无效的AprilTag家族ID")
             return False
         
         # 判断目标位置是否在FOV内
@@ -244,20 +245,20 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             FOV_HALF_ANGLE = math.radians(35)  # 70度/2 = 35度
             is_in_fov = abs(angle_diff) <= FOV_HALF_ANGLE
             
-            print(f"目标位置: ({target_position[0]:.2f}, {target_position[1]:.2f})")
-            print(f"机器人位置: ({robot_position[0]:.2f}, {robot_position[1]:.2f})")
-            print(f"目标角度: {math.degrees(target_angle):.2f}度")
-            print(f"机器人朝向: {math.degrees(robot_yaw):.2f}度")
-            print(f"角度差: {math.degrees(angle_diff):.2f}度")
-            print(f"是否在FOV内: {is_in_fov}")
+            SDKLogger.debug(f"目标位置: ({target_position[0]:.2f}, {target_position[1]:.2f})")
+            SDKLogger.debug(f"机器人位置: ({robot_position[0]:.2f}, {robot_position[1]:.2f})")
+            SDKLogger.debug(f"目标角度: {math.degrees(target_angle):.2f}度")
+            SDKLogger.debug(f"机器人朝向: {math.degrees(robot_yaw):.2f}度")
+            SDKLogger.debug(f"角度差: {math.degrees(angle_diff):.2f}度")
+            SDKLogger.debug(f"是否在FOV内: {is_in_fov}")
             
             # 如果目标不在FOV内且模式允许旋转身体，先旋转机器人身体
             if not is_in_fov and search_pattern == "rotate_body":
-                print("目标超出FOV，调整机器人朝向...")
+                SDKLogger.info("目标超出FOV，调整机器人朝向...")
                 # 调整机器人朝向
-                print(f"开始调整 - 机器人位置: {robot_position}")
-                print(f"开始调整 - 目标角度: {math.degrees(target_angle):.2f}度")
-                print(f"开始调整 - 目标角度: {target_angle}")
+                SDKLogger.info(f"开始调整 - 机器人位置: {robot_position}")
+                SDKLogger.info(f"开始调整 - 目标角度: {math.degrees(target_angle):.2f}度")
+                SDKLogger.info(f"开始调整 - 目标角度: {target_angle}")
                 self.robot.control_command_pose_world(
                     robot_position[0], # 保持机器人当前x位置
                     robot_position[1], # 保持机器人当前y位置
@@ -294,14 +295,14 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
                     
                     # 检查是否找到目标
                     target_data = self.vision.get_data_by_id_from_odom(target_id)
-                    print(f"target_data: {target_data}")
+                    SDKLogger.debug(f"target_data: {target_data}")
 
                     if (target_data is not None and isinstance(target_data, dict) and 
                         'poses' in target_data and len(target_data['poses']) > 0):
-                        print(f"Target AprilTag {target_id} found!")
+                        SDKLogger.info(f"Target AprilTag {target_id} found!")
                         found_target = True
                         # 开始头部追踪
-                        print("---- 开始头部追踪 ---- ")
+                        SDKLogger.info("---- 开始头部追踪 ---- ")
                         self.robot.enable_head_tracking(target_id) # self.robot.disable_head_tracking()
                         break
                 
@@ -375,15 +376,15 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         start_time = time.time()
         target_data = self.vision.get_data_by_id_from_odom(target_id)
         if target_data is None:
-            print(f"未找到目标ID: {target_id} 的目标数据!")
+            SDKLogger.error(f"未找到目标ID: {target_id} 的目标数据!")
             return False
         target_pose = target_data["poses"][0]
-        print(f"target_pose in _approach_target: {target_pose}")
+        SDKLogger.debug(f"target_pose in _approach_target: {target_pose}")
         while not approach_success:
             approach_success = self._approach_target(target_pose, target_distance, approach_speed, **kwargs)
             time.sleep(1)
             time_cost = time.time() - start_time
-            print(f"walking approach target..., time_cost: {time_cost:.2f}秒.")
+            SDKLogger.debug(f"walking approach target..., time_cost: {time_cost:.2f}秒.")
         return approach_success
     
     def _approach_target(self, target_pose, target_distance=0.5, approach_speed=0.15, **kwargs):
@@ -419,7 +420,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         yaw_reached = self._yaw_check(angle)
         pos_reached = self._pos_check(p_wt)
         stance_check = (self.state == 'stance')
-        print(f"yaw_reached: {yaw_reached}, pos_reached: {pos_reached}, stance_check: {stance_check}")
+        SDKLogger.debug(f"yaw_reached: {yaw_reached}, pos_reached: {pos_reached}, stance_check: {stance_check}")
         return yaw_reached and pos_reached # and stance_check
     
     def _check_target_reachable(self, target_info:BoxInfo) -> bool:
@@ -543,7 +544,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
                 orientation=rot_base
             )
         except Exception as e:
-            print(f"坐标转换出错: {str(e)}")
+            SDKLogger.error(f"坐标转换出错: {str(e)}")
             return None
 
     @staticmethod
@@ -655,8 +656,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 计算抓取姿态
         box_position = list(target_info.pose.position)
         box_orientation = list(target_info.pose.orientation)
-        print(f"原始世界坐标系下的位置: {box_position}")
-        print(f"原始世界坐标系下的姿态: {box_orientation}")
+        SDKLogger.debug(f"原始世界坐标系下的位置: {box_position}")
+        SDKLogger.debug(f"原始世界坐标系下的姿态: {box_orientation}")
 
         box_size = target_info.size    # (length, width, height)
         
@@ -783,8 +784,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             base_to_odom = self.tools.get_tf_transform("odom", "base_link")
             
             # 添加调试信息
-            print(f"base_to_odom position type: {type(base_to_odom.position)}")
-            print(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
+            SDKLogger.debug(f"base_to_odom position type: {type(base_to_odom.position)}")
+            SDKLogger.debug(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
 
             # 确保返回的是可迭代对象
             if not isinstance(base_to_odom.position, (list, tuple, np.ndarray)):
@@ -807,8 +808,8 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             )
             base_to_odom = self.tools.get_tf_transform("odom", "base_link")
             # 添加调试信息
-            print(f"base_to_odom position type: {type(base_to_odom.position)}")
-            print(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
+            SDKLogger.debug(f"base_to_odom position type: {type(base_to_odom.position)}")
+            SDKLogger.debug(f"base_to_odom orientation type: {type(base_to_odom.orientation)}")
             # 转换目标姿态到odom坐标系
             left_place = self._transform_to_odom(l_arm_put_away_base_pose, base_to_odom)
             right_place = self._transform_to_odom(r_arm_put_away_base_pose, base_to_odom)
@@ -866,7 +867,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             elif traj_type == "release":
                 return left_place, right_place, left_release, right_release
             else:
-                print(f"未知的轨迹类型: {traj_type}")
+                SDKLogger.error(f"未知的轨迹类型: {traj_type}")
                 return None, None, None, None
 
     def _check_orientation_safety(self, target_orientation, threshold=None):
@@ -885,10 +886,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         angle_diff = abs(target_yaw - current_yaw)
         angle_diff = min(2*math.pi - angle_diff, angle_diff)  # 取最小角度差
         
-        print(f"[安全检查] 当前朝向: {math.degrees(current_yaw):.1f}°, 目标朝向: {math.degrees(target_yaw):.1f}°, 差异: {math.degrees(angle_diff):.1f}°")
+        SDKLogger.debug(f"[安全检查] 当前朝向: {math.degrees(current_yaw):.1f}°, 目标朝向: {math.degrees(target_yaw):.1f}°, 差异: {math.degrees(angle_diff):.1f}°")
         
         if angle_diff > threshold:
-            print(f"❌ 方向偏差超过安全阈值({math.degrees(threshold):.1f}°)，终止操作！")
+            SDKLogger.error(f"❌ 方向偏差超过安全阈值({math.degrees(threshold):.1f}°)，终止操作！")
             return False
         return True
 
@@ -911,15 +912,15 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             l_distance = np.linalg.norm(target_pos[:2] - l_joint_pos[:2])
             r_distance = np.linalg.norm(target_pos[:2] - r_joint_pos[:2])
 
-            print(f"[位置安全检查] 左臂距离: {l_distance:.2f}m, 右臂距离: {r_distance:.2f}m, 安全阈值: {self.workspace_radius:.2f}m")
+            SDKLogger.debug(f"[位置安全检查] 左臂距离: {l_distance:.2f}m, 右臂距离: {r_distance:.2f}m, 安全阈值: {self.workspace_radius:.2f}m")
             
             # 检查是否在安全范围内
             if l_distance > self.workspace_radius or r_distance > self.workspace_radius:
-                print(f"❌ 目标位置超出工作空间范围({self.workspace_radius}m)")
+                SDKLogger.error(f"❌ 目标位置超出工作空间范围({self.workspace_radius}m)")
                 return False
             return True
         except Exception as e:
-            print(f"位置安全检查出错: {str(e)}")
+            SDKLogger.error(f"位置安全检查出错: {str(e)}")
             return False
 
     def _check_height_safety(self, target_info: BoxInfo) -> bool:
@@ -935,10 +936,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         min_height = 0.5  # 最小工作高度
         max_height = 1.8  # 最大工作高度
         
-        print(f"[高度安全检查] 目标高度: {target_height:.2f}m, 工作范围: {min_height:.2f}m - {max_height:.2f}m")
+        SDKLogger.debug(f"[高度安全检查] 目标高度: {target_height:.2f}m, 工作范围: {min_height:.2f}m - {max_height:.2f}m")
         
         if target_height < min_height or target_height > max_height:
-            print(f"❌ 目标高度 {target_height:.2f}m 超出工作范围({min_height:.2f}m - {max_height:.2f}m)，终止操作！")
+            SDKLogger.error(f"❌ 目标高度 {target_height:.2f}m 超出工作范围({min_height:.2f}m - {max_height:.2f}m)，终止操作！")
             return False
         return True
 
@@ -971,7 +972,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         ):
             return False
         
-        print("执行预抓取姿态到抓取姿态的轨迹...")
+        SDKLogger.debug("执行预抓取姿态到抓取姿态的轨迹...")
         left_traj_grasp = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
         right_traj_grasp = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
         self._execute_trajectory(left_traj_grasp, right_traj_grasp)       
@@ -1057,7 +1058,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             return False
 
         # 执行抬起轨迹
-        print("执行抬起轨迹")
+        SDKLogger.debug("执行抬起轨迹")
         left_traj_lift = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
         right_traj_lift = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
         self._execute_trajectory(left_traj_lift, right_traj_lift)
@@ -1074,7 +1075,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         time.sleep(5) # 等待机器人执行到位 
 
         # 执行收臂轨迹
-        print("执行收臂轨迹")
+        SDKLogger.debug("执行收臂轨迹")
         left_pose_init, right_pose_init, left_pose_target, right_pose_target = self._get_target_pose(target_info, traj_type="pull")
         if left_pose_init is None:
             return False
@@ -1124,14 +1125,14 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             yaw_reached = self._yaw_check(target_yaw)
             
             if pos_reached and yaw_reached:
-                print("机器人已到达目标位姿!")
+                SDKLogger.debug("机器人已到达目标位姿!")
                 return True
             
             # 短暂等待再次检查
             time.sleep(wait_interval)
         
         # 超时
-        print(f"等待机器人到达目标位姿超时!")
+        SDKLogger.warn(f"等待机器人到达目标位姿超时!")
         return False
     
     def walk_to_pose(self, target_pose:KuavoPose, target_distance=0.5, approach_speed=0.15, timeout=10.0, **kwargs):
@@ -1148,11 +1149,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 获取目标位置和朝向
         target_position = target_pose.position
         target_orientation = target_pose.orientation
-        print(f"target_position: {target_position}, target_orientation: {target_orientation}")
+        SDKLogger.debug(f"target_position: {target_position}, target_orientation: {target_orientation}")
         
         # 从四元数中提取yaw角
         target_yaw = KuavoGraspBoxUtils.extract_yaw_from_quaternion(target_orientation)
-        print(f"target_yaw: {target_yaw}")
+        SDKLogger.debug(f"target_yaw: {target_yaw}")
         
         # 计算偏移后的位置
         # 根据目标朝向计算偏移方向
@@ -1166,10 +1167,10 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             target_position[2]
         ]
         
-        print(f"开始移动到目标位姿:")
-        print(f"原始目标位置: ({target_position[0]:.2f}, {target_position[1]:.2f}, {target_position[2]:.2f})")
-        print(f"偏移后位置: ({new_target_position[0]:.2f}, {new_target_position[1]:.2f}, {new_target_position[2]:.2f})")
-        print(f"目标朝向: {math.degrees(target_yaw):.2f}度")
+        SDKLogger.info(f"开始移动到目标位姿:")
+        SDKLogger.info(f"原始目标位置: ({target_position[0]:.2f}, {target_position[1]:.2f}, {target_position[2]:.2f})")
+        SDKLogger.info(f"偏移后位置: ({new_target_position[0]:.2f}, {new_target_position[1]:.2f}, {new_target_position[2]:.2f})")
+        SDKLogger.info(f"目标朝向: {math.degrees(target_yaw):.2f}度")
         
         if not self._arrive_pose(
             new_target_position,
@@ -1257,7 +1258,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         rate_hz = 10  # 检查频率
         wait_interval = 1.0 / rate_hz
         
-        print(f"等待机器人旋转到位，目标角度: {math.degrees(target_angle):.2f}度")
+        SDKLogger.info(f"等待机器人旋转到位，目标角度: {math.degrees(target_angle):.2f}度")
         
         while time.time() - start_time < max_wait_time:
             if self._yaw_check(target_angle, angle_threshold):
@@ -1267,7 +1268,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             time.sleep(wait_interval)
         
         # 超时
-        print(f"等待机器人旋转到位超时! 已经等待了 {max_wait_time:.2f}秒")
+        SDKLogger.warn(f"等待机器人旋转到位超时! 已经等待了 {max_wait_time:.2f}秒")
         return False
 
     def _yaw_check(self, yaw_angle_target, angle_threshold=0.1):
@@ -1293,11 +1294,11 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
             angle_diff += 2 * math.pi
         
         # 输出当前状态
-        print(f"当前朝向: {math.degrees(current_yaw):.2f}度, 目标朝向: {math.degrees(yaw_angle_target):.2f}度, 差值: {math.degrees(abs(angle_diff)):.2f}度")
+        SDKLogger.debug(f"当前朝向: {math.degrees(current_yaw):.2f}度, 目标朝向: {math.degrees(yaw_angle_target):.2f}度, 差值: {math.degrees(abs(angle_diff)):.2f}度")
         
         # 检查是否已到位
         if abs(angle_diff) < angle_threshold:
-            print(f"机器人已旋转到位!")
+            SDKLogger.debug(f"机器人已旋转到位!")
             return True
         else:
             return False
@@ -1311,14 +1312,14 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         """
         current_pos = self.state.robot_position()
         if not current_pos or len(current_pos) < 2:
-            print("无法获取有效的机器人当前位置")
+            SDKLogger.error("无法获取有效的机器人当前位置")
             return False
             
-        # print(f"current_pos: {current_pos}, pos_target: {pos_target}")
+        # SDKLogger.debug(f"current_pos: {current_pos}, pos_target: {pos_target}")
         pos_diff = np.linalg.norm(np.array(pos_target[:2]) - np.array(current_pos[:2]))
-        print(f"当前位置(x,y): ({current_pos[0]:.2f}, {current_pos[1]:.2f}), 目标位置(x,y): ({pos_target[0]:.2f}, {pos_target[1]:.2f}), 距离: {pos_diff:.2f}米")
+        SDKLogger.debug(f"当前位置(x,y): ({current_pos[0]:.2f}, {current_pos[1]:.2f}), 目标位置(x,y): ({pos_target[0]:.2f}, {pos_target[1]:.2f}), 距离: {pos_diff:.2f}米")
         if pos_diff < pos_threshold:
-            print(f"机器人已到达目标位置!")
+            SDKLogger.debug(f"机器人已到达目标位置!")
             return True
         else:
             return False
