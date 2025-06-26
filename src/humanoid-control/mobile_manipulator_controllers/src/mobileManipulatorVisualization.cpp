@@ -43,6 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_core/misc/LoadData.h>
 #include <ocs2_core/misc/LoadStdVectorOfPair.h>
 #include <ocs2_ros_interfaces/common/RosMsgHelpers.h>
+#include <ocs2_ros_interfaces/visualization/VisualizationHelpers.h>
 
 #include <ocs2_mobile_manipulator/AccessHelperFunctions.h>
 #include <ocs2_mobile_manipulator/FactoryFunctions.h>
@@ -185,8 +186,10 @@ void MobileManipulatorVisualization::publishTargetTrajectories(const ros::Time& 
 /******************************************************************************************************/
 void MobileManipulatorVisualization::publishOptimizedTrajectory(const ros::Time& timeStamp, const PrimalSolution& policy) {
   const scalar_t TRAJECTORYLINEWIDTH = 0.005;
+  const scalar_t ORIENTATIONARROWLENGTH = 0.05;  // 添加姿态箭头长度
   const std::array<scalar_t, 3> red{0.6350, 0.0780, 0.1840};
   const std::array<scalar_t, 3> blue{0, 0.4470, 0.7410};
+  const std::array<scalar_t, 3> green{0.1, 0.8, 0.1};  // 为右手添加绿色
   const auto& mpcStateTrajectory = policy.stateTrajectory_;
 
   visualization_msgs::MarkerArray markerArray;
@@ -201,18 +204,164 @@ void MobileManipulatorVisualization::publishOptimizedTrajectory(const ros::Time&
   const auto& model = pinocchioInterface_.getModel();
   auto& data = pinocchioInterface_.getData();
 
-  std::vector<geometry_msgs::Point> endEffectorTrajectory;
-  endEffectorTrajectory.reserve(mpcStateTrajectory.size());
+  // 左手和右手轨迹
+  std::vector<geometry_msgs::Point> leftHandTrajectory;
+  std::vector<geometry_msgs::Point> rightHandTrajectory;
+  leftHandTrajectory.reserve(mpcStateTrajectory.size());
+  rightHandTrajectory.reserve(mpcStateTrajectory.size());
+  
+  // 为轨迹线条创建分段显示以实现渐变透明度
+  std::vector<visualization_msgs::Marker> trajectorySegments;
+  
+  // 添加姿态可视化容器
+  std::vector<visualization_msgs::Marker> orientationMarkers;
+  int markerIdCounter = 0;
+  const int totalPoints = mpcStateTrajectory.size();
+  
+  // 检查是否有多个末端执行器
+  const int numEndEffectors = std::min(static_cast<int>(modelInfo_.eeFrames.size()), 2);  // 最多处理两个（左手和右手）
+  
   std::for_each(mpcStateTrajectory.begin(), mpcStateTrajectory.end(), [&](const Eigen::VectorXd& state) {
     pinocchio::forwardKinematics(model, data, state);
     pinocchio::updateFramePlacements(model, data);
-    const auto eeIndex = model.getBodyId(modelInfo_.eeFrames[0]);//TODO: support multiple end-effectors
-    const vector_t eePosition = data.oMf[eeIndex].translation();
-    endEffectorTrajectory.push_back(ros_msg_helpers::getPointMsg(eePosition));
+    
+    // 处理多个末端执行器
+    for (int eeIdx = 0; eeIdx < numEndEffectors; ++eeIdx) {
+      const auto eeIndex = model.getBodyId(modelInfo_.eeFrames[eeIdx]);
+      const vector_t eePosition = data.oMf[eeIndex].translation();
+      const Eigen::Matrix3d eeRotation = data.oMf[eeIndex].rotation();
+      
+      // 根据末端执行器索引选择轨迹容器
+      if (eeIdx == 0) {
+        leftHandTrajectory.push_back(ros_msg_helpers::getPointMsg(eePosition));
+      } else if (eeIdx == 1) {
+        rightHandTrajectory.push_back(ros_msg_helpers::getPointMsg(eePosition));
+      }
+      
+      // 每隔几个点添加姿态可视化（避免过于密集）
+      if (markerIdCounter % 5 == 0) {  // 每5个点显示一个姿态
+        // 计算透明度：当前时刻透明度低(0.9)，未来时刻透明度高(0.2)
+        double alpha = 0.9 - 0.7 * (static_cast<double>(markerIdCounter) / static_cast<double>(totalPoints - 1));
+        alpha = std::max(0.2, std::min(0.9, alpha));  // 限制在0.2到0.9之间
+        
+        // 为每个末端执行器创建姿态可视化
+        std::string handName = (eeIdx == 0) ? "Left Hand" : "Right Hand";
+        int baseId = markerIdCounter * 6 + eeIdx * 3;  // 为每个末端执行器分配不同的ID范围
+        
+        // X轴（红色）
+        const vector_t xAxis = eeRotation.col(0) * ORIENTATIONARROWLENGTH;
+        auto xArrow = ocs2::getArrowAtPointMsg(xAxis, eePosition, ocs2::Color::red);
+        xArrow.ns = handName + " Orientation X";
+        xArrow.id = baseId;
+        xArrow.scale.x = 0.002;  // shaft diameter
+        xArrow.scale.y = 0.004;  // arrow-head diameter  
+        xArrow.scale.z = 0.008;  // arrow-head length
+        xArrow.color.a = alpha;  // 设置透明度
+        orientationMarkers.push_back(xArrow);
+        
+        // Y轴（绿色）
+        const vector_t yAxis = eeRotation.col(1) * ORIENTATIONARROWLENGTH;
+        auto yArrow = ocs2::getArrowAtPointMsg(yAxis, eePosition, ocs2::Color::green);
+        yArrow.ns = handName + " Orientation Y";
+        yArrow.id = baseId + 1;
+        yArrow.scale.x = 0.002;  // shaft diameter
+        yArrow.scale.y = 0.004;  // arrow-head diameter
+        yArrow.scale.z = 0.008;  // arrow-head length
+        yArrow.color.a = alpha;  // 设置透明度
+        orientationMarkers.push_back(yArrow);
+        
+        // Z轴（蓝色）
+        const vector_t zAxis = eeRotation.col(2) * ORIENTATIONARROWLENGTH;
+        auto zArrow = ocs2::getArrowAtPointMsg(zAxis, eePosition, ocs2::Color::blue);
+        zArrow.ns = handName + " Orientation Z";
+        zArrow.id = baseId + 2;
+        zArrow.scale.x = 0.002;  // shaft diameter
+        zArrow.scale.y = 0.004;  // arrow-head diameter
+        zArrow.scale.z = 0.008;  // arrow-head length
+        zArrow.color.a = alpha;  // 设置透明度
+        orientationMarkers.push_back(zArrow);
+      }
+    }
+    markerIdCounter++;
   });
 
-  markerArray.markers.emplace_back(ros_msg_helpers::getLineMsg(std::move(endEffectorTrajectory), blue, TRAJECTORYLINEWIDTH));
-  markerArray.markers.back().ns = "EE Trajectory";
+  // 创建左手分段轨迹线条以实现渐变透明度
+  const int segmentSize = 10;  // 每段包含的点数
+  if (!leftHandTrajectory.empty()) {
+    for (int i = 0; i < static_cast<int>(leftHandTrajectory.size()) - 1; i += segmentSize) {
+      std::vector<geometry_msgs::Point> segmentPoints;
+      int endIdx = std::min(i + segmentSize + 1, static_cast<int>(leftHandTrajectory.size()));
+      
+      for (int j = i; j < endIdx; j++) {
+        segmentPoints.push_back(leftHandTrajectory[j]);
+      }
+      
+      if (segmentPoints.size() >= 2) {
+        // 计算该段的透明度
+        double segmentProgress = static_cast<double>(i) / static_cast<double>(leftHandTrajectory.size() - 1);
+        double segmentAlpha = 0.9 - 0.7 * segmentProgress;
+        segmentAlpha = std::max(0.2, std::min(0.9, segmentAlpha));
+        
+        // 创建线段标记
+        visualization_msgs::Marker segmentMarker;
+        segmentMarker.type = visualization_msgs::Marker::LINE_STRIP;
+        segmentMarker.scale.x = TRAJECTORYLINEWIDTH;
+        segmentMarker.points = std::move(segmentPoints);
+        segmentMarker.pose.orientation = ros_msg_helpers::getOrientationMsg({1., 0., 0., 0.});
+        segmentMarker.ns = "Left Hand Trajectory";
+        segmentMarker.id = i / segmentSize;
+        
+        // 设置颜色和透明度（蓝色）
+        segmentMarker.color.r = blue[0];
+        segmentMarker.color.g = blue[1];
+        segmentMarker.color.b = blue[2];
+        segmentMarker.color.a = segmentAlpha;
+        
+        markerArray.markers.push_back(std::move(segmentMarker));
+      }
+    }
+  }
+  
+  // 创建右手分段轨迹线条以实现渐变透明度
+  if (!rightHandTrajectory.empty()) {
+    for (int i = 0; i < static_cast<int>(rightHandTrajectory.size()) - 1; i += segmentSize) {
+      std::vector<geometry_msgs::Point> segmentPoints;
+      int endIdx = std::min(i + segmentSize + 1, static_cast<int>(rightHandTrajectory.size()));
+      
+      for (int j = i; j < endIdx; j++) {
+        segmentPoints.push_back(rightHandTrajectory[j]);
+      }
+      
+      if (segmentPoints.size() >= 2) {
+        // 计算该段的透明度
+        double segmentProgress = static_cast<double>(i) / static_cast<double>(rightHandTrajectory.size() - 1);
+        double segmentAlpha = 0.9 - 0.7 * segmentProgress;
+        segmentAlpha = std::max(0.2, std::min(0.9, segmentAlpha));
+        
+        // 创建线段标记
+        visualization_msgs::Marker segmentMarker;
+        segmentMarker.type = visualization_msgs::Marker::LINE_STRIP;
+        segmentMarker.scale.x = TRAJECTORYLINEWIDTH;
+        segmentMarker.points = std::move(segmentPoints);
+        segmentMarker.pose.orientation = ros_msg_helpers::getOrientationMsg({1., 0., 0., 0.});
+        segmentMarker.ns = "Right Hand Trajectory";
+        segmentMarker.id = 2000 + i / segmentSize;  // 不同的ID范围避免冲突
+        
+        // 设置颜色和透明度（绿色）
+        segmentMarker.color.r = green[0];
+        segmentMarker.color.g = green[1];
+        segmentMarker.color.b = green[2];
+        segmentMarker.color.a = segmentAlpha;
+        
+        markerArray.markers.push_back(std::move(segmentMarker));
+      }
+    }
+  }
+  
+  // 添加姿态标记到markerArray
+  for (auto& marker : orientationMarkers) {
+    markerArray.markers.push_back(std::move(marker));
+  }
 
   // Extract base pose from state
   std::for_each(mpcStateTrajectory.begin(), mpcStateTrajectory.end(), [&](const vector_t& state) {
@@ -228,8 +377,39 @@ void MobileManipulatorVisualization::publishOptimizedTrajectory(const ros::Time&
     poseArray.poses.push_back(std::move(pose));
   });
 
-  markerArray.markers.emplace_back(ros_msg_helpers::getLineMsg(std::move(baseTrajectory), red, TRAJECTORYLINEWIDTH));
-  markerArray.markers.back().ns = "Base Trajectory";
+  // 创建分段基座轨迹线条以实现渐变透明度
+  for (int i = 0; i < static_cast<int>(baseTrajectory.size()) - 1; i += segmentSize) {
+    std::vector<geometry_msgs::Point> segmentPoints;
+    int endIdx = std::min(i + segmentSize + 1, static_cast<int>(baseTrajectory.size()));
+    
+    for (int j = i; j < endIdx; j++) {
+      segmentPoints.push_back(baseTrajectory[j]);
+    }
+    
+    if (segmentPoints.size() >= 2) {
+      // 计算该段的透明度
+      double segmentProgress = static_cast<double>(i) / static_cast<double>(baseTrajectory.size() - 1);
+      double segmentAlpha = 0.9 - 0.7 * segmentProgress;
+      segmentAlpha = std::max(0.2, std::min(0.9, segmentAlpha));
+      
+      // 创建线段标记
+      visualization_msgs::Marker segmentMarker;
+      segmentMarker.type = visualization_msgs::Marker::LINE_STRIP;
+      segmentMarker.scale.x = TRAJECTORYLINEWIDTH;
+      segmentMarker.points = std::move(segmentPoints);
+      segmentMarker.pose.orientation = ros_msg_helpers::getOrientationMsg({1., 0., 0., 0.});
+      segmentMarker.ns = "Base Trajectory";
+      segmentMarker.id = 1000 + i / segmentSize;  // 不同的ID范围避免冲突
+      
+      // 设置颜色和透明度
+      segmentMarker.color.r = red[0];
+      segmentMarker.color.g = red[1];
+      segmentMarker.color.b = red[2];
+      segmentMarker.color.a = segmentAlpha;
+      
+      markerArray.markers.push_back(std::move(segmentMarker));
+    }
+  }
 
   assignHeader(markerArray.markers.begin(), markerArray.markers.end(), ros_msg_helpers::getHeaderMsg("mm/world", timeStamp));
   assignIncreasingId(markerArray.markers.begin(), markerArray.markers.end());
