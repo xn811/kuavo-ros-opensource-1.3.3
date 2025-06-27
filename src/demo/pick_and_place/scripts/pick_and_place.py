@@ -555,8 +555,13 @@ class Robot:
         
         # Create hand position message
         hand_pose_msg = robotHandPosition()
-        hand_pose_msg.left_hand_position = self.view_hand
-        hand_pose_msg.right_hand_position = self.view_hand
+        if self.picking_arm == "left":
+            hand_pose_msg.left_hand_position = self.view_hand
+            hand_pose_msg.right_hand_position = self.open_hand
+        else:
+            hand_pose_msg.left_hand_position = self.open_hand
+            hand_pose_msg.right_hand_position = self.view_hand
+
         
         # Publish hand position
         self.gripper_pub.publish(hand_pose_msg)
@@ -589,9 +594,13 @@ class Robot:
         
         # Create hand position message
         hand_pose_msg = robotHandPosition()
-        hand_pose_msg.left_hand_position = self.close_hand
-        hand_pose_msg.right_hand_position = self.close_hand
-        print(self.close_hand)
+        if self.picking_arm == "left":
+            hand_pose_msg.left_hand_position = self.close_hand
+            hand_pose_msg.right_hand_position = self.open_hand
+        else:
+            hand_pose_msg.left_hand_position = self.open_hand
+            hand_pose_msg.right_hand_position = self.close_hand
+        
         # Publish hand position
         self.gripper_pub.publish(hand_pose_msg)
         rospy.sleep(0.5)  # Wait for gripper to close
