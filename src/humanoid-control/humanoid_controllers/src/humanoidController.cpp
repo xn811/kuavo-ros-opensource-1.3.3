@@ -476,9 +476,9 @@ namespace humanoid_controller
         }
         currentArmTargetTrajectories_ = targetTrajectories;
       };
-      if (is_simplified_model_ || only_half_up_body_)// 简化模型需要直接从全部target的topic中去获取被简化关节的target
+      if (is_simplified_model_)// 简化模型需要直接从全部target的topic中去获取被简化关节的target
         arm_target_traj_sub_ =
-            controllerNh_.subscribe<ocs2_msgs::mpc_target_trajectories>(robotName_ + ((only_half_up_body_)?"_mpc_target_arm" : "_mpc_arm_commanded"), 3, armTargetTrajectoriesCallback);
+            controllerNh_.subscribe<ocs2_msgs::mpc_target_trajectories>(robotName_ + "_mpc_arm_commanded", 3, armTargetTrajectoriesCallback);
 
       gait_scheduler_sub_ = controllerNh_.subscribe<kuavo_msgs::gaitTimeName>(robotName_ + "_mpc_gait_time_name", 10, [this](const kuavo_msgs::gaitTimeName::ConstPtr &msg)
                                                                               {
