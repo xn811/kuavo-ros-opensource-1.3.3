@@ -207,8 +207,8 @@ def play_from_file(file_path, play_interval_sec):
             while latest_joint_state is None and not rospy.is_shutdown():
                 rospy.sleep(0.1) 
         print("==> Playing back reset to first frame.\n")  
-        set_kuavo_arm_target_poses(kuavo_arm_target_poses_pub, [1.0, 3.0], [latest_joint_state.position, frames[0]])
-        time.sleep(3.5)     
+        set_kuavo_arm_target_poses(kuavo_arm_target_poses_pub, [1.0, play_interval_sec], [latest_joint_state.position, frames[0]])
+        time.sleep(play_interval_sec+0.5)     
 
         # 开始回放
         print("==> Playing back Starting...\n")        
