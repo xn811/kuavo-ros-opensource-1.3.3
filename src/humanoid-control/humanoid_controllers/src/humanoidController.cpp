@@ -162,6 +162,16 @@ namespace humanoid_controller
     {
       ros::param::get("/timeout_warning_ms", timeout_warning_ms_);
     }
+    if (ros::param::has("/pull_up_force_threshold"))
+    {
+      ros::param::get("/pull_up_force_threshold", pull_up_force_threshold_);
+      std::cout << "pull_up_force_threshold: " << pull_up_force_threshold_ << std::endl;
+    }
+    if (ros::param::has("/enable_pull_up_protect"))
+    {
+      ros::param::get("/enable_pull_up_protect", enable_pull_up_protect_);
+      std::cout << "enable_pull_up_protect: " << enable_pull_up_protect_ << std::endl;
+    }
     auto &motor_info = kuavo_settings_.hardware_settings;
     headNum_ = motor_info.num_head_joints;
     armNumReal_ = motor_info.num_arm_joints;
@@ -1880,8 +1890,8 @@ namespace humanoid_controller
       currentObservation_.time += period.toSec();
     }
     bool new_pull_up_state = false;
-    if (isPreUpdateComplete && is_stance_mode_ && !only_half_up_body_ && currentObservation_.time - standupTime_ > 4 ) // 只有非半身轮臂模式站立状态&&站起来稳定之后进行保护
-      new_pull_up_state = stateEstimate_->checkPullUp();
+    if (enable_pull_up_protect_ && isPreUpdateComplete && is_stance_mode_ && !only_half_up_body_ && currentObservation_.time - standupTime_ > 4 ) // 只有非半身轮臂模式站立状态&&站起来稳定之后进行保护
+      new_pull_up_state = stateEstimate_->checkPullUp(pull_up_force_threshold_);
     ros_logger_->publishValue("/state_estimate/pull_up_state", new_pull_up_state);
     if (new_pull_up_state && !isPullUp_)
     {

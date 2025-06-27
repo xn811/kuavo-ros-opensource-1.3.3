@@ -456,6 +456,8 @@ namespace humanoid_controller
     feet_array_t<vector3_t> foot_pos_desired_;
     bool visualizeHumanoid_ = true;
     double timeout_warning_ms_ = 1000;
+    double pull_up_force_threshold_ = 0.70;
+    bool enable_pull_up_protect_ = false;
 
     std::vector<std::pair<double, double> > head_joint_limits_ = {{-80, 80}, {-25, 25}};
 
