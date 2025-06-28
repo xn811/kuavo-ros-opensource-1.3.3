@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/init.h>
 #include <ros/package.h>
+#include <std_msgs/String.h>
 #include <sensor_msgs/Joy.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -180,6 +181,8 @@ namespace ocs2
           1,                                                    // queue length
           boost::bind(&JoyControl::mpcPolicyCallback, this, _1) // callback
       );
+      gait_change_sub_ = nodeHandle_.subscribe<std_msgs::String>(
+      "/humanoid_mpc_gait_change", 1, &JoyControl::gaitChangeCallback, this);
 
       stop_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/stop_robot", 10);
       re_start_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/re_start_robot", 10);
@@ -483,6 +486,29 @@ namespace ocs2
       current_desired_gait_ = gaitName;
     }
 
+    void gaitChangeCallback(const std_msgs::String::ConstPtr& msg) 
+    {
+      const std::string &req = msg->data;
+      ROS_INFO_STREAM("[JoyControl] Gait change request: " << req);
+
+      if (req != "walk" && req != "stance")
+      {
+        ROS_WARN_STREAM("[JoyControl] Invalid gait '" << req 
+                        << "'. Only 'walk' or 'stance' allowed.");
+        return;
+      }
+
+      if (req == current_desired_gait_)
+      {
+        ROS_INFO_STREAM("[JoyControl] Already in '" << req << "', no change.");
+        return;
+      }
+
+      ROS_INFO_STREAM("[JoyControl] Switching gait from '" 
+                      << current_desired_gait_ << "' to '" << req << "'");
+      publishGaitTemplate(req);
+    }
+
     void observationCallback(const ocs2_msgs::mpc_observation::ConstPtr &observation_msg)
     {
       observation_ = ros_msg_conversions::readObservationMsg(*observation_msg);
@@ -678,6 +704,7 @@ namespace ocs2
     ros::Subscriber observation_sub_;
     ros::Subscriber gait_scheduler_sub_;
     ros::Subscriber policy_sub_;
+    ros::Subscriber gait_change_sub_;
     bool get_observation_ = false;
     vector_t current_target_ = vector_t::Zero(6);
     std::string current_desired_gait_ = "stance";

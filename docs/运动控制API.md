@@ -360,6 +360,16 @@
 
 - 注意: 发布的模板要和gait.info中定义的gait严格一致
 
+#### /humanoid_mpc_gait_change
+
+话题描述: 用于切换gait指令
+
+消息类型: `std_msgs/String`
+  
+  - 描述：输入步态名字即可，例如：'walk','stance'
+
+- **注意：** 该话题是在`/humanoid_mpc_mode_schedule`的基础上进行封装给用户使用的，为保证安全仅支持`walk`和`stance`切换
+
 #### /humanoid_mpc_stop_step_num
 
 话题描述: 停止步数，从当前统计的步数开始，机器人会在后续第N步自动停下
