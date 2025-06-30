@@ -951,7 +951,7 @@ namespace humanoid_controller
     // }
     ROS_INFO_STREAM("Initial policy has been received.");
     // usleep(1000); // wait for 1s to ensure that the initial policy is received by the MPC node
-    if (!is_real_ && !is_play_back_mode_ && !use_shm_communication_)
+    if (!is_real_ && !is_play_back_mode_)
       callSimStartSrv(controllerNh_);
     // if (is_real_)
     // {

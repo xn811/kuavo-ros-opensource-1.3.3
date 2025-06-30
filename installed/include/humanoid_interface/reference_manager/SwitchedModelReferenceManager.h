@@ -266,6 +266,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Subscriber eef_wrench_sub_;
   ros::Subscriber fullBodyTargetTrajectoriesSubscriber_;
   ros::Subscriber estContactStateSubscriber_;
+  ros::Subscriber slope_planning_sub_;
   ros::Publisher footContactPointPublisher_;
   ros::Publisher footDesiredPointPublisher_;
   ros::Publisher gaitTimeNamePublisher_;
@@ -376,6 +377,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
                                 TargetTrajectories& targetTrajectories,
                                 const feet_array_t<vector3_t>& currentFeet);
 
+  bool enable_slope_planning_ = false;
   bool enable_pitch_limit_ = false;
 };
 

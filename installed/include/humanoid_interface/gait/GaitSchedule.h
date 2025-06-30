@@ -173,7 +173,7 @@ namespace ocs2
        * @param [in] lowerBoundTime: The smallest time for which the ModeSchedule should be defined.
        * @param [in] upperBoundTime: The greatest time for which the ModeSchedule should be defined.
        */
-      ModeSchedule getModeSchedule(scalar_t lowerBoundTime, scalar_t upperBoundTime);
+      ModeSchedule getModeSchedule(scalar_t lowerBoundTime, scalar_t upperBoundTime, bool clean_up = false);
 
       /**
        * Gets the mode schedule.

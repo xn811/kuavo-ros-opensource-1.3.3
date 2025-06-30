@@ -81,6 +81,9 @@ add_message_files(
   AprilTagDetection.msg
   AprilTagDetectionArray.msg
   motorParam.msg
+  footPoseWithVision.msg
+  footPoseWithVisionArray.msg
+
   # motion_capture_ik
   robotArmQVVD.msg
   ikSolveError.msg

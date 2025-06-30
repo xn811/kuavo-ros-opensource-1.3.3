@@ -7,7 +7,7 @@
   <link name="base_link">
     <inertial>
       <origin xyz="-0.0185005 0.00031952 0.1929569" rpy="0 0 0" />
-      <mass value="22.11293803" />
+      <mass value="27.79833803" />
       <inertia ixx="0.93103133" ixy="0.00011763" ixz="-0.07210993" iyy="0.82590532" iyz="6.88e-06" izz="0.27686612" />
     </inertial>
     <visual>
@@ -957,5 +957,59 @@
     <origin xyz="0.0217799337881943 0 0.105417258037133" rpy="0 0.229686043245049 0" />
     <parent link="zhead_2_link" />
     <child link="radar" />
+  </joint>
+
+  <link
+    name="torso-camera">
+    <inertial>
+      <origin
+        xyz="0.00156932606101622 0.0665388104781718 -0.00701167672575201"
+        rpy="0 0 0" />
+      <mass
+        value="0.1" />
+      <inertia
+        ixx="0.45922222140768"
+        ixy="0.00116938454009796"
+        ixz="5.81050583006598E-05"
+        iyy="0.0772067428906068"
+        iyz="0.0105506548802549"
+        izz="0.499312253423526" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s45/meshes/torso-camera.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s45/meshes/torso-camera.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="torso-camera"
+    type="fixed">
+    <origin
+      xyz="0.115535332475413 0.0175000000005085 0.2883441440894"
+      rpy="0 0.732666 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="torso-camera" />
+    <axis
+      xyz="0 0 0" />
   </joint>
 </robot>

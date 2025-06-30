@@ -203,6 +203,9 @@
     <!-- monitor node -->
     <node pkg="kuavo_monitor" type="kuavo_monitor_node" name="kuavo_monitor_node" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)"/>
 
+    <!-- 启动上位机服务节点 -->
+    <node pkg="humanoid_controllers" type="upper_computer_service.py" name="upper_computer_service" output="screen" />
+
     <group if="$(arg vr_remote_control)">
       <include file="$(find noitom_hi5_hand_udp_python)/launch/launch_quest3_ik.launch"/>
     </group>

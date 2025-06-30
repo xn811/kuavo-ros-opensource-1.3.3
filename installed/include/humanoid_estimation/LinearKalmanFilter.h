@@ -90,6 +90,7 @@ private:
   int last_contact_point_index_;
   // Topic
   ros::Subscriber sub_;
+  ros::Subscriber footContactPointSubscriber_;
   realtime_tools::RealtimeBuffer<nav_msgs::Odometry> buffer_;
   tf2_ros::Buffer tfBuffer_;
   tf2_ros::TransformListener tfListener_;

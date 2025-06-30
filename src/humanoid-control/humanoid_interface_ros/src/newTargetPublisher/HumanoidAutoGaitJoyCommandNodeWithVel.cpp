@@ -61,6 +61,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "kuavo_msgs/robotHeadMotionData.h"
 #include <std_srvs/SetBool.h>
 
+// 命令执行相关头文件
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <array>
+#include <thread>
+#include <future>
+
 namespace ocs2
 {
   using namespace humanoid;
@@ -92,6 +102,16 @@ namespace ocs2
     std::string name;
     double startTime;
   };
+
+  // 命令结构体
+  struct Command_t
+  {
+    std::string name;
+    std::string type;
+    std::string value;
+    std::string description;
+  };
+
 #define DEAD_ZONE 0.05
 #define TARGET_REACHED_THRESHOLD 0.1
 #define TARGET_REACHED_THRESHOLD_YAW 0.1
@@ -103,6 +123,14 @@ namespace ocs2
         : nodeHandle_(nodeHandle),
           targetPoseCommand_(nodeHandle, robotName)
     {
+      // 获取repo_root_path
+      if (!nodeHandle.getParam("repo_root_path", repo_root_path_))
+      {
+        ROS_WARN_STREAM("No repo_root_path parameter found, using current directory.");
+        repo_root_path_ = ".";
+      }
+      ROS_INFO_STREAM("Repository root path: " << repo_root_path_);
+      
       if (nodeHandle.hasParam("channel_map_path"))
       {
         std::string channel_map_path;
@@ -187,6 +215,14 @@ namespace ocs2
       stop_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/stop_robot", 10);
       re_start_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/re_start_robot", 10);
       head_motion_pub_ = nodeHandle_.advertise<kuavo_msgs::robotHeadMotionData>("/robot_head_motion_data", 10);
+      slope_planning_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/humanoid/mpc/enable_slope_planning", 10);
+
+      // 楼梯检测相关
+      start_stair_detection_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/kuavo/start_stair_detection");
+      stop_stair_detection_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/kuavo/stop_stair_detection");
+
+      // 加载命令配置
+      loadCommandsConfig();
     }
     void loadJoyJsonConfig(const std::string &config_file)
     {
@@ -214,6 +250,108 @@ namespace ocs2
       }
     
     }
+    void loadCommandsConfig()
+    {
+      std::string commands_config_path = repo_root_path_ + "/src/humanoid-control/humanoid_controllers/config/commands.yaml";
+      ROS_INFO_STREAM("Loading commands config from: " << commands_config_path);
+      
+      try
+      {
+        std::ifstream config_file(commands_config_path);
+        if (!config_file.is_open())
+        {
+          ROS_ERROR_STREAM("Failed to open commands config file: " << commands_config_path);
+          return;
+        }
+        
+        // 使用简单的文本解析方法
+        std::string line;
+        std::string current_command;
+        Command_t current_cmd;
+        bool in_commands_section = false;
+        
+        while (std::getline(config_file, line))
+        {
+          // 去除前导空格
+          line.erase(0, line.find_first_not_of(" \t"));
+          
+          if (line.empty() || line[0] == '#')
+            continue;
+          
+          // 检查是否进入commands部分
+          if (line == "commands:")
+          {
+            in_commands_section = true;
+            continue;
+          }
+          
+          if (!in_commands_section)
+            continue;
+          
+          // 检查是否是新的命令（以冒号结尾且不包含空格）
+          if (line.find(":") == line.length() - 1 && line.find(" ") == std::string::npos)
+          {
+            if (!current_command.empty())
+            {
+              // 保存前一个命令
+              commands_map_[current_cmd.name] = current_cmd;
+            }
+            current_command = line.substr(0, line.length() - 1);
+            current_cmd = Command_t(); // 重置
+            current_cmd.name = current_command;
+            continue;
+          }
+          
+          // 解析键值对
+          if (line.find(":") != std::string::npos)
+          {
+            size_t colon_pos = line.find(":");
+            std::string key = line.substr(0, colon_pos);
+            std::string value = line.substr(colon_pos + 1);
+            
+            // 去除前导空格
+            value.erase(0, value.find_first_not_of(" \t"));
+            
+            // 去除引号
+            if (!value.empty() && value[0] == '"')
+            {
+              value = value.substr(1);
+              if (!value.empty() && value.back() == '"')
+                value.pop_back();
+            }
+            
+            if (key == "type")
+            {
+              current_cmd.type = value;
+            }
+            else if (key == "value")
+            {
+              current_cmd.value = value;
+            }
+            else if (key == "description")
+            {
+              current_cmd.description = value;
+            }
+          }
+        }
+        
+        // 保存最后一个命令
+        if (!current_command.empty())
+        {
+          commands_map_[current_cmd.name] = current_cmd;
+        }
+        
+        std::cout << "Loaded " << commands_map_.size() << " commands" <<std::endl;
+        for (const auto& cmd : commands_map_)
+        {
+          std::cout << " - " << cmd.first << ": "<< cmd.second.type << " " << cmd.second.value << " " << cmd.second.description << std::endl;
+        }
+      }
+      catch (const std::exception& e)
+      {
+        ROS_ERROR_STREAM("Error loading commands config: " << e.what());
+      }
+    }
     void mpcPolicyCallback(const ocs2_msgs::mpc_flattened_controller::ConstPtr &msg)
     {
       const auto targetTrajSize = msg->planTargetTrajectories.stateTrajectory.size();
@@ -229,6 +367,28 @@ namespace ocs2
       while (ros::ok())
       {
         ros::spinOnce();
+        
+        // 检查异步命令执行结果
+        if (command_future_.valid() && command_future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+        {
+          try
+          {
+            bool result = command_future_.get();
+            if (result)
+            {
+              // std::cout << "[JoyControl] 异步命令执行成功" << std::endl;
+            }
+            else
+            {
+              std::cerr << "[JoyControl] 异步命令执行失败" << std::endl;
+            }
+          }
+          catch (const std::exception& e)
+          {
+            std::cerr << "[JoyControl] 异步命令执行异常: " << e.what() << std::endl;
+          }
+        }
+        
         rate.sleep();
         if (!get_observation_)
         {
@@ -323,6 +483,62 @@ namespace ocs2
       }
     }
 
+    bool executeCommand(const std::string& command_name)
+    {
+      auto it = commands_map_.find(command_name);
+      if (it == commands_map_.end())
+      {
+        ROS_ERROR_STREAM("[JoyControl] Command not found: " << command_name);
+        return false;
+      }
+      
+      const Command_t& cmd = it->second;
+      std::cout << "[JoyControl] Executing command: " << cmd.name << " (" << cmd.description << ")" << std::endl;
+      
+      if (cmd.type.find("shell") != std::string::npos)
+      {
+        // 使用异步线程执行shell命令，避免阻塞ROS回调
+        if (command_future_.valid() && command_future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout)
+        {
+          std::cout << "[JoyControl] Previous command is still running, skipping: " << command_name << std::endl;
+          return false;
+        }
+        
+        command_future_ = std::async(std::launch::async, [this, cmd]() {
+          return executeShellCommand(cmd.value);
+        });
+        
+        return true;
+      }
+      else
+      {
+        std::cerr << "[JoyControl] Unknown command type: " << cmd.type << std::endl;
+        return false;
+      }
+    }
+
+    bool executeShellCommand(const std::string& shell_command)
+    {
+      
+      // 直接执行shell命令，先切换到repo_root_path目录
+      std::string command = "cd " + repo_root_path_ + " && " + shell_command;
+      std::cout << "execute command: " << command << std::endl;
+      int result = system(command.c_str());
+      
+      if (result == 0)
+      {
+        std::cout << "[JoyControl] 命令执行成功: " << shell_command << std::endl;
+        return true;
+      }
+      else
+      {
+        std::cerr << "[JoyControl] 命令执行失败，返回值 " << result << ": " << shell_command << std::endl;
+        return false;
+      }
+    }
+
+   
+
   private:
     void feetCallback(const std_msgs::Float64MultiArray::ConstPtr &feet_msg)
     {
@@ -379,6 +595,29 @@ namespace ocs2
       {
         joystickOriginAxisTemp_.head(4) << joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_X"]], joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_Y"]], joy_msg->axes[joyAxisMap["AXIS_RIGHT_STICK_Z"]], joy_msg->axes[joyAxisMap["AXIS_RIGHT_STICK_YAW"]];
       }
+
+      if(joy_msg->axes[joyAxisMap["AXIS_LEFT_LT"]] < -0.5)
+      {
+        if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_STANCE"]] && joy_msg->buttons[joyButtonMap["BUTTON_STANCE"]])
+        {
+          pubSlopePlanning(false);
+        }
+        else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_WALK"]] && joy_msg->buttons[joyButtonMap["BUTTON_WALK"]])
+        {
+          pubSlopePlanning(true);
+        }
+        else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_JUMP"]] && joy_msg->buttons[joyButtonMap["BUTTON_JUMP"]])
+        {
+          toggleStairDetection(!stair_detection_enabled_);
+        }
+        else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_TROT"]] && joy_msg->buttons[joyButtonMap["BUTTON_TROT"]])
+        {
+          executeCommand("stairclimb");
+        }
+        old_joy_msg_ = *joy_msg;
+        return;
+      }
+
 
       joystickOriginAxisFilter_ = joystickOriginAxisTemp_;
       // for(int i=0;i<4;i++)
@@ -588,6 +827,15 @@ namespace ocs2
       msg.data = scale;
       mode_scale_publisher_.publish(msg);
     }
+
+    inline void pubSlopePlanning(bool enable)
+    {
+      ROS_INFO_STREAM("[JoyControl] Publish slope planning: " << (enable ? "enable" : "disable"));
+      std_msgs::Bool msg;
+      msg.data = enable;
+      slope_planning_pub_.publish(msg);
+    }
+
     bool callArmControlService(int mode)
     {
       ros::ServiceClient client = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("humanoid_change_arm_ctrl_mode");
@@ -644,57 +892,104 @@ namespace ocs2
       head_motion_pub_.publish(msg);
     }
 
-  bool enableGrabBoxDemo(bool enable)
-  {
-    const std::string service_name = "/grab_box_demo/control_bt";
-    ros::NodeHandle nh;
 
-    // 等待服务可用
-    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
-      ROS_ERROR("Service %s not available", service_name.c_str());
-      return false;
+    bool enableGrabBoxDemo(bool enable)
+    {
+      const std::string service_name = "/grab_box_demo/control_bt";
+      ros::NodeHandle nh;
+
+      // 等待服务可用
+      if (!ros::service::waitForService(service_name, ros::Duration(1))) {
+        ROS_ERROR("Service %s not available", service_name.c_str());
+        return false;
+      }
+
+      // 创建服务代理
+      ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
+      std_srvs::SetBool srv;
+      srv.request.data = enable;
+
+      // 调用服务
+      if (client.call(srv)) {
+        ROS_INFO("controlBtTree call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
+        return srv.response.success; // 服务调用成功
+      } else {
+        ROS_ERROR("Failed to call service %s", service_name.c_str());
+        return false; // 服务调用失败
+      }
     }
 
-    // 创建服务代理
-    ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
-    std_srvs::SetBool srv;
-    srv.request.data = enable;
+    bool resetGrabBoxDemo(bool reset)
+    {
+      const std::string service_name = "/grab_box_demo/reset_bt";
+      ros::NodeHandle nh;
 
-    // 调用服务
-    if (client.call(srv)) {
-      ROS_INFO("controlBtTree call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
-      return srv.response.success; // 服务调用成功
-    } else {
-      ROS_ERROR("Failed to call service %s", service_name.c_str());
-      return false; // 服务调用失败
+      // 等待服务可用
+      if (!ros::service::waitForService(service_name, ros::Duration(1))) {
+        ROS_ERROR("Service %s not available", service_name.c_str());
+        return false;
+      }
+
+      // 创建服务代理
+      ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
+      std_srvs::SetBool srv;
+      srv.request.data = reset;
+
+      // 调用服务
+      if (client.call(srv)) {
+        ROS_INFO("resetGrabBoxDemo call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
+        return srv.response.success; // 服务调用成功
+      } else {
+        ROS_ERROR("Failed to call service %s", service_name.c_str());
+        return false; // 服务调用失败
+      }
     }
-  }
 
-  bool resetGrabBoxDemo(bool reset)
-  {
-    const std::string service_name = "/grab_box_demo/reset_bt";
-    ros::NodeHandle nh;
-
-    // 等待服务可用
-    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
-      ROS_ERROR("Service %s not available", service_name.c_str());
-      return false;
+    void toggleStairDetection(bool enable)
+    {
+      if (enable)
+      {
+        // 开启楼梯检测
+        std_srvs::Trigger srv;
+        if (start_stair_detection_client_.call(srv))
+        {
+          if (srv.response.success)
+          {
+            stair_detection_enabled_ = true;
+            ROS_INFO("[JoyControl] 楼梯检测已开启");
+          }
+          else
+          {
+            ROS_ERROR("[JoyControl] 开启楼梯检测失败: %s", srv.response.message.c_str());
+          }
+        }
+        else
+        {
+          ROS_ERROR("[JoyControl] 无法连接到楼梯检测开启服务");
+        }
+      }
+      else
+      {
+        // 关闭楼梯检测
+        std_srvs::Trigger srv;
+        if (stop_stair_detection_client_.call(srv))
+        {
+          if (srv.response.success)
+          {
+            stair_detection_enabled_ = false;
+            ROS_INFO("[JoyControl] 楼梯检测已关闭");
+          }
+          else
+          {
+            ROS_ERROR("[JoyControl] 关闭楼梯检测失败: %s", srv.response.message.c_str());
+          }
+        }
+        else
+        {
+          ROS_ERROR("[JoyControl] 无法连接到楼梯检测关闭服务");
+        }
+      }
     }
-
-    // 创建服务代理
-    ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
-    std_srvs::SetBool srv;
-    srv.request.data = reset;
-
-    // 调用服务
-    if (client.call(srv)) {
-      ROS_INFO("resetGrabBoxDemo call succeeded, received response: %s", srv.response.success ? "Success" : "Failure");
-      return srv.response.success; // 服务调用成功
-    } else {
-      ROS_ERROR("Failed to call service %s", service_name.c_str());
-      return false; // 服务调用失败
-    }
-  }
 
   private:
     ros::NodeHandle nodeHandle_;
@@ -730,6 +1025,7 @@ namespace ocs2
     ros::Publisher stop_pub_;
     ros::Publisher re_start_pub_;
     ros::Publisher head_motion_pub_;
+    ros::Publisher slope_planning_pub_;
     float total_mode_scale_{1.0};
     bool button_start_released_{true};
     // TargetTrajectories current_target_traj_;
@@ -739,6 +1035,16 @@ namespace ocs2
     std::map<std::string, humanoid::ModeSequenceTemplate> gait_map_;
     ros::ServiceServer joy_topic_service_;
     std::string current_joy_topic_;
+    
+    // 楼梯检测相关
+    ros::ServiceClient start_stair_detection_client_;
+    ros::ServiceClient stop_stair_detection_client_;
+    bool stair_detection_enabled_ = false;
+    
+    // 命令执行相关
+    std::map<std::string, Command_t> commands_map_;
+    std::string repo_root_path_;
+    std::future<bool> command_future_;
   };
 }
 
