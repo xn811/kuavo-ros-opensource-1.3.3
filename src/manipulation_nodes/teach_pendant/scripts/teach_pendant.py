@@ -214,7 +214,7 @@ def play_from_file(file_path, play_interval_sec):
         print("==> Playing back Starting...\n")        
 
         set_kuavo_arm_target_poses(kuavo_arm_target_poses_pub, 
-                                   [play_interval_sec + i * play_interval_sec for i in range(len(frames))],
+                                   [i * play_interval_sec for i in range(len(frames))],
                                      frames)
 
         time.sleep(play_interval_sec * len(frames))  
