@@ -28,6 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
 
 #include <string>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/joystick.h> 
 
 #include <ros/init.h>
 #include <ros/package.h>
@@ -96,6 +100,28 @@ namespace ocs2
       {"AXIS_FORWARD_BACK_TRIGGER", 7}
   };
 
+    std::map<std::string, int> joyButtonMap_backup = {
+      {"BUTTON_STANCE", 0},
+      {"BUTTON_TROT", 1},
+      {"BUTTON_JUMP", 3},
+      {"BUTTON_WALK", 4},
+      {"BUTTON_LB", 6},
+      {"BUTTON_RB", 7},
+      {"BUTTON_BACK", 10},
+      {"BUTTON_START", 11}
+  };
+
+  std::map<std::string, int> joyAxisMap_backup = {
+      {"AXIS_LEFT_STICK_Y", 0},
+      {"AXIS_LEFT_STICK_X", 1},
+      {"AXIS_LEFT_LT", 5},
+      {"AXIS_RIGHT_STICK_YAW", 2},
+      {"AXIS_RIGHT_STICK_Z", 3},
+      {"AXIS_RIGHT_RT", 4},
+      {"AXIS_LEFT_RIGHT_TRIGGER", 6},
+      {"AXIS_FORWARD_BACK_TRIGGER", 7}
+  };
+
 
   struct gaitTimeName_t
   {
@@ -116,6 +142,13 @@ namespace ocs2
 #define TARGET_REACHED_THRESHOLD 0.1
 #define TARGET_REACHED_THRESHOLD_YAW 0.1
 #define TARGET_REACHED_FEET_THRESHOLD 0.08
+#define MAX_JOYSTICK_NAME_LEN 256
+#define JOYSTICK_XBOX_MAP_JSON "bt2"
+#define JOYSTICK_XBOX_BUTTON_NUM 11
+#define JOYSTICK_BEITONG_MAP_JSON "bt2pro"
+#define JOYSTICK_BEITONG_BUTTON_NUM 16
+#define JOYSTICK_AXIS_NUM 8
+
   class JoyControl
   {
   public:
@@ -131,12 +164,52 @@ namespace ocs2
       }
       ROS_INFO_STREAM("Repository root path: " << repo_root_path_);
       
+
+      if (nodeHandle.hasParam("joy_node/dev"))
+      {
+        std::string joystick_device;
+        nodeHandle.getParam("joy_node/dev", joystick_device);
+
+        int fd = -1;
+        const char *device_path = joystick_device.c_str();
+
+        fd = open(device_path, O_RDONLY);
+        if (fd < 0) {
+          ROS_ERROR("[JoyControl] Error opening joystick device: %s", device_path);
+        } 
+        else {
+          char name[MAX_JOYSTICK_NAME_LEN] = {0};
+          if (ioctl(fd, JSIOCGNAME(MAX_JOYSTICK_NAME_LEN), name) < 0) {
+              ROS_ERROR("[JoyControl] Error getting joystick name via ioctl");
+          } 
+          else {
+            std::string joystick_name(name);
+            
+            if (joystick_name.find("BEITONG") != std::string::npos) {
+              nodeHandle.setParam("joystick_type", JOYSTICK_BEITONG_MAP_JSON);
+              std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_BEITONG_MAP_JSON + ".json";
+              nodeHandle.setParam("channel_map_path", channel_map_path);
+              ROS_INFO("[JoyControl] Setting joystick type to bt2pro");
+              loadJoyJsonConfig(ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_XBOX_MAP_JSON + ".json", joyButtonMap_backup, joyAxisMap_backup);
+            } else if (joystick_name.find("X-Box") != std::string::npos) {
+              nodeHandle.setParam("joystick_type", JOYSTICK_XBOX_MAP_JSON);
+              std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_XBOX_MAP_JSON + ".json";
+              nodeHandle.setParam("channel_map_path", channel_map_path);
+              ROS_INFO("[JoyControl] Setting joystick type to bt2");
+              
+              loadJoyJsonConfig(ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_BEITONG_MAP_JSON + ".json", joyButtonMap_backup, joyAxisMap_backup);
+            }
+          }
+          close(fd);
+        }
+      }
+
       if (nodeHandle.hasParam("channel_map_path"))
       {
         std::string channel_map_path;
         nodeHandle.getParam("channel_map_path", channel_map_path);
         ROS_INFO_STREAM("Loading joystick mapping from " << channel_map_path);
-        loadJoyJsonConfig(channel_map_path);
+        loadJoyJsonConfig(channel_map_path, joyButtonMap, joyAxisMap);
       }
       else
       {
@@ -224,7 +297,7 @@ namespace ocs2
       // 加载命令配置
       loadCommandsConfig();
     }
-    void loadJoyJsonConfig(const std::string &config_file)
+    void loadJoyJsonConfig(const std::string &config_file, std::map<std::string, int>& button_map, std::map<std::string, int>& axis_map)
     {
       nlohmann::json data_;
       std::ifstream ifs(config_file);
@@ -232,21 +305,21 @@ namespace ocs2
       for (auto &item : data_["JoyButton"].items())
       {
         std::cout << "button:" << item.key() << " item.value():" << item.value() << std::endl;
-        if (joyButtonMap.find(item.key())!= joyButtonMap.end())
+        if (button_map.find(item.key())!= button_map.end())
         {
-          joyButtonMap[item.key()] = item.value();
+          button_map[item.key()] = item.value();
         }
         else
-          joyButtonMap.insert({item.key(), item.value()});
+          button_map.insert({item.key(), item.value()});
       }
       for (auto &item : data_["JoyAxis"].items())
       {
-        if (joyAxisMap.find(item.key())!= joyAxisMap.end())
+        if (axis_map.find(item.key())!= axis_map.end())
         {
-          joyAxisMap[item.key()] = item.value();
+          axis_map[item.key()] = item.value();
         }
         else
-          joyAxisMap.insert({item.key(), item.value()});
+          axis_map.insert({item.key(), item.value()});
       }
     
     }
@@ -460,6 +533,37 @@ namespace ocs2
       cmd_vel_publisher_.publish(cmdVel_);
     }
 
+    void reloadJoystickMapping(int axis_num, int button_num) {
+        sensor_msgs::Joy old_joy_msg_backup;
+        old_joy_msg_backup.axes = std::vector<float>(axis_num, 0.0);
+        old_joy_msg_backup.buttons = std::vector<int32_t>(button_num, 0);
+
+        for (const auto& button : joyButtonMap_backup) {
+            auto it = std::find_if(joyButtonMap.begin(), joyButtonMap.end(),
+                [&button](const auto& pair) { return pair.first == button.first; });
+            if (it != joyButtonMap.end()) {
+                old_joy_msg_backup.buttons[button.second] = old_joy_msg_.buttons[it->second];
+            }
+        }
+        for (const auto& axis : joyAxisMap_backup) {
+            auto it = std::find_if(joyAxisMap.begin(), joyAxisMap.end(),
+                [&axis](const auto& pair) { return pair.first == axis.first; });
+            if (it != joyAxisMap.end()) {
+                old_joy_msg_backup.axes[axis.second] = old_joy_msg_.axes[it->second];
+            }
+        }
+
+        old_joy_msg_.buttons = old_joy_msg_backup.buttons;
+        old_joy_msg_.axes = old_joy_msg_backup.axes;
+
+        std::map<std::string, int> tempButtonMap = joyButtonMap;
+        std::map<std::string, int> tempAxisMap = joyAxisMap;
+        joyButtonMap = joyButtonMap_backup;
+        joyAxisMap = joyAxisMap_backup;
+        joyButtonMap_backup = tempButtonMap;
+        joyAxisMap_backup = tempAxisMap;
+    }
+
     bool setJoyTopicCallback(kuavo_msgs::SetJoyTopic::Request &req,
                            kuavo_msgs::SetJoyTopic::Response &res)
     {
@@ -557,11 +661,24 @@ namespace ocs2
         std::cout << "invalide joy msg"<<std::endl;
         return;
       }
-      if (joy_msg->buttons.size()<=joyButtonMap["BUTTON_START"])
+
+      if (old_joy_msg_.buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_XBOX_BUTTON_NUM)
       {
-        std::cerr << "[JoyController]:joy_msg has a error length, check your joystick_type!" << std::endl;
-        return;
+        nodeHandle_.setParam("joystick_type", JOYSTICK_XBOX_MAP_JSON);
+        std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_XBOX_MAP_JSON + ".json";
+        nodeHandle_.setParam("channel_map_path", channel_map_path);
+        ROS_WARN("[JoyController]: Joystick data mapping has changed from BEITONG to X-Box");
+        reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_XBOX_BUTTON_NUM);
       }
+      if(old_joy_msg_.buttons.size() == JOYSTICK_XBOX_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM)
+      {
+        nodeHandle_.setParam("joystick_type", JOYSTICK_BEITONG_MAP_JSON);
+        std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_BEITONG_MAP_JSON + ".json";
+        nodeHandle_.setParam("channel_map_path", channel_map_path);
+        ROS_WARN("[JoyController]: Joystick data mapping has changed from X-Box to BEITONG");
+        reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_BEITONG_BUTTON_NUM);
+      }
+
       if(joy_msg->axes[joyAxisMap["AXIS_RIGHT_RT"]] < -0.5)
       {
         // 组合键
