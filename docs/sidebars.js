@@ -123,7 +123,7 @@ const sidebars = {
                 'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/模仿学习使用案例/常见问题',
               ],
             },
-            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人导航案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/机器人开源导航案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/手腕相机抓取放置案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/拓展案例/百度EdgeBoard接入机器人案例',
           ],
