@@ -312,6 +312,7 @@ namespace humanoid_controller
     ros::Subscriber arm_target_traj_sub_;//最终的手臂目标位置
     ros::Subscriber foot_pos_des_sub_;
     ros::Subscriber hand_wrench_sub_;
+    ros::Subscriber arm_control_mode_sub_;
     ros::Subscriber contact_force_sub_;
     ros::Publisher mpcPolicyPublisher_;
 
@@ -360,6 +361,7 @@ namespace humanoid_controller
     size_t jointNumReal_ = 12;
     size_t armNumReal_ = 0;
     size_t actuatedDofNumReal_ = 12;// 实物的自由度
+    ArmControlMode mpcArmControlMode_ = ArmControlMode::AUTO_SWING; // KEEP = 0, AUTO_SWING = 1, EXTERN_CONTROL = 2
     int armDofMPC_ = 7; // 单手臂的自由度，会从配置文件中重新计算
     int armDofReal_ = 7; // 实际单手臂的自由度
     int armDofDiff_ = 0; // 单手臂的自由度差

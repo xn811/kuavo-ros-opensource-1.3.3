@@ -546,6 +546,19 @@ namespace humanoid_controller
       rHandWrenchPub_ = controllerNh_.advertise<geometry_msgs::WrenchStamped>("/hand_wrench/right_hand", 10);
       currentGaitNameSrv_ = controllerNh_.advertiseService(robotName_ + "_get_current_gait_name", 
         &humanoidController::getCurrentGaitNameCallback, this);
+      arm_control_mode_sub_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/humanoid/mpc/arm_control_mode", 10,[&](const std_msgs::Float64MultiArray::ConstPtr &msg)
+      {
+        if(msg->data.size() == 0)
+        {
+          ROS_ERROR("The dimensin of arm control mode is 0!!");
+          return;
+        }
+        if (msg->data[0] != mpcArmControlMode_)
+        {
+          mpcArmControlMode_ = static_cast<ArmControlMode>(msg->data[0]);
+          std::cout << "[controller] mpc arm control mode changed to: " << mpcArmControlMode_ << std::endl;
+        }
+      });
       
       // dexhand state
       dexhand_state_sub_ = controllerNh_.subscribe("/dexhand/state", 10, &humanoidController::dexhandStateCallback, this);
@@ -1890,7 +1903,10 @@ namespace humanoid_controller
       currentObservation_.time += period.toSec();
     }
     bool new_pull_up_state = false;
-    if (enable_pull_up_protect_ && isPreUpdateComplete && is_stance_mode_ && !only_half_up_body_ && currentObservation_.time - standupTime_ > 4 ) // 只有非半身轮臂模式站立状态&&站起来稳定之后进行保护
+     // 只有非半身轮臂模式站立状态&&站起来稳定之后进行保护, 并且手臂不是外部遥操作模式才可触发拉起保护
+    if (enable_pull_up_protect_ && isPreUpdateComplete && is_stance_mode_ && 
+    !only_half_up_body_ && currentObservation_.time - standupTime_ > 4 
+    && mpcArmControlMode_ != ArmControlMode::EXTERN_CONTROL)
       new_pull_up_state = stateEstimate_->checkPullUp(pull_up_force_threshold_);
     ros_logger_->publishValue("/state_estimate/pull_up_state", new_pull_up_state);
     if (new_pull_up_state && !isPullUp_)
