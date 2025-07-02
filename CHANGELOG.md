@@ -14,6 +14,12 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- 新增 rosbag 扭矩转化工具，读取 rosbag 中的 /sensors_data_raw 话题，将电流值转换为扭矩值，[工具链接](tools/bag_tools/current_to_torque_converter.py)
+- Kuavo Humanoid SDK 新增 v2 搬箱子策略模块，基于事件模型提供闭环的策略编排控制，[使用文档](./src/kuavo_humanoid_sdk/kuavo_humanoid_sdk/kuavo_strategy_v2/README.md)
+- 新增上楼梯功能案例，[使用文档](src/humanoid-control/humanoid_controllers/scripts/上楼梯案例说明.md)
+- 新增 ROS 服务接口 `/humanoid_mpc_gait_change`用于步态切换, 支持 `walk` 和 `stance`
+- 新增 VR 可以控制头部运动，默认开启头部控制模式，可通过`enable_head_control:=false`关闭
+- 新增手臂碰撞检测功能包 `kuavo_arm_collision_check`，用于检测手臂碰撞
 - 非触觉灵巧手新增 ROS 控制话题:`/dexhand/command`, `/dexhand/left/command`, `/dexhand/right/command`, 支持位置和速度控制模式， [详细文档](./docs/运动控制API.md)
 - 非触觉灵巧手新增更改握力级别 ROS 服务接口:`/dexhand/change_force_level` `, [详细文档](./docs/运动控制API.md)
 - 新增非触觉灵巧手 Protobuf SDK 替换旧版 hand_sdk 支持位置/速度控制，握力级别变更，获取手指真实状态等接口 
@@ -35,6 +41,12 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复初始化和运行过程中的手柄的型号发生改变无法控制机器人问题
+- 修复半身模式手臂 VR 跟踪时无法回正
+- 修复 TF 树中 odom->base_link 时间戳为 0 和 base link 相对于 dummy link 平移和旋转不为 0 的问题 
+- 修复示教功能中小臂不会动的问题
+- 修复手臂和头部电机获取速度接口未赋值就返回导致速度值一直为 0 的问题
+- Kuavo Humanoid SDK 修复在非原点处执行`ctrl_arm_example.py`示例手臂会异常问题，原因是示例中展示的运动学控制坐标系为 odom 系，更正示例为局部系
 - 修复所有版本机器人的 gazebo urdf 中 friction 参数错误问题，更正为 0.0 防止手臂控制有静差
 - 修复 pick_and_place 功能包, 运行时无法控制灵巧手问题
 - 修复半身VR XA切换控制模式手臂不插值，导致机器人手臂抽搐
@@ -61,6 +73,8 @@
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
+- VR 机器人 VR 节点新增广播机器人信息用于等待 VR 头盔连接
+- 增加可视化运动学 MPC 补充双手末端执行器的轨迹姿态
 - 新增 USB WIFI 信号稳定性测试工具和 VR 传输数据用量测试工具， [使用文档](./tools/wifi_benchmark/README.md)
 - 增加时频域分析脚本，用于分析手臂末端的运动跟踪性能，从时域和频域的角度定量的分析跟踪效果、各环节间的延迟
 - 优化上下位机 DHCP 配置工具，默认下位机为DHCP分配主机并增加声卡 udev 规则配置
