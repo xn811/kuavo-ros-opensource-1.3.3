@@ -84,6 +84,17 @@ clone_repos() {
     print_success "代码仓库克隆/更新完成"
 }
 
+check_samplerate(){
+    print_info "正在安装 samplerate..."
+    sudo bash ~/kuavo-ros-opensource/tools/user_groups_tools/samplerate_install.sh
+    if [ $? -eq 0 ]; then
+        print_success "samplerate 安装完成"
+    else
+        print_error "samplerate 安装失败，请检查日志"
+        exit 1
+    fi
+}
+
 # Configure robot version
 setup_robot_version() {
     print_info "设置机器人版本..."
@@ -417,6 +428,7 @@ main() {
     check_system_time
     setup_pip
     clone_repos
+    check_samplerate
     setup_robot_version
     setup_robot_weight
     setup_drive_board
