@@ -13,9 +13,12 @@ if not executor.connect():
     exit(1)
 container_name = "kuavo_gendexgrasp_staircase_estimation_dev"
 
-executor.execute_predefined_command("xhost_on")
-executor.execute_predefined_container_command_async("run_staircase_detection", container_name)
-executor.execute_predefined_container_command_async("start_staircase_detection", container_name)
+# executor.execute_predefined_command("xhost_on")
+executor.execute_predefined_command("launch_orbbec_camera")
+
+
+# executor.execute_predefined_container_command_async("run_staircase_detection", container_name)
+# executor.execute_predefined_container_command_async("start_staircase_detection", container_name)
 
 print("异步指令开始执行")
 time.sleep(50)

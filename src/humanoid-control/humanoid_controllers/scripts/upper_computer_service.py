@@ -17,6 +17,8 @@ class UpperComputerServiceNode:
             raise RuntimeError("上位机连接失败")
         rospy.loginfo("上位机已连接")
         self.start_srv = rospy.Service('/kuavo/start_stair_detection', Trigger, self.handle_start_stair_detection)
+        self.start_srv_orbbec = rospy.Service('/kuavo/start_stair_detection_orbbec', Trigger, self.handle_start_stair_detection_orbbec)
+
         self.stop_srv = rospy.Service('/kuavo/stop_stair_detection', Trigger, self.handle_stop_stair_detection)
         rospy.on_shutdown(self.cleanup)
         rospy.loginfo("上位机服务节点已启动，等待服务调用...")
@@ -24,6 +26,13 @@ class UpperComputerServiceNode:
     def handle_start_stair_detection(self, req):
         try:
             self.ssh_executor.start_stair_detection()
+            return TriggerResponse(success=True, message="已远程启动楼梯识别脚本")
+        except Exception as e:
+            return TriggerResponse(success=False, message=f"启动失败: {e}")
+
+    def handle_start_stair_detection_orbbec(self, req):
+        try:
+            self.ssh_executor.start_stair_detection("orbbec")
             return TriggerResponse(success=True, message="已远程启动楼梯识别脚本")
         except Exception as e:
             return TriggerResponse(success=False, message=f"启动失败: {e}")

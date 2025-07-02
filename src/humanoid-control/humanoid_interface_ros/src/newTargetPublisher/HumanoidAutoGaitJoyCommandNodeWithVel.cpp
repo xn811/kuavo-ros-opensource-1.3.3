@@ -290,10 +290,6 @@ namespace ocs2
       head_motion_pub_ = nodeHandle_.advertise<kuavo_msgs::robotHeadMotionData>("/robot_head_motion_data", 10);
       slope_planning_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/humanoid/mpc/enable_slope_planning", 10);
 
-      // 楼梯检测相关
-      start_stair_detection_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/kuavo/start_stair_detection");
-      stop_stair_detection_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/kuavo/stop_stair_detection");
-
       // 加载命令配置
       loadCommandsConfig();
     }
@@ -725,7 +721,13 @@ namespace ocs2
         }
         else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_JUMP"]] && joy_msg->buttons[joyButtonMap["BUTTON_JUMP"]])
         {
-          toggleStairDetection(!stair_detection_enabled_);
+          if (stair_detection_enabled_)
+          {
+            executeCommand("stop_stair_detect");
+          }
+          else{
+            executeCommand("start_stair_detect");
+          }
         }
         else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_TROT"]] && joy_msg->buttons[joyButtonMap["BUTTON_TROT"]])
         {
@@ -1062,51 +1064,7 @@ namespace ocs2
       }
     }
 
-    void toggleStairDetection(bool enable)
-    {
-      if (enable)
-      {
-        // 开启楼梯检测
-        std_srvs::Trigger srv;
-        if (start_stair_detection_client_.call(srv))
-        {
-          if (srv.response.success)
-          {
-            stair_detection_enabled_ = true;
-            ROS_INFO("[JoyControl] 楼梯检测已开启");
-          }
-          else
-          {
-            ROS_ERROR("[JoyControl] 开启楼梯检测失败: %s", srv.response.message.c_str());
-          }
-        }
-        else
-        {
-          ROS_ERROR("[JoyControl] 无法连接到楼梯检测开启服务");
-        }
-      }
-      else
-      {
-        // 关闭楼梯检测
-        std_srvs::Trigger srv;
-        if (stop_stair_detection_client_.call(srv))
-        {
-          if (srv.response.success)
-          {
-            stair_detection_enabled_ = false;
-            ROS_INFO("[JoyControl] 楼梯检测已关闭");
-          }
-          else
-          {
-            ROS_ERROR("[JoyControl] 关闭楼梯检测失败: %s", srv.response.message.c_str());
-          }
-        }
-        else
-        {
-          ROS_ERROR("[JoyControl] 无法连接到楼梯检测关闭服务");
-        }
-      }
-    }
+    
 
   private:
     ros::NodeHandle nodeHandle_;
@@ -1154,8 +1112,6 @@ namespace ocs2
     std::string current_joy_topic_;
     
     // 楼梯检测相关
-    ros::ServiceClient start_stair_detection_client_;
-    ros::ServiceClient stop_stair_detection_client_;
     bool stair_detection_enabled_ = false;
     
     // 命令执行相关

@@ -7,7 +7,7 @@
   <link name="base_link">
     <inertial>
       <origin xyz="-0.0185005 0.00031952 0.1929569" rpy="0 0 0" />
-      <mass value="27.79833803" />
+      <mass value="27.56033803" />
       <inertia ixx="0.93103133" ixy="0.00011763" ixz="-0.07210993" iyy="0.82590532" iyz="6.88e-06" izz="0.27686612" />
     </inertial>
     <visual>
@@ -1009,6 +1009,60 @@
       link="base_link" />
     <child
       link="torso-camera" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+  <link
+    name="waist_camera">
+    <inertial>
+      <origin
+        xyz="-0.0352747720086005 5.11279030860874E-05 -0.00154687630407949"
+        rpy="0 0 0" />
+      <mass
+        value="0.237986769607677" />
+      <inertia
+        ixx="0.000666718805832595"
+        ixy="1.39974366569124E-07"
+        ixz="-1.47166626554892E-05"
+        iyy="8.36219161597965E-05"
+        iyz="-3.58024687826506E-07"
+        izz="0.000699018993000803" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s45/meshes/waist_camera.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://kuavo_assets/models/biped_s45/meshes/waist_camera.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="waist_camera"
+    type="fixed">
+    <origin
+      xyz="0.168717483101422 0 0.01355599662743"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="waist_camera" />
     <axis
       xyz="0 0 0" />
   </joint>

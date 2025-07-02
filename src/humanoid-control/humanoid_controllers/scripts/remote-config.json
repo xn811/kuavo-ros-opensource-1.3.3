@@ -16,14 +16,10 @@
         "xhost_off": [
             "export DISPLAY=:1.0 && xhost -"
         ],
-        "start_vision_system": [
-            "cd /home/lab/vision_system",
-            "source devel/setup.bash",
-            "roslaunch stair_detection stair_detection.launch"
-        ],
-        "stop_vision_system": [
-            "pkill -f stair_detection",
-            "pkill -f roslaunch"
+        
+        "launch_orbbec_camera": [
+            "pkill -f orb",
+            "bash -c 'export ROS_MASTER_URI=http://kuavo_master:11311 && export ROS_IP=192.168.26.1 && source /home/kuavo/.bashrc && cd /home/kuavo/kuavo_ros_application && source devel/setup.bash && roslaunch orbbec_camera gemini_330_series.launch' > ~/camera.log"
         ],
         "check_system_status": [
             "ps aux | grep ros",
@@ -38,6 +34,9 @@
         ],
         "start_staircase_detection": [
             "bash -c 'export DISPLAY=:1.0 && source devel/setup.bash && roslaunch vision_staircase_estimation one_start_all.launch'"
+        ],
+        "start_staircase_detection_orbbec": [
+            "bash -c 'export DISPLAY=:1.0 && source devel/setup.bash && roslaunch vision_staircase_estimation one_start_all_orbbec.launch'"
         ],
         "kill_staircase_detection": [
             "bash -c 'pkill -f terrain_runner'",

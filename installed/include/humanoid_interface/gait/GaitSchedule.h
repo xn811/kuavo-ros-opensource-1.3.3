@@ -188,6 +188,7 @@ namespace ocs2
        * @return The full mode schedule.
        */
       ModeSchedule getFullModeSchedule() { return modeSchedule_; }
+      ModeSchedule& getFullModeScheduleRef() { return modeSchedule_; }
       /**
        * Used to insert a new user defined logic in the given time period.
        *

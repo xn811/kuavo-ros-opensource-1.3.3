@@ -833,13 +833,20 @@ class SSHExecutor:
         self.async_processes.clear()
         print("已清理所有异步任务")
         
-    def start_stair_detection(self):
+    def start_stair_detection(self, camera_type=None):
         """
         启动远程楼梯识别（与 stairClimbPlanner-vision.py 中一致）
         """
         self.execute_predefined_command("xhost_on")
+        print("camera_type:",camera_type)
+        if camera_type == "orbbec":
+            self.execute_predefined_command_async("launch_orbbec_camera")
+            print("启动上位机 orbbec 相机")
         self.execute_predefined_container_command_async("run_staircase_detection")
-        self.execute_predefined_container_command_async("start_staircase_detection")
+        if camera_type == "orbbec":
+            self.execute_predefined_container_command_async("start_staircase_detection_orbbec")
+        else:
+            self.execute_predefined_container_command_async("start_staircase_detection")
         print("已远程启动楼梯识别脚本")
 
     def stop_stair_detection(self):
