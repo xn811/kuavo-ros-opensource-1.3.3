@@ -16,7 +16,7 @@ const sidebars = {
   tutorialSidebar: [
     {
       type: 'category',
-      label: '产品介绍',
+      label: '首页',
       items: [
                 {
           type: 'category',
@@ -34,8 +34,9 @@ const sidebars = {
           type: 'category',
           label: 'KUAVO4Pro旧版介绍',
           items: [
-            'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO产品介绍',
             'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4_1产品介绍',
+            'basic_usage/kuavo-ros-control/docs/首页',
           ],
         },
         'basic_usage/kuavo-ros-control/docs/1产品介绍/轮臂产品介绍',
