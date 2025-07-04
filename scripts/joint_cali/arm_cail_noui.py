@@ -802,7 +802,7 @@ class ArmCalibratorNoUI(ArmCalibrator):
         try:
             import subprocess
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            bag_file = os.path.join(script_dir, "bags/new_hand_move_demo_" + ('left' if self.side == 'l' else 'right') + ".bag")
+            bag_file = os.path.join(script_dir, "bags/hand_move_demo_" + ('left' if self.side == 'l' else 'right') + ".bag")
             if not os.path.exists(bag_file):
                 print(f"[WARNING] Hand move demo bag file not found: {bag_file}")
                 return False
