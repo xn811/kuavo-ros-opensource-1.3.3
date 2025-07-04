@@ -18,23 +18,24 @@ const sidebars = {
       type: 'category',
       label: '产品介绍',
       items: [
-                {
+        'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
+        {
           type: 'category',
           label: 'KUAVO4Pro新版介绍',
           items: [
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 标准版产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 进阶版产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO MaxA版产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO MaxB版产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 展厅版产品介绍',
-        'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 展厅算力版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 标准版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 进阶版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO MaxA版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO MaxB版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 展厅版产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO 展厅算力版产品介绍',
           ],
         },
         {
           type: 'category',
           label: 'KUAVO4Pro旧版介绍',
           items: [
-            'basic_usage/kuavo-ros-control/docs/1产品介绍/产品介绍',
+            'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4PRO产品介绍',
             'basic_usage/kuavo-ros-control/docs/1产品介绍/KUAVO_4_1产品介绍',
           ],
         },
