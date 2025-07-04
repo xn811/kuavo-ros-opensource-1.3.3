@@ -10,8 +10,8 @@ mother_dir = os.path.dirname(os.path.abspath(__file__))
 
 log_path = init_logging(log_dir=os.path.join(mother_dir, "logs"), filename_prefix="grab_box_v2", enable=True)
 
-from configs.config_sim import config
-# from configs.config_real import config
+# from configs.config_sim import config
+from configs.config_real import config
 
 from strategy import (
     search_tag_with_head,
@@ -204,7 +204,7 @@ def grab_one_box(user_input=True):
         box_behind_tag=config.pick.box_behind_tag,  # 箱子在tag后面的距离，单位米
         box_beneath_tag=config.pick.box_beneath_tag,  # 箱子在tag下方的距离，单位米
         box_left_tag=config.pick.box_left_tag,  # 箱子在tag左侧的距离，单位米
-        tag=fake_target_tag,
+        tag=latest_tag,
         step_back_distance=config.common.step_back_distance,  # 搬起后向后平移的距离，单位米
 
         box_mass=config.common.box_mass,  # 假设箱子质量，单位kg，用来计算纵向wrench
@@ -323,7 +323,7 @@ def grab_one_box(user_input=True):
 if __name__ == "__main__":
     for eps in range(10):
         print(f"### 案例开始: {eps} ###")
-        res = grab_one_box(user_input=False)
+        res = grab_one_box(user_input=True)
         print(f"### 案例结束: {eps} ###")
 
         if not res:

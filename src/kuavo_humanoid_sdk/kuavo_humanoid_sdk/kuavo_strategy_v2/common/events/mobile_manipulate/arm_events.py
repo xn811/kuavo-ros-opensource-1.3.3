@@ -371,22 +371,44 @@ class EventArmMoveKeyPoint(BaseEvent):
         返回：
             bool: 如果目标设置成功返回True，否则返回False。
         """
-        # 检查目标是否有效
-        if not self._check_target_valid(target, *args, **kwargs):
-            return False
 
-        # 将目标转换为世界坐标系
-        left_target_world = self._convert_pose_to_world_frame(target[0])
-        right_target_world = self._convert_pose_to_world_frame(target[1])
+        # 直接检查整个 [left_target_list, right_target_list] 结构
+        target_wrench = kwargs.get('arm_wrench', None)
+
+        left_target_world = []
+        right_target_world = []
+        for left_key_pose, right_key_pose in zip(target[0], target[1]):
+            if Frame.BASE == left_key_pose.frame:
+
+                transform_base_to_world = self.get_current_transform(source_frame=Frame.BASE, target_frame=Frame.ODOM)
+                self.logger.info(f'此刻base在odom下的位置：{transform_base_to_world.trans_pose}')
+                left_target_world.append(transform_base_to_world.apply_to_pose(left_key_pose))
+                right_target_world.append(transform_base_to_world.apply_to_pose(right_key_pose))
+
+            elif Frame.ODOM == left_key_pose.frame:
+                left_target_world.append(left_key_pose)
+                right_target_world.append(right_key_pose)
+
+            elif Frame.TAG == left_key_pose.frame:
+                tag = kwargs.get('tag', None)
+                assert tag is not None, "Tag must be provided when target frame is TAG"
+                transform_source_to_target = Transform3D(
+                    trans_pose=tag.pose,
+                    source_frame=Frame.TAG,  # 源坐标系为Tag坐标系
+                    target_frame=Frame.ODOM  # 目标坐标系为里程计坐标系
+                )
+
+                left_target_world.append(transform_source_to_target.apply_to_pose(left_key_pose))
+                right_target_world.append(transform_source_to_target.apply_to_pose(right_key_pose))
 
         res = super().set_target(target=[left_target_world, right_target_world], *args, **kwargs)
+
         if res:
-            self.target = [left_target_world, right_target_world]
-            self.current_pose_id = 0
-            self.pre_pose_id = -1
-            self.current_left_pose = left_target_world
-            self.current_right_pose = right_target_world
-        return res
+            # 为了应对相对位置控制的情况，记录设置目标时机器人的位姿
+            self.target_wrench = target_wrench
+            self.get_arm_pose_world()
+
+        return True
 
     def check_current_point_meet(self, current_left_target_pose: Pose, current_right_target_pose: Pose):
         """
@@ -467,25 +489,62 @@ class EventArmMoveKeyPoint(BaseEvent):
         返回：
             bool: 如果目标有效返回True，否则返回False。
         """
-        if not isinstance(target, list) or len(target) != 2:
-            self.logger.error("目标必须是包含两个Pose对象的列表")
+        # 如果是 [list, list]，递归检查
+        target_wrench = kwargs.get('arm_wrench', None)
+
+        if isinstance(target, (list, tuple)) and len(target) == 2:
+            left_list, right_list = target
+
+            if not (isinstance(left_list, list) and isinstance(right_list, list)):
+                print("❌目标不是两个列表")
+                return False
+
+            if target_wrench is not None:
+                if not isinstance(target_wrench, (list, tuple)):
+                    # print(target_wrench)
+                    print("❌目标力矩必须是列表的列表")
+                    return False
+                left_wrench, right_wrench = target_wrench
+                if len(left_wrench) != len(left_list):
+                    print("❌左手力矩列表长度与关键点列表长度不匹配")
+                    return False
+                if len(right_wrench) != len(right_list):
+                    print("❌右手力矩列表长度与关键点列表长度不匹配")
+                    return False
+
+            # 检查每个关键点的有效性和可达性
+            for i, (left_pose, right_pose) in enumerate(zip(left_list, right_list)):
+                if not isinstance(left_pose, Pose) or not isinstance(right_pose, Pose):
+                    print(f"关键点{i + 1}不是Pose对象: {type(left_pose)}, {type(right_pose)}")
+                    return False
+
+                # 检查坐标系有效性
+                if left_pose.frame not in [Frame.ODOM, Frame.BASE, Frame.TAG]:
+                    print(f"关键点{i + 1}左手臂坐标系无效: {left_pose.frame}")
+                    return False
+                if right_pose.frame not in [Frame.ODOM, Frame.BASE, Frame.TAG]:
+                    print(f"关键点{i + 1}右手臂坐标系无效: {right_pose.frame}")
+                    return False
+
+                # 检查位置有效性和可达性
+                if not self._check_arm_pose_validity(left_pose, "左手臂", i + 1, tag=kwargs.get('tag', None)):
+                    return False
+                if not self._check_arm_pose_validity(right_pose, "右手臂", i + 1, tag=kwargs.get('tag', None)):
+                    return False
+
+            return True
+        # 单个 Pose 检查
+        if not isinstance(target, Pose):
+            print("❌目标位置必须是Pose对象")
             return False
-
-        left_pose, right_pose = target
-
-        # 检查左臂位姿
-        if not self._check_arm_pose_validity(left_pose, "left", 0, *args, **kwargs):
+        if target.frame not in [Frame.ODOM, Frame.BASE]:
+            print("❌目标位姿的坐标系必须是'base_link'或'odom'")
             return False
-
-        # 检查右臂位姿
-        if not self._check_arm_pose_validity(right_pose, "right", 1, *args, **kwargs):
-            return False
-
         return True
 
     def _check_arm_pose_validity(self, pose: Pose, arm_name: str, point_id: int, *args, **kwargs) -> bool:
         """
-        检查手臂位姿是否有效。
+        检查手臂姿态的有效性。
 
         参数：
             pose (Pose): 位姿。
@@ -495,7 +554,7 @@ class EventArmMoveKeyPoint(BaseEvent):
             `**kwargs`: 额外的关键字参数。
 
         返回：
-            bool: 如果位姿有效返回True，否则返回False。
+            bool: 如果姿态有效返回True，否则返回False。
         """
         try:
             # 提前计算所有需要的转换

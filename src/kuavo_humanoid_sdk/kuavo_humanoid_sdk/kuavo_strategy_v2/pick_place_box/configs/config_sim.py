@@ -28,13 +28,13 @@ class config:
 
     class pick:
         """搬框配置"""
-        tag_id = 2
+        tag_id = 1
         tag_pos_world = (0, -10, 0)  # 初始位置猜测，单位米
         tag_euler_world = (0, 0, 0)  # 初始姿态猜测，单位欧拉角（弧度）
         box_in_tag_pos = (0.0, 0.0, 0.0)  # 箱子在目标标签中的位置猜测，单位米
         box_in_tag_euler = (0.0, 0.0, 0.0)  # 箱子在目标标签中的姿态猜测，单位欧拉角（弧度）
 
-        stand_in_tag_pos = (0.0, 0.0, 1.0)  # 站立位置在目标标签中的位置猜测，单位米
+        stand_in_tag_pos = (0.0, 0.0, 0.5)  # 站立位置在目标标签中的位置猜测，单位米
         stand_in_tag_euler = (-np.deg2rad(90), np.deg2rad(90), 0.0)  # 站立位置在目标标签中的姿态猜测，单位欧拉角（弧度）
 
         box_behind_tag = 0.0  # 箱子在tag后面的距离，单位米
@@ -46,13 +46,9 @@ class config:
 
     class place:
         """放框配置"""
-        tag_id = 2
-        # tag_pos_world = (0, 10, 0)  # 放置位置猜测，单位米
-        # tag_euler_world = (0, 0, 0)  # 放置位置姿态猜测，单位欧拉角（弧度）
-
-        tag_pos_world = (-10, 0, 0)  # 放置位置猜测，单位米
+        tag_id = 0
+        tag_pos_world = (0, 10, 0)  # 放置位置猜测，单位米
         tag_euler_world = (0, 0, 0)  # 放置位置姿态猜测，单位欧拉角（弧度）
-
         stand_in_tag_pos = (0.0, 0.0, 0.5)  # 放置位置站立位置在目标标签中的位置猜测，单位米
         stand_in_tag_euler = (-np.deg2rad(90), np.deg2rad(90), 0.0)  # 放置位置站立位置在目标标签中的姿态猜测，单位欧拉角（弧度）
 

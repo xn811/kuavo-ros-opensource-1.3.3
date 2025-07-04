@@ -112,8 +112,8 @@ class EventWalkToPose(BaseEvent):
 
         参数：
             target (Any): 目标。
-            `*args`: 额外的参数。
-            `**kwargs`: 额外的关键字参数。
+            *args: 额外的参数。
+            **kwargs: 额外的关键字参数。
 
         返回：
             bool: 如果目标设置成功返回True，否则返回False。

@@ -274,7 +274,7 @@ class EventHeadMoveKeyPoint(BaseEvent):
             `*args`: 额外的参数。
             `**kwargs`: 额外的关键字参数。
         """
-        super().open(*args, **kwargs)
+        super().open()
         self.last_step_time = time.time()
 
     def close(self):
