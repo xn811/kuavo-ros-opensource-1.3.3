@@ -107,6 +107,7 @@ const sidebars = {
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/二维码抓取水瓶案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/基于人脸识别的简易语音交互案例',
             'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/全身打太极动作案例',
+            'basic_usage/kuavo-ros-control/docs/5功能案例/通用案例/策略模块搬箱子案例',
           ],
         },
         {
