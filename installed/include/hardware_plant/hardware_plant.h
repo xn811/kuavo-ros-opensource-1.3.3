@@ -139,8 +139,9 @@ public:
     double lockRotorTimeWin_{0.0};
     double speedTimeWin_{0.0};
     std::vector<double_t> joint_velocity_limits_;
+    std::vector<double_t> joint_peak_velocity_limits_;
     std::vector<double_t> joint_lock_rotor_limits_;
-    std::vector<double_t> joint_peak_limits_;
+    std::vector<double_t> joint_peak_torque_limits_;
     std::vector<double_t> min_joint_position_limits;
     std::vector<double_t> max_joint_position_limits;
 
