@@ -2,6 +2,8 @@ import rospy
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+import os
+from common.common_utils import print_colored_text
 
 bridge = CvBridge()
 # 初始化颜色图像回调次数计数器
@@ -11,18 +13,6 @@ depth_callback_count = 0
 
 color_valid_flag = False
 depth_valid_flag = False
-
-def print_colored_text(text, color="green", bold=False):
-    color_codes = {
-        "green": ("32", "92"),
-        "yellow": ("33", "93"),
-        "red": ("31", "91")
-    }
-    base_code = "\033["
-    if bold:
-        base_code += "1;"
-    color_code = color_codes.get(color, ("32", "92"))[1]
-    print(f"{base_code}{color_code}m{text}\033[0m")
 
 def check_and_print_status():
     global color_callback_count, depth_callback_count

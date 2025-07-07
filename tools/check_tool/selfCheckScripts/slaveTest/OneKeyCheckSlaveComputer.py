@@ -1,6 +1,7 @@
 import subprocess
 import paramiko
 import os
+from common.common_utils import print_colored_text
 from sshConnAndExec import start_all_services, close_all_connections
 
 # 远程主机信息
@@ -46,18 +47,6 @@ def check_roslaunch_success(node_check):
     except Exception as e:
         print_colored_text(f"检查 ROS 节点时出错: {e}", color="red", bold=True)
         return False
-
-def print_colored_text(text, color="green", bold=False):
-    color_codes = {
-        "green": ("32", "92"),
-        "yellow": ("33", "93"),
-        "red": ("31", "91")
-    }
-    base_code = "\033["
-    if bold:
-        base_code += "1;"
-    color_code = color_codes.get(color, ("32", "92"))[1]
-    print(f"{base_code}{color_code}m{text}\033[0m")
 
 def ssh_send_command(host, port, username, password, command):
     global ssh

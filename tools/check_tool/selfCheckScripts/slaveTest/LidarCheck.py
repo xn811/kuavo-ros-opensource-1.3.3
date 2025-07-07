@@ -1,20 +1,10 @@
 import rospy
 from sensor_msgs.msg import PointCloud2
+import os
+from common.common_utils import print_colored_text
 
 lidar_callback_count = 0
 lidar_valid_flag = False
-
-def print_colored_text(text, color="green", bold=False):
-    color_codes = {
-        "green": ("32", "92"),
-        "yellow": ("33", "93"),
-        "red": ("31", "91")
-    }
-    base_code = "\033["
-    if bold:
-        base_code += "1;"
-    color_code = color_codes.get(color, ("32", "92"))[1]
-    print(f"{base_code}{color_code}m{text}\033[0m")
 
 def check_and_print_status():
     global lidar_callback_count, lidar_valid_flag
