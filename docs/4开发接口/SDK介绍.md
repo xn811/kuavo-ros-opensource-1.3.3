@@ -41,7 +41,7 @@ catkin build kuavo_sdk
 ## 使用
 - source 环境变量
 ```sh
-source ~/devel/setup.zsh # zsh还是bash根据使用终端环境选择
+source ~/devel/setup.bash # zsh还是bash根据使用终端环境选择
 ```
 - 执行SDK示例程序
 ```sh
