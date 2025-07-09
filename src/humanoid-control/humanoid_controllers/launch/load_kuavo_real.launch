@@ -125,7 +125,7 @@
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
     <arg name="joint_protect_enable" default="false" />
-    <arg name="cmd_truncation_enable" default="true" />
+    <arg name="cmd_truncation_enable" default="false" />
 
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />
