@@ -2,6 +2,8 @@
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <behaviortree_cpp_v3/loggers/bt_cout_logger.h>
 #include <yaml-cpp/yaml.h>
+#include <algorithm>
+#include <iterator>
 #include "grab_box/package_path.h"
 #include "grab_box/localization/closeToStart.hpp"
 #include "grab_box/localization/checkStatusOK.hpp"
@@ -35,6 +37,8 @@
 #include "grab_box/grasp/controlClaw.hpp"
 #include "grab_box/utils/getPartPose.hpp"   
 #include "grab_box/grasp/selectHandSide.hpp"
+#include "grab_box/utils/filtered_logger.hpp"
+
 void executeResetState(const BT::BehaviorTreeFactory& factory, const std::string& xml_string, BT::Blackboard::Ptr blackboard) {
   BT::BehaviorTreeFactory factory_reset = factory;
   std::cout << "Loading reset behavior tree from " << xml_string << std::endl;
@@ -171,6 +175,24 @@ int main(int argc, char **argv)
   auto tree = factory.createTreeFromFile(path, blackboard);
   g_tree_ptr = &tree;  // 保存树的指针以供服务回调使用
   
+  // Load nodes to ignore from the YAML config file for the logger.
+  std::vector<std::string> nodes_to_ignore;
+  if (config["logger_nodes_to_ignore"])
+  {
+    ROS_INFO("Loading logger ignore list from bt_config.yaml");
+    std::transform(config["logger_nodes_to_ignore"].begin(), 
+                   config["logger_nodes_to_ignore"].end(),
+                   std::back_inserter(nodes_to_ignore),
+                   [](const YAML::Node& node) { return node.as<std::string>(); });
+  }
+  else
+  {
+    // Provide a default list if not specified in the YAML file.
+    ROS_WARN("Key 'logger_nodes_to_ignore' not found in bt_config.yaml. Using default ignore list.");
+    nodes_to_ignore = {};
+  }
+  GrabBox::FilteredCoutLogger logger_cout(tree, nodes_to_ignore);
+
   // 创建服务
   ros::ServiceServer service = nh.advertiseService("control_bt", controlCallback);
   ros::ServiceServer service_reset = nh.advertiseService("reset_bt", resetCallback);

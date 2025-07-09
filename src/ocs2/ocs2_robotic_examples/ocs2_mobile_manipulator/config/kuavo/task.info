@@ -238,6 +238,27 @@ stateCost
       }
     }
   }
+  Q_regularization
+  {
+    scaling 1e-2
+
+    (6,6) 1.0 ; z_arm_l1
+    (7,7) 10.0 ; z_arm_l2
+    (8,8) 1.0 ; z_arm_l3
+    (9,9) 1.0 ; z_arm_l4
+    (10,10) 1.0 ; z_arm_l5
+    (11,11) 1.0 ; z_arm_l6
+    (12,12) 1.0 ; z_arm_l7
+    (13,13) 1.0 ; z_arm_r1
+    (14,14) 10.0 ; z_arm_r2
+    (15,15) 1.0 ; z_arm_r3
+    (16,16) 1.0 ; z_arm_r4
+    (17,17) 1.0 ; z_arm_r5
+    (18,18) 1.0 ; z_arm_r6
+    (19,19) 1.0 ; z_arm_r7
+
+
+  }
 }
 
 inputCost

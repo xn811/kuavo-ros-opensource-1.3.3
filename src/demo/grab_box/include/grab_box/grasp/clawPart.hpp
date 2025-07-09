@@ -17,6 +17,7 @@
 #include "kuavo_msgs/fkSrv.h"
 #include "kuavo_msgs/headBodyPose.h"
 #include "kuavo_msgs/changeArmCtrlMode.h"
+#include "kuavo_msgs/armTargetPoses.h"
 #include "grab_box/common/ocs2_ros_interface.hpp"
 #include "grab_box/common/drake_interface.hpp"
 #include "grab_box/common/math.hpp"
@@ -51,7 +52,7 @@ namespace GrabBox
     : BT::StatefulActionNode(name, config)
     {
       ros::NodeHandle nh;
-      Manipulator_pub_ = nh.advertise<kuavo_msgs::twoArmHandPoseCmd>("mm/two_arm_hand_pose_cmd", 10);
+      Manipulator_traj_pub_ = nh.advertise<kuavo_msgs::armTargetPoses>("/mm/end_effector_trajectory", 1);
       changeManipulatorControlFrame_srv_ = nh.serviceClient<kuavo_msgs::setMmCtrlFrame>("/set_mm_ctrl_frame");
       changeManipulatorControlFlow_srv_ = nh.serviceClient<kuavo_msgs::changeArmCtrlMode>("/enable_mm_wbc_arm_trajectory_control");
 
@@ -146,25 +147,30 @@ namespace GrabBox
         cubic_interp_torso_ = CubicInterpolator(t_values, pose_values);
       }
 
+      if(!resetMpcMrtService())
+      {
+        ROS_ERROR("Failed to Pre-reset MPC.");
+        return BT::NodeStatus::FAILURE;
+      }
+      ros::Duration(0.5).sleep();
+      
       is_runing_ = true;
       current_time_ = 0.0;
+      sendArmTrajectory();
+
       return BT::NodeStatus::RUNNING;
     }
 
     /// method invoked by an action in the RUNNING state.
     BT::NodeStatus onRunning() override
     {
-      
-
       if(current_time_ > end_time_)
       {
-
         {
           std::cout << "GraspBox finished." << std::endl;
           ros::Duration(1.0).sleep();
           if(!changeKinematicMpcControlMode(0))// 不接入运动学mpc控制
             return BT::NodeStatus::FAILURE;
-          // changeArmCtrlModeSrv(0); // keep current control position
           if(!changeManipulatorControlFlow(0)) // 关闭wbc手臂直接控制
           {
             ROS_ERROR("Failed to set enable_wbc_arm_trajectory control mode to false.");
@@ -173,23 +179,6 @@ namespace GrabBox
           return BT::NodeStatus::SUCCESS;
         }
       }
-      HandPose l_pose, r_pose;
-      l_pose.first = cubic_interp_lh_.getPos(current_time_);
-      l_pose.second = cubic_interp_lh_.getQuat(current_time_);
-      r_pose.first = cubic_interp_rh_.getPos(current_time_);
-      r_pose.second = cubic_interp_rh_.getQuat(current_time_);
-      double terrain_height=0.0;
-      config().blackboard->get("terrain_height", terrain_height);
-      l_pose.first(2) -= (terrain_height);
-      r_pose.first(2) -= (terrain_height);
-
-      auto l_vel = cubic_interp_lh_.getVel(current_time_);
-      auto r_vel = cubic_interp_rh_.getVel(current_time_);
-
-      Eigen::VectorXd torso_ref = Eigen::VectorXd::Zero(6);
-      torso_ref = cubic_interp_torso_.getPos(current_time_);
-
-      bool ret = controlArm(l_pose, r_pose, l_vel, r_vel);
 
       if(current_time_ <= 2*dt_)
       {
@@ -198,19 +187,8 @@ namespace GrabBox
             return BT::NodeStatus::FAILURE;
       }
       current_time_ += dt_;
-      if(ret){
-        // ++current_step_;
-        // std::cout << "Process: " << current_step_/static_cast<double>(twoHandPoseTrajectory_.size())*100.0 << "%." << std::endl;
-        // std::cout << "Process: " << current_time_/end_time_*100.0 << "%." << std::endl;
-        // ros::Duration(max_hand_dis_/hand_move_spd_).sleep();//TODO: sleep time should be adjusted according to delta pos
-        return BT::NodeStatus::RUNNING;
-      }
-      else
-      {
-        ROS_ERROR("Failed to control arm.");
-        changeArmCtrlModeSrv(0); // keep current control position
-        return BT::NodeStatus::FAILURE;
-      }
+      ros::Duration(dt_).sleep();
+      return BT::NodeStatus::RUNNING;
     }
 
     void onHalted() override
@@ -222,7 +200,45 @@ namespace GrabBox
 
 
   private:
+    void sendArmTrajectory()
+    {
+      kuavo_msgs::armTargetPoses msg;
+      double terrain_height = 0.0;
+      config().blackboard->get("terrain_height", terrain_height);
 
+      for (double t = 0; t <= end_time_; t += dt_)
+      {
+        msg.times.push_back(t);
+
+        HandPose l_pose, r_pose;
+        l_pose.first = cubic_interp_lh_.getPos(t);
+        l_pose.second = cubic_interp_lh_.getQuat(t);
+        r_pose.first = cubic_interp_rh_.getPos(t);
+        r_pose.second = cubic_interp_rh_.getQuat(t);
+
+        l_pose.first(2) -= terrain_height;
+        r_pose.first(2) -= terrain_height;
+        
+        // left hand: [pos_x, pos_y, pos_z, quat_x, quat_y, quat_z, quat_w]
+        msg.values.push_back(l_pose.first.x());
+        msg.values.push_back(l_pose.first.y());
+        msg.values.push_back(l_pose.first.z());
+        msg.values.push_back(l_pose.second.x());
+        msg.values.push_back(l_pose.second.y());
+        msg.values.push_back(l_pose.second.z());
+        msg.values.push_back(l_pose.second.w());
+
+        // right hand: [pos_x, pos_y, pos_z, quat_x, quat_y, quat_z, quat_w]
+        msg.values.push_back(r_pose.first.x());
+        msg.values.push_back(r_pose.first.y());
+        msg.values.push_back(r_pose.first.z());
+        msg.values.push_back(r_pose.second.x());
+        msg.values.push_back(r_pose.second.y());
+        msg.values.push_back(r_pose.second.z());
+        msg.values.push_back(r_pose.second.w());
+      }
+      Manipulator_traj_pub_.publish(msg);
+    }
 
     TwoHandPoseWithForceTrajectory generateTwoHandPoseTrajectory(
         const Eigen::Vector3d& target_hand_base_pos_from_input,
@@ -283,8 +299,6 @@ namespace GrabBox
         add_trajectory_point(target_hand_base_pos_from_input, hand_offset_from_input, hand_quat_xyzw_from_input, bias, hand_side_);
       }
       return std::move(traj);
-      
-
     }
 
     double interpolateTwoHandPoseTrajectoryByCubicSpline(const TwoHandPoseWithForceTrajectory& traj_with_force, double vel=0.5)
@@ -316,7 +330,6 @@ namespace GrabBox
 
         double time_cost_l = std::max(0.05, (l_pose_next.first - l_pose.first).norm() / vel);
         double time_cost_r = std::max(0.05, (r_pose_next.first - r_pose.first).norm() / vel);
-        // std::cout << "time_cost_l: " << time_cost_l << ", time_cost_r: " << time_cost_r << std::endl;
 
         t_values_l.push_back(t_values_l.back() + time_cost_l);
         t_values_r.push_back(t_values_r.back() + time_cost_r);
@@ -334,47 +347,6 @@ namespace GrabBox
       cubic_interp_rh_.addQuaternion(quat_values_r);
       cubic_interp_rh_.addForce(force_values_r);
       return std::max(t_values_l.back(), t_values_r.back());
-    }
-
-    bool controlArm(const HandPose& left_hand_pose, const HandPose& right_hand_pose, 
-      const Eigen::Vector3d& left_hand_vel, const Eigen::Vector3d& right_hand_vel,
-      const Vector6d &torso_ref = Vector6d::Zero())
-    {
-      kuavo_msgs::twoArmHandPoseCmd msg = getIKCmdMsg(left_hand_pose, right_hand_pose, torso_ref);
-      Manipulator_pub_.publish(msg);
-      return true;
-    }
-
-    kuavo_msgs::twoArmHandPoseCmd getIKCmdMsg(const HandPose& left_hand_pose, const HandPose& right_hand_pose, const Vector6d &torso_ref)
-    {
-      kuavo_msgs::twoArmHandPoseCmd msg;
-      msg.ik_param = ikParam_;
-      msg.use_custom_ik_param = true;
-      msg.joint_angles_as_q0 = false;
-      for(int i=0; i<3; i++)
-      {
-        msg.hand_poses.left_pose.elbow_pos_xyz[i] = 0;
-        msg.hand_poses.right_pose.elbow_pos_xyz[i] = 0;
-        // 
-        msg.hand_poses.left_pose.pos_xyz[i] = left_hand_pose.first[i];
-        msg.hand_poses.right_pose.pos_xyz[i] = right_hand_pose.first[i];
-      }
-
-      msg.hand_poses.left_pose.quat_xyzw[0] = left_hand_pose.second.x();
-      msg.hand_poses.left_pose.quat_xyzw[1] = left_hand_pose.second.y();
-      msg.hand_poses.left_pose.quat_xyzw[2] = left_hand_pose.second.z();
-      msg.hand_poses.left_pose.quat_xyzw[3] = left_hand_pose.second.w();
-
-      msg.hand_poses.right_pose.quat_xyzw[0] = right_hand_pose.second.x();
-      msg.hand_poses.right_pose.quat_xyzw[1] = right_hand_pose.second.y();
-      msg.hand_poses.right_pose.quat_xyzw[2] = right_hand_pose.second.z();
-      msg.hand_poses.right_pose.quat_xyzw[3] = right_hand_pose.second.w();
-
-      // msg.torso_ref.resize(6);
-      // for(int i=0; i<6; i++)
-      //   msg.torso_ref[i] = torso_ref[i];
-
-      return std::move(msg);
     }
 
     bool changeManipulatorControlFlow(int mode)
@@ -404,7 +376,7 @@ namespace GrabBox
     }
 
 
-    ros::Publisher Manipulator_pub_;
+    ros::Publisher Manipulator_traj_pub_;
     ros::ServiceClient changeManipulatorMode_srv_;
     ros::ServiceClient changeArmCtrlModeSrv_;
     ros::ServiceClient changeManipulatorControlFlow_srv_;

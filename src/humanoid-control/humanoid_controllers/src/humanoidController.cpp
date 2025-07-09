@@ -561,6 +561,7 @@ namespace humanoid_controller
         }
       });
       
+      armEefWbcPosePublisher_ = controllerNh_.advertise<std_msgs::Float64MultiArray>("/humanoid_controller/wbc_arm_eef_pose", 10, true);
       // dexhand state
       dexhand_state_sub_ = controllerNh_.subscribe("/dexhand/state", 10, &humanoidController::dexhandStateCallback, this);
 
@@ -812,18 +813,33 @@ namespace humanoid_controller
   
   bool humanoidController::enableArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
+      bool old_mode = use_ros_arm_joint_trajectory_;
       use_ros_arm_joint_trajectory_ = req.control_mode;
+      
+      // 记录模式切换
+      if (old_mode != use_ros_arm_joint_trajectory_) 
+      {
+          ROS_INFO_STREAM("[ArmControl] ROS arm trajectory control mode changed: " << (use_ros_arm_joint_trajectory_ ? "ENABLED" : "DISABLED"));
+      }
+      
       res.result = true;
       return true;
   }
 
   bool humanoidController::enableMmArmTrajectoryControlCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
+      bool old_mode = use_mm_arm_joint_trajectory_;
       use_mm_arm_joint_trajectory_ = req.control_mode;
-      // if(use_mm_arm_joint_trajectory_)
+      
       {
         mm_arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
         mm_arm_joint_trajectory_.vel = vector_t::Zero(armNumReal_);
+      }
+
+      // 记录模式切换
+      if (old_mode != use_mm_arm_joint_trajectory_) 
+      {
+          ROS_INFO_STREAM("[ArmControl] MM arm trajectory control mode changed: " << (use_mm_arm_joint_trajectory_ ? "ENABLED" : "DISABLED"));
       }
       // arm_joint_trajectory_.pos = currentObservationWBC_.state.segment(12 + jointNumReal_, armNumReal_);
       res.result = true;
@@ -1500,6 +1516,8 @@ namespace humanoid_controller
       enable_wbc = !disable_wbc_;
     }
 
+    publishWbcArmEndEffectorPose();
+
     std::chrono::time_point<std::chrono::high_resolution_clock> t4;
     if (enable_wbc)
     {
@@ -2071,6 +2089,10 @@ namespace humanoid_controller
                                                                     modelSettings_.contactNames3DoF);
     eeKinematicsWBCPtr_->setPinocchioInterface(*pinocchioInterfaceWBCPtr_);
   
+    eeSpatialKinematicsWBCPtr_ = std::make_shared<PinocchioEndEffectorSpatialKinematics>(*pinocchioInterfaceWBCPtr_, pinocchioMapping,
+                                                                                         modelSettings_.contactNames6DoF);
+    eeSpatialKinematicsWBCPtr_->setPinocchioInterface(*pinocchioInterfaceWBCPtr_);
+
     centroidalModelInfoEstimate_ = centroidal_model::createCentroidalModelInfo(
       *pinocchioInterfaceEstimatePtr_, centroidal_model::loadCentroidalType(taskFile), defaultJointState, modelSettings_.contactNames3DoF,
       modelSettings_.contactNames6DoF);
@@ -2455,6 +2477,42 @@ namespace humanoid_controller
     {
       ROS_INFO("Received enable wbc value: %s", msg->data ? "true" : "false");
       disable_wbc_ = !msg->data;
+    }
+  }
+
+  void humanoidController::publishWbcArmEndEffectorPose()
+  {
+    auto& infoWBC = centroidalModelInfoWBC_;
+    // publish arm eef pose from WBC
+    if (infoWBC.numSixDofContacts > 0 && eeSpatialKinematicsWBCPtr_)
+    {
+        // Manually update the pinocchio data for the WBC interface, similar to how WBC does it internally.
+        auto& wbc_pinocchio_model = pinocchioInterfaceWBCPtr_->getModel();
+        auto& wbc_pinocchio_data = pinocchioInterfaceWBCPtr_->getData();
+        const auto q_wbc = CentroidalModelPinocchioMapping(centroidalModelInfoWBC_).getPinocchioJointPosition(currentObservationWBC_.state);
+        pinocchio::forwardKinematics(wbc_pinocchio_model, wbc_pinocchio_data, q_wbc);
+        pinocchio::updateFramePlacements(wbc_pinocchio_model, wbc_pinocchio_data);
+
+        // Call with empty vector to use the pre-updated data
+        const auto armPositions = eeSpatialKinematicsWBCPtr_->getPosition(vector_t());
+        const auto armOrientations = eeSpatialKinematicsWBCPtr_->getOrientation(vector_t());
+
+        if (armPositions.size() == infoWBC.numSixDofContacts)
+        {
+            std_msgs::Float64MultiArray pose_msg;
+            pose_msg.data.resize(armPositions.size() * 7);
+            for (size_t i = 0; i < armPositions.size(); ++i)
+            {
+                pose_msg.data[i * 7 + 0] = armPositions[i].x();
+                pose_msg.data[i * 7 + 1] = armPositions[i].y();
+                pose_msg.data[i * 7 + 2] = armPositions[i].z();
+                pose_msg.data[i * 7 + 3] = armOrientations[i].x();
+                pose_msg.data[i * 7 + 4] = armOrientations[i].y();
+                pose_msg.data[i * 7 + 5] = armOrientations[i].z();
+                pose_msg.data[i * 7 + 6] = armOrientations[i].w();
+            }
+            armEefWbcPosePublisher_.publish(pose_msg);
+        }
     }
   }
 

@@ -162,6 +162,44 @@ namespace GrabBox
     }
   }
 
+  bool resetMpcService()
+  {
+    const std::string service_name = "/reset_mm_mpc";
+    ros::NodeHandle nh;
+    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
+      ROS_ERROR("Service %s not available", service_name.c_str());
+      return false;
+    }
+    ros::ServiceClient client = nh.serviceClient<kuavo_msgs::changeTorsoCtrlMode>(service_name);
+    kuavo_msgs::changeTorsoCtrlMode srv;
+    srv.request.control_mode = 0;
+    if (client.call(srv)) {
+      return true; // 服务调用成功
+    } else {
+      ROS_ERROR("Failed to call service %s", service_name.c_str());
+      return false; // 服务调用失败
+    }
+  }
+
+  bool resetMpcMrtService()
+  {
+    const std::string service_name = "/mobile_manipulator_reset_mpc_mrt";
+    ros::NodeHandle nh;
+    if (!ros::service::waitForService(service_name, ros::Duration(1))) {
+      ROS_ERROR("Service %s not available", service_name.c_str());
+      return false;
+    }
+    ros::ServiceClient client = nh.serviceClient<std_srvs::SetBool>(service_name);
+    std_srvs::SetBool srv;
+    srv.request.data = true;
+    if (client.call(srv)) {
+      return true; // 服务调用成功
+    } else {
+      ROS_ERROR("Failed to call service %s", service_name.c_str());
+      return false; // 服务调用失败
+    }
+  }
+
   std_msgs::Float64MultiArray getEefWrenchCmdMsg(const Vector6d &wrench_l, const Vector6d &wrench_r)
   {
     std_msgs::Float64MultiArray wrench_msg;

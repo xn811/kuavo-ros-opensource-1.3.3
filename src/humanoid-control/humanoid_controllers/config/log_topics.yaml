@@ -49,3 +49,6 @@ topics:
   - /odometry/filtered
   - /sensor_data_new/.*
   - /imu_data
+  - /mm/end_effector_trajectory
+  - /mm/.*
+  - /grasp_box/.*

@@ -16,6 +16,10 @@ bt_xml_file: "repeat_multi_grab_put_box_in_shelves_with_force.xml"
 # bt_xml_file: "claw_test.xml"
 
 bt_xml_file_reset: "../reset.xml"
+logger_nodes_to_ignore:
+  - ForceCheck
+  - CheckStatusOK
+
 
 tick_rate: 100
 normal_torso_pitch: 3 # deg

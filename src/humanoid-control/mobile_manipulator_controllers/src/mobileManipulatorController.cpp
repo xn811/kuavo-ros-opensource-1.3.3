@@ -12,6 +12,8 @@
 #include <ocs2_ros_interfaces/synchronized_module/RosReferenceManager.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
+#include <std_srvs/SetBool.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 namespace mobile_manipulator_controller
 {
@@ -114,8 +116,9 @@ namespace mobile_manipulator_controller
     // basePoseCmdSubscriber_ = controllerNh_.subscribe<std_msgs::Float64MultiArray>("/base_pose_cmd", 10, basePoseCmdCallback);
     kinematicMpcControlSrv_ = controllerNh_.advertiseService(robotName_ + "_mpc_control", &MobileManipulatorController::controlService, this);
     getKinematicMpcControlModeSrv_ = controllerNh_.advertiseService(robotName_ + "_get_mpc_control_mode", &MobileManipulatorController::getKinematicMpcControlModeService, this);
+    resetMpcMrtSrv_ = controllerNh_.advertiseService(robotName_ + "_reset_mpc_mrt", &MobileManipulatorController::resetMpcMrtService, this);
     mpcPolicyPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_flattened_controller>(robotName_ + "_mpc_policy", 1, true);
-
+    toggleMpcSrv_ = controllerNh_.advertiseService(robotName_ + "_toggle_mpc", &MobileManipulatorController::toggleMpcService, this);
     humanoidTorsoTargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("humanoid_mpc_target_pose", 1);
     humanoidArmTargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("humanoid_mpc_target_arm", 1);
     humanoidTargetTrajectoriesPublisher_ = controllerNh_.advertise<ocs2_msgs::mpc_target_trajectories>("humanoid_mpc_target", 1);
@@ -124,6 +127,9 @@ namespace mobile_manipulator_controller
     mmEefPosesPublisher_ = controllerNh_.advertise<std_msgs::Float64MultiArray>(robotName_ + "_eef_poses", 10, true);
     mmPlanedTrajPublisher_ = nh.advertise<visualization_msgs::MarkerArray>(robotName_ + "/planed_two_hand_trajectory", 10);
     armTrajPublisher_ = controllerNh_.advertise<sensor_msgs::JointState>("/mm_kuavo_arm_traj", 10);
+    targetSubscriber_ = controllerNh_.subscribe(robotName_ + "_mpc_target", 1, &MobileManipulatorController::targetCallback, this);
+
+    resetMpcSrv_ = controllerNh_.advertiseService("reset_mm_mpc", &MobileManipulatorController::resetMpcService, this);
 
     yaml_cfg_ = YAML::LoadFile(mobile_manipulator_controller::getPath() + "/cfg/cfg.yaml");
 
@@ -198,6 +204,7 @@ namespace mobile_manipulator_controller
                 mpcTimer_.startTimer();
                 mpcMrtInterface_->advanceMpc();
                 mpcTimer_.endTimer();
+                newMPCSolved_ = true;
               }
             },
             mobileManipulatorInterface_->mpcSettings().mpcDesiredFrequency_);
@@ -261,21 +268,43 @@ namespace mobile_manipulator_controller
     mpcMrtInterface_->setCurrentObservation(initial_observation);
     mpcMrtInterface_->getReferenceManager().setTargetTrajectories(target_trajectories);
     ROS_INFO_STREAM("Waiting for the initial policy ...");
+    mpcRunning_ = false;
     while (!mpcMrtInterface_->initialPolicyReceived() && ros::ok())
     {
       mpcMrtInterface_->advanceMpc();
       ros::WallRate(mobileManipulatorInterface_->mpcSettings().mrtDesiredFrequency_).sleep();
     }
     ROS_INFO_STREAM("Initial policy received time: " << mmObservation_.time);
-    mpcRunning_ = true;
   }
 
   void MobileManipulatorController::update()
   {
     pubHumanoid2MMTf();
+    {
+      std::lock_guard<std::mutex> lock(targetMutex_);
+      if (controlType_ != ControlType::None && !mpcRunning_ && newTargetReceived_) {
+          // More robust: check if target is recent
+          if ((ros::Time::now() - lastTargetTime_).toSec() < 0.5) {
+                restart();
+                ROS_INFO("MPC started after receiving new target.");
+          }
+      }
+    }
+    
+    // 检查是否正在重置中，如果是则跳过更新
+    if (isResetting_.load()) {
+      return;
+    }
+    
     if(!recievedObservation_)
     {
       ROS_WARN("No observation received yet. Skipping update.");
+      return;
+    }
+    
+    // 检查MRT接口是否有效
+    if (!mpcMrtInterface_) {
+      ROS_WARN("MRT interface is null. Skipping update.");
       return;
     }
     const size_t baseDim = info_.stateDim - info_.armDim;
@@ -285,8 +314,9 @@ namespace mobile_manipulator_controller
     switch(controlType_)
     {
       case ControlType::None:
-        mmObservationDummy_ = mmObservation_;
-        mpcMrtInterface_->getReferenceManager().setTargetTrajectories(target_trajectories);
+        mmObservationDummy_.state = mmObservation_.state;
+        // mpcMrtInterface_->getReferenceManager().setTargetTrajectories(target_trajectories);
+        stop();
         // return;//
         break;
       case ControlType::ArmOnly:
@@ -303,46 +333,82 @@ namespace mobile_manipulator_controller
     obs.time = mmObservationDummy_.time;
     obs.input.setZero();
     if(dummySim_)
+    {
       obs.state.head(baseDim) = mmObservationDummy_.state.head(baseDim);
+      // obs.state.tail(info_.armDim) = mmObservationDummy_.state.tail(info_.armDim);
+    }
     if(dummySimArm_)
       obs.state.tail(info_.armDim) = mmObservationDummy_.state.tail(info_.armDim);
+    
+    // 安全访问MRT接口
+    if (!mpcMrtInterface_) return;
     mpcMrtInterface_->setCurrentObservation(obs);
+    
+    observationPublisher_.publish(ros_msg_conversions::createObservationMsg(obs));
 
-    vector_t optimizedStateMrt, optimizedInputMrt;
-    // Load the latest MPC policy
-    bool is_mpc_updated = false;
-    if (mpcMrtInterface_->updatePolicy())
+    if (mpcRunning_ && newMPCSolved_)
     {
-      is_mpc_updated = true;
-      auto &policy = mpcMrtInterface_->getPolicy();
-      auto &command = mpcMrtInterface_->getCommand();
-      auto &performance_indices = mpcMrtInterface_->getPerformanceIndices();
-      auto &state_trajectory = policy.stateTrajectory_;
 
-      ocs2_msgs::mpc_flattened_controller mpcPolicyMsg =
-          createMpcPolicyMsg(policy, command, performance_indices);
+      vector_t optimizedStateMrt, optimizedInputMrt;
+      // Load the latest MPC policy
+      bool is_mpc_updated = false;
+      
+      if (mpcMrtInterface_ && mpcMrtInterface_->updatePolicy())
+      {
+        is_mpc_updated = true;
+        auto &policy = mpcMrtInterface_->getPolicy();
+        auto &command = mpcMrtInterface_->getCommand();
+        auto &performance_indices = mpcMrtInterface_->getPerformanceIndices();
+        auto &state_trajectory = policy.stateTrajectory_;
 
-      // publish the message
-      mpcPolicyPublisher_.publish(mpcPolicyMsg);
-      // ROS_INFO_STREAM("MPC policy updated. TIME: " << mmObservation_.time);
-      if(visualizeMm_)
-        visualizationPtr_->update(obs, policy, command);
+        ocs2_msgs::mpc_flattened_controller mpcPolicyMsg =
+            createMpcPolicyMsg(policy, command, performance_indices);
+
+        // publish the message
+        mpcPolicyPublisher_.publish(mpcPolicyMsg);
+        // ROS_INFO_STREAM("MPC policy updated. TIME: " << mmObservation_.time);
+        if(visualizeMm_)
+          visualizationPtr_->update(obs, policy, command);
+      }
+
+      // Evaluate the current policy - 使用异常处理来安全调用
+      if (!mpcMrtInterface_) return;
+      
+      try {
+        size_t mode;
+        mpcMrtInterface_->evaluatePolicy(obs.time, obs.state, optimizedStateMrt, optimizedInputMrt, mode);
+      } catch (const std::runtime_error& e) {
+        std::string error_msg = e.what();
+        if (error_msg.find("updatePolicy() should be called first") != std::string::npos) {
+          // MRT接口还没有准备好，跳过这个周期
+          ROS_WARN_THROTTLE(1.0, "MRT interface requires policy update before evaluation, skipping this cycle");
+          return;
+        } else {
+          // 其他运行时错误，记录但不崩溃
+          ROS_ERROR_STREAM_THROTTLE(1.0, "MRT evaluatePolicy error: " << error_msg);
+          return;
+        }
+      } catch (const std::exception& e) {
+        ROS_ERROR_STREAM_THROTTLE(1.0, "Unexpected error in evaluatePolicy: " << e.what());
+        return;
+      }
+      // if(controlling_)
+      //   controlHumanoid(optimizedStateMrt, optimizedInputMrt, humanoidObservation_);
+      // else
+      //   ROS_WARN("Controlling is not enabled.");
+      // if(dummySim_)
+
+      mmObservationDummy_ = forwardSimulation(mmObservationDummy_);
+      if(controlType_ != ControlType::None)
+        controlHumanoid(mmObservationDummy_.state, optimizedInputMrt, humanoidObservation_);
+      // publish eef poses
+      // const vector_t eefPoses = getMMEefPose(mmObservationDummy_.state);
+    }
+    else{
+      mmObservationDummy_.state = mmObservation_.state;
     }
 
-    // Evaluate the current policy
-    size_t mode;
-    mpcMrtInterface_->evaluatePolicy(obs.time, obs.state, optimizedStateMrt, optimizedInputMrt, mode);
-    observationPublisher_.publish(ros_msg_conversions::createObservationMsg(obs));
-    // if(controlling_)
-    //   controlHumanoid(optimizedStateMrt, optimizedInputMrt, humanoidObservation_);
-    // else
-    //   ROS_WARN("Controlling is not enabled.");
-    // if(dummySim_)
-    mmObservationDummy_ = forwardSimulation(mmObservationDummy_);
-    if(controlType_ != ControlType::None)
-      controlHumanoid(mmObservationDummy_.state, optimizedInputMrt, humanoidObservation_);
-    // publish eef poses
-    // const vector_t eefPoses = getMMEefPose(mmObservationDummy_.state);
+    // visualize eef poses
     if(mmPlanedTrajQueue_.size() < 200)
       mmPlanedTrajQueue_.push_back(eefPoses);
     else
@@ -781,6 +847,10 @@ namespace mobile_manipulator_controller
 
   bool MobileManipulatorController::controlService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res) {
       std::cout << "Kinematic MPC control service request received." << std::endl;
+
+      // When transitioning from "None" to an active mode, synchronize the dummy state
+      // with the latest real observation. This ensures the MPC starts planning from the robot's actual current state.
+
       if(controlType_ != ControlType::None && req.control_mode == static_cast<int>(ControlType::None)) {
         std::cout << "Stopping Kinematic MPC control." << std::endl;
         geometry_msgs::Twist msg;
@@ -790,6 +860,15 @@ namespace mobile_manipulator_controller
         msg.angular.z = 0;
         // humanoidCmdVelPublisher_.publish(msg);
       }
+      if(req.control_mode == static_cast<int>(ControlType::None)) {
+        stop();
+      }else{
+        std::lock_guard<std::mutex> lock(targetMutex_);
+        newTargetReceived_ = false;
+        stop();
+        ROS_INFO("Control mode switched. MPC stopped, waiting for a new target.");
+      }
+
       controlType_ = static_cast<ControlType>(req.control_mode);
       res.result = true;
       res.mode = req.control_mode;
@@ -803,6 +882,17 @@ namespace mobile_manipulator_controller
     res.mode = static_cast<int>(controlType_);
     res.message = "Kinematic MPC control mode is " + controlTypeToString(controlType_) + ".";
     std::cout << res.message << std::endl;
+    return true;
+  }
+
+  bool MobileManipulatorController::resetMpcService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res) {
+    std::cout << "Reset MPC service request received." << std::endl;
+    vector_t eefPoses = getMMEefPose(mmObservation_.state);
+    const TargetTrajectories target_trajectories({mmObservation_.time}, {eefPoses}, {vector_t::Zero(info_.inputDim)});
+
+    mpcMrtInterface_->resetMpcNode(target_trajectories);
+    res.result = true;
+    res.message = "MPC reset successfully.";
     return true;
   }
 
@@ -909,4 +999,275 @@ namespace mobile_manipulator_controller
     }
     return isLimited;
   }
-} // namespace mobile_manipulator
+
+  void MobileManipulatorController::resetMpc()
+  {
+    ROS_WARN("Resetting MPC...");
+    try {
+      // 先清理旧的MPC（智能指针会自动调用析构函数）
+      if (mpc_) {
+        // 获取旧的solver来清理ReferenceManager（如果需要的话）
+        auto* oldSolver = mpc_->getSolverPtr();
+        if (oldSolver) {
+          // 某些solver可能需要显式清理ReferenceManager
+          // 但由于是shared_ptr管理，这里主要是确保引用计数正确
+          ROS_INFO("Cleaning old MPC solver references");
+        }
+        mpc_.reset(); // 显式重置
+      }
+      
+      // 等待确保旧资源完全释放
+      ros::Duration(0.1).sleep();
+      
+      // 重新创建MPC实例
+      if(mpcType_ == MpcType::SQP)
+        mpc_ = std::make_shared<SqpMpc>(mobileManipulatorInterface_->mpcSettings(), mobileManipulatorInterface_->sqpSettings(),
+                                        mobileManipulatorInterface_->getOptimalControlProblem(), mobileManipulatorInterface_->getInitializer());
+      else if(mpcType_ == MpcType::DDP)
+        mpc_ = std::make_shared<GaussNewtonDDP_MPC>(mobileManipulatorInterface_->mpcSettings(), mobileManipulatorInterface_->ddpSettings(), 
+                                                    mobileManipulatorInterface_->getRollout(),
+                                                    mobileManipulatorInterface_->getOptimalControlProblem(), mobileManipulatorInterface_->getInitializer());
+      else {
+        throw std::runtime_error("Unknown MPC type");
+      }
+      
+      // 重新设置ReferenceManager
+      auto rosReferenceManagerPtr = std::make_shared<ocs2::RosReferenceManager>(robotName_, mobileManipulatorInterface_->getReferenceManagerPtr());
+      rosReferenceManagerPtr->subscribe(controllerNh_);
+      mpc_->getSolverPtr()->setReferenceManager(rosReferenceManagerPtr);
+      
+      ROS_INFO("MPC reset successfully");
+    } catch (const std::exception& e) {
+      ROS_ERROR_STREAM("Failed to reset MPC: " << e.what());
+      throw;
+    }
+  }
+
+  void MobileManipulatorController::resetMrt()
+  {
+    ROS_WARN("Resetting MRT interface...");
+    try {
+      // 停止MPC运行
+      mpcRunning_ = false;
+      
+      // 等待一段时间确保MPC线程停止处理
+      ros::Duration(0.1).sleep();
+      
+      // 等待当前MPC线程完成
+      if (mpcThread_.joinable()) {
+        controllerRunning_ = false;
+        mpcThread_.join();
+        ROS_INFO("MPC thread stopped successfully");
+      }
+      
+      // 清理旧的MRT接口
+      mpcMrtInterface_.reset();
+      
+      // 等待一段时间确保资源完全释放
+      ros::Duration(0.05).sleep();
+      
+      // 重新创建MRT接口
+      mpcMrtInterface_ = std::make_shared<MPC_MRT_Interface>(*mpc_);
+      mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
+      mpcTimer_.reset();
+      
+      // 等待一段时间确保MRT接口完全初始化
+      ros::Duration(0.05).sleep();
+      
+      // 重新启动MPC线程
+      controllerRunning_ = true;
+      mpcThread_ = std::thread([&]() {
+        // 在线程开始时等待一段时间
+        ros::Duration(0.1).sleep();
+        
+        while (controllerRunning_) {
+          try {
+            executeAndSleep(
+                [&]() {
+                  if (mpcRunning_ && mpcMrtInterface_) {
+                    mpcTimer_.startTimer();
+                    mpcMrtInterface_->advanceMpc();
+                    mpcTimer_.endTimer();
+                    newMPCSolved_ = true;
+                  }
+                },
+                mobileManipulatorInterface_->mpcSettings().mpcDesiredFrequency_);
+          } catch (const std::exception& e) {
+            controllerRunning_ = false;
+            ROS_ERROR_STREAM("[Ocs2 MPC thread] Error : " << e.what());
+          }
+        }
+      });
+      setThreadPriority(mobileManipulatorInterface_->sqpSettings().threadPriority, mpcThread_);
+      
+      // 等待线程完全启动后再启动MPC
+      ros::Duration(0.2).sleep();
+      mpcRunning_ = true;
+      
+      ROS_INFO("MRT interface reset successfully");
+    } catch (const std::exception& e) {
+      ROS_ERROR_STREAM("Failed to reset MRT: " << e.what());
+      throw;
+    }
+  }
+
+  void MobileManipulatorController::resetMpcMrt()
+  {
+    std::lock_guard<std::mutex> lock(resetMutex_);
+    if (isResetting_.load()) {
+      ROS_WARN("Reset already in progress, skipping...");
+      return;
+    }
+    
+    isResetting_.store(true);
+    ROS_WARN("Starting MPC/MRT reset...");
+    
+    try {
+      // 1. 停止MPC运行
+      mpcRunning_ = false;
+      newMPCSolved_ = false;
+      ROS_INFO("MPC running stopped");
+      
+      // 2. 等待确保停止
+      ros::Duration(0.2).sleep();
+      
+      // 3. 停止线程
+      if (mpcThread_.joinable()) {
+        controllerRunning_ = false;
+        mpcThread_.join();
+        ROS_INFO("MPC thread stopped successfully");
+      }
+      
+      // 4. 清理资源
+      mpcMrtInterface_.reset();
+      mpc_.reset();
+      ROS_INFO("Resources cleared");
+      
+      // 5. 等待资源完全释放
+      ros::Duration(0.3).sleep();
+      
+      // 6. 重新创建MPC
+      resetMpc();
+      
+      // 7. 等待MPC完全初始化
+      ros::Duration(0.2).sleep();
+      
+      // 8. 重新创建MRT接口
+      mpcMrtInterface_ = std::make_shared<MPC_MRT_Interface>(*mpc_);
+      mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
+      mpcTimer_.reset();
+      ROS_INFO("MRT interface recreated");
+      
+      // 9. 等待MRT接口完全初始化
+      ros::Duration(0.2).sleep();
+      
+      // 10. 重新启动线程
+      controllerRunning_ = true;
+      mpcThread_ = std::thread([&]() {
+        ros::Duration(0.2).sleep(); // 线程启动延迟
+        
+        while (controllerRunning_) {
+          try {
+            executeAndSleep(
+                [&]() {
+                  if (mpcRunning_ && mpcMrtInterface_ && controllerRunning_) {
+                    mpcTimer_.startTimer();
+                    mpcMrtInterface_->advanceMpc();
+                    mpcTimer_.endTimer();
+                    newMPCSolved_ = true;
+                  }
+                },
+                mobileManipulatorInterface_->mpcSettings().mpcDesiredFrequency_);
+          } catch (const std::exception& e) {
+            controllerRunning_ = false;
+            ROS_ERROR_STREAM("[Ocs2 MPC thread] Error : " << e.what());
+          }
+        }
+      });
+      setThreadPriority(mobileManipulatorInterface_->sqpSettings().threadPriority, mpcThread_);
+      
+      // 11. 等待线程完全启动
+      ros::Duration(0.3).sleep();
+      
+      // 12. 最后启动MPC
+      mpcRunning_ = true;
+      
+      // 13. 强制进行一次策略更新以初始化MRT接口
+      if (recievedObservation_ && mpcMrtInterface_) {
+        try {
+          // 使用当前观测设置初始观测
+          mpcMrtInterface_->setCurrentObservation(mmObservation_);
+          
+          // 设置一个简单的目标轨迹
+          const vector_t eefPoses = getMMEefPose(mmObservation_.state);
+          const TargetTrajectories target_trajectories({mmObservation_.time}, {eefPoses}, {vector_t::Zero(info_.inputDim)});
+          mpcMrtInterface_->getReferenceManager().setTargetTrajectories(target_trajectories);
+          
+          // 强制等待一次MPC求解
+          ros::Duration(0.5).sleep();
+          
+          ROS_INFO("MRT interface initialized with current observation");
+        } catch (const std::exception& e) {
+          ROS_WARN_STREAM("Failed to initialize MRT interface: " << e.what());
+        }
+      }
+      
+      ROS_INFO("MPC/MRT reset completed successfully");
+    } catch (const std::exception& e) {
+      ROS_ERROR_STREAM("MPC/MRT reset failed: " << e.what());
+      // 确保重置标志被清除
+      mpcRunning_ = false;
+      controllerRunning_ = false;
+    }
+    
+    isResetting_.store(false);
+  }
+
+  bool MobileManipulatorController::resetMpcMrtService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+  {
+    if (req.data) {
+      try {
+        resetMpcMrt();
+        res.success = true;
+        res.message = "MPC/MRT reset successfully";
+        ROS_INFO("MPC/MRT reset requested via service - completed successfully");
+        return true;
+      } catch (const std::exception& e) {
+        res.success = false;
+        res.message = std::string("Failed to reset MPC/MRT: ") + e.what();
+        ROS_ERROR_STREAM("MPC/MRT reset requested via service - failed: " << e.what());
+        return true;  // 服务调用成功，但操作失败
+      }
+    } else {
+      res.success = false;
+      res.message = "Reset not requested (data=false)";
+      return true;
+    }
+  }
+
+  bool MobileManipulatorController::toggleMpcService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+  {
+    if (!req.data) {
+      stop();
+      res.success = true;
+      res.message = "MPC stopped";
+    } else {
+      std::lock_guard<std::mutex> lock(targetMutex_);
+      newTargetReceived_ = false;
+      stop();
+      ROS_INFO("MPC enabled via service. Waiting for a new target to start.");
+      res.success = true;
+      res.message = "MPC enabled, waiting for target.";
+    }
+    return true;
+  }
+
+  void MobileManipulatorController::targetCallback(const ocs2_msgs::mpc_target_trajectories::ConstPtr& msg)
+  {
+      std::lock_guard<std::mutex> lock(targetMutex_);
+      newTargetReceived_ = true;
+      lastTargetTime_ = ros::Time::now();
+      ROS_INFO_ONCE("Received first target, MPC can be started.");
+  }
+
+} // namespace mobile_manipulator_controller

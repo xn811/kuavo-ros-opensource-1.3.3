@@ -24,7 +24,9 @@ namespace GrabBox
       subObservation_ = nh.subscribe("/humanoid_wbc_observation", 10, &CheckStatusOK::observationCallback, this);
       continuousTrackClient_ = nh.serviceClient<std_srvs::SetBool>("/continuous_track");
       // eePoseSubscriber_ = nh.subscribe<kuavo_msgs::endEffectorData>("/humanoid_ee_State", 1, &CheckStatusOK::eePoseCallback, this);
-      eePoseSubscriber_ = nh.subscribe<std_msgs::Float64MultiArray>("/mobile_manipulator_eef_poses", 10, &CheckStatusOK::eePoseCallback, this);
+      // eePoseSubscriber_ = nh.subscribe<std_msgs::Float64MultiArray>("/mobile_manipulator_eef_poses", 10, &CheckStatusOK::eePoseCallback, this);
+      eePoseSubscriber_ = nh.subscribe<std_msgs::Float64MultiArray>("/humanoid_controller/wbc_arm_eef_pose", 10, &CheckStatusOK::eePoseCallback, this);
+
       terrainHeightSubscriber_ = nh.subscribe<std_msgs::Float64>("/humanoid/mpc/terrainHeight", 1, &CheckStatusOK::terrainHeightCallback, this);
       single_step_mode_sub_ = nh.subscribe("/humanoid/single_step_mode", 10, &CheckStatusOK::singleStepModeCallback, this);
 
@@ -115,10 +117,10 @@ namespace GrabBox
     void eePoseCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
     {
       HandPose real_hand_pose_l, real_hand_pose_r;
-      double z_bias = com_height_ + terrain_height_;
-      real_hand_pose_l.first << msg->data[0], msg->data[1], msg->data[2] + z_bias;
+      // double z_bias = com_height_ + terrain_height_;
+      real_hand_pose_l.first << msg->data[0], msg->data[1], msg->data[2];
       real_hand_pose_l.second = Eigen::Quaterniond(msg->data[6], msg->data[3], msg->data[4], msg->data[5]);
-      real_hand_pose_r.first << msg->data[7], msg->data[8], msg->data[9] + z_bias;
+      real_hand_pose_r.first << msg->data[7], msg->data[8], msg->data[9];
       real_hand_pose_r.second = Eigen::Quaterniond(msg->data[13], msg->data[10], msg->data[11], msg->data[12]);
       config().blackboard->set<TwoHandPose>("real_hand_poses", {real_hand_pose_l, real_hand_pose_r});
       ee_pose_updated_ = true;

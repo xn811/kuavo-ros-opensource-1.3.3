@@ -23,7 +23,7 @@ class AprilTagPublisher:
             {
                 "id": 1,
                 "pose": Pose(
-                    position=Point(1.0, 0.3, 0.9),
+                    position=Point(1.0, 0.3, 1.3),
                     # orientation=Quaternion(0.0, -0.707, 0.0, 0.707)
                     orientation=Quaternion(0.488, -0.4545, -0.5209, 0.5324)
                     

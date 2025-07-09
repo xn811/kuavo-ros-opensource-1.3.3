@@ -256,6 +256,7 @@ namespace humanoid_controller
     // Whole Body Control
     std::shared_ptr<WbcBase> wbc_;
     std::shared_ptr<SafetyChecker> safetyChecker_;
+    std::shared_ptr<PinocchioEndEffectorSpatialKinematics> eeSpatialKinematicsWBCPtr_;
 
     // Nonlinear MPC
     std::shared_ptr<MPC_BASE> mpc_;
@@ -298,6 +299,7 @@ namespace humanoid_controller
     ros::Publisher kinematicPub_;
     ros::Publisher lHandWrenchPub_;
     ros::Publisher rHandWrenchPub_;
+    ros::Publisher armEefWbcPosePublisher_;
 
     ros::Publisher standUpCompletePub_;
     ros::Subscriber jointPosVelSub_;
@@ -467,6 +469,8 @@ namespace humanoid_controller
     bool enable_pull_up_protect_ = false;
 
     std::vector<std::pair<double, double> > head_joint_limits_ = {{-80, 80}, {-25, 25}};
+
+    void publishWbcArmEndEffectorPose();
 
   };
 
