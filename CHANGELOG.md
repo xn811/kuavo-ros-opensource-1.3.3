@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 上楼梯案例适配奥比中光相机以及使用文档，[文档链接](./src/humanoid-control/humanoid_controllers/scripts/上楼梯案例说明.md)
 - 新增行为树搬箱子 README 说明文档，[文档链接](./src/demo/grab_box/README.md)
 - Kuavo Humanoid SDK 更新使用文档描述搬箱子策略模块需要关闭 `basePitchLimits`，[文档链接](./src/kuavo_humanoid_sdk/README.md)
 - Kuavo Humanoid SDK 更新使用示例和搬箱子案例文档中文描述，[文档链接](./src/kuavo_humanoid_sdk/README.md)
@@ -14,6 +15,10 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- 运动学 MPC 增加末端轨迹的输入接口、mpc mrt 求解器重置服务
+- 新增置速度和扭矩超过峰值截断保护功能
+- 一键标定零点脚本工具增加对相机(realsense，奥比中光)和 IP 的适配，[文档链接](./scripts/joint_cali/README_One_button_start.md)
+- RUIWO CXX SDK 支持 kp kd 参数动态控制
 - 新增 rosbag 扭矩转化工具，读取 rosbag 中的 /sensors_data_raw 话题，将电流值转换为扭矩值，[工具链接](tools/bag_tools/current_to_torque_converter.py)
 - Kuavo Humanoid SDK 新增 v2 搬箱子策略模块，基于事件模型提供闭环的策略编排控制，[使用文档](./src/kuavo_humanoid_sdk/kuavo_humanoid_sdk/kuavo_strategy_v2/README.md)
 - 新增上楼梯功能案例，[使用文档](src/humanoid-control/humanoid_controllers/scripts/上楼梯案例说明.md)
@@ -41,6 +46,9 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复音频模块安装 samplerate 库失败的问题
+- 修复 VR 控制手臂动作过快可能导致摔倒的问题，在VR控制时关闭 pullup 保护
+- 修复 `/cmd_pose_world` 接口中单步抽搐会导致机器摔倒问题
 - 修复初始化和运行过程中的手柄的型号发生改变无法控制机器人问题
 - 修复半身模式手臂 VR 跟踪时无法回正
 - 修复 TF 树中 odom->base_link 时间戳为 0 和 base link 相对于 dummy link 平移和旋转不为 0 的问题 
