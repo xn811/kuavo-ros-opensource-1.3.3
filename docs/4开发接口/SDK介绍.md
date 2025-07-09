@@ -7,7 +7,6 @@
   - [说明](#说明)
   - [SDK环境构建](#sdk环境构建)
   - [使用](#使用)
-  - [SDK版本](#sdk版本)
 
 本SDK主要用于控制机器人各个部分的运动和状态。使用ROS1（Robot Operating System）框架，通过发布和订阅消息(ROS Topic)以及调用服务(Ros Service)来实现对机器人的控制
 
@@ -50,7 +49,3 @@ python3 src/kuavo_sdk/sdk/01_use_music/playmusic.py # 音频播放示例
 
 - SDK接口文档：[接口使用文档](接口使用文档.md)
 - 调试参考：[快速调试](../3调试教程/快速调试.md)
-
-## SDK版本
-- 版本：**1.0**
-- 发布时间：**2024-12-28**
