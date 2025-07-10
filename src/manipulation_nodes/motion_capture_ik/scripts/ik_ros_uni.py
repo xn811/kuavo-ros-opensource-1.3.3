@@ -185,7 +185,7 @@ class IkRos:
         )
         self.arm_mode_changing = False
         self.sensor_data_raw = None
-        self.maxSpeed = rospy.get_param("/arm_move_spd_half_up_body", 0.12)
+        self.maxSpeed = rospy.get_param("/arm_move_spd_half_up_body", 0.21)
         self.threshold_arm_diff_half_up_body = rospy.get_param("/threshold_arm_diff_half_up_body", 0.2)
         self._interp_time_last = rospy.Time.now().to_sec()
 
@@ -405,9 +405,11 @@ class IkRos:
         run_count, fail_count = 0, 0
         sum_time_cost = 0.0
         arm_q_filtered = [0.0] * 14
+        is_runing = False
         while not rospy.is_shutdown():
             self.hand_finger_data_process(0)
             # print(f"q_now: {q_now}")
+            is_runing_last = is_runing
             is_runing = self.quest3_arm_info_transformer.is_runing if self.__as_mc_ik else True
             self.__current_pose, self.__current_pose_right = self.get_two_arm_pose(q_last)
             self.pub_solved_arm_eef_pose(q_last, self.__current_pose, self.__current_pose_right)
@@ -428,6 +430,8 @@ class IkRos:
                 sys.stdout.write("\rStatus: {}, is target far?: {}".format("RUNING" if is_runing else "STOPED", self.judge_target_is_far()))
                 continue
             
+            if(not is_runing_last and is_runing):
+                self.arm_mode_changing = True
             if self.__target_pose[0] is None or self.__target_pose_right[0] is None or \
                 self.__current_pose[0] is None or self.__current_pose_right[0] is None:
                 rate.sleep()
@@ -549,11 +553,11 @@ class IkRos:
                 arm_agl_interpolated = arm_current_state + delta_state * scale
             
             msg.position = 180.0 / np.pi * np.array(arm_agl_interpolated)
+            self.pub.publish(msg)
         else:
             # 非插值模式下直接使用目标状态
             msg.position = 180.0 / np.pi * np.array(arm_agl_limited)
-        
-        self.pub.publish(msg)
+            self.pub.publish(msg)
 
     def kuavo_joint_states_callback(self, joint_states_msg):
         # 手臂状态正解
@@ -860,7 +864,25 @@ class IkRos:
 
     def set_arm_mode_changing_callback(self, req):
         """服务回调函数，设置arm_mode_changing为True"""
+
         self.arm_mode_changing = True
+        
+        if self.only_half_up_body:
+            # 发送当前手臂的关节状态到kuavo_arm_traj来清空mpc节点话题接收队列
+            # 防止半身手臂切换时刻mpc执行旧的kuavo_arm_tarj
+            if self.sensor_data_raw is None:
+                print(f"[ik_ros_uni]: sensor_data_raw is None")
+            else:
+                rate = rospy.Rate(1 / self.controller_dt)
+                arm_current_state = np.array(self.sensor_data_raw.joint_data.joint_q[12:26]).copy()
+                msg = JointState()
+                msg.name = ["arm_joint_" + str(i) for i in range(1, 15)]
+                msg.header.stamp = rospy.Time.now()
+                msg.position = 180.0 / np.pi * np.array(arm_current_state)
+                for i in range(20):
+                    self.pub.publish(msg)
+                    rate.sleep()
+
         response = TriggerResponse()
         response.success = True
         response.message = "Arm mode changing set to True"
