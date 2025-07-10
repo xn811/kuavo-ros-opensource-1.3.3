@@ -20,6 +20,7 @@
 #include <humanoid_interface/gait/ModeSequenceTemplate.h>
 #include "humanoid_interface_ros/gait/ModeSequenceTemplateRos.h"
 #include "std_srvs/Trigger.h"
+#include <std_srvs/SetBool.h>
 #include <std_msgs/Bool.h>
 #include "humanoid_interface_drake/humanoid_interface_drake.h"
 
@@ -119,6 +120,9 @@ namespace ocs2
             command_add_height_pre_ = 0.0;
 
             arm_mode_pub_ = nodeHandle_.advertise<std_msgs::Int32>("/quest3/triger_arm_mode", 1);
+
+            // 添加arm_collision_control服务
+            arm_collision_control_service_ = nodeHandle_.advertiseService("/quest3/set_arm_collision_control", &QuestControlFSM::armCollisionControlCallback, this);
         }
 
         void run()
@@ -223,6 +227,14 @@ namespace ocs2
         }
         }
 
+        bool armCollisionControlCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res) {
+            arm_collision_control_ = req.data;
+            res.success = true;
+            res.message = "Arm collision control set to " + std::string(req.data ? "true" : "false");
+            ROS_INFO("Arm collision control set to %s", req.data ? "true" : "false");
+            return true;
+        }
+
     private:
         void joystickCallback(const kuavo_msgs::questJoySticks::ConstPtr& msg) 
         {
@@ -267,7 +279,14 @@ namespace ocs2
                 }
                 else if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed) // 启用手臂控制
                 {
-                    current_arm_mode_ = (current_arm_mode_!=1) ? 1 : 2;
+                    // 如果手臂碰撞控制中，手臂正在回归，回归完成会切换到手臂 KEEP 模式，此时再按 XA 继续手臂跟踪 
+                    if (arm_collision_control_) {
+                        current_arm_mode_ = 2;
+                        arm_collision_control_ = false;
+                        
+                        stopArmCollisionControl();
+                    }
+                    else current_arm_mode_ = (current_arm_mode_!=1) ? 1 : 2;
                     std::cout << "[QuestControlFSM] change arm mode to :" << current_arm_mode_ << std::endl;
                     if (only_half_up_body_) {
                         callVRSetArmModeSrv(current_arm_mode_);
@@ -644,6 +663,35 @@ namespace ocs2
             return value;
         }
 
+        
+        void stopArmCollisionControl() {
+
+            // 调用服务设置collision_check_control
+            std_srvs::SetBool set_collision_check_request;
+            set_collision_check_request.request.data = false;
+            
+            if (!ros::service::exists("/quest3/set_collision_check_control", false)) {
+                ROS_WARN("Service /quest3/set_collision_check_control does not exist, skipping call");
+            }
+            else{
+                auto set_collision_check_client = nodeHandle_.serviceClient<std_srvs::SetBool>("/quest3/set_collision_check_control");
+                if (set_collision_check_client.call(set_collision_check_request)) {
+                    ROS_INFO("Set collision check control service call successful");
+                } else {
+                    ROS_ERROR("Failed to call set collision check control service");
+                }
+            }
+
+            auto arm_collision_check_control_client = nodeHandle_.serviceClient<std_srvs::SetBool>("arm_collision_check_control_service");
+            std_srvs::SetBool arm_collision_check_control_request;
+            arm_collision_check_control_request.request.data = false;
+            if (arm_collision_check_control_client.call(arm_collision_check_control_request)) {
+                ROS_INFO("Set arm collision check control service call successful");
+            } else {
+                ROS_ERROR("Failed to call set arm collision check control service");
+            }
+        }
+
         bool isValueChanged(const std::vector<int>& values_norm) {
             if (previous_value_m_.empty()) return true;
             for (size_t i = 0; i < values_norm.size(); ++i) {
@@ -716,6 +764,7 @@ namespace ocs2
         ros::ServiceClient change_arm_mode_service_client_;
         ros::ServiceClient change_arm_mode_service_VR_client_;
         ros::ServiceClient get_arm_mode_service_client_;
+        ros::ServiceServer arm_collision_control_service_;
 
         int current_arm_mode_{2};
 
@@ -745,6 +794,9 @@ namespace ocs2
 
         bool last_cmd_close_to_zero_{true};
         bool only_half_up_body_{false};
+
+        // 手臂碰撞控制，当前是否处于发生碰撞，手臂回归控制中
+        bool arm_collision_control_{false};
 
         ros::Publisher arm_mode_pub_;
     };

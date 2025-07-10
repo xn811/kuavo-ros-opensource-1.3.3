@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   urdf
   kdl_parser
   kuavo_msgs
+  kuavo_common
 )
 
 # Find FCL package using pkg-config

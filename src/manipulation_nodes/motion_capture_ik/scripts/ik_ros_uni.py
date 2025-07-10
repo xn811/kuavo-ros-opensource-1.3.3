@@ -20,7 +20,7 @@ from tools.drake_trans import *
 
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeKuavo
 from kuavo_msgs.msg import sensorsData
-from std_srvs.srv import Trigger, TriggerResponse
+from std_srvs.srv import Trigger, TriggerResponse, SetBool, SetBoolRequest, SetBoolResponse
 
 import numpy as np
 from pydrake.all import (
@@ -144,6 +144,7 @@ class IkRos:
 
         # 添加服务
         self.arm_mode_service = rospy.Service('/quest3/set_arm_mode_changing', Trigger, self.set_arm_mode_changing_callback)
+        self.arm_mode_service_collision_check = rospy.Service('/quest3/set_collision_check_control', SetBool, self.set_collision_check_callback)
 
         # self.hand_pub_timer = rospy.Timer(rospy.Duration(0.001), self.hand_finger_data_process)
 
@@ -184,6 +185,8 @@ class IkRos:
             "/sensors_data_raw", sensorsData, self.sensor_data_raw_callback
         )
         self.arm_mode_changing = False
+        # 检测到碰撞后，由外部控制手臂
+        self.collision_check_control = False
         self.sensor_data_raw = None
         self.maxSpeed = rospy.get_param("/arm_move_spd_half_up_body", 0.21)
         self.threshold_arm_diff_half_up_body = rospy.get_param("/threshold_arm_diff_half_up_body", 0.2)
@@ -553,10 +556,11 @@ class IkRos:
                 arm_agl_interpolated = arm_current_state + delta_state * scale
             
             msg.position = 180.0 / np.pi * np.array(arm_agl_interpolated)
-            self.pub.publish(msg)
         else:
             # 非插值模式下直接使用目标状态
             msg.position = 180.0 / np.pi * np.array(arm_agl_limited)
+        
+        if not self.collision_check_control:
             self.pub.publish(msg)
 
     def kuavo_joint_states_callback(self, joint_states_msg):
@@ -855,6 +859,7 @@ class IkRos:
             print(f"\033[91m[IK]Reset arm mode.\033[0m")
             self.trigger_reset_mode = True
             self.arm_mode_changing = False
+            self.collision_check_control = False
         elif new_mode == 2:
             print(f"\033[91m[IK]Arm mode changing.\033[0m")
             self.arm_mode_changing = True
@@ -886,6 +891,17 @@ class IkRos:
         response = TriggerResponse()
         response.success = True
         response.message = "Arm mode changing set to True"
+        return response
+    
+    def set_collision_check_callback(self, req):
+        """服务回调函数，设置collision_check_control状态"""
+        self.collision_check_control = req.data
+        if not req.data:
+            self.arm_mode_changing = True
+
+        response = SetBoolResponse()
+        response.success = True
+        response.message = "Collision check control set to " + str(self.collision_check_control)
         return response
 
 if __name__ == "__main__":

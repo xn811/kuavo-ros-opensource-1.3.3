@@ -33,7 +33,13 @@
 #include <tf2_ros/buffer.h>
 #include <memory>
 #include <vector>
+#include <algorithm>
 #include <kuavo_msgs/armCollisionCheckInfo.h>
+#include <kuavo_msgs/armTargetPoses.h>
+#include <kuavo_msgs/sensorsData.h>
+#include <std_msgs/Int32.h>
+#include <deque>
+#include <chrono>
 
 namespace kuavo_arm_collision_check {
 
@@ -43,6 +49,7 @@ struct CollisionPair {
 };
 
 struct Triangle { float v0[3], v1[3], v2[3]; };
+
 
 struct CollisionCheckUserData {
 
@@ -66,11 +73,21 @@ private:
     // ROS related members
     ros::NodeHandle& nh_;
     ros::Subscriber joint_state_sub_;
+    ros::Subscriber arm_traj_sub_;  // 订阅手臂轨迹数据
+    ros::Subscriber sensors_data_sub_;  // 订阅传感器数据
+    ros::Subscriber arm_mode_sub_;  // 订阅手臂模式
+    ros::Publisher arm_pose_pub_;
     ros::Publisher collision_info_pub_;
     ros::Publisher collision_marker_pub_;
     ros::Publisher collision_check_duration_pub_;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
+
+    int head_joint_num = 2;
+    int arm_joint_num = 14;
+
+    bool is_collision_moving_ = false;
+    int current_arm_mode_ = 2;
 
     std::string kuavo_asset_path = "";
     std::string robot_version = "";
@@ -92,6 +109,15 @@ private:
     std::map<std::string, CollisionCheckUserData> link_name_to_collision_check_user_data_;
     
     bool publish_markers_ = false;
+    bool enable_arm_moving_check_ = false;
+
+    double record_duration_ = 3.0;  // 记录3秒
+
+    std::deque<sensor_msgs::JointState> recorded_arm_pose_data_;
+    std::mutex recorded_arm_pose_data_mutex_;
+    std::vector<double> back_to_safe_arm_pose_data_;
+    double arm_move_diff_ = 0.1;
+    int stable_count_ = 0;
 
     // Helper functions
     bool loadURDF(const std::string& urdf_file_path);
@@ -106,6 +132,15 @@ private:
     void saveCollisionMesh(const std::string& link_name, const std::vector<Triangle>& triangles, const std::string& output_path);
 
     bool loadSTL(const std::string& filename, std::vector<Triangle>& triangles);
+    
+    // 手臂姿态记录相关函数
+    void armTrajCallback(const sensor_msgs::JointState::ConstPtr& msg);
+    // void sensorsDataCallback(const kuavo_msgs::sensorsData::ConstPtr& msg);
+    void armModeCallback(const std_msgs::Int32::ConstPtr& msg);
+
+    void startArmCollisionControl();
+    void stopArmCollisionControl();
+    
 public:
     void triggerCollisionCheck();
 };
