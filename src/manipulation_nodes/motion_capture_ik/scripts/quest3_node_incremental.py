@@ -13,7 +13,7 @@ import argparse
 import enum
 
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, sensorsData
-from kuavo_msgs.srv import changeArmCtrlMode
+from kuavo_msgs.srv import changeTorsoCtrlMode, changeTorsoCtrlModeRequest, changeArmCtrlMode, changeArmCtrlModeRequest
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
 from handcontrollerdemorosnode.msg import robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
@@ -21,7 +21,21 @@ from kuavo_msgs.msg import lejuClawCommand
 from kuavo_msgs.srv import fkSrv
 from kuavo_msgs.msg import twoArmHandPose
 from std_msgs.msg import Float32MultiArray
+from enum import Enum
 
+class IncrementalMpcCtrlMode(Enum):
+    """表示Kuavo机器人 Manipulation MPC 控制模式的枚举类"""
+    NoControl = 0
+    """无控制"""
+    ArmOnly = 1
+    """仅控制手臂"""
+    BaseOnly = 2
+    """仅控制底座"""
+    BaseArm = 3
+    """同时控制底座和手臂"""
+    ERROR = -1
+    """错误状态"""
+    
 def get_package_path(package_name):
     try:
         rospack = rospkg.RosPack()
@@ -29,6 +43,24 @@ def get_package_path(package_name):
         return package_path
     except rospkg.ResourceNotFound:
         return None
+
+def reset_mm_mpc():
+    rospy.wait_for_service('/reset_mm_mpc')
+    try:
+        reset_mpc = rospy.ServiceProxy('/reset_mm_mpc', changeTorsoCtrlMode)
+        req = changeTorsoCtrlModeRequest()
+        res = reset_mpc(req)
+        if res.result:
+            rospy.loginfo("Mobile manipulator MPC reset successfully")
+        else:
+            rospy.logerr("Failed to reset mobile manipulator MPC")
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call to %s failed: %s", '/reset_mm_mpc', e)
+    except rospy.ROSException as e:
+        rospy.logerr("Failed to connect to service %s: %s", '/reset_mm_mpc', e)
+    except Exception as e:
+        rospy.logerr("Failed to reset mobile manipulator MPC: %s", e)
+
 class Quest3Node:
     class ControlMode(enum.Enum):
         NONE_MODE = 0
@@ -286,27 +318,52 @@ class Quest3Node:
                     print("\033[93m++++++++++++++++++++开始增量模式+++++++++++++++++\033[0m")
                     # 刚开始切换到增量控制模式
                     self.control_mode = Quest3Node.ControlMode.INCREMENTAL_MODE
+                    
+                    # 重置MPC状态
+                    print("\033[94m重置 Mobile Manipulator MPC...\033[0m")
+                    reset_mm_mpc()
+                    
+                    self.change_mobile_ctrl_mode(IncrementalMpcCtrlMode.ArmOnly.value)
                     # 设置当前VR的末端位姿为锚点
                     self._left_anchor_pose = left_pose
                     self._right_anchor_pose = right_pose
-                    hand_poses = self.fk_srv_client(self.arm_joint_angles)
-                    if hand_poses is not None:
-                        print("********************************* FK *********************************")
-                        self._left_target_pose = (hand_poses.left_pose.pos_xyz, hand_poses.left_pose.quat_xyzw)
-                        self._right_target_pose = (hand_poses.right_pose.pos_xyz, hand_poses.right_pose.quat_xyzw)
-                        # Print target poses from FK
-                        print("\033[92m左手FK目标位置: {}\033[0m".format(self._left_target_pose[0]))
-                        print("\033[92m左手FK目标姿态(四元数): {}\033[0m".format(self._left_target_pose[1]))
-                        print("\033[92m右手FK目标位置: {}\033[0m".format(self._right_target_pose[0]))
-                        print("\033[92m右手FK目标姿态(四元数): {}\033[0m".format(self._right_target_pose[1]))
+                    
+                    # 只有在目标位姿为空时才重新获取FK，避免抖动
+                    def is_pose_empty(pose):
+                        return pose[0] is None or pose[1] is None
+                    
+                    if is_pose_empty(self._left_target_pose) or is_pose_empty(self._right_target_pose):
+                        hand_poses = self.fk_srv_client(self.arm_joint_angles)
+                        if hand_poses is not None:
+                            print("********************************* FK (First Time) *********************************")
+                            self._left_target_pose = (hand_poses.left_pose.pos_xyz, hand_poses.left_pose.quat_xyzw)
+                            self._right_target_pose = (hand_poses.right_pose.pos_xyz, hand_poses.right_pose.quat_xyzw)
+                            # Print target poses from FK
+                            print("\033[92m左手FK目标位置: {}\033[0m".format(self._left_target_pose[0]))
+                            print("\033[92m左手FK目标姿态(四元数): {}\033[0m".format(self._left_target_pose[1]))
+                            print("\033[92m右手FK目标位置: {}\033[0m".format(self._right_target_pose[0]))
+                            print("\033[92m右手FK目标姿态(四元数): {}\033[0m".format(self._right_target_pose[1]))
+                        else:
+                            print("********************************* FK ERROR *********************************")
+                            self._left_target_pose = left_pose
+                            self._right_target_pose = right_pose
                     else:
-                        print("********************************* FK ERROR *********************************")
-                        self._left_target_pose = left_pose
-                        self._right_target_pose = right_pose
+                        print("********************************* 使用上次目标位姿 (避免抖动) *********************************")
+                        print("\033[92m左手保持目标位置: {}\033[0m".format(self._left_target_pose[0]))
+                        print("\033[92m左手保持目标姿态(四元数): {}\033[0m".format(self._left_target_pose[1]))
+                        print("\033[92m右手保持目标位置: {}\033[0m".format(self._right_target_pose[0]))
+                        print("\033[92m右手保持目标姿态(四元数): {}\033[0m".format(self._right_target_pose[1]))
 
                 # 计算位置增量
                 l_xyz_delta = left_pose[0] - self._left_anchor_pose[0]
                 r_xyz_delta = right_pose[0] - self._right_anchor_pose[0]
+                
+                # 添加位置变化阈值，减少噪声影响
+                position_threshold = 0.001  # 1mm
+                if np.linalg.norm(l_xyz_delta) < position_threshold:
+                    l_xyz_delta = np.zeros(3)
+                if np.linalg.norm(r_xyz_delta) < position_threshold:
+                    r_xyz_delta = np.zeros(3)
 
                 def quaternion_inverse(q):
                     norm = np.sum(np.array(q)**2)
@@ -329,8 +386,27 @@ class Quest3Node:
                 r_anchor_quat_inv = quaternion_inverse(self._right_anchor_pose[1])
                 l_delta_quat = quaternion_multiply(left_pose[1], l_anchor_quat_inv)
                 r_delta_quat = quaternion_multiply(right_pose[1], r_anchor_quat_inv)
-                self._left_anchor_pose = left_pose
-                self._right_anchor_pose = right_pose
+                
+                # 添加姿态变化阈值，减少噪声影响
+                def quaternion_angle(q):
+                    # 计算四元数对应的旋转角度
+                    w = abs(q[3])  # 确保w为正
+                    if w > 1.0:
+                        w = 1.0
+                    return 2.0 * np.arccos(w)
+                
+                orientation_threshold = 0.01  # 约0.57度
+                if quaternion_angle(l_delta_quat) < orientation_threshold:
+                    l_delta_quat = np.array([0, 0, 0, 1])  # 单位四元数
+                if quaternion_angle(r_delta_quat) < orientation_threshold:
+                    r_delta_quat = np.array([0, 0, 0, 1])  # 单位四元数
+                
+                # 只有在有显著变化时才更新锚点
+                if np.linalg.norm(l_xyz_delta) > 0 or quaternion_angle(l_delta_quat) > 0:
+                    self._left_anchor_pose = left_pose
+                if np.linalg.norm(r_xyz_delta) > 0 or quaternion_angle(r_delta_quat) > 0:
+                    self._right_anchor_pose = right_pose
+                    
                 l_target_quat = quaternion_multiply(l_delta_quat, self._left_target_pose[1])
                 r_target_quat = quaternion_multiply(r_delta_quat, self._right_target_pose[1])
 
@@ -353,6 +429,9 @@ class Quest3Node:
             else: # Incremental mode OFF
                 if self.control_mode == Quest3Node.ControlMode.INCREMENTAL_MODE:
                     print("\033[93m--------------------退出增量模式-----------------\033[0m")
+                    self.change_mobile_ctrl_mode(IncrementalMpcCtrlMode.NoControl.value)
+                    # 注意：这里不清空目标位姿，保持状态以避免下次进入时的抖动
+                    print("\033[94m保持目标位姿以避免下次进入增量模式时的抖动\033[0m")
                 self.control_mode = Quest3Node.ControlMode.NONE_MODE
         
         if eef_pose_msg is not None:
@@ -374,6 +453,11 @@ class Quest3Node:
             self.change_mm_wbc_arm_ctrl_mode(wbc_mode)
             print("Received service response of changing arm control mode.")
             self.last_quest_running_state = self.quest3_arm_info_transformer.is_runing
+        
+        if self.joySticks_data is None:  # 优先使用手柄数据
+            self.pub_robot_end_hand(hand_finger_data=[left_finger_joints, right_finger_joints])
+        
+        # self.joySticks_data = None
 
     def joySticks_data_callback(self, msg):
         self.quest3_arm_info_transformer.read_joySticks_msg(msg)
