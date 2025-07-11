@@ -123,8 +123,9 @@
     <arg name="cali" default="false" />
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
-    <arg name="joint_protect_enable" default="false" />
-    <arg name="cmd_truncation_enable" default="false" />
+    <arg name="joint_protect_enable" default="true" />
+    <arg name="cmd_truncation_enable" default="true" />
+    <arg name="leg_disable_mode" default="true" doc="If true, when any leg joint fails, all leg joints (1-12) will be disabled" />
 
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />
@@ -133,6 +134,7 @@
     <param name="cali_leg" value="$(arg cali_leg)" />
     <param name="joint_protect_enable" value="$(arg joint_protect_enable)" />
     <param name="cmd_truncation_enable" value="$(arg cmd_truncation_enable)" />
+    <param name="leg_disable_mode" value="$(arg leg_disable_mode)" />
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" 
        output="screen" required="true" clear_params="true"
        launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)">

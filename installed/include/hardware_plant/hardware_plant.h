@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <map>
 #include "kuavo_common/common/robot_state.h"
 #include "kuavo_common/common/sensor_data.h"
 #include "kuavo_common/common/kuavo_settings.h"
@@ -21,6 +22,7 @@
 #include "gesture_types.h"
 #include "touch_hand_controller.h"
 #include "hipnuc_imu_receiver.h"
+#include "motor_status_manager.h"
 
 namespace HighlyDynamic
 {
@@ -95,7 +97,7 @@ public:
     int8_t PDInitialize(Eigen::VectorXd &q0);
     void writeCommand(Eigen::VectorXd cmd_r, uint32_t na_r, std::vector<int> control_modes, Eigen::VectorXd &joint_kp, Eigen::VectorXd &joint_kd);
     void endEffectorCommand(std::vector<EndEffectorData> &end_effector_cmd);
-    bool checkJointPos(const std::vector<JointParam_t> &joint_data, std::vector<uint8_t> ids, std::string &msg);
+    bool checkJointSafety(const std::vector<JointParam_t> &joint_data, std::vector<uint8_t> ids, std::string &msg);
     void jointFiltering(std::vector<JointParam_t> &joint_data, double dt);
     void setDefaultJointPos(std::vector<double> default_joint_pos);
 
@@ -115,6 +117,13 @@ public:
     bool changeMotorParam(const std::vector<MotorParam> &motor_params, std::string &err_msg);
     bool getMotorParam(std::vector<MotorParam> &motor_params, std::string &err_msg);
 
+    // 电机状态管理器接口
+    void setMotorStatusPositionLimits();  // 设置位置限制到电机状态管理器
+    
+    // 电机状态管理器接口 - 仅更新状态记录，不控制硬件
+    void markJointAsDisabled(int joint_id, const std::string& reason = "");
+    bool isJointMarkedAsDisabled(int joint_id) const;
+    std::map<int, MotorStatus> getAllJointsStatus() const;
 
     bool checkLejuClawInitialized();
     bool controlLejuClaw(eef_controller::ControlClawRequest& req, eef_controller::ControlClawResponse& res);
@@ -147,6 +156,9 @@ public:
 
     std::unique_ptr<eef_controller::DexhandController> dexhand_actuator;
     std::string gesture_filepath_;
+    
+    // 电机状态管理器
+    std::unique_ptr<MotorStatusManager> motor_status_manager_;
 
 private:
 
