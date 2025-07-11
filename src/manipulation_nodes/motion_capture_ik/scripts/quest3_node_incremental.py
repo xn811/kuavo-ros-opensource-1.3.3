@@ -75,7 +75,12 @@ class Quest3Node:
         rospy.set_param("/quest3/upper_arm_length", upper_arm_length)
         rospy.set_param("/quest3/lower_arm_length", lower_arm_length)
         rospy.set_param("/quest3/shoulder_width", shoulder_width)
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path)
+        
+        # Get hand reference mode from parameter or use default
+        hand_reference_mode = rospy.get_param('~hand_reference_mode', 'thumb_index')
+        print(f"Hand reference mode: {hand_reference_mode}")
+        
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path, hand_reference_mode=hand_reference_mode)
         
         self.control_robot_hand_position_pub = rospy.Publisher("control_robot_hand_position", robotHandPosition, queue_size=10)
         self.pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)

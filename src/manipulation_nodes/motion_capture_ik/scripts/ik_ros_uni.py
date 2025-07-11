@@ -107,7 +107,7 @@ control_finger_type = 0
 control_torso = 0
 
 class IkRos:
-    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True, predict_gesture=False):
+    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True, predict_gesture=False, hand_reference_mode="thumb_index"):
         self.__start_time = None
         self.__timestamp = None
         self.__ctrl_arm_idx = ctrl_arm_idx
@@ -150,7 +150,7 @@ class IkRos:
 
 
         model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path, predict_gesture=predict_gesture)
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path, predict_gesture=predict_gesture, hand_reference_mode=hand_reference_mode)
         self.quest3_arm_info_transformer.control_torso = control_torso
         initial_state = np.array([0, 0, 0, 0, 0, 0])  # 初始状态 [x, y, z, vx, vy, vz]
         initial_covariance = np.eye(6)  # 初始协方差矩阵
@@ -926,6 +926,7 @@ if __name__ == "__main__":
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
     parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
     parser.add_argument("--eef_z_bias", type=float, default=-0.0, help="End effector z-axis bias distance.")
+    parser.add_argument("--hand_reference_mode", type=str, default="thumb_index", help="Hand reference mode: fingertips, middle_finger, or thumb_index.")
     args, unknown = parser.parse_known_args()
     # ee_type
     end_effector_type=""
@@ -946,6 +947,7 @@ if __name__ == "__main__":
     control_finger_type = args.control_finger_type
     control_torso = args.control_torso
     predict_gesture = args.predict_gesture
+    hand_reference_mode = args.hand_reference_mode
 
     print(f"\033[92mControl {ctrl_arm_idx.name()} arms.\033[0m")
     print(f"\033[92mIk type: {ik_type_idx.name()}\033[0m")
@@ -1028,4 +1030,4 @@ if __name__ == "__main__":
     rospy.set_param("/quest3/lower_arm_length", float(lower_arm_length))
     rospy.set_param("/quest3/shoulder_width", float(shoulder_width))
     print(f"\033[92mLeft Arm Length: {arm_length_left:.3f} m, Right Arm Length:{arm_length_right:.3f} m.\033[0m")
-    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv, predict_gesture=predict_gesture)
+    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv, predict_gesture=predict_gesture, hand_reference_mode=hand_reference_mode)

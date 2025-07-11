@@ -23,7 +23,12 @@ class Quest3Node:
         kuavo_assests_path = rospack.get_path("kuavo_assets")
         robot_version = os.environ.get('ROBOT_VERSION', '40')
         self.model_path = kuavo_assests_path + f"/models/biped_s{robot_version}"
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path)
+        
+        # Get hand reference mode from parameter or use default
+        hand_reference_mode = rospy.get_param('~hand_reference_mode', 'palm')
+        print(f"Hand reference mode: {hand_reference_mode}")
+        
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path, hand_reference_mode=hand_reference_mode)
         self.use_custom_ik_param = True
         self.ik_solve_param = ikSolveParam()
         
