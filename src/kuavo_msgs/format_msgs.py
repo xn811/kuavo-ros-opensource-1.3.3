@@ -36,6 +36,12 @@ def capitalize_type(type_name):
     if type_name.lower() in {t.lower() for t in basic_types}:
         return type_name.lower() + array_suffix
     
+    # 特殊处理时间相关类型，直接替换为标准ROS2类型
+    if type_name.lower() == 'time':
+        return 'builtin_interfaces/Time' + array_suffix
+    elif type_name.lower() == 'duration':
+        return 'builtin_interfaces/Duration' + array_suffix
+    
     # 处理可能包含命名空间的类型
     parts = type_name.split('/')
     if len(parts) > 1:
