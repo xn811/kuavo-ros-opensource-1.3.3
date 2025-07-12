@@ -37,6 +37,7 @@ class Quest3Node:
 
         self.end_effector_type = "qiangnao"
         self.send_srv = True
+        self.rl = False
         self.last_quest_running_state = False
         self.joySticks_data = None
         self.button_y_last = False
@@ -241,10 +242,11 @@ class Quest3Node:
             mode = 2 if self.quest3_arm_info_transformer.is_runing else 0
             mobile_mode = 1 if self.quest3_arm_info_transformer.is_runing else 0
             wbc_mode = 1 if self.quest3_arm_info_transformer.is_runing else 0
-            self.change_arm_ctrl_mode(mode)
             self.change_mobile_ctrl_mode(mobile_mode)
-            self.change_mm_wbc_arm_ctrl_mode(wbc_mode)
-            print("Received service response of changing arm control mode.")
+            if not self.rl:
+                self.change_arm_ctrl_mode(mode)
+                self.change_mm_wbc_arm_ctrl_mode(wbc_mode)
+                print("Received service response of changing arm control mode.")
             self.last_quest_running_state = self.quest3_arm_info_transformer.is_runing
 
         if self.joySticks_data is None:  # 优先使用手柄数据
@@ -261,6 +263,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     parser = argparse.ArgumentParser()
     parser.add_argument("--send_srv", type=int, default=1, help="Send arm control service, True or False.")
+    parser.add_argument("--rl", type=int, default=0, help="RL version.")
     parser.add_argument("--ee_type", "--end_effector_type", dest="end_effector_type", type=str, default="", help="End effector type, jodell, qiangnao or lejuclaw.")
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
     args, unknown = parser.parse_known_args()
@@ -272,5 +275,7 @@ if __name__ == '__main__':
     print(f"Send srv?: {quest3_node.send_srv}")
     quest3_node.set_control_torso_mode(args.control_torso)
     print(f"Control torso?: {args.control_torso}")
+    quest3_node.rl = args.rl
+    print(f"RL version?: {quest3_node.rl}")
     print("Quest3 node started")
     rospy.spin()

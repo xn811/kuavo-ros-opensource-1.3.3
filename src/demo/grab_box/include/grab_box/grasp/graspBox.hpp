@@ -153,11 +153,11 @@ namespace GrabBox
       // }
       // if(!changeKinematicMpcControlMode(1))//Arm only control mode
       //   return BT::NodeStatus::FAILURE;
-      if(!resetMpcService())
-      {
-        ROS_ERROR("Failed to Pre-reset MPC.");
-        return BT::NodeStatus::FAILURE;
-      }
+      // if(!resetMpcService())
+      // {
+      //   ROS_ERROR("Failed to Pre-reset MPC.");
+      //   return BT::NodeStatus::FAILURE;
+      // }
       changeArmCtrlModeSrv(2);//using external controller
       if(!changeManipulatorControlFrame(FrameType::MmWorldFrame))
       {

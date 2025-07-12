@@ -8,6 +8,7 @@ from kuavo_msgs.srv import twoArmHandPoseCmdSrv
 from sensor_msgs.msg import JointState
 
 import numpy as np
+import argparse
 
 # decide use custom ik param or not
 use_custom_ik_param = True
@@ -43,8 +44,13 @@ def get_joint_states_msg(q_now):
     return msg
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use_topic", type=bool, default=False, help="use topic or not")
+    args = parser.parse_args()
+    use_topic = args.use_topic
+
     rospy.init_node("sim_ik_cmd", anonymous=True)
-    pub = rospy.Publisher('/ik/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
+    pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
     pub_result = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=10)
     record_data = []
     r = 0.15
@@ -79,17 +85,19 @@ if __name__ == "__main__":
         eef_pose_msg.hand_poses.right_pose.quat_xyzw = record_data[idx, -4:]
         eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = np.zeros(3)
         
-        # pub.publish(eef_pose_msg) # 话题
-        res = call_ik_srv(eef_pose_msg) # 服务
-        if(res.success):
-            l_pos = res.hand_poses.left_pose.pos_xyz
-            l_pos_error = np.linalg.norm(l_pos - eef_pose_msg.hand_poses.left_pose.pos_xyz)
-            r_pos = res.hand_poses.right_pose.pos_xyz
-            r_pos_error = np.linalg.norm(r_pos - eef_pose_msg.hand_poses.right_pose.pos_xyz)
-            print(f"time_cost: {res.time_cost:.2f} ms. left_pos_error: {1e3*l_pos_error:.2f} mm, right_pos_error: {1e3*r_pos_error:.2f} mm")
-            pub_result.publish(get_joint_states_msg(res.q_arm))
+        if use_topic:
+            pub.publish(eef_pose_msg) # 话题
         else:
-            print(f"success: {res.success}")
+            res = call_ik_srv(eef_pose_msg) # 服务
+            if(res.success):
+                l_pos = res.hand_poses.left_pose.pos_xyz
+                l_pos_error = np.linalg.norm(l_pos - eef_pose_msg.hand_poses.left_pose.pos_xyz)
+                r_pos = res.hand_poses.right_pose.pos_xyz
+                r_pos_error = np.linalg.norm(r_pos - eef_pose_msg.hand_poses.right_pose.pos_xyz)
+                print(f"time_cost: {res.time_cost:.2f} ms. left_pos_error: {1e3*l_pos_error:.2f} mm, right_pos_error: {1e3*r_pos_error:.2f} mm")
+                pub_result.publish(get_joint_states_msg(res.q_arm))
+            else:
+                print(f"success: {res.success}")
         rate.sleep()
         idx = idx + 1 if forward_direction else idx - 1
         if idx == len(record_data) - 1:
