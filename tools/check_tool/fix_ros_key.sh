@@ -18,7 +18,7 @@ ping -c 3 mirrors.tuna.tsinghua.edu.cn > /dev/null 2>&1 || {
 
 # 密钥下载函数
 download_ros_key() {
-    local url="https://mirrors.tuna.tsinghua.edu.cn/ros/ros.key"
+    local url="https://kuavo.lejurobot.com/statics/ros.key"
     local backup_url="http://repo.ros2.org/ros.key"
     
     if ! curl -fsSL --connect-timeout $TIMEOUT "$url" | gpg --dearmor | sudo tee "$KEYRING" > /dev/null; then
