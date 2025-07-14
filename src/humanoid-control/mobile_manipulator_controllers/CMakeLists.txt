@@ -7,12 +7,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(catkin REQUIRED
   COMPONENTS
   roscpp
-  humanoid_common
-  humanoid_interface
-  humanoid_interface_ros
   ocs2_mobile_manipulator
   ocs2_mobile_manipulator_ros
-  motion_capture_ik
   kuavo_msgs
   std_srvs
 )
@@ -28,12 +24,8 @@ catkin_package(
   ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
-    humanoid_common
-    humanoid_interface
-    humanoid_interface_ros
     ocs2_mobile_manipulator
     ocs2_mobile_manipulator_ros
-    motion_capture_ik
     kuavo_msgs
     ${CATKIN_PACKAGE_DEPENDENCIES}
 )
@@ -61,6 +53,7 @@ link_directories(
 add_library(${PROJECT_NAME}_base
   src/mobileManipulatorControllerBase.cpp
   src/mobileManipulatorVisualization.cpp
+  src/TopicLogger.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_base

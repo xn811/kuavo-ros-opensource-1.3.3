@@ -20,7 +20,7 @@
 #include <condition_variable>
 #include <memory>
 #include "mobile_manipulator_controllers/package_path.h"
-#include "humanoid_interface/common/TopicLogger.h"
+#include "mobile_manipulator_controllers/TopicLogger.h"
 
 
 namespace mobile_manipulator_controller
