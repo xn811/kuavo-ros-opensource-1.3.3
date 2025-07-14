@@ -10,8 +10,8 @@ mother_dir = os.path.dirname(os.path.abspath(__file__))
 
 log_path = init_logging(log_dir=os.path.join(mother_dir, "logs"), filename_prefix="grab_box_v2", enable=True)
 
-# from configs.config_sim import config
-from configs.config_real import config
+from configs.config_sim import config
+# from configs.config_real import config
 
 from strategy import (
     search_tag_with_head,
@@ -140,6 +140,7 @@ def grab_one_box(user_input=True):
         head_search_pitchs=config.common.head_search_pitchs,  # 头部搜索的俯仰角度范围，单位度
         enable_head_tracking=config.common.enable_head_tracking,  # 是否启用头部追踪
         rotate_body=config.common.rotate_body,  # 是否允许身体旋转以寻找目标
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -169,7 +170,8 @@ def grab_one_box(user_input=True):
             frame=Frame.TAG,  # 使用标签坐标系
             degrees=False
         ),
-        enable_percep_when_walking=config.common.enable_percep_when_walking
+        enable_percep_when_walking=config.common.enable_percep_when_walking,
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -184,8 +186,6 @@ def grab_one_box(user_input=True):
 
     # 3. -------------------- 移动手臂搬框 --------------------
 
-    # arm_event.util_set_arm_dof_to_work()
-
     fake_target_tag = Tag(
         id=config.pick.tag_id,  # 假设目标箱子的ID为1
         pose=Pose.from_euler(
@@ -195,7 +195,6 @@ def grab_one_box(user_input=True):
             degrees=True
         )
     )
-    robot_sdk.control.enable_base_pitch_limit(False)
 
     success = grab_box_and_backward(
         walk_event=walk_event,
@@ -210,6 +209,7 @@ def grab_one_box(user_input=True):
         box_mass=config.common.box_mass,  # 假设箱子质量，单位kg，用来计算纵向wrench
         force_ratio_z=config.pick.force_ratio_z,  # 经验系数（根据1.5kg对应5N得出：5/(1.5*9.8)≈0.34
         lateral_force=config.pick.lateral_force,  # 侧向夹持力，单位N
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -222,7 +222,6 @@ def grab_one_box(user_input=True):
         input("准备寻找放置地点，按回车键继续... \n")
 
     # 4. -------------------- 尋找放置地點 --------------------
-    robot_sdk.control.enable_base_pitch_limit(True)
 
     success, target_tag = search_tag_with_head(
         robot_sdk=robot_sdk,
@@ -244,6 +243,7 @@ def grab_one_box(user_input=True):
         head_search_pitchs=config.common.head_search_pitchs,  # 头部搜索的俯仰角度范围，单位度
         enable_head_tracking=config.common.enable_head_tracking,  # 是否启用头部追踪
         rotate_body=config.common.rotate_body,  # 是否允许身体旋转以寻找目标
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -257,6 +257,7 @@ def grab_one_box(user_input=True):
         input("准备接近放置Tag，按回车键继续... \n")
 
     # 5. -------------------- 走路接近放置位置 --------------------
+
     success, latest_tag = walk_approach_target_with_perception_loop(
         walk_event=walk_event,
         percep_event=percep_event,
@@ -267,7 +268,8 @@ def grab_one_box(user_input=True):
             frame=Frame.TAG,  # 使用标签坐标系
             degrees=False
         ),
-        enable_percep_when_walking=config.common.enable_percep_when_walking
+        enable_percep_when_walking=config.common.enable_percep_when_walking,
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -281,7 +283,6 @@ def grab_one_box(user_input=True):
         input("准备放框，按回车键继续... \n")
 
     # 6. -------------------- 放下箱子并向后平移 --------------------
-    robot_sdk.control.enable_base_pitch_limit(False)
     success = place_box_and_backward(
         walk_event=walk_event,
         arm_event=arm_event,
@@ -294,7 +295,8 @@ def grab_one_box(user_input=True):
 
         box_mass=config.common.box_mass,  # 假设箱子质量，单位kg，用来计算纵向wrench
         force_ratio_z=config.place.force_ratio_z,  # 经验系数（根据1.5kg对应5N得出：5/(1.5*9.8)≈0.34
-        lateral_force=config.place.lateral_force,  # 侧向夹持力，单位N
+        lateral_force=config.place.lateral_force,  # 侧向夹持力，单位N,
+        walk_use_cmd_vel=config.common.walk_use_cmd_vel
     )
 
     if not success:
@@ -314,9 +316,6 @@ def grab_one_box(user_input=True):
     # if not success:
     #     print("未能回到初始位置，退出策略。")
     #     return False
-
-    robot_sdk.control.enable_base_pitch_limit(True)
-
     return True
 
 
@@ -329,4 +328,4 @@ if __name__ == "__main__":
         if not res:
             break
 
-    # test_arm_only()
+    # test_arm_only(）

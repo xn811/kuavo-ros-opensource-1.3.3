@@ -3,7 +3,7 @@ from typing import Tuple
 from scipy.spatial.transform import Rotation as R
 from enum import Enum
 
-from kuavo_humanoid_sdk.kuavo_strategy_v2.utils.utils import quaternion_rotate, quaternion_multiply
+from kuavo_humanoid_sdk.kuavo_strategy_v2.utils.utils import quaternion_rotate, quaternion_multiply, quaternion_inverse
 
 
 class Frame(str, Enum):
@@ -188,6 +188,37 @@ class Pose:
 
         return 2 * np.arccos(quat_dot)
 
+    def angle_yaw(self, other: "Pose"):
+        """
+        计算姿态的角度差（弧度）。
+        只考虑yaw的误差。用于2d情况下的计算。
+        参数：
+            other (Pose): 另一个姿态对象。
+
+        返回：
+            float: 角度差。
+        """
+        # 确保四元数已归一化
+        # quat1_norm = np.linalg.norm(self.quat)
+        # quat2_norm = np.linalg.norm(other.quat)
+        #
+        # if quat1_norm == 0 or quat2_norm == 0:
+        #     return 0.0
+        #
+        # # 计算归一化的四元数点积
+        # quat1_normalized = self.quat / quat1_norm
+        # quat2_normalized = other.quat / quat2_norm
+
+        quat1_normalized = R.from_quat(self.quat)
+        quat2_normalized = R.from_quat(other.quat)
+
+        # 相对旋转：从 self 变换到 other
+        r_rel = quat2_normalized * quat1_normalized.inv()
+        print(r_rel)
+        # 转换为欧拉角
+        yaw = r_rel.as_euler("xyz", degrees=False)[2]
+        return yaw
+
     def __repr__(self):
         """
         返回Pose对象的字符串表示。
@@ -225,10 +256,34 @@ class Transform3D:
             source_frame (Frame): 被转换数据所在的坐标系。
             target_frame (Frame): 要转到的坐标系。
         """
-        assert trans_pose.frame == target_frame, "转换的目标坐标系必须与传入的Pose的frame一致"
+        assert trans_pose.frame == target_frame, f"转换的目标坐标系{target_frame}必须与传入的Pose的frame {trans_pose.frame}一致"
         self.trans_pose = trans_pose
         self.source_frame = source_frame  # 源坐标系
         self.target_frame = target_frame  # 目标坐标系
+
+    def apply_to_pose_inverse(self, pose: Pose):
+        """
+        将Pose从target_frame逆变换到source_frame。
+        """
+
+        assert pose.frame == self.target_frame, "逆变换要求Pose的frame必须是target_frame"
+
+        # 1. 姿态逆变换
+        quat_pose = np.array(pose.quat)
+        quat_trans = np.array(self.trans_pose.quat)
+        quat_trans_inv = quaternion_inverse(quat_trans)
+        quat_new = quaternion_multiply(quat_trans_inv, quat_pose)
+
+        # 2. 位置逆变换
+        # pos_diff = pose.pos - trans.pos，然后用 trans.quat 的逆旋转回来
+        pos_diff = np.array(pose.pos) - np.array(self.trans_pose.pos)
+        pos_new = quaternion_rotate(quat_trans_inv, pos_diff)
+
+        return Pose(
+            pos=pos_new,
+            quat=quat_new,
+            frame=self.source_frame
+        )
 
     def apply_to_pose(self, pose: Pose):
         """

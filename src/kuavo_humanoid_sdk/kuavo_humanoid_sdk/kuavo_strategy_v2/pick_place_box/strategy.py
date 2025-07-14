@@ -31,6 +31,7 @@ def search_tag_with_head(
         head_search_yaws: List[float],
         head_search_pitchs: List[float],
 
+        walk_use_cmd_vel: bool = False,  # 是否使用cmd_vel控制走路
         enable_head_tracking: bool = True,  # 是否启用头部追踪
         rotate_body: bool = True,  # 是否允许身体旋转
 
@@ -75,6 +76,9 @@ def search_tag_with_head(
     if not is_in_fov and rotate_body:
         # 如果目标不在FOV内且允许旋转身体，先旋转机器人身体
         walk_event.open()
+        walk_event.utils_enable_base_pitch_limit(True)  # 启用基座俯仰限制
+        if walk_use_cmd_vel:
+            walk_event.set_control_mode('cmd_vel')
         target_pose = Pose.from_euler(
             pos=robot_sdk.state.robot_position(),
             euler=(0, 0, target_direction),  # 只旋转yaw角度
@@ -125,7 +129,8 @@ def walk_approach_target_with_perception_loop(
         percep_event: EventPercep,
         tag: Tag,
         stand_pose_in_tag: Pose,  # 最終站立位置在目标标签中的位姿
-        enable_percep_when_walking: bool  # 是否在走路时启用感知闭环（边走边看）
+        enable_percep_when_walking: bool,  # 是否在走路时启用感知闭环（边走边看）
+        walk_use_cmd_vel: bool = False,  # 是否使用cmd_vel控制走路
 ):
     """
     走路接近目标，同时视觉闭环。
@@ -143,6 +148,11 @@ def walk_approach_target_with_perception_loop(
 
     percep_event.open()
     walk_event.open()
+
+    walk_event.utils_enable_base_pitch_limit(True)
+
+    if walk_use_cmd_vel:
+        walk_event.set_control_mode('cmd_vel')  # 使用相对位置控制模式
 
     # # 转换stand_pose_in_tag到世界坐标系。注意、需要搞清楚tag的坐标定义和机器人的坐标定义
     stand_pose_in_world = percep_event.transform_pose_from_tag_to_world(tag, stand_pose_in_tag)
@@ -189,6 +199,7 @@ def move_arm_and_backward(
         arm_event: EventArmMoveKeyPoint,
         arm_traj: Tuple[List[Pose], List[Pose]],  # 分别存放左臂和右臂的list数据，frame可以是odom或者bask_link
         step_back_distance: float,  # 向后平移的距离，单位米
+        walk_use_cmd_vel: bool = False, # 是否使用cmd_vel控制走路
         tag: Tag = None,  # 可选的目标标签，用于获取位置和姿态信息
         arm_wrench: Tuple[List, List] = None  # 可选的手臂扭矩数据，分别存放左臂和右臂的扭矩
 ):
@@ -225,7 +236,13 @@ def move_arm_and_backward(
     arm_event.close()
 
     walk_event.open()
-    walk_event.set_control_mode('cmd_pos')  # 使用相对位置控制模式
+
+    walk_event.utils_enable_base_pitch_limit(False)
+
+    if walk_use_cmd_vel:
+        walk_event.set_control_mode('cmd_vel')  # 使用相对位置控制模式
+    else:
+        walk_event.set_control_mode('cmd_pos')
 
     walk_event.set_target(
         Pose(
@@ -264,6 +281,8 @@ def grab_box_and_backward(
         box_mass: float, # 假设箱子质量，单位kg，用来计算纵向wrench
         force_ratio_z: float,  # 经验系数（根据1.5kg对应5N得出：5/(1.5*9.8)≈0.34
         lateral_force: float,  # 侧向夹持力，单位N
+
+        walk_use_cmd_vel: bool = False,  # 是否使用cmd_vel控制走路
 ) -> bool:
     """
     抓取箱子并向后移动。
@@ -288,7 +307,7 @@ def grab_box_and_backward(
     # =================== 计算每个关键点的手臂位姿（Pose） =================== #
     pick_left_arm_poses = [
         # # 1. 预抓取点位
-        Pose.from_euler(pos=(-0.45 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
+        Pose.from_euler(pos=(-box_width*3/2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
         # 2. 并拢点位
         Pose.from_euler(pos=(-box_width / 2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
@@ -300,7 +319,7 @@ def grab_box_and_backward(
         Pose.from_euler(pos=(0.5, box_width / 2, 0.3), euler=(0, -90, 0), degrees=True, frame=Frame.BASE)]
 
     pick_right_arm_poses = [
-        Pose.from_euler(pos=(0.45 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
+        Pose.from_euler(pos=(box_width*3/2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
         # 2. 并拢点位
         Pose.from_euler(pos=(box_width / 2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
@@ -339,7 +358,7 @@ def grab_box_and_backward(
 
     arm_traj = (pick_left_arm_poses, pick_right_arm_poses)
     arm_wrench = (pick_left_arm_wrench, pick_right_arm_wrench)  # 手臂扭矩数据
-    success = move_arm_and_backward(walk_event, arm_event, arm_traj, step_back_distance, tag=tag, arm_wrench=arm_wrench)
+    success = move_arm_and_backward(walk_event, arm_event, arm_traj, step_back_distance, tag=tag, arm_wrench=arm_wrench, walk_use_cmd_vel=walk_use_cmd_vel)
     return success
 
 
@@ -358,6 +377,8 @@ def place_box_and_backward(
         box_mass: float,  # 假设箱子质量，单位kg，用来计算纵向wrench
         force_ratio_z: float,  # 经验系数（根据1.5kg对应5N得出：5/(1.5*9.8)≈0.34
         lateral_force: float,  # 侧向夹持力，单位N
+
+        walk_use_cmd_vel: bool = False,  # 是否使用cmd_vel控制走路
 ):
     """
     放置箱子并向后移动。
@@ -389,7 +410,7 @@ def place_box_and_backward(
         Pose.from_euler(pos=(-box_width / 2 - box_left_tag + 0.03, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
         # 3. 打开点位
-        Pose.from_euler(pos=(-0.4 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
+        Pose.from_euler(pos=(-box_width*3/2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
 
         # 4. 收臂点位
@@ -404,7 +425,7 @@ def place_box_and_backward(
         Pose.from_euler(pos=(box_width / 2 - box_left_tag - 0.03, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
         # 3. 打开点位
-        Pose.from_euler(pos=(0.4 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
+        Pose.from_euler(pos=(box_width*3/2 - box_left_tag, -box_beneath_tag, -box_behind_tag), euler=(0, 0, 90), degrees=True,
                         frame=Frame.TAG),
 
         # 4. 收臂点位
@@ -439,7 +460,7 @@ def place_box_and_backward(
     arm_traj = (place_left_arm_poses, place_right_arm_poses)
     arm_wrench = (place_left_arm_wrench, place_right_arm_wrench)  # 手臂扭矩数据
 
-    success = move_arm_and_backward(walk_event, arm_event, arm_traj, step_back_distance, tag=tag, arm_wrench=arm_wrench)
+    success = move_arm_and_backward(walk_event, arm_event, arm_traj, step_back_distance, tag=tag, arm_wrench=arm_wrench, walk_use_cmd_vel=walk_use_cmd_vel)
 
 
     return success

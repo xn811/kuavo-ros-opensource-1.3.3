@@ -4,17 +4,23 @@
 
 ## 概述
 
-策略模块 v2 是 kuavo_humanoid_sdk 的升级版本，提供了更模块化和事件驱动的策略编写框架。
+策略模块 v2 调用 kuavo_humanoid_sdk 的sdk接口实现一些基本的任务，提供了更模块化和事件驱动的策略编写框架。
+在不同层级上，这些任务可以被复用。
 
-## 核心组件
+### 为什么有了sdk还需要策略模块？
 
-### 机器人SDK
+例如简单的走路到一个指定点这件事情，可以调用kuavo_humanoid_sdk里发送/cmd_pos_world话题的接口实现，但是如果给定一个tag的位置，并要走到tag相对的一个位置，则需要对输入做坐标转换。并且，在走的过程中，我希望监听，走路是否成功到达目标，还是因为某种原因失败了。
+事件就是这样一个封装：每个事件是一个类，可以在接收目标的时候做一些处理（如坐标转换，和范围检测），并且在执行过程中维护自己的状态，等等。
+
+案例 >> 策略 >> 事件 >> SDK。它们之间的关系如下图：
+
+![策略模块 v2 结构图](pages/structure.jpg)
+
+## 数据结构
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.common.robot_sdk.RobotSDK
 
 Bases: `object`
-
-### 数据类型
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Frame(value)
 
@@ -46,6 +52,17 @@ Bases: `object`
 
 参数：
 : other (Pose): 另一个姿态对象。
+
+返回：
+: float: 角度差。
+
+#### angle_yaw(other: [Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose))
+
+计算姿态的角度差（弧度）。
+只考虑yaw的误差。用于2d情况下的计算。
+参数：
+
+> other (Pose): 另一个姿态对象。
 
 返回：
 : float: 角度差。
@@ -157,9 +174,11 @@ Bases: `object`
 返回：
 : Pose: 转换后的Pose对象。
 
-## 事件系统
+#### apply_to_pose_inverse(pose: [Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose))
 
-### 基础事件
+将Pose从target_frame逆变换到source_frame。
+
+## 事件系统
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.base_event.EventStatus(value)
 
@@ -231,8 +250,6 @@ Bases: `object`
 
 异常：
 : NotImplementedError: 如果在子类中未实现。
-
-### 移动操作事件
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventPercep(robot_sdk: [RobotSDK](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.robot_sdk.RobotSDK), half_fov, timeout)
 
@@ -349,8 +366,18 @@ Bases: [`BaseEvent`](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.base_ev
 
 参数：
 : target (Any): 目标。
-  \*args: 额外的参数。
-  \*\*kwargs: 额外的关键字参数。
+  <br/>
+  ```
+  *
+  ```
+  <br/>
+  args: 额外的参数。
+  <br/>
+  ```
+  **
+  ```
+  <br/>
+  kwargs: 额外的关键字参数。
 
 返回：
 : bool: 如果目标设置成功返回True，否则返回False。
@@ -358,6 +385,13 @@ Bases: [`BaseEvent`](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.base_ev
 #### step()
 
 执行事件的每一步操作。
+
+#### utils_enable_base_pitch_limit(enable: bool)
+
+启用或禁用base_link的俯仰角限制。
+
+参数：
+: enable (bool): 是否启用俯仰角限制。
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint(robot_sdk: [RobotSDK](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.robot_sdk.RobotSDK), timeout, arm_control_mode: str, pos_threshold: float, angle_threshold: float)
 
@@ -449,8 +483,6 @@ Bases: [`BaseEvent`](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.base_ev
 
 ## 工具类
 
-### 日志工具
-
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.utils.logger_setup.Logger(filename)
 
 Bases: `object`
@@ -461,9 +493,7 @@ Bases: `object`
 
 ## 策略函数
 
-### 箱子抓取策略
-
-### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.search_tag_with_head(robot_sdk: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.robot_sdk.RobotSDK, walk_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose, head_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventHeadMoveKeyPoint, percep_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventPercep, init_tag_guess: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag, head_search_yaws: ~typing.List[float], head_search_pitchs: ~typing.List[float], enable_head_tracking: bool = True, rotate_body: bool = True) -> (<class 'bool'>, <class 'kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag'>)
+### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.search_tag_with_head(robot_sdk: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.robot_sdk.RobotSDK, walk_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose, head_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventHeadMoveKeyPoint, percep_event: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventPercep, init_tag_guess: ~kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag, head_search_yaws: ~typing.List[float], head_search_pitchs: ~typing.List[float], walk_use_cmd_vel: bool = False, enable_head_tracking: bool = True, rotate_body: bool = True) -> (<class 'bool'>, <class 'kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag'>)
 
 使用头部寻找目标位置。
 
@@ -481,7 +511,7 @@ Bases: `object`
 返回：
 : Tuple[bool, Tag]: 搜索结果和目标Tag。
 
-### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.walk_approach_target_with_perception_loop(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), percep_event: [EventPercep](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventPercep), tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), stand_pose_in_tag: [Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose), enable_percep_when_walking: bool)
+### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.walk_approach_target_with_perception_loop(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), percep_event: [EventPercep](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.head_events.EventPercep), tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), stand_pose_in_tag: [Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose), enable_percep_when_walking: bool, walk_use_cmd_vel: bool = False)
 
 走路接近目标，同时视觉闭环。
 
@@ -495,7 +525,7 @@ Bases: `object`
 返回：
 : Tuple[bool, Tag]: 是否成功接近目标和目标Tag。
 
-### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.move_arm_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), arm_traj: Tuple[List[[Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose)], List[[Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose)]], step_back_distance: float, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag) | None = None, arm_wrench: Tuple[List, List] | None = None)
+### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.move_arm_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), arm_traj: Tuple[List[[Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose)], List[[Pose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Pose)]], step_back_distance: float, walk_use_cmd_vel: bool = False, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag) | None = None, arm_wrench: Tuple[List, List] | None = None)
 
 抓起箱子同时向后平移。
 
@@ -510,7 +540,7 @@ Bases: `object`
 返回：
 : bool: 是否成功完成操作。
 
-### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.grab_box_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), step_back_distance: float, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), box_width: float, box_behind_tag: float, box_beneath_tag: float, box_left_tag: float, box_mass: float, force_ratio_z: float, lateral_force: float) → bool
+### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.grab_box_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), step_back_distance: float, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), box_width: float, box_behind_tag: float, box_beneath_tag: float, box_left_tag: float, box_mass: float, force_ratio_z: float, lateral_force: float, walk_use_cmd_vel: bool = False) → bool
 
 抓取箱子并向后移动。
 
@@ -530,7 +560,7 @@ Bases: `object`
 返回：
 : bool: 是否成功完成操作。
 
-### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.place_box_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), step_back_distance: float, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), box_width: float, box_behind_tag: float, box_beneath_tag: float, box_left_tag: float, box_mass: float, force_ratio_z: float, lateral_force: float)
+### kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.strategy.place_box_and_backward(walk_event: [EventWalkToPose](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.walk_events.EventWalkToPose), arm_event: [EventArmMoveKeyPoint](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.events.mobile_manipulate.arm_events.EventArmMoveKeyPoint), step_back_distance: float, tag: [Tag](#kuavo_humanoid_sdk.kuavo_strategy_v2.common.data_type.Tag), box_width: float, box_behind_tag: float, box_beneath_tag: float, box_left_tag: float, box_mass: float, force_ratio_z: float, lateral_force: float, walk_use_cmd_vel: bool = False)
 
 放置箱子并向后移动。
 
@@ -562,7 +592,7 @@ Bases: `object`
 
 ## 配置模块
 
-### 仿真配置
+<a id="module-kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.configs.config_sim"></a>
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.configs.config_sim.config
 
@@ -574,9 +604,9 @@ Bases: `object`
 
 通用配置
 
-#### arm_angle_threshold *= np.float64(0.3490658503988659)*
+#### arm_angle_threshold *= 0.3490658503988659*
 
-#### arm_control_mode *= 'manipulation_mpc'*
+#### arm_control_mode *= 'fixed_base'*
 
 #### arm_pos_threshold *= 0.15*
 
@@ -584,11 +614,11 @@ Bases: `object`
 
 #### box_mass *= 1.5*
 
-#### box_width *= 0.37*
+#### box_width *= 0.25*
 
 #### enable_head_tracking *= True*
 
-#### enable_percep_when_walking *= False*
+#### enable_percep_when_walking *= True*
 
 #### half_fov *= 60*
 
@@ -602,11 +632,13 @@ Bases: `object`
 
 #### step_back_distance *= 0.5*
 
-#### walk_pos_threshold *= 0.2*
+#### walk_pos_threshold *= 0.05*
 
 #### walk_timeout *= 50*
 
-#### walk_yaw_threshold *= 0.1*
+#### walk_use_cmd_vel *= True*
+
+#### walk_yaw_threshold *= 0.08726646259971647*
 
 #### *class* pick
 
@@ -622,19 +654,19 @@ Bases: `object`
 
 #### box_in_tag_pos *= (0.0, 0.0, 0.0)*
 
-#### box_left_tag *= 0.0*
+#### box_left_tag *= -0.2*
 
 #### force_ratio_z *= 0.0*
 
 #### lateral_force *= 0.0*
 
-#### stand_in_tag_euler *= (np.float64(-1.5707963267948966), np.float64(1.5707963267948966), 0.0)*
+#### stand_in_tag_euler *= (-1.5707963267948966, 1.5707963267948966, 0.0)*
 
-#### stand_in_tag_pos *= (0.0, 0.0, 1.0)*
+#### stand_in_tag_pos *= (0.0, 0.0, 0.5)*
 
 #### tag_euler_world *= (0, 0, 0)*
 
-#### tag_id *= 2*
+#### tag_id *= 1*
 
 #### tag_pos_world *= (0, -10, 0)*
 
@@ -654,17 +686,17 @@ Bases: `object`
 
 #### lateral_force *= 0.0*
 
-#### stand_in_tag_euler *= (np.float64(-1.5707963267948966), np.float64(1.5707963267948966), 0.0)*
+#### stand_in_tag_euler *= (-1.5707963267948966, 1.5707963267948966, 0.0)*
 
 #### stand_in_tag_pos *= (0.0, 0.0, 0.5)*
 
 #### tag_euler_world *= (0, 0, 0)*
 
-#### tag_id *= 2*
+#### tag_id *= 0*
 
-#### tag_pos_world *= (-10, 0, 0)*
+#### tag_pos_world *= (0, 10, 0)*
 
-### 实物配置
+<a id="module-kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.configs.config_real"></a>
 
 ### *class* kuavo_humanoid_sdk.kuavo_strategy_v2.pick_place_box.configs.config_real.config
 
@@ -676,9 +708,9 @@ Bases: `object`
 
 通用配置
 
-#### arm_angle_threshold *= np.float64(0.3490658503988659)*
+#### arm_angle_threshold *= 0.3490658503988659*
 
-#### arm_control_mode *= 'manipulation_mpc'*
+#### arm_control_mode *= 'fixed_base'*
 
 #### arm_pos_threshold *= 0.15*
 
@@ -690,7 +722,7 @@ Bases: `object`
 
 #### enable_head_tracking *= True*
 
-#### enable_percep_when_walking *= False*
+#### enable_percep_when_walking *= True*
 
 #### half_fov *= 60*
 
@@ -702,11 +734,13 @@ Bases: `object`
 
 #### rotate_body *= True*
 
-#### step_back_distance *= 0.0*
+#### step_back_distance *= 0.5*
 
 #### walk_pos_threshold *= 0.2*
 
 #### walk_timeout *= 50*
+
+#### walk_use_cmd_vel *= True*
 
 #### walk_yaw_threshold *= 0.1*
 
@@ -730,13 +764,13 @@ Bases: `object`
 
 #### lateral_force *= 10.0*
 
-#### stand_in_tag_euler *= (np.float64(-1.5707963267948966), np.float64(1.5707963267948966), 0.0)*
+#### stand_in_tag_euler *= (-1.5707963267948966, 1.5707963267948966, 0.0)*
 
 #### stand_in_tag_pos *= (0.0, 0.0, 0.4)*
 
 #### tag_euler_world *= (0, 0, 0)*
 
-#### tag_id *= 1*
+#### tag_id *= 8*
 
 #### tag_pos_world *= (0, -10, 0)*
 
@@ -756,74 +790,96 @@ Bases: `object`
 
 #### lateral_force *= 10.0*
 
-#### stand_in_tag_euler *= (np.float64(-1.5707963267948966), np.float64(1.5707963267948966), 0.0)*
+#### stand_in_tag_euler *= (-1.5707963267948966, 1.5707963267948966, 0.0)*
 
 #### stand_in_tag_pos *= (0.0, 0.0, 0.65)*
 
 #### tag_euler_world *= (0, 0, 0)*
 
-#### tag_id *= 0*
+#### tag_id *= 1*
 
 #### tag_pos_world *= (0, 10, 0)*
 
-## 使用示例
+## 搬箱子示例
 
-以下是一个使用策略模块 v2 的基本示例:
+注意ROS里Tag识别的坐标系如下：
 
-### 仿真运行
+![Tag的坐标系定义](pages/tag_frame.png)
 
-#### 准备
+以下是一个使用箱子抓取策略的基本示例:
 
-在运行仿真场景前需要确保配置正确。
+### 准备
 
-#### 编译
+第一次启动 gazebo 场景前需要修改tag尺寸:
 
-确保所有相关功能包已编译:
+在 `/opt/ros/noetic/share/apriltag_ros/config/tags.yaml` 文件中将 tag 的 size 尺寸修改为和立方体 tag 码的尺寸一致（只需做一次）
 
-```bash
-catkin build kuavo_humanoid_sdk
+```yaml
+standalone_tags:
+  [
+    {id: 0, size: 0.088, name: 'tag_0'},
+    {id: 1, size: 0.088, name: 'tag_1'},
+    {id: 2, size: 0.088, name: 'tag_2'},
+    {id: 3, size: 0.088, name: 'tag_3'},
+    {id: 4, size: 0.088, name: 'tag_4'},
+    {id: 5, size: 0.088, name: 'tag_5'},
+    {id: 6, size: 0.088, name: 'tag_6'},
+    {id: 7, size: 0.088, name: 'tag_7'},
+    {id: 8, size: 0.088, name: 'tag_8'},
+    {id: 9, size: 0.088, name: 'tag_9'}
+  ]
 ```
 
-#### 运行
+### 编译
 
-启动仿真环境:
+上位机需要编译相关功能包:
 
 ```bash
-# 启动仿真场景
-source devel/setup.bash
-roslaunch kuavo_humanoid_sdk start_simulation.launch
+git clone https://www.lejuhub.com/ros-application-team/kuavo_ros_application.git
+cd kuavo_ros_application
+git checkout dev
+catkin build kuavo_tf2_web_republisher
 ```
 
-运行搬箱子示例:
+下位机首先需要编译相关功能包:
 
 ```bash
-cd src/kuavo_humanoid_sdk/examples/strategies_v2
-python3 grasp_box_example_v2.py --sim
+git clone https://gitee.com/leju-robot/kuavo-ros-control.git
+cd kuavo-ros-control
+git checkout dev
+catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
 ```
 
-### 实物运行
-
-#### 准备
-
-确保所有硬件连接正确，并已进行必要的标定。
-
-**零点标定** !! 非常重要 !!
-
-执行零点标定工具:
+#### 【或者】Mujoco 仿真运行
 
 ```bash
-sudo su
-./scripts/joint_cali/One_button_start.sh
+roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch
+```
+
+### 启动【事件】测试脚本
+
+#### 行走事件测试
+
+```bash
+python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/examples/walk_example.py
+```
+
+#### 手臂移动事件测试
+
+```bash
+python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/examples/arm_example.py
+```
+
+### 启动完整搬框案例
+
+```bash
+python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/case.py
 ```
 
 ## 目录结构
 
-### 文件
-
 - why_v2.md: 解释为什么使用 v2 版本。
 - README.md: 项目的简要介绍。
-
-### 目录
 
 - **pick_place_box**: 包含与抓取和放置相关的策略。
 - **resource**: 存储资源文件。

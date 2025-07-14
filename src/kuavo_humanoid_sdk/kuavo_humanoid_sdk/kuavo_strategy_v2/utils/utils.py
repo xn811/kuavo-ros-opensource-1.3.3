@@ -34,6 +34,9 @@ def normalize_angle(angle: float) -> float:
 
     return angle
 
+def quaternion_inverse(q):
+    q = np.array(q)
+    return np.array([ -q[0], -q[1], -q[2], q[3] ]) / np.dot(q, q)
 
 def quaternion_multiply(q1, q2):
     """

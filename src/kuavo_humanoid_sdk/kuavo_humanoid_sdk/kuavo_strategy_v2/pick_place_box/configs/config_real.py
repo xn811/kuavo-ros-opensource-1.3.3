@@ -3,7 +3,7 @@ import numpy as np
 class config:
     class common:
         """通用配置"""
-        step_back_distance = 0.0
+        step_back_distance = 0.5
         enable_head_tracking = True
         half_fov = 60  # 半视场角度，单位度
         walk_timeout = 50  # 走路事件的超时时间，单位秒
@@ -17,14 +17,16 @@ class config:
         head_search_pitchs = [-30, -15, 0, 15, 30]  # 头部搜索的俯仰角度范围，单位度
         rotate_body = True  # 允许身体旋转以寻找目标
 
-        arm_control_mode = 'manipulation_mpc'  # 手臂控制模式，使用Manipulation MPC控制模式
+        arm_control_mode = 'fixed_base'  # 手臂控制模式，使用Manipulation MPC控制模式; fixed_base; manipulation_mpc
         arm_pos_threshold = 0.15  # 手臂位置阈值，单位米
         arm_angle_threshold = np.deg2rad(20)  # 手臂角度阈值，单位弧度
 
-        enable_percep_when_walking = False # 是否在走路时启用感知(边走边看)
+        enable_percep_when_walking = True # 是否在走路时启用感知(边走边看)
 
         box_width = 0.37  # 米
         box_mass = 1.5 # kg，假设一个较重的箱子
+
+        walk_use_cmd_vel = True  # 是否使用cmd_vel控制走路
 
     class pick:
         """搬框配置"""

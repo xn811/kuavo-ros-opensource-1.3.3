@@ -8,9 +8,23 @@
 ==========================
 .. currentmodule:: kuavo_humanoid_sdk.kuavo_strategy_v2
 
-策略模块 v2 是 kuavo_humanoid_sdk 的升级版本，提供了更模块化和事件驱动的策略编写框架。
+策略模块 v2 调用 kuavo_humanoid_sdk 的sdk接口实现一些基本的任务，提供了更模块化和事件驱动的策略编写框架。
+在不同层级上，这些任务可以被复用。
 
-核心组件
+
+为什么有了sdk还需要策略模块？
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+例如简单的走路到一个指定点这件事情，可以调用kuavo_humanoid_sdk里发送/cmd_pos_world话题的接口实现，但是如果给定一个tag的位置，并要走到tag相对的一个位置，则需要对输入做坐标转换。并且，在走的过程中，我希望监听，走路是否成功到达目标，还是因为某种原因失败了。
+事件就是这样一个封装：每个事件是一个类，可以在接收目标的时候做一些处理（如坐标转换，和范围检测），并且在执行过程中维护自己的状态，等等。
+
+案例 >> 策略 >> 事件 >> SDK。它们之间的关系如下图：
+
+.. image:: structure.jpg
+   :alt: 策略模块 v2 结构图
+   :width: 400px
+   :align: center
+
+数据结构
 ====================
 
 机器人SDK
@@ -144,62 +158,94 @@
     :undoc-members:
     :show-inheritance:
 
-使用示例
+
+搬箱子示例
 ============
 
-以下是一个使用策略模块 v2 的基本示例:
+注意ROS里Tag识别的坐标系如下：
 
-仿真运行
---------------
+.. image:: tag_frame.png
+   :alt: Tag的坐标系定义
+   :width: 400px
+   :align: center
+
+以下是一个使用箱子抓取策略的基本示例:
+
+gazebo 仿真运行
+------------------------
 
 准备
 ^^^^^^^^^^^^
 
-在运行仿真场景前需要确保配置正确。
+第一次启动 gazebo 场景前需要修改tag尺寸:
+
+在 ``/opt/ros/noetic/share/apriltag_ros/config/tags.yaml`` 文件中将 tag 的 size 尺寸修改为和立方体 tag 码的尺寸一致（只需做一次）
+
+.. code-block:: yaml
+
+    standalone_tags:
+      [
+        {id: 0, size: 0.088, name: 'tag_0'},
+        {id: 1, size: 0.088, name: 'tag_1'},
+        {id: 2, size: 0.088, name: 'tag_2'},
+        {id: 3, size: 0.088, name: 'tag_3'},
+        {id: 4, size: 0.088, name: 'tag_4'},
+        {id: 5, size: 0.088, name: 'tag_5'},
+        {id: 6, size: 0.088, name: 'tag_6'},
+        {id: 7, size: 0.088, name: 'tag_7'},
+        {id: 8, size: 0.088, name: 'tag_8'},
+        {id: 9, size: 0.088, name: 'tag_9'}
+      ]
 
 编译
 ^^^^^^^^^^^^
 
-确保所有相关功能包已编译:
+上位机需要编译相关功能包:
 
 .. code-block:: bash
 
-    catkin build kuavo_humanoid_sdk
+    git clone https://www.lejuhub.com/ros-application-team/kuavo_ros_application.git
+    cd kuavo_ros_application
+    git checkout dev
+    catkin build kuavo_tf2_web_republisher
 
-运行
-^^^^^^^^^^^^
-
-启动仿真环境:
-
-.. code-block:: bash
-
-    # 启动仿真场景
-    source devel/setup.bash
-    roslaunch kuavo_humanoid_sdk start_simulation.launch
-
-运行搬箱子示例:
+下位机首先需要编译相关功能包:
 
 .. code-block:: bash
 
-    cd src/kuavo_humanoid_sdk/examples/strategies_v2
-    python3 grasp_box_example_v2.py --sim
+    git clone https://gitee.com/leju-robot/kuavo-ros-control.git
+    cd kuavo-ros-control
+    git checkout dev
+    catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
 
-实物运行
---------------
 
-准备
-^^^^^^^^^^^^
-
-确保所有硬件连接正确，并已进行必要的标定。
-
-**零点标定** !! 非常重要 !!
-
-执行零点标定工具:
-
+【或者】Mujoco 仿真运行
+------------------------
 .. code-block:: bash
 
-    sudo su
-    ./scripts/joint_cali/One_button_start.sh
+    roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch
+
+启动【事件】测试脚本
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+行走事件测试
+------------------------
+.. code-block:: bash
+
+    python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/examples/walk_example.py
+
+
+手臂移动事件测试
+------------------------
+.. code-block:: bash
+
+    python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/examples/arm_example.py
+
+启动完整搬框案例
+^^^^^^^^^^^^^^^^^^^^^^^^
+.. code-block:: bash
+
+    python3 kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/case.py
 
 目录结构
 ============
