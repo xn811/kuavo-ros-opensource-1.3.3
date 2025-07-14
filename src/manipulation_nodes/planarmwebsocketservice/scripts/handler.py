@@ -704,6 +704,75 @@ async def update_data_pilot_handler(
     response_queue.put(response)
 
 
+def get_music_list():
+    # 指定路径下指定格式的文件列表
+    music_list = []
+
+    # 检查下位机是否有音频播放设备
+    if is_player_in_body():
+        music_folder = os.path.expanduser("/home/lab/.config/lejuconfig/music")
+
+        for root, dirs, files in os.walk(music_folder):
+            for file in files:
+                if file.endswith(".wav") or file.endswith(".mp3"):
+                    # 使用 os.path.join 规范路径拼接
+                    full_path = os.path.join(music_folder, file)
+                    # 确保UTF-8编码格式
+                    music_list.append(full_path.encode('utf-8').decode('utf-8'))
+
+    else:
+        result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+        if result.returncode == 0:
+            remote_host = "192.168.26.12"
+        else:
+            remote_host = "192.168.26.1"
+
+
+        remote_user = "kuavo"
+        remote_path = "/home/kuavo/.config/lejuconfig/music"
+        encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
+
+        if encoded_password is None:
+            raise ValueError("Failed to get remote password.")
+        remote_password = base64.b64decode(encoded_password).decode('utf-8')
+
+        # 获取远程路径下的音乐列表
+        ssh_cmd = (
+            f"sshpass -p '{remote_password}' ssh {remote_user}@{remote_host} "
+            f"'cd \"{remote_path}\" && find . -maxdepth 1 -type f \\( -name \"*.mp3\" -o -name \"*.wav\" \\) -printf \"%P\\n\"'"
+        )
+
+        result = subprocess.run(
+            ssh_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=True
+        )
+
+        if result.returncode == 0:
+            # 成功获取远程音乐文件列表
+            music_list = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            music_list = [os.path.join(remote_path, file) for file in music_list]
+        else:
+            music_list = []
+
+    return music_list
+
+async def get_music_list_handler(websocket: websockets.WebSocketServerProtocol, data: dict):
+    music_list = get_music_list()
+    payload = Payload(
+        cmd="get_music_list", data={"code": 0, "music_list": music_list}
+
+    )
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+
+    response_queue.put(response)
+
+
 # Add a function to clean up when a websocket connection is closed
 def cleanup_websocket(websocket: websockets.WebSocketServerProtocol):
     if websocket in active_threads:
