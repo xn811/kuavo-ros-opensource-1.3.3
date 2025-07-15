@@ -158,21 +158,21 @@ class ESKFQuaternion:
 
 
 class TwoArmPosePredictor:
-    def __init__(self, eef_pos_left, eef_pos_right, eef_quat_left, eef_quat_right, dt):
+    def __init__(self, eef_pos_left, eef_pos_right, eef_quat_left, eef_quat_right, dt, process_noise_scale=0.1, measurement_noise_scale=0.01):
         # 位置滤波
         initial_state = np.array([0]*6, dtype=np.float64)  # 初始状态 [x, y, z, vx, vy, vz]
         initial_covariance = np.eye(6, dtype=np.float64)  # 初始协方差矩阵
-        process_noise = np.eye(6, dtype=np.float64) * 0.01  # 过程噪声协方差矩阵
-        measurement_noise = np.eye(3, dtype=np.float64) * 1.0  # 测量噪声协方差矩阵
+        process_noise = np.eye(6, dtype=np.float64) * process_noise_scale  # 过程噪声协方差矩阵
+        measurement_noise = np.eye(3, dtype=np.float64) * measurement_noise_scale  # 测量噪声协方差矩阵
         initial_state[0:3] = eef_pos_left
         self.pkf_left = KalmanFilter3D(initial_state, initial_covariance, process_noise, measurement_noise, dt)
         initial_state[0:3] = eef_pos_right
         self.pkf_right = KalmanFilter3D(initial_state, initial_covariance, process_noise, measurement_noise, dt)
         
         # 四元数滤波
-        initial_covariance = np.eye(6) * 0.1
-        process_noise = np.eye(6) * 0.01
-        measurement_noise = np.eye(3) * 1.0
+        initial_covariance = np.eye(6) * process_noise_scale
+        process_noise = np.eye(6) * process_noise_scale
+        measurement_noise = np.eye(3) * measurement_noise_scale
         initial_angular_velocity = np.array([0.0, 0.0, 0.0])
         self.qkf_left = ESKFQuaternion(eef_quat_left, initial_angular_velocity, 
                 initial_covariance, process_noise, measurement_noise, dt)
@@ -610,7 +610,9 @@ def test_next_pose_predictor():
     predictor = TwoArmPosePredictor(
         noisy_pos_left[0], noisy_pos_right[0],
         noisy_quat_left[0], noisy_quat_right[0],
-        dt
+        dt,
+        process_noise_scale=0.001,
+        measurement_noise_scale=0.1
     )
     
     # 滤波处理
@@ -635,8 +637,9 @@ def test_next_pose_predictor():
         filtered_quat_left.append(quat_l)
         filtered_quat_right.append(quat_r)
         
-        # 预测未来0.1秒
-        pred_pos_l, pred_pos_r, pred_quat_l, pred_quat_r = predictor.predict_next_pose(0.1)
+        # 预测未来
+        predict_time = 0.3
+        pred_pos_l, pred_pos_r, pred_quat_l, pred_quat_r = predictor.predict_next_pose(predict_time)
         predicted_pos_left.append(pred_pos_l)
         predicted_pos_right.append(pred_pos_r)
         predicted_quat_left.append(pred_quat_l)
@@ -670,6 +673,8 @@ def test_next_pose_predictor():
     noisy_euler_right = np.array([quaternion_to_euler(q) for q in noisy_quat_right])
     filtered_euler_left = np.array([quaternion_to_euler(q) for q in filtered_quat_left])
     filtered_euler_right = np.array([quaternion_to_euler(q) for q in filtered_quat_right])
+    predicted_euler_left = np.array([quaternion_to_euler(q) for q in predicted_quat_left])
+    predicted_euler_right = np.array([quaternion_to_euler(q) for q in predicted_quat_right])
     
     # 绘图
     fig, axes = plt.subplots(4, 3, figsize=(18, 16))
@@ -682,7 +687,7 @@ def test_next_pose_predictor():
         ax.plot(t, true_pos_left[:, i], 'g-', label='true', linewidth=2)
         ax.plot(t, noisy_pos_left[:, i], 'r.', label='noisy', markersize=2, alpha=0.6)
         ax.plot(t, filtered_pos_left[:, i], 'b-', label='filtered', linewidth=1.5)
-        ax.plot(t, predicted_pos_left[:, i], 'y--', label='predicted(0.1s)', linewidth=1.5)
+        ax.plot(t, predicted_pos_left[:, i], 'y--', label=f'predicted({predict_time}s)', linewidth=1.5)
         ax.set_xlabel('time (s)')
         ax.set_ylabel(f'left arm {pos_labels[i]} position (m)')
         ax.set_title(f'left arm {pos_labels[i]} position')
@@ -695,7 +700,7 @@ def test_next_pose_predictor():
         ax.plot(t, true_pos_right[:, i], 'g-', label='true', linewidth=2)
         ax.plot(t, noisy_pos_right[:, i], 'r.', label='noisy', markersize=2, alpha=0.6)
         ax.plot(t, filtered_pos_right[:, i], 'b-', label='filtered', linewidth=1.5)
-        ax.plot(t, predicted_pos_right[:, i], 'y--', label='predicted(0.1s)', linewidth=1.5)
+        ax.plot(t, predicted_pos_right[:, i], 'y--', label=f'predicted({predict_time}s)', linewidth=1.5)
         ax.set_xlabel('time (s)')
         ax.set_ylabel(f'right arm {pos_labels[i]} position (m)')
         ax.set_title(f'right arm {pos_labels[i]} position')
@@ -709,6 +714,7 @@ def test_next_pose_predictor():
         ax.plot(t, np.degrees(true_euler_left[:, i]), 'g-', label='true', linewidth=2)
         ax.plot(t, np.degrees(noisy_euler_left[:, i]), 'r.', label='noisy', markersize=2, alpha=0.6)
         ax.plot(t, np.degrees(filtered_euler_left[:, i]), 'b-', label='filtered', linewidth=1.5)
+        ax.plot(t, np.degrees(predicted_euler_left[:, i]), 'y--', label=f'predicted({predict_time}s)', linewidth=1.5)
         ax.set_xlabel('time (s)')
         ax.set_ylabel(f'left arm {euler_labels[i]} (deg)')
         ax.set_title(f'left arm {euler_labels[i]}')
@@ -721,6 +727,7 @@ def test_next_pose_predictor():
         ax.plot(t, np.degrees(true_euler_right[:, i]), 'g-', label='true', linewidth=2)
         ax.plot(t, np.degrees(noisy_euler_right[:, i]), 'r.', label='noisy', markersize=2, alpha=0.6)
         ax.plot(t, np.degrees(filtered_euler_right[:, i]), 'b-', label='filtered', linewidth=1.5)
+        ax.plot(t, np.degrees(predicted_euler_right[:, i]), 'y--', label=f'predicted({predict_time}s)', linewidth=1.5)
         ax.set_xlabel('time (s)')
         ax.set_ylabel(f'right arm {euler_labels[i]} (deg)')
         ax.set_title(f'right arm {euler_labels[i]}')
@@ -814,8 +821,8 @@ if __name__ == "__main__":
     # 运行nextPosePredictor测试
     test_next_pose_predictor()
 
-    # 运行四元数滤波测试
-    test_quaternion_filter_with_plotting()
+    # # 运行四元数滤波测试
+    # test_quaternion_filter_with_plotting()
     
-    # 运行位置滤波测试
-    test_position_filter_with_plotting()
+    # # 运行位置滤波测试
+    # test_position_filter_with_plotting()

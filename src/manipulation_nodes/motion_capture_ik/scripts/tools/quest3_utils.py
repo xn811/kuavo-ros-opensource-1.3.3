@@ -836,12 +836,12 @@ class Quest3ArmInfoTransformer:
         T = pos_rpy_to_transform(pos, rpy)
         return T
     
-    def construct_marker(self, arm_pose_p, arm_pose_q, r, g, b, side):
+    def construct_marker(self, arm_pose_p, arm_pose_q, rgba, side, marker_id):
         if len(arm_pose_q) != 4 or len(arm_pose_p)!= 3:
             print("Invalid arm pose, cannot construct marker")
             return None
         marker = Marker()
-        # marker.id = id
+        marker.id = marker_id
         marker.header.frame_id = (
             "base_link"  # set frame_id according to the actual situation
         )
@@ -868,10 +868,10 @@ class Quest3ArmInfoTransformer:
         marker.scale.x = 1
         marker.scale.y = 1
         marker.scale.z = 1
-        marker.color.a = 0.3
-        marker.color.r = r
-        marker.color.g = g
-        marker.color.b = b
+        marker.color.a = rgba[3]
+        marker.color.r = rgba[0]
+        marker.color.g = rgba[1]
+        marker.color.b = rgba[2]
         marker.header.stamp = rospy.Time.now()
         marker.pose.position.x = arm_pose_p[0]
         marker.pose.position.y = arm_pose_p[1]

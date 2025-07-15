@@ -61,6 +61,9 @@ namespace mobile_manipulator_controller
       case ManipulatorModelType::ActuatedXYZYawPitchManipulator:
         humanoidState_.head(5) = mmState.head(5);
         break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        humanoidState_.head(6) = mmState.head(6);
+        break;
       default:
         ROS_ERROR("Unknown manipulator model type");
         break;
@@ -159,6 +162,10 @@ namespace mobile_manipulator_controller
         msg.angular.y = mmState(4);
         break;
       case ManipulatorModelType::ActuatedXYZYawPitchManipulator:
+        msg.linear.z = mmState(2);
+        msg.angular.y = mmState(4);
+        break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
         msg.linear.z = mmState(2);
         msg.angular.y = mmState(4);
         break;

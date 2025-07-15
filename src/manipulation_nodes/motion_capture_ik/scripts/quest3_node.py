@@ -9,9 +9,12 @@ import numpy as np
 from sensor_msgs.msg import JointState
 from tools.drake_trans import *
 from tools.quest3_utils import Quest3ArmInfoTransformer
+from tools.kalman_filter import TwoArmPosePredictor
+from visualization_msgs.msg import MarkerArray, Marker
 import argparse
 
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
+from kuavo_msgs.msg import armTargetPoses
 from kuavo_msgs.srv import changeArmCtrlMode
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
 from handcontrollerdemorosnode.msg import robotHandPosition
@@ -28,7 +31,6 @@ class Quest3Node:
     def __init__(self):
         rospy.init_node('quest3_node')
         
-        self.model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         self.use_custom_ik_param = True
         self.ik_solve_param = ikSolveParam()
         
@@ -60,15 +62,27 @@ class Quest3Node:
         # Get hand reference mode from parameter or use default
         hand_reference_mode = rospy.get_param('~hand_reference_mode', 'thumb_index')
         print(f"Hand reference mode: {hand_reference_mode}")
-        
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path, hand_reference_mode=hand_reference_mode)
+        self.model_path = kuavo_assests_path + "/models/biped_s" + str(robot_version)
+        print(f"vis model path: {self.model_path}")
+
+        import json
+        with open(model_config_file, 'r') as f:
+            model_config = json.load(f)
+        eef_visual_stl_files = model_config["eef_visual_stl_files"]
+        print(f"eef_visual_stl_files: {eef_visual_stl_files}")
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(self.model_path, eef_visual_stl_files=eef_visual_stl_files, hand_reference_mode=hand_reference_mode)
         
         self.control_robot_hand_position_pub = rospy.Publisher("control_robot_hand_position", robotHandPosition, queue_size=10)
         self.pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
+        self.pub_mm_traj = rospy.Publisher('/mm/end_effector_trajectory', armTargetPoses, queue_size=10)
         self.leju_claw_command_pub = rospy.Publisher("leju_claw_command", lejuClawCommand, queue_size=10)
 
         rospy.Subscriber("/leju_quest_bone_poses", PoseInfoList, self.quest_bone_poses_callback)
         rospy.Subscriber("/quest_joystick_data", JoySticks, self.joySticks_data_callback)
+        self.filtered_marker_array_pub = rospy.Publisher("/quest3_node/filtered_marker_array", MarkerArray, queue_size=10)
+
+        self.arm_pose_predictor = None
+        self.predict_time = 0.0 # if predict_time is 0, no predict, just publish the filtered pose.
 
     def set_control_torso_mode(self, mode: bool):
         self.quest3_arm_info_transformer.control_torso = mode
@@ -216,25 +230,27 @@ class Quest3Node:
         self.quest3_arm_info_transformer.read_msg(quest_bone_poses_msg)
         left_pose, left_elbow_pos = self.quest3_arm_info_transformer.get_hand_pose("Left")
         right_pose, right_elbow_pos = self.quest3_arm_info_transformer.get_hand_pose("Right")
+        if left_pose is None or right_pose is None:
+            rospy.logwarn("left_pose or right_pose is None!")
+            return
         
         left_finger_joints = self.quest3_arm_info_transformer.get_finger_joints("Left")
         right_finger_joints = self.quest3_arm_info_transformer.get_finger_joints("Right")
-        
-        eef_pose_msg = twoArmHandPoseCmd()
-        eef_pose_msg.hand_poses.left_pose.pos_xyz = left_pose[0]
-        eef_pose_msg.hand_poses.left_pose.quat_xyzw = left_pose[1]
-        eef_pose_msg.hand_poses.left_pose.elbow_pos_xyz = left_elbow_pos
-
-        eef_pose_msg.hand_poses.right_pose.pos_xyz = right_pose[0]
-        eef_pose_msg.hand_poses.right_pose.quat_xyzw = right_pose[1]
-        eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = right_elbow_pos
-        eef_pose_msg.ik_param = self.ik_solve_param
-        eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
 
         if(self.quest3_arm_info_transformer.check_if_vr_error()):
             print("\033[91mDetected VR ERROR!!! Please restart VR app in quest3 or check the battery level of the joystick!!!\033[0m")
             return
-        if self.quest3_arm_info_transformer.is_runing:
+        if self.quest3_arm_info_transformer.is_runing and self.predict_time <= 1e-5:
+            eef_pose_msg = twoArmHandPoseCmd()
+            eef_pose_msg.hand_poses.left_pose.pos_xyz = left_pose[0]
+            eef_pose_msg.hand_poses.left_pose.quat_xyzw = left_pose[1]
+            eef_pose_msg.hand_poses.left_pose.elbow_pos_xyz = left_elbow_pos
+
+            eef_pose_msg.hand_poses.right_pose.pos_xyz = right_pose[0]
+            eef_pose_msg.hand_poses.right_pose.quat_xyzw = right_pose[1]
+            eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = right_elbow_pos
+            eef_pose_msg.ik_param = self.ik_solve_param
+            eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
             self.pub.publish(eef_pose_msg)
 
         if self.send_srv and (self.last_quest_running_state != self.quest3_arm_info_transformer.is_runing):
@@ -253,6 +269,42 @@ class Quest3Node:
             self.pub_robot_end_hand(hand_finger_data=[left_finger_joints, right_finger_joints])
         
         self.joySticks_data = None
+        if self.arm_pose_predictor is None:
+            dt = 0.01 # 认为是稳定的100Hz的频率
+            process_noise_scale=0.1
+            measurement_noise_scale=0.01
+            self.arm_pose_predictor = TwoArmPosePredictor(left_pose[0], right_pose[0], left_pose[1], right_pose[1], dt,
+                                                          process_noise_scale=process_noise_scale,
+                                                          measurement_noise_scale=measurement_noise_scale)
+            print("Initialized arm pose predictor")
+        else:
+            predict_time = self.predict_time
+            times = [0.0, predict_time]
+            values = []
+            pos_left, pos_right, quat_left, quat_right = self.arm_pose_predictor.filter(left_pose[0], right_pose[0], left_pose[1], right_pose[1])
+            values.append([*pos_left, *quat_left, *pos_right, *quat_right])
+            # print(f"pos_left: {pos_left}, pos_right: {pos_right}, quat_left: {quat_left}, quat_right: {quat_right}")
+            # visualize the filtered pose
+            marker_array = MarkerArray()
+            marker_array.markers.append(self.quest3_arm_info_transformer.construct_marker(pos_left, quat_left, rgba=[1,0,0,0.9], side="Left", marker_id=0))
+            marker_array.markers.append(self.quest3_arm_info_transformer.construct_marker(pos_right, quat_right, rgba=[1,0,0,0.9], side="Right", marker_id=1))
+            
+            pos_left, pos_right, quat_left, quat_right = self.arm_pose_predictor.predict_next_pose(predict_time)
+            values.append([*pos_left, *quat_left, *pos_right, *quat_right])
+            marker_array.markers.append(self.quest3_arm_info_transformer.construct_marker(pos_left, quat_left, rgba=[0,0.8,0,0.3], side="Left", marker_id=2))
+            marker_array.markers.append(self.quest3_arm_info_transformer.construct_marker(pos_right, quat_right, rgba=[0,0.8,0,0.3], side="Right", marker_id=3))
+            self.filtered_marker_array_pub.publish(marker_array)
+            
+            values = np.array(values)
+            values = values.flatten()
+            # publish mm traj
+            if self.quest3_arm_info_transformer.is_runing and self.predict_time > 1e-5:
+                msg = armTargetPoses()
+                msg.times = times
+                msg.values = values
+                self.pub_mm_traj.publish(msg)
+                # print(f"publishing mm traj values: {values}")
+
 
     def joySticks_data_callback(self, msg):
         self.quest3_arm_info_transformer.read_joySticks_msg(msg)
@@ -266,6 +318,7 @@ if __name__ == '__main__':
     parser.add_argument("--rl", type=int, default=0, help="RL version.")
     parser.add_argument("--ee_type", "--end_effector_type", dest="end_effector_type", type=str, default="", help="End effector type, jodell, qiangnao or lejuclaw.")
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
+    parser.add_argument("--predict_time", type=float, default=0.0, help="predict time, if predict_time is 0, no predict, just publish the filtered pose.")
     args, unknown = parser.parse_known_args()
     
     quest3_node = Quest3Node()
@@ -277,5 +330,11 @@ if __name__ == '__main__':
     print(f"Control torso?: {args.control_torso}")
     quest3_node.rl = args.rl
     print(f"RL version?: {quest3_node.rl}")
+    quest3_node.predict_time = args.predict_time
+    print(f"predict time: {quest3_node.predict_time}")
+    if quest3_node.predict_time > 0:
+        print("Predict time is set, will publish mm traj instead of single-frame /mm/two_arm_hand_pose_cmd")
+    else:
+        print("Predict time is not set, will publish single-frame /mm/two_arm_hand_pose_cmd instead of mm traj")
     print("Quest3 node started")
     rospy.spin()

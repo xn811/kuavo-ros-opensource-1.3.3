@@ -63,6 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ocs2_mobile_manipulator/dynamics/FullyActuatedFloatingArmManipulatorDynamics.h"
 #include "ocs2_mobile_manipulator/dynamics/WheelBasedMobileManipulatorDynamics.h"
 #include "ocs2_mobile_manipulator/dynamics/ActuatedXYZYawPitchManipulatorDynamics.h"
+#include "ocs2_mobile_manipulator/dynamics/ActuatedZPitchManipulatorDynamics.h"
 
 // Boost
 #include <boost/filesystem/operations.hpp>
@@ -219,6 +220,11 @@ MobileManipulatorInterface::MobileManipulatorInterface(const std::string& taskFi
     case ManipulatorModelType::ActuatedXYZYawPitchManipulator:{
       problem_.dynamicsPtr.reset(
           new ActuatedXYZYawPitchManipulatorDynamics(manipulatorModelInfo_, "dynamics", libraryFolder, recompileLibraries, true));
+      break;
+    }
+    case ManipulatorModelType::ActuatedZPitchManipulator: {
+      problem_.dynamicsPtr.reset(
+          new ActuatedZPitchManipulatorDynamics(manipulatorModelInfo_, "dynamics", libraryFolder, recompileLibraries, true));
       break;
     }
     default:

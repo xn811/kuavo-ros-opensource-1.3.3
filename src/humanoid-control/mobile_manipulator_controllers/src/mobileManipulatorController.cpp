@@ -127,6 +127,12 @@ namespace mobile_manipulator_controller
         mmOservation.input.segment<5>(0) = humanoidObservation.state.segment<5>(0);
         mmOservation.state(2) -= (comHeight_ + terrain_height_);
         break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        mmOservation.state.segment<6>(0) = humanoidObservation.state.segment<6>(6);
+        mmOservation.input(0) = humanoidObservation.state(2); // v_z
+        mmOservation.input(1) = humanoidObservation.state(4); // d_pitch
+        mmOservation.state(2) -= (comHeight_ + terrain_height_);
+        break;
       default:
         break;
     }
@@ -162,6 +168,12 @@ namespace mobile_manipulator_controller
       case ManipulatorModelType::ActuatedXYZYawPitchManipulator:
         humanoidObservation.state.segment<5>(6) = mmOservation.state.segment<5>(0); // x-y-z-yaw-pitch
         humanoidObservation.state.segment<5>(0) = mmOservation.input.segment<5>(0); // x-y-z-yaw-pitch
+        humanoidObservation.state(8) += (comHeight_ + terrain_height_);
+        break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        humanoidObservation.state.segment<6>(6) = mmOservation.state.segment<6>(0); // x-y-z-yaw-pitch-roll
+        humanoidObservation.state(2) = mmOservation.input(0); // v_z
+        humanoidObservation.state(4) = mmOservation.input(1); // d_pitch
         humanoidObservation.state(8) += (comHeight_ + terrain_height_);
         break;
       default:
@@ -201,6 +213,12 @@ namespace mobile_manipulator_controller
       case ManipulatorModelType::ActuatedXYZYawPitchManipulator:
         humanoidState.segment<5>(6) = mmState.segment<5>(0); // x-y-z-yaw-pitch
         humanoidState.segment<5>(0) = mmInput.segment<5>(0); // x-y-z-yaw-pitch
+        humanoidState(8) += (comHeight_ + terrain_height_);
+        break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        humanoidState.segment<6>(6) = mmState.segment<6>(0); // x-y-z-yaw-pitch-roll
+        humanoidState(2) = mmInput(0); // v_z
+        humanoidState(4) = mmInput(1); // d_pitch
         humanoidState(8) += (comHeight_ + terrain_height_);
         break;
       default:
@@ -316,6 +334,10 @@ namespace mobile_manipulator_controller
         msg.angular.z = mmInput(3);//yaw
         msg.angular.y = mmInput(4);//pitch
         break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        msg.linear.z = mmInput(0);
+        msg.angular.y = mmInput(1);
+        break;
       default:
         break;
     }
@@ -371,6 +393,13 @@ namespace mobile_manipulator_controller
         pose_now.head(5) = mmObservation_.state.head(5);
         delta_pose.head(5) = mmState.head(5) - pose_now;
         limitDeltaPose(delta_pose, basePoseDeltaLimit_, 5);
+        msg.linear.z = pose_now(2) + delta_pose(2);
+        msg.angular.y = pose_now(4) + delta_pose(4);
+        break;
+      case ManipulatorModelType::ActuatedZPitchManipulator:
+        pose_now.head(6) = mmObservation_.state.head(6);
+        delta_pose.head(6) = mmState.head(6) - pose_now;
+        limitDeltaPose(delta_pose, basePoseDeltaLimit_, 6);
         msg.linear.z = pose_now(2) + delta_pose(2);
         msg.angular.y = pose_now(4) + delta_pose(4);
         break;

@@ -13,6 +13,7 @@
   <arg name="ip_address"         default="192.168.3.17" /> <!-- ip address of quest3 -->
   <arg name="use_quest3_utils"   default="true"/>
   <arg name="rl"                 default="1"/>
+  <arg name="predict_time"       default="0.1"/>
   <param name="use_quest3_utils" type="bool" value="$(arg use_quest3_utils)"/>
   <!-- sim launch -->
 
@@ -22,7 +23,8 @@
     <arg name="visualize_mm"       value="$(arg visualize_mm)"/>
   </include>
   
-  <node name="quest3_node" pkg="motion_capture_ik" type="quest3_node.py" output="screen" args="--ee_type $(arg ee_type) --send_srv $(arg send_srv) --control_torso=$(arg control_torso) --rl $(arg rl)"></node>
+  <node name="quest3_node" pkg="motion_capture_ik" type="quest3_node.py" output="screen" args="--ee_type $(arg ee_type) --send_srv $(arg send_srv)
+     --control_torso=$(arg control_torso) --rl $(arg rl) --predict_time $(arg predict_time)"></node>
   <node pkg="noitom_hi5_hand_udp_python" type="monitor_quest3.py" args="$(arg ip_address)" name="monitor_quest3" output="screen"/>
 
   <group if="$(arg visualize)">    
