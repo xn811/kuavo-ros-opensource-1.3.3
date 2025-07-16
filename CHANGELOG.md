@@ -4,6 +4,8 @@
 - 无
 
 ## 文档相关
+- 新增 Kuavo Humanoid SDK 原子技能 v2 版搬箱子策略模块文档，[文档链接](./src/kuavo_humanoid_sdk/docs/markdown/pages/kuavo_strategy_v2.md)
+- 新增运动学 MPC VR 遥操作使用文档， [文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - 上楼梯案例适配奥比中光相机以及使用文档，[文档链接](./src/humanoid-control/humanoid_controllers/scripts/上楼梯案例说明.md)
 - 新增行为树搬箱子 README 说明文档，[文档链接](./src/demo/grab_box/README.md)
 - Kuavo Humanoid SDK 更新使用文档描述搬箱子策略模块需要关闭 `basePitchLimits`，[文档链接](./src/kuavo_humanoid_sdk/README.md)
@@ -15,6 +17,10 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- 新增关节保护功能，使用电机原始的速度峰值和扭矩峰值进行数据拦截，避免电机异常运动损坏
+- 新增 VR 运动学 mpc 增量式遥操功能，启动launch文件见 [链接](./src/manipulation_nodes/motion_capture_ik/launch/kinematic_mpc_vr_incremental_real.launch)
+- 新增手臂碰撞检测模块，VR 外部控制时检测到碰撞回到手臂 3秒前的状态， [文档链接](./src/kuavo_arm_collision_check/readme.md)
+- 新增 H12 遥控器支持控制头部关节，按键文档见 [文档](./docs/5功能案例/通用案例/H12遥控器使用开发案例.md)
 - 运动学 MPC 增加末端轨迹的输入接口、mpc mrt 求解器重置服务
 - 新增置速度和扭矩超过峰值截断保护功能
 - 一键标定零点脚本工具增加对相机(realsense，奥比中光)和 IP 的适配，[文档链接](./scripts/joint_cali/README_One_button_start.md)
@@ -46,6 +52,11 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复不安全的多线程访问数据可能会导致段错误而引起机器摔倒的问题
+- 修复硬件自检脚本无法绘图的问题，原因是保存数据中索引越界
+- 运动学 MPC 功能包中对不必要的ros包的依赖以及添加误差状态四元数卡尔曼滤波器
+- 修复 VR 遥操作时，手臂弯曲的问题
+- 修复 pick_and_place 案例功能包，右臂进行抓取时, 左臂动作异常问题
 - 修复音频模块安装 samplerate 库失败的问题
 - 修复 VR 控制手臂动作过快可能导致摔倒的问题，在VR控制时关闭 pullup 保护
 - 修复 `/cmd_pose_world` 接口中单步抽搐会导致机器摔倒问题
