@@ -21,7 +21,7 @@
 #include <memory>
 #include "mobile_manipulator_controllers/package_path.h"
 #include "mobile_manipulator_controllers/TopicLogger.h"
-
+#include "kuavo_msgs/MmDetectionMsg.h"
 
 namespace mobile_manipulator_controller
 {
@@ -42,8 +42,9 @@ namespace mobile_manipulator_controller
     ~MobileManipulatorControllerBase();
     int update(const vector_t& externalState, vector_t& nextState);
     int update(const vector_t& externalState, vector_t& nextState, vector_t& optimizedInput);
-    void stop() { updateRunning_ = false; }
+    void stop() { updateRunning_ = false; observationPublishing_ = false; }
     void start() { updateRunning_ = true; }
+    bool isObservationPublishing() const { return observationPublishing_; }
     /**
      * @brief Reset the controller to the given external state
      * @param externalState: The external state to reset to
@@ -62,7 +63,19 @@ namespace mobile_manipulator_controller
     virtual void setupMobileManipulatorInterface(const std::string &taskFile, const std::string &libFolder, const std::string &urdfFile, MpcType mpcType);
     virtual void setupMpc();
     virtual void setupMrt();
-    void getOptimizedStateAndInput(const SystemObservation& currentObservation, vector_t& optimizedStateMrt, vector_t& optimizedInputMrt);
+    void setAnomalyStopMpc(bool anomalyStopMpc){anomalyStopMpc_ = anomalyStopMpc;};
+    void setAnomalyCheckThreshold(double positionErrorMaxThreshold, double orientationErrorMaxThreshold, double positionErrorAvgThreshold, double orientationErrorAvgThreshold, double VelocityErrorAvgThreshold, 
+      double VelocityErrorMaxThreshold)
+      {
+        positionErrorMaxThreshold_ = positionErrorMaxThreshold;
+        orientationErrorMaxThreshold_ = orientationErrorMaxThreshold;
+        positionErrorAvgThreshold_ = positionErrorAvgThreshold;
+        orientationErrorAvgThreshold_ = orientationErrorAvgThreshold;
+        VelocityErrorAvgThreshold_ = VelocityErrorAvgThreshold;
+        VelocityErrorMaxThreshold_ = VelocityErrorMaxThreshold;
+      };
+    int getOptimizedStateAndInput(const SystemObservation& currentObservation, vector_t& optimizedStateMrt, vector_t& optimizedInputMrt);
+    int anomaly_check(const SystemObservation& currentObservation, const PrimalSolution& policy, const CommandData& command, const PerformanceIndex& performanceIndices);
     /**
      * Creates MPC Policy message.
      *
@@ -87,10 +100,64 @@ namespace mobile_manipulator_controller
     int dummySim_;
     int dummySimArm_;
     bool visualizeMm_;
+    bool anomalyStopMpc_{false};
     std::deque<Eigen::VectorXd> mmPlanedTrajQueue_;
 
   private:
 
+    double VelocityErrorAvgThreshold_{0.5};
+    double VelocityErrorMaxThreshold_{2.0};
+    double positionErrorMaxThreshold_{0.15};
+    double orientationErrorMaxThreshold_{0.4};
+    double positionErrorAvgThreshold_{0.15};
+    double orientationErrorAvgThreshold_{0.4};
+
+    double errorAnglerEX_{0.0};
+
+    // 末端效应器位置姿态误差结构
+    struct EefPoseError {
+      vector_t positionErrors;      // 位置误差 (双手 x 3维)
+      vector_t orientationErrors;   // 姿态误差 (双手角度误差)  
+      vector_t totalErrors;         // 总误差 (所有14维)
+    };
+
+    // 异常检测结构
+    struct DetectionResult {
+      bool hasAnomaly{false};
+      std::string anomalyType;
+      
+      // 第一类检测：轨迹级别的位置误差
+      double trajectoryPositionErrorMax{0.0};
+      double trajectoryPositionErrorAvg{0.0};
+      bool trajectoryPositionMaxThresholdExceeded{false};
+      bool trajectoryPositionAvgThresholdExceeded{false};
+      
+      // 第一类检测：轨迹级别的姿态误差
+      double trajectoryOrientationErrorMax{0.0};
+      double trajectoryOrientationErrorAvg{0.0};
+      bool trajectoryOrientationMaxThresholdExceeded{false};
+      bool trajectoryOrientationAvgThresholdExceeded{false};
+      
+      // 第二类检测：速度阈值检测
+      double velocityMagnitudeAvg{0.0};
+      double velocityMagnitudeMax{0.0};
+      bool velocityAvgThresholdExceeded{false};
+      bool velocityMaxThresholdExceeded{false};
+    };
+  
+
+    vector_t getStateFromPolicyTrajectory(const scalar_array_t& timeTrajectory, const vector_array_t& stateTrajectory, scalar_t currentTime);
+    std::pair<std::vector<vector_t>, std::vector<scalar_t>> calculatePolicyEefVelocities(const PrimalSolution& policy);
+    
+    // Helper functions for velocity calculation
+    vector_t calculateSingleEefVelocity(const vector_t& eefPose1, const vector_t& eefPose2, scalar_t dt);
+    vector_t calculateDualHandEefVelocity(const vector_t& eefPoses1, const vector_t& eefPoses2, scalar_t dt);
+    std::vector<vector_t> calculateTargetEefVelocities(const TargetTrajectories& targetTrajectories, const std::vector<scalar_t>& times);
+    EefPoseError calculateEefPoseErrors(const vector_t& optimizedEefPoses, const vector_t& targetEefPoses);
+    std::vector<vector_t> calculateEefVelocityErrors(const std::vector<vector_t>& policyVel, const std::vector<vector_t>& targetVel);
+    DetectionResult detectEefAnomalies(const EefPoseError& poseError, const std::vector<vector_t>& velErrors);
+    DetectionResult detectEefAnomaliesNew(const std::vector<EefPoseError>& poseErrors, const std::vector<scalar_t>& velocityMagnitudes);
+    void publishDetectionResult(const DetectionResult& result);
   protected:
     std::thread mpcThread_;
 
@@ -100,6 +167,9 @@ namespace mobile_manipulator_controller
     std::mutex mpcThreadMutex_;
     std::condition_variable mpcThreadCondition_;
     std::atomic_bool mpcThreadPaused_{false};
+    
+    // Flag to track if observations are being published
+    std::atomic_bool observationPublishing_{false};
     
     benchmark::RepeatedTimer mpcTimer_;
 
@@ -115,7 +185,7 @@ namespace mobile_manipulator_controller
 
     ros::Publisher observationPublisher_;
     ros::Publisher mpcPolicyPublisher_;
-
+    ros::Publisher mmDetectionResultPublisher_;
     std::unique_ptr<PinocchioInterface> pinocchioInterface_ptr_;
     std::shared_ptr<PinocchioEndEffectorSpatialKinematics> eeSpatialKinematicsPtr_;
     std::unique_ptr<MobileManipulatorPinocchioMapping> pinocchioMappingPtr_;

@@ -301,7 +301,7 @@ class KuavoRobot(RobotBase):
         """
         return self._robot_arm.manipulation_mpc_reset()
     
-    def control_arm_joint_positions(self, joint_positions:list)->bool:
+    def control_arm_joint_positions(self, joint_positions:list, use_arm_collision_check:bool=False)->bool:
         """通过关节位置角度控制手臂
         
         Args:
@@ -319,14 +319,15 @@ class KuavoRobot(RobotBase):
             print("The length of the position list must be equal to the number of DOFs of the arm.")
             return False
         
-        return self._robot_arm.control_arm_joint_positions(joint_positions)
+        return self._robot_arm.control_arm_joint_positions(joint_positions, use_arm_collision_check=use_arm_collision_check)
     
-    def control_arm_joint_trajectory(self, times:list, q_frames:list)->bool:
+    def control_arm_joint_trajectory(self, times:list, q_frames:list, use_arm_collision_check:bool=False)->bool:
         """控制机器人手臂的目标轨迹。
         
         Args:
             times (list): 时间间隔列表,单位秒。
             q_frames (list): 关节位置列表,单位弧度。
+            use_arm_collision_check (bool): 是否使用碰撞检查
             
         Returns:
             bool: 如果控制成功返回True,否则返回False。
@@ -340,7 +341,7 @@ class KuavoRobot(RobotBase):
         Warning:
             异步接口，函数在发送命令后立即返回，用户需要自行等待运动完成。
         """
-        return self._robot_arm.control_arm_joint_trajectory(times, q_frames)
+        return self._robot_arm.control_arm_joint_trajectory(times, q_frames, use_arm_collision_check=use_arm_collision_check)
 
     def set_fixed_arm_mode(self) -> bool:
         """固定/冻结机器人手臂。
@@ -482,6 +483,24 @@ class KuavoRobot(RobotBase):
             enable (bool): 开启/关闭
         """
         return self._kuavo_core.enable_base_pitch_limit(enable)
+    
+    def is_arm_collision(self)->bool:
+        """判断当前是否发生碰撞
+        
+        Returns:
+            bool: 发生碰撞返回True,否则返回False
+        """
+        return self._robot_arm.is_arm_collision()
+    
+    def wait_arm_collision_complete(self):
+        """等待碰撞完成
+        """
+        self._robot_arm.wait_arm_collision_complete()
+
+    def release_arm_collision_mode(self):
+        """释放碰撞模式
+        """
+        self._robot_arm.release_arm_collision_mode()
 
 if __name__ == "__main__":
     robot = KuavoRobot()

@@ -142,9 +142,9 @@ class IkRos:
         if rospy.has_param('/only_half_up_body'):
             self.only_half_up_body = rospy.get_param('/only_half_up_body')
 
+        self.use_arm_collision = rospy.get_param('~use_arm_collision', False)
         # 添加服务
         self.arm_mode_service = rospy.Service('/quest3/set_arm_mode_changing', Trigger, self.set_arm_mode_changing_callback)
-        self.arm_mode_service_collision_check = rospy.Service('/quest3/set_collision_check_control', SetBool, self.set_collision_check_callback)
 
         # self.hand_pub_timer = rospy.Timer(rospy.Duration(0.001), self.hand_finger_data_process)
 
@@ -193,7 +193,10 @@ class IkRos:
         self._interp_time_last = rospy.Time.now().to_sec()
 
 
-        self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=10)
+        if self.use_arm_collision:
+            self.pub = rospy.Publisher("/arm_collision/kuavo_arm_traj", JointState, queue_size=10)
+        else:
+            self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=10)
         self.pub_origin_joint = rospy.Publisher("/kuavo_arm_traj_origin", Float32MultiArray, queue_size=10)
         self.pub_filtered_joint = rospy.Publisher("/kuavo_arm_traj_filtered", Float32MultiArray, queue_size=10)
         self.pub_real_arm_hand_pose = rospy.Publisher("/drake_ik/real_arm_hand_pose", twoArmHandPose, queue_size=10)
@@ -560,8 +563,7 @@ class IkRos:
             # 非插值模式下直接使用目标状态
             msg.position = 180.0 / np.pi * np.array(arm_agl_limited)
         
-        if not self.collision_check_control:
-            self.pub.publish(msg)
+        self.pub.publish(msg)
 
     def kuavo_joint_states_callback(self, joint_states_msg):
         # 手臂状态正解
@@ -893,7 +895,7 @@ class IkRos:
         response.message = "Arm mode changing set to True"
         return response
     
-    def set_collision_check_callback(self, req):
+    def collision_control_complete(self, req):
         """服务回调函数，设置collision_check_control状态"""
         self.collision_check_control = req.data
         if not req.data:

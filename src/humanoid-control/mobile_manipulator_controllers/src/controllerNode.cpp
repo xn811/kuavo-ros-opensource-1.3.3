@@ -1,4 +1,5 @@
 #include "mobile_manipulator_controllers/mobileManipulatorController.h"
+#include <thread>
 
 using namespace mobile_manipulator_controller;
 
@@ -55,12 +56,19 @@ int main(int argc, char **argv)
   MobileManipulatorController controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, frequency, dummySimBase, dummySimArm, visualizeMm);
   controller.init(nodeHandle);
 
+  // 创建独立线程处理ROS消息
+  std::thread spin_thread([&](){
+    ros::spin();
+  });
+  spin_thread.detach();
+
+  // 主控制循环，不会被ROS服务阻塞
   ros::Rate loopRate(frequency);
   while(ros::ok())
   {
     controller.update();
-    ros::spinOnce();
     loopRate.sleep();
   }
+  
   return 0;
 }

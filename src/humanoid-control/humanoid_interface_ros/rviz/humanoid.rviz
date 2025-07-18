@@ -6,14 +6,13 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
         - /RobotModel1/Links1
         - /TF1/Frames1
-        - /MarkerArray1
         - /Marker1
         - /Marker6
         - /GridMap1
       Splitter Ratio: 0.5
+    Tree Height: 461
     Tree Height: 461
   - Class: rviz/Selection
     Name: Selection
@@ -63,7 +62,7 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: false
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -74,6 +73,7 @@ Visualization Manager:
           Show Trail: false
           Value: true
         camera:
+        camera:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -82,6 +82,8 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
+        dummy_link:
           Value: true
         dummy_link:
           Alpha: 1
@@ -379,8 +381,6 @@ Visualization Manager:
           Value: true
         base_link:
           Value: true
-        camera:
-          Value: false
         camera_base:
           Value: true
         dummy_link:
@@ -389,6 +389,8 @@ Visualization Manager:
           Value: false
         l_foot_toe:
           Value: false
+        left_hand_target:
+          Value: true
         leg_l1_link:
           Value: false
         leg_l2_link:
@@ -430,6 +432,8 @@ Visualization Manager:
         r_foot_toe:
           Value: false
         radar:
+          Value: true
+        right_hand_target:
           Value: true
         rl_foot_heel:
           Value: false
@@ -617,7 +621,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /humanoid/optimizedStateTrajectory
+      Marker Topic: /mobile_manipulator/optimizedStateTrajectory
       Name: MarkerArray
       Namespaces:
         "": true

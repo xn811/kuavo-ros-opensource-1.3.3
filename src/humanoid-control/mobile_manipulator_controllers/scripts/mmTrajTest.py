@@ -134,12 +134,12 @@ def main():
             rospy.loginfo("Waiting for a subscriber to connect...")
             rate.sleep()
 
-        reset_mm_mpc()
+        # reset_mm_mpc()
         
         if not rospy.is_shutdown():
             pub.publish(msg)
             rospy.loginfo("Message published.")
-        rospy.sleep(10)
+        rospy.sleep(15)
         change_mm_ctrl_mode(0)
         change_arm_ctrl_mode(1)
         srv_change_manipulation_mpc_control_flow(0)

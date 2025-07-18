@@ -2,6 +2,9 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <ocs2_ros_interfaces/synchronized_module/RosReferenceManager.h>
 #include <sensor_msgs/JointState.h>
+#include <chrono>
+#include <thread>
+#include <sstream>
 
 namespace mobile_manipulator_controller
 {
@@ -18,7 +21,7 @@ namespace mobile_manipulator_controller
   }
 
   MobileManipulatorController::MobileManipulatorController(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase, bool dummySimArm, bool visualizeMm)
+            bool dummySimBase, bool dummySimArm, bool visualizeMm, bool anomalyStopMpc)
     : MobileManipulatorControllerBase(nh, taskFile, libFolder, urdfFile, mpcType, freq, dummySimBase, dummySimArm, visualizeMm)
   {
   }
@@ -29,9 +32,11 @@ namespace mobile_manipulator_controller
 
   bool MobileManipulatorController::init(ros::NodeHandle &nh)
   {
+    std::cout << "[MobileManipulatorController] get com_height param..." << std::endl;
     // 等待 com_height 参数
     while(!nh.hasParam("/com_height")) { ros::Duration(0.1).sleep(); }
     nh.getParam("/com_height", comHeight_);
+    std::cout << "[MobileManipulatorController] com_height: " << comHeight_ << std::endl;
 
     // 初始化观测状态
     mmObservation_.state.setZero(info_.stateDim);
@@ -54,42 +59,64 @@ namespace mobile_manipulator_controller
     yaml_cfg_ = YAML::LoadFile(mobile_manipulator_controller::getPath() + "/cfg/cfg.yaml");
     arm_min_ = yaml_cfg_["arm_min"].as<std::vector<double>>();
     arm_max_ = yaml_cfg_["arm_max"].as<std::vector<double>>();
+    auto positionErrorMaxThreshold = yaml_cfg_["detection_thresholds"]["position_error_max"].as<double>();
+    auto orientationErrorMaxThreshold = yaml_cfg_["detection_thresholds"]["orientation_error_max"].as<double>();
+    auto positionErrorAvgThreshold = yaml_cfg_["detection_thresholds"]["position_error_avg"].as<double>();
+    auto orientationErrorAvgThreshold = yaml_cfg_["detection_thresholds"]["orientation_error_avg"].as<double>();
+    auto VelocityErrorAvgThreshold = yaml_cfg_["detection_thresholds"]["velocity_error_avg"].as<double>();
+    auto VelocityErrorMaxThreshold = yaml_cfg_["detection_thresholds"]["velocity_error_max"].as<double>();
+    setAnomalyCheckThreshold(positionErrorMaxThreshold, orientationErrorMaxThreshold, positionErrorAvgThreshold, orientationErrorAvgThreshold, VelocityErrorAvgThreshold, VelocityErrorMaxThreshold);
     auto base_pose_delta_limit = yaml_cfg_["base_pose_delta_limit"].as<std::vector<double>>();
     basePoseDeltaLimit_ << Eigen::Map<const Eigen::VectorXd>(base_pose_delta_limit.data(), base_pose_delta_limit.size());
 
+    mmControlTypePublisher_ = nh.advertise<std_msgs::Int8>("/mm/control_type", 1);
+    // play back mode
+    if (nh.hasParam("play_back"))
+    {
+      nh.getParam("/play_back", is_play_back_mode_);
+    }
+    ROS_INFO("[MobileManipulatorController] Play back mode: %d", is_play_back_mode_);
+    if(is_play_back_mode_)
+    {
+      mmControlTypeSubscriber_ = nh.subscribe("/mm/control_type", 1, &MobileManipulatorController::mmControlTypeCallback, this);
+      // mmStateSubscriber_ = nh.subscribe("/mm/external_state", 1, &MobileManipulatorController::mmStateCallback, this);
+      ROS_INFO("[MobileManipulatorController] Play back mode is enabled");
+    }
     return true;
   }
 
   void MobileManipulatorController::update()
   {
     // Provide a mpc observation for the first time
-    while(!recievedObservation_) { std::cout << "Waiting for observation..." << std::endl; return;}
     if(!mpcInitialized_) {//important: only initialize once, to provide a mpc observation for the first time
       mpcInitialized_ = true;
       vector_t nextState = vector_t::Zero(info_.stateDim);
       int result = MobileManipulatorControllerBase::update(mmObservation_.state, nextState);
       std::cout << "MPC initialized, result: " << result << std::endl;
     }
-    ros_logger_->publishValue("/mm/control_type", static_cast<int>(controlType_));
-    if(lastControlType_ != controlType_){
-      if(controlType_ == ControlType::None){
-        stop();
-        ROS_INFO("MPC is stopped, if you want to resume, please set control_mode to ArmOnly or BaseArm.");
-      }
-      else{
-        reset(mmObservation_.state);
-        ROS_INFO("MPC is reseted, now you can control the humanoid.");
-      }
-      lastControlType_ = controlType_;
+    while(!recievedObservation_) { std::cout << "Waiting for observation..." << std::endl; return;}
+    if(!is_play_back_mode_){
+      std_msgs::Int8 msg;
+      msg.data = static_cast<int8_t>(controlType_);
+      mmControlTypePublisher_.publish(msg);
     }
+    // ros_logger_->publishValue("/mm/control_type", static_cast<int>(controlType_));
+
     if(controlType_ == ControlType::None || !recievedObservation_) return;
+    
     pubHumanoid2MMTf();
     
     vector_t externalState = mmObservation_.state;
-    ros_logger_->publishVector("/mm/external_state", externalState);
+    if(is_play_back_mode_)
+    {
+      ros_logger_->publishVector("/mm/external_state_play_back", externalState);
+    }
+    else
+      ros_logger_->publishVector("/mm/external_state", externalState);
     
     vector_t nextState = vector_t::Zero(info_.stateDim);
     vector_t optimizedInput = vector_t::Zero(info_.inputDim);
+    
     int result = MobileManipulatorControllerBase::update(externalState, nextState, optimizedInput);
     ros_logger_->publishVector("/mm/next_state", nextState);
     ros_logger_->publishVector("/mm/optimized_input", optimizedInput);
@@ -417,6 +444,47 @@ namespace mobile_manipulator_controller
   bool MobileManipulatorController::controlService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res) {
     lastControlType_ = controlType_;
     controlType_ = static_cast<ControlType>(req.control_mode);
+    if(lastControlType_ != controlType_){
+      if(controlType_ == ControlType::None){
+        stop();
+        ROS_INFO("MPC is stopped, if you want to resume, please set control_mode to ArmOnly or BaseArm.");
+      }
+      else{
+        reset(mmObservation_.state);
+        ROS_INFO_STREAM("MPC is reseted, control mode switched to " << controlTypeToString(controlType_) << ".");
+        
+        ROS_INFO("Waiting for MPC to fully start and begin publishing observations...");
+        
+        auto start_time = std::chrono::steady_clock::now();
+        const auto timeout_duration = std::chrono::seconds(2); // 2 seconds timeout
+        
+        while (!observationPublishing_ && ros::ok()) {
+          if (std::chrono::steady_clock::now() - start_time > timeout_duration) {
+            ROS_ERROR("Timeout waiting for MPC to start publishing observations.");
+            res.result = false;
+            res.mode = req.control_mode;
+            res.message = "Timeout waiting for MPC to start - " + controlTypeToString(controlType_) + ".";
+            return true;
+          }
+          
+          // Show progress every 500ms
+          auto elapsed = std::chrono::steady_clock::now() - start_time;
+          if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() % 500 == 0) {
+            ROS_INFO_STREAM("Waiting for MPC to stabilize... " 
+                          << (10.0 - std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() / 1000.0) 
+                          << "s remaining");
+          }
+          
+          // Short sleep to avoid busy waiting
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        
+        if (observationPublishing_) {
+          ROS_INFO("MPC has fully started and observations are being published!");
+        }
+      }
+      lastControlType_ = controlType_;
+    }
     res.result = true;
     res.mode = req.control_mode;
     res.message = "Set controlling to " + controlTypeToString(controlType_) + ".";
@@ -466,4 +534,11 @@ namespace mobile_manipulator_controller
     }
     return isLimited;
   }
+
+  void MobileManipulatorController::mmControlTypeCallback(const std_msgs::Int8::ConstPtr& msg)
+  {
+    lastControlType_ = controlType_;
+    controlType_ = static_cast<ControlType>(msg->data);
+  }
+
 } // namespace mobile_manipulator_controller 

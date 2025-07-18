@@ -124,7 +124,6 @@ class VRHandCommandNode {
         eePoseTargetSub_ = nh_.subscribe<kuavo_msgs::armPoseWithTimeStamp>("/kuavo_hand_pose", 1, &VRHandCommandNode::eePoseTargetCallback, this);
         headBodyPoseSub_ = nh_.subscribe<kuavo_msgs::headBodyPose>("/kuavo_head_body_orientation", 1, &VRHandCommandNode::headBodyPoseCallback, this);
         changeArmCtrlModeSrv_ = nh_.advertiseService("change_arm_ctrl_mode", &VRHandCommandNode::changeArmCtlModeCallback, this);
-        armCollisionCheckControlSrv_ = nh_.advertiseService("arm_collision_check_control_service", &VRHandCommandNode::armCollisionCheckControlCallback, this);
         auto terrHeightCallback = [this](const std_msgs::Float64::ConstPtr& msg){
           terrainHeight_ = static_cast<scalar_t>(msg->data);
         };
@@ -372,13 +371,8 @@ class VRHandCommandNode {
       TargetTrajectories goalTargetTrajectories = goalHandPoseToTargetTrajectories(armJointState, observation_);
       const auto mpcTargetTrajectoriesMsg = ros_msg_conversions::createTargetTrajectoriesMsg(goalTargetTrajectories);
 
-      if (arm_collision_check_control_){
-        ROS_INFO("[VRHandCommandNode]: Arm collision check control is enabled, skip send arm target trajectories.");
-      }
-      else
-      {
-        ArmTargetTrajectoriesPublisher_.publish(mpcTargetTrajectoriesMsg);
-      }
+      ArmTargetTrajectoriesPublisher_.publish(mpcTargetTrajectoriesMsg);
+      
       // targetTrajectoriesPublisherPtr_->publishTargetTrajectories(goalTargetTrajectories);
       last_joint_state_ = *msg;
     }
@@ -515,12 +509,6 @@ class VRHandCommandNode {
       }
     }
 
-    bool armCollisionCheckControlCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res){
-      arm_collision_check_control_ = req.data;
-      res.success = true;
-      return true;
-    }
-
     bool callSetTorsoModeSrv(int32_t mode)
     {
       kuavo_msgs::changeTorsoCtrlMode srv;
@@ -594,7 +582,6 @@ class VRHandCommandNode {
     ros::Publisher torsoTargetTrajectoriesPublisher_;
 
     ros::ServiceServer changeArmCtrlModeSrv_;
-    ros::ServiceServer armCollisionCheckControlSrv_;
     ocs2::SystemObservation observation_;
     ocs2::SystemObservation lastObservation_;
     int num_arm_joints_ = 14;

@@ -108,6 +108,8 @@ add_message_files(
 
   # kuavo_arm_collision_check
   armCollisionCheckInfo.msg
+
+  MmDetectionMsg.msg
 )
 
 ## Generate services in the 'srv' folder

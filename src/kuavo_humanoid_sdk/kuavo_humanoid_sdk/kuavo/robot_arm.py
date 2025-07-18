@@ -32,11 +32,12 @@ class KuavoRobotArm:
         """
         return self._kuavo_core.robot_manipulation_mpc_reset()
         
-    def control_arm_joint_positions(self, joint_position:list)->bool:
+    def control_arm_joint_positions(self, joint_position:list, use_arm_collision_check:bool=False)->bool:
         """控制机器人手臂关节位置。
 
         Args:
             joint_position (list): 关节位置列表,单位为弧度
+            use_arm_collision_check (bool): 是否使用碰撞检查
 
         Raises:
             ValueError: 如果关节位置列表长度不正确
@@ -54,14 +55,15 @@ class KuavoRobotArm:
             if abs(pos) > math.pi:
                 raise ValueError(f"Joint position {pos} rad exceeds ±π rad (±180 deg) limit")
 
-        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_position)
+        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_position, use_arm_collision_check=use_arm_collision_check)
 
-    def control_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
+    def control_arm_joint_trajectory(self, times:list, joint_q:list, use_arm_collision_check:bool=False)->bool:
         """控制机器人手臂关节轨迹。
 
         Args:
             times (list): 时间间隔列表,单位为秒
             joint_q (list): 关节位置列表,单位为弧度
+            use_arm_collision_check (bool): 是否使用碰撞检查
 
         Raises:
             ValueError: 如果times列表长度不正确
@@ -85,7 +87,7 @@ class KuavoRobotArm:
             # Convert joint positions from radians to degrees
             q_degs.append([(p * 180.0 / math.pi) for p in q])
 
-        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs)
+        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs, use_arm_collision_check=use_arm_collision_check)
 
     def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
         """控制机器人末端执行器姿态。
@@ -216,6 +218,24 @@ class KuavoRobotArm:
             bool: 控制成功返回True, 否则返回False
         """
         return self._kuavo_core.control_hand_wrench(left_wrench, right_wrench)
+
+    def is_arm_collision(self)->bool:
+        """判断当前是否发生碰撞
+        
+        Returns:
+            bool: 发生碰撞返回True,否则返回False
+        """
+        return self._kuavo_core.is_arm_collision()
+    
+    def release_arm_collision_mode(self):
+        """释放碰撞模式
+        """
+        self._kuavo_core.release_arm_collision_mode()
+
+    def wait_arm_collision_complete(self):
+        """等待碰撞完成
+        """
+        self._kuavo_core.wait_arm_collision_complete()
 
 # if __name__ == "__main__":
 #     arm = KuavoRobotArm()

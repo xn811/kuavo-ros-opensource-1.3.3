@@ -13,6 +13,8 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/JointState.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Int8.h>
 
 #include <ocs2_mobile_manipulator/MobileManipulatorInterface.h>
 #include <mobile_manipulator_controllers/mobileManipulatorControllerBase.h>
@@ -41,7 +43,7 @@ namespace mobile_manipulator_controller
   {
   public:
     MobileManipulatorController(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true);
+            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true, bool anomalyStopMpc=false);
     ~MobileManipulatorController();
     bool init(ros::NodeHandle &nh);
     void update();
@@ -63,6 +65,9 @@ namespace mobile_manipulator_controller
     bool getKinematicMpcControlModeService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res);
     void pubHumanoid2MMTf();
     bool limitArmPosition(ocs2::vector_t& armPosition);
+    // for play back mode
+    void mmStateCallback(const std_msgs::Float64MultiArray::ConstPtr& msg);
+    void mmControlTypeCallback(const std_msgs::Int8::ConstPtr& msg);
 
     // ROS Communication Layer
     ros::Subscriber humanoidObservationSub_;
@@ -73,6 +78,8 @@ namespace mobile_manipulator_controller
     ros::Publisher humanoidCmdVelPublisher_;
     ros::Publisher humanoidCmdPosPublisher_;
     ros::Publisher armTrajPublisher_;
+    ros::Publisher mmStatePublisher_;
+    ros::Publisher mmControlTypePublisher_;
     ros::ServiceServer kinematicMpcControlSrv_;
     ros::ServiceServer getKinematicMpcControlModeSrv_;
     tf2_ros::StaticTransformBroadcaster staticBroadcaster_;
@@ -98,6 +105,9 @@ namespace mobile_manipulator_controller
     YAML::Node yaml_cfg_;
     std::vector<double> arm_min_;
     std::vector<double> arm_max_;
+    // play back mode
+    bool is_play_back_mode_ = false;
+    ros::Subscriber mmControlTypeSubscriber_;
   };
 
 } // namespace mobile_manipulator_controller

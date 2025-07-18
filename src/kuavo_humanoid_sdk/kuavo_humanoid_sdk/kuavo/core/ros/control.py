@@ -18,7 +18,7 @@ from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecut
                         changeTorsoCtrlMode, changeTorsoCtrlModeRequest, setMmCtrlFrame, setMmCtrlFrameRequest,
                         setTagId, setTagIdRequest, getMotorParam, getMotorParamRequest,
                         changeMotorParam, changeMotorParamRequest)
-from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose
+from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose, armCollisionCheckInfo
 from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
 from std_srvs.srv import SetBool, SetBoolRequest
 from std_msgs.msg import Float64MultiArray
@@ -188,10 +188,40 @@ class ControlEndEffector:
 
 class ControlRobotArm:
     def __init__(self):
+
+        # 带有碰撞检查的轨迹发布
+        self._pub_ctrl_arm_traj_arm_collision = rospy.Publisher('/arm_collision/kuavo_arm_traj', JointState, queue_size=10)
+        self._pub_ctrl_arm_target_poses_arm_collision = rospy.Publisher('/arm_collision/kuavo_arm_target_poses', armTargetPoses, queue_size=10)
+
+        # 判断当前是否发生碰撞
+        self._sub_arm_collision_info = rospy.Subscriber('/arm_collision/info', armCollisionCheckInfo, self.callback_arm_collision_info, queue_size=10)
+        self._is_collision = False
+
+        # 正常轨迹发布
         self._pub_ctrl_arm_traj = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=10)
         self._pub_ctrl_arm_target_poses = rospy.Publisher('/kuavo_arm_target_poses', armTargetPoses, queue_size=10)
         self._pub_ctrl_hand_pose_cmd = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
         self._pub_hand_wrench = rospy.Publisher('/hand_wrench_cmd', Float64MultiArray, queue_size=10)
+
+    def is_arm_collision(self)->bool:
+        return self._is_collision
+    
+    def callback_arm_collision_info(self, msg: armCollisionCheckInfo):
+        self._is_collision = True
+        SDKLogger.info(f"Arm collision detected")
+        
+
+    def release_arm_collision_mode(self):
+        self._is_collision = False
+    
+    def wait_arm_collision_complete(self):
+        if self._is_collision:
+            srv_wait_arm_collision_complete_srv = rospy.ServiceProxy('/arm_collision/wait_complete', SetBool)
+            req = SetBoolRequest()
+            req.data = True
+            resp = srv_wait_arm_collision_complete_srv(req)
+            if not resp.success:
+                SDKLogger.error(f"Failed to wait arm collision complete: {resp.message}")
 
     def connect(self, timeout:float=1.0)-> bool:
         start_time = rospy.Time.now()
@@ -211,26 +241,39 @@ class ControlRobotArm:
                 rospy.sleep(0.1)
         return success
 
-    def pub_control_robot_arm_traj(self, joint_q: list)->bool:
+    def pub_control_robot_arm_traj(self, joint_q: list, use_arm_collision_check:bool=False)->bool:
+        
+        if use_arm_collision_check and self._is_collision:
+            raise Exception(f"Arm collision detected, cannot publish arm trajectory")
+        
         try:
             msg = JointState()
             msg.name = ["arm_joint_" + str(i) for i in range(0, 14)]
             msg.header.stamp = rospy.Time.now()
             msg.position = 180.0 / np.pi * np.array(joint_q) # convert to degree
-            self._pub_ctrl_arm_traj.publish(msg)
+            if use_arm_collision_check:
+                self._pub_ctrl_arm_traj_arm_collision.publish(msg)
+            else:
+                self._pub_ctrl_arm_traj.publish(msg)
             return True
         except Exception as e:
             SDKLogger.error(f"publish robot arm traj: {e}")
         return False
         
-    def pub_arm_target_poses(self, times:list, joint_q:list):
+    def pub_arm_target_poses(self, times:list, joint_q:list, use_arm_collision_check:bool=False):
+        if use_arm_collision_check and self._is_collision:
+            raise Exception(f"Arm collision detected, cannot publish arm trajectory")
+        
         try:
             msg = armTargetPoses()
             msg.times = times
             for i in range(len(joint_q)):
                 degs = [q for q in joint_q[i]]
                 msg.values.extend(degs)
-            self._pub_ctrl_arm_target_poses.publish(msg)
+            if use_arm_collision_check:
+                self._pub_ctrl_arm_target_poses_arm_collision.publish(msg)
+            else:
+                self._pub_ctrl_arm_target_poses.publish(msg)
             return True
         except Exception as e:
             SDKLogger.error(f"publish arm target poses: {e}")
@@ -385,8 +428,8 @@ class ControlRobotArm:
 
     def srv_change_arm_ctrl_mode(self, mode: KuavoArmCtrlMode)->bool:
         try:
-            rospy.wait_for_service('/arm_traj_change_mode', timeout=2.0)
-            change_arm_ctrl_mode_srv = rospy.ServiceProxy('/arm_traj_change_mode', changeArmCtrlMode)
+            rospy.wait_for_service('/change_arm_ctrl_mode', timeout=2.0)
+            change_arm_ctrl_mode_srv = rospy.ServiceProxy('/change_arm_ctrl_mode', changeArmCtrlMode)
             req = changeArmCtrlModeRequest()
             req.control_mode = mode.value
             resp = change_arm_ctrl_mode_srv(req)
@@ -998,16 +1041,36 @@ class KuavoRobotControl:
         SDKLogger.debug(f"Disable head tracking")
         return self.kuavo_head_control.srv_disable_head_tracking()
     
-    def control_robot_arm_joint_positions(self, joint_data:list)->bool:
+    def control_robot_arm_joint_positions(self, joint_data:list, use_arm_collision_check:bool=False)->bool:
         """
             Control robot arm joint positions
             Arguments:
                 - joint_data: list of joint data (degrees)
         """
         # SDKLogger.debug(f"[ROS] Control robot arm trajectory: {joint_data}")
-        return self.kuavo_arm_control.pub_control_robot_arm_traj(joint_data)
+        return self.kuavo_arm_control.pub_control_robot_arm_traj(joint_data, use_arm_collision_check=use_arm_collision_check)
     
-    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
+    def is_arm_collision(self)->bool:
+        """
+            Check if arm collision is happening
+            Returns:
+                bool: True if collision is happening, False otherwise
+        """
+        return self.kuavo_arm_control.is_arm_collision()
+    
+    def release_arm_collision_mode(self):
+        """
+            Release arm collision mode
+        """
+        return self.kuavo_arm_control.release_arm_collision_mode()
+    
+    def wait_arm_collision_complete(self):
+        """
+            Wait for arm collision to complete
+        """
+        return self.kuavo_arm_control.wait_arm_collision_complete()
+    
+    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list, use_arm_collision_check:bool=False)->bool:
         """
             Control robot arm joint trajectory
             Arguments:
@@ -1019,7 +1082,7 @@ class KuavoRobotControl:
         elif len(times) == 0:
             raise ValueError("Times and joint_q must not be empty.")
         
-        return self.kuavo_arm_control.pub_arm_target_poses(times=times, joint_q=joint_q)
+        return self.kuavo_arm_control.pub_arm_target_poses(times=times, joint_q=joint_q, use_arm_collision_check=use_arm_collision_check)
     
     def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
         """

@@ -230,6 +230,10 @@ namespace ocs2
         bool armCollisionControlCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res) {
             arm_collision_control_ = req.data;
             res.success = true;
+            if (req.data) {
+                callSetArmModeSrv(0);
+                current_arm_mode_ = 0;
+            }
             res.message = "Arm collision control set to " + std::string(req.data ? "true" : "false");
             ROS_INFO("Arm collision control set to %s", req.data ? "true" : "false");
             return true;
@@ -283,8 +287,6 @@ namespace ocs2
                     if (arm_collision_control_) {
                         current_arm_mode_ = 2;
                         arm_collision_control_ = false;
-                        
-                        stopArmCollisionControl();
                     }
                     else current_arm_mode_ = (current_arm_mode_!=1) ? 1 : 2;
                     std::cout << "[QuestControlFSM] change arm mode to :" << current_arm_mode_ << std::endl;
@@ -661,35 +663,6 @@ namespace ocs2
                 value[i] = w[i] * values_norm[i];
             }
             return value;
-        }
-
-        
-        void stopArmCollisionControl() {
-
-            // 调用服务设置collision_check_control
-            std_srvs::SetBool set_collision_check_request;
-            set_collision_check_request.request.data = false;
-            
-            if (!ros::service::exists("/quest3/set_collision_check_control", false)) {
-                ROS_WARN("Service /quest3/set_collision_check_control does not exist, skipping call");
-            }
-            else{
-                auto set_collision_check_client = nodeHandle_.serviceClient<std_srvs::SetBool>("/quest3/set_collision_check_control");
-                if (set_collision_check_client.call(set_collision_check_request)) {
-                    ROS_INFO("Set collision check control service call successful");
-                } else {
-                    ROS_ERROR("Failed to call set collision check control service");
-                }
-            }
-
-            auto arm_collision_check_control_client = nodeHandle_.serviceClient<std_srvs::SetBool>("arm_collision_check_control_service");
-            std_srvs::SetBool arm_collision_check_control_request;
-            arm_collision_check_control_request.request.data = false;
-            if (arm_collision_check_control_client.call(arm_collision_check_control_request)) {
-                ROS_INFO("Set arm collision check control service call successful");
-            } else {
-                ROS_ERROR("Failed to call set arm collision check control service");
-            }
         }
 
         bool isValueChanged(const std::vector<int>& values_norm) {
