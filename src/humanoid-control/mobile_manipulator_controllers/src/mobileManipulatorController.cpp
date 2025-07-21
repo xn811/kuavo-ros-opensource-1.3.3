@@ -539,6 +539,16 @@ namespace mobile_manipulator_controller
   {
     lastControlType_ = controlType_;
     controlType_ = static_cast<ControlType>(msg->data);
+    if(lastControlType_ != controlType_){
+      if(controlType_ == ControlType::None){
+        stop();
+        ROS_INFO("MPC is stopped, if you want to resume, please set control_mode to ArmOnly or BaseArm.");
+      }
+      else{
+        reset(mmObservation_.state);
+        ROS_INFO("MPC is reseted, now you can control the humanoid.");
+      }
+    }
   }
 
 } // namespace mobile_manipulator_controller 

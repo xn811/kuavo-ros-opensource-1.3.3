@@ -558,9 +558,6 @@ namespace mobile_manipulator_controller
       ROS_INFO("MPC thread paused successfully");
     }
     
-    // 给线程一点时间来响应暂停请求
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    
     // 强制重置MRT_BASE状态
     try
     {
