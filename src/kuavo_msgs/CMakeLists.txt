@@ -60,13 +60,19 @@ add_message_files(
   armPoseWithTimeStamp.msg
   headBodyPose.msg
   robotHandPosition.msg
+  picoPoseInfo.msg
+  picoPoseInfoList.msg
   gaitTimeName.msg
   questJoySticks.msg
   armTargetPoses.msg
   robotHeadMotionData.msg
+  robotBodyMatrices.msg
   footPose.msg
+  footPose6D.msg
   footPoses.msg
+  footPoses6D.msg
   footPoseTargetTrajectories.msg
+  footPose6DTargetTrajectories.msg
   gestureInfo.msg
   gestureTask.msg
   lejuClawState.msg
@@ -127,6 +133,7 @@ add_service_files(
   controlLejuClaw.srv
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
+  footPose6DTargetTrajectoriesSrv.srv
   getCurrentGaitName.srv
   handForceLevel.srv
   enableHandTouchSensor.srv

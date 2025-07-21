@@ -50,9 +50,9 @@ namespace ocs2
       scalar_t startTime{-1.0};  // 新增：起始时间，默认为-1.0
       std::vector<scalar_t> eventTimes;  // event times
       std::vector<FootIdx> footIndices;  // foot indices
-      std::vector<Eigen::Vector4d> footPoseSequence;  // pose(xyz yaw) of each step at each event time
-      std::vector<Eigen::Vector4d> torsoPoseSequence;  // torso pose(xyz yaw) of each step at each event time
-      std::vector<std::vector<Eigen::Vector4d>> additionalFootPoseSequence;  // additional foot pose(xyz yaw) of each step at each event time
+      std::vector<vector6_t> footPoseSequence;  // pose(xyz yaw) of each step at each event time
+      std::vector<vector6_t> torsoPoseSequence;  // torso pose(xyz yaw) of each step at each event time
+      std::vector<std::vector<vector6_t>> additionalFootPoseSequence;  // additional foot pose(xyz yaw) of each step at each event time
       std::vector<scalar_t> swingHeightSequence;  // swing height of each mode at swing phase
       void clear()
       {
@@ -260,7 +260,7 @@ namespace ocs2
       /**
        * 拓展足端位姿序列, 并更新模式位姿序列.
        */
-      ModeSchedule modifyModePoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1);
+      ModeSchedule modifyModePoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories());
 
       inline scalar_t getCustomGaitEndTime() const
       {
@@ -281,10 +281,11 @@ namespace ocs2
       {
         const auto &eventTimes = modeSchedule_.eventTimes;
         const auto &enableFootSequence = modeSchedule_.enableFootSequence;
+        const auto &isLastCommandSequence = modeSchedule_.isLastCommandSequence;
         size_t eventIdx = 0;
         for(size_t i=1; i<eventTimes.size(); i++)
         {
-          if(enableFootSequence[i]){
+          if(enableFootSequence[i] && !isLastCommandSequence[i]){
             eventIdx = i - 1;
             break;
           }
@@ -363,6 +364,7 @@ namespace ocs2
       std::map<std::string, ModeSequenceTemplate> gaitMap_;
       std::vector<std::string> gaitList_;
       double default_stance_duration_ = 0.4;
+      size_t erase_index = 0;
     };
 
   } // namespace humanoid

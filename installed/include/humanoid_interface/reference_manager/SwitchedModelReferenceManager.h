@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <kuavo_msgs/singleStepControl.h>
 #include <kuavo_msgs/changeTorsoCtrlMode.h>
 #include "kuavo_msgs/footPoseTargetTrajectoriesSrv.h"
+#include "kuavo_msgs/footPose6DTargetTrajectoriesSrv.h"
 
 #include <ocs2_msgs/mpc_target_trajectories.h>
 #include "std_srvs/SetBool.h"
@@ -169,6 +170,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
               TargetTrajectories& targetTrajectories, const ModeSchedule& modeSchedule);
 
   bool footPoseTargetTrajectoriesSrvCallback(kuavo_msgs::footPoseTargetTrajectoriesSrv::Request &req, kuavo_msgs::footPoseTargetTrajectoriesSrv::Response &res);
+  bool footPose6DTargetTrajectoriesSrvCallback(kuavo_msgs::footPose6DTargetTrajectoriesSrv::Request &req, kuavo_msgs::footPose6DTargetTrajectoriesSrv::Response &res);
+  
+  void processFootPose6DTargetTrajectories(const kuavo_msgs::footPose6DTargetTrajectories::ConstPtr &msg);
 
   bool armControlModeSrvCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
 
@@ -259,6 +263,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Subscriber armTargetTrajectoriesSubscriber_;
   ros::Subscriber poseTargetTrajectoriesSubscriber_;
   ros::Subscriber footPoseTargetTrajectoriesSubscriber_;
+  ros::Subscriber footPose6DTargetTrajectoriesSubscriber_;
   ros::Subscriber eef_wrench_sub_;
   ros::Subscriber fullBodyTargetTrajectoriesSubscriber_;
   ros::Subscriber estContactStateSubscriber_;
@@ -277,6 +282,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::ServiceServer singleStepControlService_;
   ros::ServiceServer change_torso_control_service_;
   ros::ServiceServer footPoseTargetTrajectoriesService_;
+  ros::ServiceServer footPose6DTargetTrajectoriesService_;
   ros::ServiceServer current_mode_service_;
   ros::ServiceServer stopSingleStepControlService_;
   ros::ServiceServer enable_pitch_limit_service_;
@@ -375,6 +381,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   bool enable_slope_planning_ = false;
   bool enable_pitch_limit_ = false;
+
+  vector_t last_init_target_state;
 };
 
 }  // namespace humanoid
