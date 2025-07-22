@@ -32,12 +32,11 @@ class KuavoRobotArm:
         """
         return self._kuavo_core.robot_manipulation_mpc_reset()
         
-    def control_arm_joint_positions(self, joint_position:list, use_arm_collision_check:bool=False)->bool:
+    def control_arm_joint_positions(self, joint_position:list)->bool:
         """控制机器人手臂关节位置。
 
         Args:
             joint_position (list): 关节位置列表,单位为弧度
-            use_arm_collision_check (bool): 是否使用碰撞检查
 
         Raises:
             ValueError: 如果关节位置列表长度不正确
@@ -55,15 +54,14 @@ class KuavoRobotArm:
             if abs(pos) > math.pi:
                 raise ValueError(f"Joint position {pos} rad exceeds ±π rad (±180 deg) limit")
 
-        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_position, use_arm_collision_check=use_arm_collision_check)
+        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_position)
 
-    def control_arm_joint_trajectory(self, times:list, joint_q:list, use_arm_collision_check:bool=False)->bool:
+    def control_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
         """控制机器人手臂关节轨迹。
 
         Args:
             times (list): 时间间隔列表,单位为秒
             joint_q (list): 关节位置列表,单位为弧度
-            use_arm_collision_check (bool): 是否使用碰撞检查
 
         Raises:
             ValueError: 如果times列表长度不正确
@@ -87,7 +85,7 @@ class KuavoRobotArm:
             # Convert joint positions from radians to degrees
             q_degs.append([(p * 180.0 / math.pi) for p in q])
 
-        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs, use_arm_collision_check=use_arm_collision_check)
+        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs)
 
     def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
         """控制机器人末端执行器姿态。
@@ -236,6 +234,11 @@ class KuavoRobotArm:
         """等待碰撞完成
         """
         self._kuavo_core.wait_arm_collision_complete()
+
+    def set_arm_collision_mode(self, enable: bool):
+        """设置碰撞模式
+        """
+        self._kuavo_core.set_arm_collision_mode(enable)
 
 # if __name__ == "__main__":
 #     arm = KuavoRobotArm()

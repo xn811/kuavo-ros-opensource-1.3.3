@@ -406,11 +406,11 @@ class KuavoRobotCore:
     def disable_head_tracking(self)->bool:
         return self._control.disable_head_tracking()
     
-    def control_robot_arm_joint_positions(self, joint_data:list, use_arm_collision_check:bool=False)->bool:
+    def control_robot_arm_joint_positions(self, joint_data:list)->bool:
         if self.state != 'stance':
             raise RuntimeError(f"[Core] control_robot_arm_joint_positions failed: robot must be in stance state, current state: {self.state}")
         
-        if use_arm_collision_check and self._control.is_arm_collision():
+        if self._control.is_arm_collision_mode() and self._control.is_arm_collision():
             raise RuntimeError(f"Arm collision detected, cannot publish arm trajectory")
         # change to external control mode  
         if self._arm_ctrl_mode != KuavoArmCtrlMode.ExternalControl:
@@ -418,11 +418,14 @@ class KuavoRobotCore:
             if not self.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl):
                 SDKLogger.warn("[Core] control_robot_arm_joint_positions failed, change robot arm ctrl mode failed!")
                 return False
-        return self._control.control_robot_arm_joint_positions(joint_data, use_arm_collision_check=use_arm_collision_check)
+        return self._control.control_robot_arm_joint_positions(joint_data)
     
-    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list, use_arm_collision_check:bool=False)->bool:
+    def control_robot_arm_joint_trajectory(self, times:list, joint_q:list)->bool:
         if self.state != 'stance':
             raise RuntimeError("[Core] control_robot_arm_joint_trajectory failed: robot must be in stance state")
+            
+        if self._control.is_arm_collision_mode() and self._control.is_arm_collision():
+            raise RuntimeError(f"Arm collision detected, cannot publish arm trajectory")
         
         if self._arm_ctrl_mode != KuavoArmCtrlMode.ExternalControl:
             SDKLogger.debug("[Core] control_robot_arm_joint_trajectory, current arm mode != ExternalControl, change it.")
@@ -430,7 +433,7 @@ class KuavoRobotCore:
                 SDKLogger.warn("[Core] control_robot_arm_joint_trajectory failed, change robot arm ctrl mode failed!")
                 return False
             
-        return self._control.control_robot_arm_joint_trajectory(times, joint_q, use_arm_collision_check=use_arm_collision_check)
+        return self._control.control_robot_arm_joint_trajectory(times, joint_q)
     
     def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:        
         if self._arm_ctrl_mode != KuavoArmCtrlMode.ExternalControl:
@@ -512,7 +515,7 @@ class KuavoRobotCore:
     
     def change_robot_arm_ctrl_mode(self, mode:KuavoArmCtrlMode)->bool:
 
-        if self.is_arm_collision():
+        if self._control.is_arm_collision_mode() and self.is_arm_collision():
             SDKLogger.warn("[Core] change_robot_arm_ctrl_mode failed, arm collision detected!")
             return False
 
@@ -598,13 +601,13 @@ class KuavoRobotCore:
     def release_arm_collision_mode(self):
 
         self._control.release_arm_collision_mode()
-        # if not self.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl):
-        #     SDKLogger.warn("[Core] control_robot_arm_joint_positions failed, change robot arm ctrl mode failed!")
-        #     return False
         
 
     def wait_arm_collision_complete(self):
         self._control.wait_arm_collision_complete()
+
+    def set_arm_collision_mode(self, enable: bool):
+        self._control.set_arm_collision_mode(enable)
 
 if __name__ == "__main__":
     DEBUG_MODE = 0
