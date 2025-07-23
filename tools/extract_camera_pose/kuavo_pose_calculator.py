@@ -6,7 +6,7 @@
 import numpy as np 
 from pydrake.multibody.parsing import Parser
 from pydrake.multibody.plant import MultibodyPlant
-
+from pydrake.multibody.tree import BodyIndex
 class KuavoPoseCalculator:
     def __init__(self, urdf_path):
         self.plant = MultibodyPlant(0.0)
@@ -32,6 +32,10 @@ class KuavoPoseCalculator:
         print("左臂关节:", l_arm_joints)
         print("右臂关节:", r_arm_joints)
         print("头部关节:", head_joints)
+        # for body_index in range(self.plant.num_bodies()):
+        #     body = self.plant.get_body(BodyIndex(body_index))
+        #     link_name = body.name()
+        #     print(f"Link {body_index}: {link_name}")
         print("----------------------------------------------------------------------------")
 
     def get_camera_pose(self, head_q:list):
@@ -122,13 +126,77 @@ class KuavoPoseCalculator:
         )
         return camera_pose_in_base
 
+    def get_l_hand_tripod_to_camera_pose(self):
+        """
+        获取左手三脚架到左手相机的位姿变换。
+        
+        Returns:
+            RigidTransform: 左手三脚架到左手相机的位姿变换矩阵。
+        """
+        # 获取 l_hand_tripod 和 l_hand_camera 的 frame
+        tripod_frame = self.plant.GetFrameByName("l_hand_tripod")
+        camera_frame = self.plant.GetFrameByName("l_hand_camera")
+        
+        # 计算从 l_hand_tripod 到 l_hand_camera 的位姿变换
+        tripod_to_camera_pose = camera_frame.CalcPose(self.context, tripod_frame)
+        
+        return tripod_to_camera_pose
+    
+    def get_r_hand_tripod_to_camera_pose(self):
+        """
+        获取右手三脚架到右手相机的位姿变换。
+        
+        Returns:
+            RigidTransform: 右手三脚架到右手相机的位姿变换矩阵。
+        """
+        # 获取 r_hand_tripod 和 r_hand_camera 的 frame
+        tripod_frame = self.plant.GetFrameByName("r_hand_tripod")
+        camera_frame = self.plant.GetFrameByName("r_hand_camera")
+        
+        # 计算从 r_hand_tripod 到 r_hand_camera 的位姿变换
+        tripod_to_camera_pose = camera_frame.CalcPose(self.context, tripod_frame)
+        
+        return tripod_to_camera_pose
+    
+    def get_head_link_to_camera_pose(self):
+        """
+        获取头部链接(zhead_2_link)到相机frame(camera)的转换位姿。
+        
+        Returns:
+            RigidTransform: 从zhead_2_link到camera的位姿变换矩阵。
+        """
+        # 获取zhead_2_link frame
+        zhead_2_link_frame = self.plant.GetFrameByName("zhead_2_link")
+        # 获取camera frame
+        camera_frame = self.plant.GetFrameByName("camera")
+        
+        # 计算从zhead_2_link到camera的转换
+        transform_zhead_to_camera = camera_frame.CalcPose(
+            self.context, zhead_2_link_frame
+        )
+        return transform_zhead_to_camera
+    
 if __name__ == "__main__":
     # 使用示例 需要替换成您实际的 URDF 路径
-    kuavo_camera_pose_calculator = KuavoPoseCalculator("../../src/kuavo_assets/models/biped_s45/urdf/biped_s45.urdf")
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    urdf_path = os.path.join(script_dir, "../../src/kuavo_assets/models/biped_s45/urdf/biped_s45.urdf")
+    kuavo_camera_pose_calculator = KuavoPoseCalculator(urdf_path)
     
     head_camera_pose = kuavo_camera_pose_calculator.get_camera_pose([0.0, 0.0])
     print("head_camera pose:", head_camera_pose)
+    
     l_hand_camera_pose = kuavo_camera_pose_calculator.get_l_hand_camera_pose([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     print("lhand_camera pose:", l_hand_camera_pose)
+    
+    pose = kuavo_camera_pose_calculator.get_r_hand_tripod_to_camera_pose()
+    print("r_hand_tripod_to_camera_pose:", pose)
+    
     r_hand_camera_pose = kuavo_camera_pose_calculator.get_r_hand_camera_pose([0.25, -1.0, -1.0, -1.208, 0.156, 0.658, 0.13])
     print("rhand_camera pose: ", r_hand_camera_pose)
+
+    pose1 = kuavo_camera_pose_calculator.get_r_hand_tripod_to_camera_pose()
+    print("r_hand_tripod_to_camera_pose:", pose1)
+
+    pose2 = kuavo_camera_pose_calculator.get_head_link_to_camera_pose()
+    print("head_link_to_camera_pose:", pose2)

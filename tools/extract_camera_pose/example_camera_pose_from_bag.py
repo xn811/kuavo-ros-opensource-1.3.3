@@ -67,8 +67,10 @@ def extract_camera_poses_from_bag(bag_path, urdf_path):
 
 if __name__ == "__main__":
     # 使用示例
-    bag_path = "222.bag"
-    urdf_path = "../../src/kuavo_assets/models/biped_s45/urdf/biped_s45.urdf"
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    bag_path = os.path.join(script_dir, "222.bag")
+    urdf_path = os.path.join(script_dir, "../../src/kuavo_assets/models/biped_s45/urdf/biped_s45.urdf")
     
     camera_poses = extract_camera_poses_from_bag(bag_path, urdf_path)
     
