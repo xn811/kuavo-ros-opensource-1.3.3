@@ -56,6 +56,7 @@ from tf.transformations import (
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point, Quaternion, Twist
 from std_msgs.msg import Float32MultiArray, Bool
+from sensor_msgs.msg import Joy
 from kuavo_msgs.msg import (
     picoPoseInfo, picoPoseInfoList,
     footPoseTargetTrajectories, footPose
@@ -761,7 +762,7 @@ class KuavoPicoInfoTransformer():
         except Exception as e:
             SDKLogger.warning(f"Error clearing trajectory queue: {e}")
             
-        SDKLogger.info("KuavoPicoInfoTransformer cleanup completed")
+        # SDKLogger.info("KuavoPicoInfoTransformer cleanup completed")
 
     def __del__(self):
         """Destructor to ensure cleanup."""
@@ -832,6 +833,18 @@ class KuavoPicoInfoTransformer():
         for idx in self.right_arm_idxs:
             ros_matrices[idx] = ros_matrices[idx] @ T_RIGHT_ARM_CORRECTION
         return ros_matrices
+
+    def parse_joy_data(self, data_str):
+        """Parse JSON format joy data."""
+        try:
+            data = json.loads(data_str)
+            if 'controllers' in data:
+                return data['controllers']
+            else:
+                return None
+        except Exception as e:
+            SDKLogger.error(f"Error parsing JSON data: {e}")
+            return None
 
     def parse_transform_data(self, data_str):
         """Parse JSON format transform data."""
@@ -1291,6 +1304,54 @@ class KuavoPicoInfoTransformer():
                 continue
         
         self.bone_frame_publisher.publish_pose_info_list(pose_info_list)
+
+    def publish_pico_joys(self, joy_data):
+        """Publish pico joys"""
+        joy_msg = Joy()
+        joy_msg.header.stamp = rospy.Time.now()
+        joy_msg.header.frame_id = f"pico_joy"
+        joy_msg.buttons = [0]*8
+        joy_msg.axes = [0.0]*8
+        try:   
+            def process_joy_data(joy_data, side)->dict:
+                if side in joy_data:
+                    data = joy_data[side]
+                    primary = data.get('primaryButton', False)
+                    secondary = data.get('secondaryButton', False)
+                    grip_btn = data.get('gripButton', False)
+                    trigger_btn = data.get('triggerButton', False)
+                    grip_val = data.get('gripValue', 0.0)
+                    trigger_val = data.get('triggerValue', 0.0)
+                    thumbstick = data.get('thumbstick', [0.0, 0.0])
+                    return  {
+                        "buttons":  [
+                            1 if primary else 0,
+                            1 if secondary else 0,
+                            1 if grip_btn else 0,
+                            1 if trigger_btn else 0
+                        ],
+                        "axes": [
+                            float(thumbstick[0]),
+                            float(thumbstick[1]),
+                            float(grip_val),
+                            float(trigger_val)
+                        ]
+                    }
+                else:
+                    SDKLogger.error(f"Process Joy data lost {side} in json!")
+                    return  {
+                        "buttons":  [0]*4,
+                        "axes": [0.0]*4
+                    }
+            left_joy = process_joy_data(joy_data, 'left')
+            right_joy = process_joy_data(joy_data, 'right')
+            joy_msg.buttons = left_joy['buttons'] + right_joy['buttons']
+            joy_msg.axes = left_joy['axes'] + right_joy['axes']
+            # print(joy_msg)
+        except Exception as e:
+            SDKLogger.error(f"Error processing joy data: {e}")
+            return None
+        self.bone_frame_publisher.publish_pico_joys(joy_msg)
 
     def process_body_pose_for_stepping(self, robot_urdf_matrices):
         """Process body pose for step generation"""
@@ -2543,7 +2604,7 @@ class ParallelFootDetector:
         
         # 关闭线程池
         self.executor.shutdown(wait=True)
-        SDKLogger.info("ParallelFootDetector shutdown completed")
+        # SDKLogger.info("ParallelFootDetector shutdown completed")
     
     def _update_performance_stats(self, detection_time, timeout_count, error_count, results):
         """更新性能统计"""

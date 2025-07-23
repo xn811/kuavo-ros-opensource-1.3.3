@@ -177,6 +177,17 @@ class KuavoPicoServer:
         #     self.pico_node.pico_info_transformer.compute_head_body_pose(robot_urdf_matrices)
         #     self.pico_node.pico_info_transformer.pub_head_body_pose_msg(self.pico_node.pico_info_transformer.head_body_pose)
     
+    def process_pico_joy_data(self, data_str):
+        """Process pico joy data and print to console."""
+        try:
+            joy_data = self.pico_node.pico_info_transformer.parse_joy_data(data_str)
+            if not joy_data:
+                SDKLogger.warn("no pico joy data")
+                return
+            self.pico_node.pico_info_transformer.publish_pico_joys(joy_data)
+        except Exception as e:
+            SDKLogger.error(f"Error processing pico joy data: {e}")
+
     def process_data_thread(self):
         """Thread function for processing data."""
         SDKLogger.info("Data processing thread started")
@@ -184,7 +195,7 @@ class KuavoPicoServer:
             try:
                 data_str = self.data_queue.get(timeout=0.1)
                 self.process_data(data_str)
-
+                self.process_pico_joy_data(data_str) # 处理pico手柄数据
             except queue.Empty:
                 continue
             except Exception as e:

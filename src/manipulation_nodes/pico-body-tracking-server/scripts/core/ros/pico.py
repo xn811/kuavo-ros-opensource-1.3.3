@@ -18,6 +18,7 @@ import tf
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any
 from tf2_msgs.msg import TFMessage
+from sensor_msgs.msg import Joy
 from kuavo_msgs.msg import (
     twoArmHandPoseCmd, robotBodyMatrices, headBodyPose,
     picoPoseInfoList, robotHeadMotionData, ikSolveParam, 
@@ -84,6 +85,20 @@ class KuavoPicoBoneFramePublisher:
             footPoseTargetTrajectories, 
             queue_size=10
         )
+
+        # PICO 手柄数据
+        self.pico_joy_pub = rospy.Publisher('/pico/joy', Joy, queue_size=10)
+
+    def publish_pico_joys(self, joy: Joy) -> None:
+        """Publish pico joys"""
+        try:
+            if not rospy.is_shutdown():
+                if joy is not None:
+                    self.pico_joy_pub.publish(joy)
+            else:
+                SDKLogger.error("ROS node is shutdown, cannot publish pico joys")
+        except Exception as e:
+            SDKLogger.error(f"Error publishing pico joys: {e}")
 
     def publish_pose_info_list(self, pose_info_list: picoPoseInfoList) -> None:
         """Publish pose information list."""
