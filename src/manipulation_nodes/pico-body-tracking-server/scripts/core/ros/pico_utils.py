@@ -36,8 +36,6 @@ import socket
 import json
 import time
 import math
-import netifaces
-import subprocess
 import rospy
 import numpy as np
 import quaternion
@@ -71,6 +69,8 @@ from pydrake.all import (
     RollPitchYaw,
 )
 
+from .net_utils import get_localip_and_broadcast_ips
+
 # Module-level constants for bone names and indices
 BODY_TRACKER_ROLES = [
     "Pelvis", "LEFT_HIP", "RIGHT_HIP", "SPINE1", "LEFT_KNEE", "RIGHT_KNEE",
@@ -97,90 +97,80 @@ ALIGN_TO_ROBOT_URDF_JOINTS = [
 
 CONTROL_MODES = ["WholeBody", "UpperBody", "LowerBody"]
 
-def get_wifi_ip():
-    """Get WiFi IP address."""
-    try:
-        interfaces = netifaces.interfaces()
-        wifi_interface = next(
-            (iface for iface in interfaces if iface.startswith("wl")), None
-        )
-
-        if wifi_interface:
-            addresses = netifaces.ifaddresses(wifi_interface)
-            if netifaces.AF_INET in addresses:
-                return addresses[netifaces.AF_INET][0]["addr"]
-
-        return "WiFi not connected"
-    except Exception as e:
-        return f"Error: {e}"
-    
-def get_wifi():
-    """Get WiFi SSID."""
-    try:
-        SDKLogger.info("Attempting to get WiFi SSID using nmcli")
-        result = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], 
-                                capture_output=True, text=True, check=True)
-        for line in result.stdout.strip().split('\n'):
-            active, ssid = line.split(':')
-            if active == 'yes':
-                SDKLogger.info(f"Connected to WiFi: {ssid}")
-                return ssid
-        
-        SDKLogger.warn("No active WiFi connection found")
-        return "Not connected to WiFi"
-    except Exception as e:
-        SDKLogger.error(f"Error getting WiFi SSID: {e}")
-        return f"Error: {e}"
-    
-def get_mac_address():
-    """Get MAC address."""
-    try:
-        interfaces = netifaces.interfaces()
-        wifi_interface = next(
-            (iface for iface in interfaces if iface.startswith("wl")), None
-        )
-
-        if wifi_interface:
-            addresses = netifaces.ifaddresses(wifi_interface)
-            if netifaces.AF_LINK in addresses:
-                return addresses[netifaces.AF_LINK][0]['addr']
-
-        return "WiFi interface not found"
-    except Exception as e:
-        return f"Error: {e}"
-
 class RobotInfoBroadcaster:
     """Broadcast robot information over network."""
     
     def __init__(self):
         self.robot_name = os.getenv("ROBOT_NAME", "KUAVO")
-        self.robot_ip = get_wifi_ip()
-        self.broadcast_ip = f"{self.robot_ip.rsplit('.', 1)[0]}.255"
+        # self.robot_ip = get_wifi_ip()
+        # self.broadcast_ip = f"{self.robot_ip.rsplit('.', 1)[0]}.255"
+        self.ip_pairs = get_localip_and_broadcast_ips()
         self.broadcast_port = 8443
-        
+        self.is_paused = False  # 添加暂停标志
+        self.broadcast_condition = threading.Condition()
         self.robot_info = {
             "data": {
                 "robot_name": self.robot_name,
-                "robot_ip": self.robot_ip,
+                "robot_ip": '',
             }
         }
+
+    #     self.start_test_pause_thread()
+
+    # def start_test_pause_thread(self):
+    #     def test_pause():
+    #         time.sleep(15)
+    #         self.pause_broadcast()
         
+    #     test_thread = threading.Thread(target=test_pause, daemon=True)
+    #     test_thread.start()
+    #     SDKLogger.info("Started test thread - will pause broadcast in 30 seconds")
+
+    
+    def pause_broadcast(self):
+        """暂停广播."""
+        with self.broadcast_condition:
+            self.is_paused = True
+            self.broadcast_condition.notify_all()
+        SDKLogger.info("Robot info broadcast paused")
+    
+    def resume_broadcast(self):
+        """恢复广播."""
+        with self.broadcast_condition:
+            self.is_paused = False
+            self.broadcast_condition.notify_all()
+        SDKLogger.info("Robot info broadcast resumed")
+    
+
     def broadcast(self):
         """Broadcast robot information."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        SDKLogger.info(f"Broadcasting to {self.broadcast_ip}:{self.broadcast_port}")
-        SDKLogger.info(f"Broadcasting robot info: {self.robot_info}")
         
-        while True:
-            try:
-                message = json.dumps(self.robot_info).encode("utf-8")
-                sock.sendto(message, (self.broadcast_ip, self.broadcast_port))
-                time.sleep(1)
-            except Exception as e:
-                SDKLogger.error(f"Error broadcasting robot info: {e}")
-                break
+        try:
+            for local_ip, broadcast_ip in self.ip_pairs:
+                SDKLogger.info(f"Broadcast IP: {local_ip}:{self.broadcast_port}")            
+            while True:
+                try:
+                    # 使用条件信号等待广播恢复或超时
+                    with self.broadcast_condition:
+                        # 如果暂停了，等待恢复信号
+                        while self.is_paused:
+                            self.broadcast_condition.wait()
+                        
+                        # 广播机器人信息
+                        for local_ip, broadcast_ip in self.ip_pairs:
+                            self.robot_info["data"]["robot_ip"] = local_ip
+                            message = json.dumps(self.robot_info).encode("utf-8")
+                            sock.sendto(message, (broadcast_ip, self.broadcast_port))
+                            SDKLogger.debug(f"Broadcasting to {broadcast_ip}:{self.broadcast_port}")
+                    time.sleep(1)
+                except Exception as e:
+                    SDKLogger.error(f"Error broadcasting robot info: {e}")
+                    break
+        finally:
+            sock.close()
 
 
 @dataclass

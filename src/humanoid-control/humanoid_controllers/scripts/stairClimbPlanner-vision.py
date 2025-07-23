@@ -2,7 +2,7 @@
 
 import rospy
 import numpy as np
-from kuavo_msgs.msg import footPoseWithVisionArray, footPoseTargetTrajectories, footPose, footPoses
+from kuavo_msgs.msg import footPoseWithVisionArray, footPoseTargetTrajectories, footPose, footPoses, footPose6D, footPose6DTargetTrajectories, footPoses6D
 from stairClimbPlanner import StairClimbingPlanner
 from std_srvs.srv import SetBool, SetBoolRequest
 import signal
@@ -30,8 +30,8 @@ class VisionBasedStairClimbingPlanner:
         
         # 创建发布器
         self.trajectory_pub = rospy.Publisher(
-            '/humanoid_mpc_foot_pose_target_trajectories',
-            footPoseTargetTrajectories,
+            '/humanoid_mpc_foot_pose_6d_target_trajectories',
+            footPose6DTargetTrajectories,
             queue_size=10
         )
         rospy.sleep(1) # 等待1秒，确保发布器已经初始化
@@ -249,7 +249,7 @@ class VisionBasedStairClimbingPlanner:
             )
             
             # 规划转身
-            time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories = self.planner.plan_move_to(0.2,0,0, time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories)
+            # time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories = self.planner.plan_move_to(0.2,0,0, time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories)
             # time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories = self.planner.plan_move_to(0.0,0,180, time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories)
             # time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories = self.planner.plan_move_to(0.16,0,0, time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories)
             # print("\nMove to down stairs plan done.")
@@ -277,25 +277,26 @@ class VisionBasedStairClimbingPlanner:
             rospy.loginfo("Debug mode: Skipping trajectory publication")
             return
             
-        msg = footPoseTargetTrajectories()
+        msg = footPose6DTargetTrajectories()
         msg.timeTrajectory = time_traj
         msg.footIndexTrajectory = foot_idx_traj
         msg.footPoseTrajectory = []
         msg.additionalFootPoseTrajectory = []
 
         for i in range(len(time_traj)):
-            foot_pose_msg = footPose()
-            foot_pose_msg.footPose = foot_traj[i]
-            foot_pose_msg.torsoPose = torso_traj[i]
+            foot_pose_msg = footPose6D()
+            # 将4D数据转换为6D格式 [x, y, z, yaw] -> [x, y, z, yaw, pitch, roll]
+            foot_pose_msg.footPose6D = [*foot_traj[i], 0.0, 0.0]  # 添加pitch和roll为0
+            foot_pose_msg.torsoPose6D = [*torso_traj[i], 0.0, 0.0]  # 添加pitch和roll为0
             msg.footPoseTrajectory.append(foot_pose_msg)
             
             if swing_trajectories is not None and i < len(swing_trajectories):
                 if swing_trajectories[i] is not None:
                     msg.additionalFootPoseTrajectory.append(swing_trajectories[i])
                 else:
-                    msg.additionalFootPoseTrajectory.append(footPoses())
+                    msg.additionalFootPoseTrajectory.append(footPoses6D())
             else:
-                msg.additionalFootPoseTrajectory.append(footPoses())
+                msg.additionalFootPoseTrajectory.append(footPoses6D())
 
         self.trajectory_pub.publish(msg)
         rospy.loginfo("Trajectory published")

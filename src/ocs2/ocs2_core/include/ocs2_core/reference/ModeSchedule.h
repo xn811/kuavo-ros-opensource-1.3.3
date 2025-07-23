@@ -112,7 +112,7 @@ struct ModeSchedule {
   bool existValidFootPose(scalar_t time) const{
     size_t count = 0;
     const size_t index_start = std::lower_bound(eventTimes.begin(), eventTimes.end(), time) - eventTimes.begin();
-    for(size_t i = index_start+1; i < enableFootSequence.size(); i++)
+    for(size_t i = index_start; i < enableFootSequence.size(); i++)
     {
       if(enableFootSequence[i])
         count++;

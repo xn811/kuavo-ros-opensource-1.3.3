@@ -44,7 +44,9 @@ namespace ocs2
   namespace humanoid
   {
 
-    enum class FootIdx { Left, Right, Stance };
+      // 左脚腾空，右脚腾空，双脚站立，左脚脚尖着地，左脚脚跟着地，右脚脚尖着地，右脚脚跟着地
+    enum class FootIdx { Left, Right, Stance, TS, HS, ST, SH, TH, HT};
+    
     struct FootPoseSchedule
     {
       scalar_t startTime{-1.0};  // 新增：起始时间，默认为-1.0
@@ -261,6 +263,7 @@ namespace ocs2
        * 拓展足端位姿序列, 并更新模式位姿序列.
        */
       ModeSchedule modifyModePoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories());
+      ModeSchedule modifyModeWorldPoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories());
 
       inline scalar_t getCustomGaitEndTime() const
       {
@@ -364,7 +367,7 @@ namespace ocs2
       std::map<std::string, ModeSequenceTemplate> gaitMap_;
       std::vector<std::string> gaitList_;
       double default_stance_duration_ = 0.4;
-      size_t erase_index = 0;
+      size_t erase_index = -1;
     };
 
   } // namespace humanoid

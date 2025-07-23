@@ -71,7 +71,10 @@ namespace humanoid {
     ZP // height, pitch
   };
 
-
+  enum FrameType{
+    Local,
+    World
+  };
     
 
 /**
@@ -153,9 +156,11 @@ class SwitchedModelReferenceManager : public ReferenceManager {
                                                                            TargetTrajectories &targetTrajectories, ModeSchedule &modeSchedule, const vector_t &cmdVel);
   TargetTrajectories generateTargetwithModeSchedule(scalar_t initTime, scalar_t finalTime, const vector_t &initState,
                                                     const TargetTrajectories &targetTrajectories, const ModeSchedule &modeSchedule);
+  TargetTrajectories generateTargetwithModeScheduleWorld(scalar_t initTime, scalar_t finalTime, const vector_t &initState,
+                                                         const TargetTrajectories &targetTrajectories, const ModeSchedule &modeSchedule);
 
-    TargetTrajectories generateTargetwithPoscmd(scalar_t initTime, const vector_t &initState,
-                                                                           TargetTrajectories &targetTrajectories, ModeSchedule &modeSchedule, const vector_t &cmdPos);
+  TargetTrajectories generateTargetwithPoscmd(scalar_t initTime, const vector_t &initState,
+                                              TargetTrajectories &targetTrajectories, ModeSchedule &modeSchedule, const vector_t &cmdPos);
 
   TargetTrajectories generateTargetwithPoscmdInCurrentPose(scalar_t initTime, const vector_t &initState, TargetTrajectories &targetTrajectories, ModeSchedule &modeSchedule, const vector_t &cmdPos); 
 
@@ -172,7 +177,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool footPoseTargetTrajectoriesSrvCallback(kuavo_msgs::footPoseTargetTrajectoriesSrv::Request &req, kuavo_msgs::footPoseTargetTrajectoriesSrv::Response &res);
   bool footPose6DTargetTrajectoriesSrvCallback(kuavo_msgs::footPose6DTargetTrajectoriesSrv::Request &req, kuavo_msgs::footPose6DTargetTrajectoriesSrv::Response &res);
   
-  void processFootPose6DTargetTrajectories(const kuavo_msgs::footPose6DTargetTrajectories::ConstPtr &msg);
+  void processFootPose6DTargetTrajectories(const kuavo_msgs::footPose6DTargetTrajectories::ConstPtr &msg, FrameType frameType);
 
   bool armControlModeSrvCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res);
 
@@ -263,6 +268,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Subscriber armTargetTrajectoriesSubscriber_;
   ros::Subscriber poseTargetTrajectoriesSubscriber_;
   ros::Subscriber footPoseTargetTrajectoriesSubscriber_;
+  ros::Subscriber footPoseWorldTargetTrajectoriesSubscriber_;
+  ros::Subscriber footPose6DWorldTargetTrajectoriesSubscriber_;
   ros::Subscriber footPose6DTargetTrajectoriesSubscriber_;
   ros::Subscriber eef_wrench_sub_;
   ros::Subscriber fullBodyTargetTrajectoriesSubscriber_;
@@ -348,8 +355,10 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   int cntMPC_ = 0;
   ros::NodeHandle nodeHandle_;
   bool update_foot_trajectory_ = false;
+  bool update_foot_world_trajectory_ = false;
   bool update_full_body_trajecory_ = false;
   FootPoseSchedule footPoseSchedule_;
+  FootPoseSchedule footPoseWorldSchedule_;
   FullBodySchedule fullBodySchedule_;
   CentroidalModelRbdConversions rbdConversions_;
   ros::Time lastArmControlModeWarnTime_ = ros::Time(0);
