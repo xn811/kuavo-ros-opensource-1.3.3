@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 重新调整运动控制文档结构并删除无用接口，[新的文档链接](./docs/运动控制API.md)
 - 新增 Kuavo Humanoid SDK 原子技能 v2 版搬箱子策略模块文档，[文档链接](./src/kuavo_humanoid_sdk/docs/markdown/pages/kuavo_strategy_v2.md)
 - 新增运动学 MPC VR 遥操作使用文档， [文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - 上楼梯案例适配奥比中光相机以及使用文档，[文档链接](./src/humanoid-control/humanoid_controllers/scripts/上楼梯案例说明.md)
@@ -17,6 +18,10 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- Kuavo Humanoid SDK 在原子技能的手部运动控制同步接口上增加碰撞保护的功能, [使用示例](./src/kuavo_humanoid_sdk/examples/atomic_skills/ctrl_arm_example_protected.py)
+- 运动学 KMPC 新增 play_back 回放功能，[文档链接](./src/humanoid-control/mobile_manipulator_controllers/scripts/how_to_play_back.md)
+- 新增运动学 MPC 的异常检测机制
+- 45 和 49 版本机器人 URDF 新增手腕相机模型
 - 新增关节保护功能，使用电机原始的速度峰值和扭矩峰值进行数据拦截，避免电机异常运动损坏
 - 新增 VR 运动学 mpc 增量式遥操功能，启动launch文件见 [链接](./src/manipulation_nodes/motion_capture_ik/launch/kinematic_mpc_vr_incremental_real.launch)
 - 新增手臂碰撞检测模块，VR 外部控制时检测到碰撞回到手臂 3秒前的状态， [文档链接](./src/kuavo_arm_collision_check/readme.md)
@@ -52,6 +57,7 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复 KMPC 控制模式切换到 None 之外的其他模式时，收到 `mm/two_hand` 的话题数据不执行的问题
 - 修复不安全的多线程访问数据可能会导致段错误而引起机器摔倒的问题
 - 修复硬件自检脚本无法绘图的问题，原因是保存数据中索引越界
 - 运动学 MPC 功能包中对不必要的ros包的依赖以及添加误差状态四元数卡尔曼滤波器
@@ -92,6 +98,8 @@
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
+- 添加工具类用于获取头和手腕相机到机器人底座的位置和转换，[工具使用文档](./tools/extract_camera_pose/howto-kuavo-pose-calculator.md)
+- 更新手臂末端三个电机和腿部的飞车保护阈值
 - VR 机器人 VR 节点新增广播机器人信息用于等待 VR 头盔连接
 - 增加可视化运动学 MPC 补充双手末端执行器的轨迹姿态
 - 新增 USB WIFI 信号稳定性测试工具和 VR 传输数据用量测试工具， [使用文档](./tools/wifi_benchmark/README.md)
