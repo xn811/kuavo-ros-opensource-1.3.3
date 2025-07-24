@@ -56,12 +56,12 @@ from tf.transformations import (
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point, Quaternion, Twist
 from std_msgs.msg import Float32MultiArray, Bool
-from sensor_msgs.msg import Joy
 from kuavo_msgs.msg import (
     picoPoseInfo, picoPoseInfoList,
     footPoseTargetTrajectories, footPose
 )
 from ocs2_msgs.msg import mpc_observation, mpc_flattened_controller
+from noitom_hi5_hand_udp_python.msg import JoySticks # TODO: 从noitom_hi5_hand_udp_python导入是临时的，等待该消息迁移到 kuavo_msgs
 from enum import IntEnum
 from common.logger import SDKLogger
 from pydrake.all import (
@@ -109,10 +109,12 @@ class RobotInfoBroadcaster:
         self.broadcast_port = 8443
         self.is_paused = False  # 添加暂停标志
         self.broadcast_condition = threading.Condition()
+        self.eef_type = rospy.get_param('end_effector_type', None)
         self.robot_info = {
             "data": {
                 "robot_name": self.robot_name,
                 "robot_ip": '',
+                "eef_type": self.eef_type,
             }
         }
 
@@ -1307,11 +1309,7 @@ class KuavoPicoInfoTransformer():
 
     def publish_pico_joys(self, joy_data):
         """Publish pico joys"""
-        joy_msg = Joy()
-        joy_msg.header.stamp = rospy.Time.now()
-        joy_msg.header.frame_id = f"pico_joy"
-        joy_msg.buttons = [0]*8
-        joy_msg.axes = [0.0]*8
+        joy_msg = JoySticks()
         try:   
             def process_joy_data(joy_data, side)->dict:
                 if side in joy_data:
@@ -1325,28 +1323,43 @@ class KuavoPicoInfoTransformer():
                     thumbstick = data.get('thumbstick', [0.0, 0.0])
                     return  {
                         "buttons":  [
-                            1 if primary else 0,
-                            1 if secondary else 0,
-                            1 if grip_btn else 0,
-                            1 if trigger_btn else 0
+                            True if primary == 1 else False,    # X/A
+                            True if secondary == 1 else False,  # Y/B
+                            True if grip_btn == 1 else False,   # Grip
+                            True if trigger_btn == 1 else False # Trigger
                         ],
                         "axes": [
-                            float(thumbstick[0]),
-                            float(thumbstick[1]),
-                            float(grip_val),
-                            float(trigger_val)
+                            float(thumbstick[0]), # thumbstick_x
+                            float(thumbstick[1]), # thumbstick_y
+                            float(grip_val),    # grip_value
+                            float(trigger_val)  # trigger_value
                         ]
                     }
                 else:
                     SDKLogger.error(f"Process Joy data lost {side} in json!")
                     return  {
-                        "buttons":  [0]*4,
+                        "buttons":  [False]*4,
                         "axes": [0.0]*4
                     }
             left_joy = process_joy_data(joy_data, 'left')
             right_joy = process_joy_data(joy_data, 'right')
-            joy_msg.buttons = left_joy['buttons'] + right_joy['buttons']
-            joy_msg.axes = left_joy['axes'] + right_joy['axes']
+            joy_msg.left_x = left_joy["axes"][0]
+            joy_msg.left_y = left_joy["axes"][1]
+            joy_msg.left_grip = left_joy["axes"][2]
+            joy_msg.left_trigger = left_joy["axes"][3]
+            joy_msg.left_first_button_pressed = bool(left_joy["buttons"][0])
+            joy_msg.left_second_button_pressed = bool(left_joy["buttons"][1])
+            joy_msg.left_first_button_touched = False  # 默认值
+            joy_msg.left_second_button_touched = False  # 默认值
+            
+            joy_msg.right_x = right_joy["axes"][0]
+            joy_msg.right_y = right_joy["axes"][1]
+            joy_msg.right_trigger = right_joy["axes"][3]
+            joy_msg.right_grip = right_joy["axes"][2]
+            joy_msg.right_first_button_pressed = bool(right_joy["buttons"][0])
+            joy_msg.right_second_button_pressed = bool(right_joy["buttons"][1])
+            joy_msg.right_first_button_touched = False  # 默认值
+            joy_msg.right_second_button_touched = False  # 默认值
             # print(joy_msg)
         except Exception as e:
             SDKLogger.error(f"Error processing joy data: {e}")

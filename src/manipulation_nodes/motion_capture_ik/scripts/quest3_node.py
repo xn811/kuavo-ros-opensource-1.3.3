@@ -16,8 +16,9 @@ import argparse
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
 from kuavo_msgs.msg import armTargetPoses
 from kuavo_msgs.srv import changeArmCtrlMode
-from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
-from handcontrollerdemorosnode.msg import robotHandPosition
+from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList
+from kuavo_msgs.msg import JoySticks
+from kuavo_msgs.msg import robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
 from kuavo_msgs.msg import lejuClawCommand
 def get_package_path(package_name):

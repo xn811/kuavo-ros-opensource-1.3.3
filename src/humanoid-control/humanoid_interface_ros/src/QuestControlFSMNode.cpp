@@ -2,7 +2,7 @@
 #include <std_srvs/Trigger.h>
 #include <string>
 #include <vector>
-#include "kuavo_msgs/questJoySticks.h"
+#include "kuavo_msgs/JoySticks.h"
 #include <string>
 
 #include <ros/init.h>
@@ -240,7 +240,7 @@ namespace ocs2
         }
 
     private:
-        void joystickCallback(const kuavo_msgs::questJoySticks::ConstPtr& msg) 
+        void joystickCallback(const kuavo_msgs::JoySticks::ConstPtr& msg) 
         {
             joystick_data_ = *msg;
             updateState();
@@ -388,7 +388,7 @@ namespace ocs2
             vel_control_pub_.publish(cmdVel_);
         }
 
-        void checkGaitSwitchCommand(const kuavo_msgs::questJoySticks &joy_msg)
+        void checkGaitSwitchCommand(const kuavo_msgs::JoySticks &joy_msg)
         {
             // 检查是否有gait切换指令
             if (!joystick_data_prev_.right_first_button_pressed && joy_msg.right_first_button_pressed)
@@ -747,8 +747,8 @@ namespace ocs2
 
         ros::Subscriber joystick_sub_;
         std::string state_;
-        kuavo_msgs::questJoySticks joystick_data_;
-        kuavo_msgs::questJoySticks joystick_data_prev_;
+        kuavo_msgs::JoySticks joystick_data_;
+        kuavo_msgs::JoySticks joystick_data_prev_;
         bool mode_changed_;
         ros::Duration update_interval_;
         ros::Time last_update_time_;

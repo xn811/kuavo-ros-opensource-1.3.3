@@ -63,7 +63,7 @@ add_message_files(
   picoPoseInfo.msg
   picoPoseInfoList.msg
   gaitTimeName.msg
-  questJoySticks.msg
+  JoySticks.msg
   armTargetPoses.msg
   robotHeadMotionData.msg
   robotBodyMatrices.msg

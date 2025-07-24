@@ -18,6 +18,7 @@ from core.ros.pico import (
     RobotMatrixPublisher
 )
 from core.ros.pico_utils import RobotInfoBroadcaster
+from core.ros.robot_data import RobotDataServer
 from common.logger import SDKLogger
 
 def signal_handler(self):
@@ -100,6 +101,10 @@ class KuavoPicoServer:
         self.broadcaster = RobotInfoBroadcaster()
         self.broadcast_thread = threading.Thread(target=self.broadcaster.broadcast, daemon=True)
         self.broadcast_thread.start()
+
+        self.robot_data_server = RobotDataServer(self.broadcaster.eef_type)
+        self.robot_data_server_thread = threading.Thread(target=self.robot_data_server.start, daemon=True)
+        self.robot_data_server_thread.start()
         
     def get_head_motion_range(self):
         """Get head motion range from configuration."""
@@ -226,6 +231,9 @@ class KuavoPicoServer:
         while not KuavoPicoNodeManager.get_ros_is_shutdown():
             try:
                 data, addr = self.socket.recvfrom(4096)
+                if(self.robot_data_server.target_client_addr != addr):
+                    SDKLogger.debug(f"get new client: {addr}")
+                    self.robot_data_server.target_client_addr = addr
                 try:
                     self.data_queue.put(data.decode('utf-8'), block=False)
                 except queue.Full:

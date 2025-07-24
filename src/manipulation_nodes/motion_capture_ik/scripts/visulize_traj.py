@@ -9,8 +9,7 @@ from sensor_msgs.msg import JointState
 from tools.drake_trans import *
 from tools.utils import get_package_path
 from tools.quest3_utils import Quest3ArmInfoTransformer
-from handcontrollerdemorosnode.msg import robotHandPosition
-from kuavo_msgs.msg import headBodyPose
+from kuavo_msgs.msg import headBodyPose, robotHandPosition
 import argparse
 from kuavo_msgs.msg import twoArmHandPoseCmd, twoArmHandPose, ikSolveParam
 from visualization_msgs.msg import Marker

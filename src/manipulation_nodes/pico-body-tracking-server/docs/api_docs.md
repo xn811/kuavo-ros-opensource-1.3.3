@@ -29,32 +29,26 @@
 
 话题描述: 发布 PICO 左右手柄数据
 
-数据类型: `sensor_msgs/Joy`
+数据类型: `kuavo_msgs/JoySticks`
 
 | 字段 | 类型 | 描述 |
 |------|------|------|
-| header | std_msgs/Header | 消息头部，包含时间戳和坐标系信息 |
-| buttons | int32[] | 按钮状态数组，0表示未按下，1表示按下 |
-| axes | float32[] | 轴数据数组，包含摇杆位置和握把/扳机值 |
-
-- buttons 顺序: 
-   - X 按键     primaryButton
-   - Y 按键     secondaryButton
-   - 左握把按钮  gripButton   
-   - 左扳机按钮  triggerButton
-   - A 按键     primaryButton
-   - B 按键     secondaryButton
-   - 右握把按钮  gripButton
-   - 右扳机按钮  triggerButton
-- axes 顺序:
-  - 左摇杆位置 thumbstick_x
-  - 左摇杆位置 thumbstick_y
-  - 左握把值   grip_value
-  - 左扳机值   trigger_value
-  - 右摇杆位置 thumbstick_x
-  - 右摇杆位置 thumbstick_y
-  - 右握把值   grip_value
-  - 右扳机值   trigger_value
+| left_x | float32 | 左手柄摇杆X轴位置 |
+| left_y | float32 | 左手柄摇杆Y轴位置 |
+| left_trigger | float32 | 左手柄扳机值 (0.0 到 1.0) |
+| left_grip | float32 | 左手柄握把值 (0.0 到 1.0) |
+| left_first_button_pressed | bool | 左手柄主按钮按下状态 (X按键) |
+| left_second_button_pressed | bool | 左手柄副按钮按下状态 (Y按键) |
+| left_first_button_touched | bool | pico不支持这个参数 |
+| left_second_button_touched | bool | pico不支持这个参数 |
+| right_x | float32 | 右手柄摇杆X轴位置 |
+| right_y | float32 | 右手柄摇杆Y轴位置 |
+| right_trigger | float32 | 右手柄扳机值 (0.0 到 1.0) |
+| right_grip | float32 | 右手柄握把值 (0.0 到 1.0) |
+| right_first_button_pressed | bool | 右手柄主按钮按下状态 (A按键) |
+| right_second_button_pressed | bool | 右手柄副按钮按下状态 (B按键) |
+| right_first_button_touched | bool | pico不支持这个参数 |
+| right_second_button_touched | bool | pico不支持这个参数 |
 
 
   ![PICO手柄](../assets/imgs/pico-joy.png)

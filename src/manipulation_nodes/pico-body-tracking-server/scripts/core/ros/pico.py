@@ -18,13 +18,13 @@ import tf
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any
 from tf2_msgs.msg import TFMessage
-from sensor_msgs.msg import Joy
 from kuavo_msgs.msg import (
     twoArmHandPoseCmd, robotBodyMatrices, headBodyPose,
     picoPoseInfoList, robotHeadMotionData, ikSolveParam, 
     footPoseTargetTrajectories
 )
 from kuavo_msgs.srv import changeArmCtrlMode
+from noitom_hi5_hand_udp_python.msg import JoySticks # TODO: 从noitom_hi5_hand_udp_python导入是临时的，等待该消息迁移到 kuavo_msgs
 from .pico_utils import KuavoPicoInfoTransformer
 from common.logger import SDKLogger
 
@@ -87,9 +87,9 @@ class KuavoPicoBoneFramePublisher:
         )
 
         # PICO 手柄数据
-        self.pico_joy_pub = rospy.Publisher('/pico/joy', Joy, queue_size=10)
+        self.pico_joy_pub = rospy.Publisher('/pico/joy', JoySticks, queue_size=10)
 
-    def publish_pico_joys(self, joy: Joy) -> None:
+    def publish_pico_joys(self, joy: JoySticks) -> None:
         """Publish pico joys"""
         try:
             if not rospy.is_shutdown():

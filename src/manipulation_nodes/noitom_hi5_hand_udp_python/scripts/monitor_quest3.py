@@ -13,7 +13,8 @@ import math
 import netifaces
 from pprint import pprint
 from kuavo_ros_interfaces.msg import robotHeadMotionData
-from noitom_hi5_hand_udp_python.msg import PoseInfoList, PoseInfo, JoySticks
+from noitom_hi5_hand_udp_python.msg import PoseInfoList, PoseInfo
+from kuavo_msgs.msg import JoySticks
 from geometry_msgs.msg import Point, Quaternion
 import threading
 from visualization_msgs.msg import Marker

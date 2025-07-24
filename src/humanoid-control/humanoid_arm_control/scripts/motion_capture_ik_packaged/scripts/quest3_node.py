@@ -14,8 +14,9 @@ import argparse
 
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam
 from kuavo_msgs.srv import changeArmCtrlMode
-from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
-from handcontrollerdemorosnode.msg import robotHandPosition
+from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList
+from kuavo_msgs.msg import JoySticks
+from kuavo_msgs.msg import robotHandPosition
 
 class Quest3Node:
     def __init__(self):

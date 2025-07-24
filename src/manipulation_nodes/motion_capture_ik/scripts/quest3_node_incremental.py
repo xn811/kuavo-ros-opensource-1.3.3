@@ -14,8 +14,9 @@ import enum
 
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, sensorsData
 from kuavo_msgs.srv import changeTorsoCtrlMode, changeTorsoCtrlModeRequest, changeArmCtrlMode, changeArmCtrlModeRequest
-from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
-from handcontrollerdemorosnode.msg import robotHandPosition
+from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList
+from kuavo_msgs.msg import JoySticks
+from kuavo_msgs.msg import robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
 from kuavo_msgs.msg import lejuClawCommand
 from kuavo_msgs.srv import fkSrv
