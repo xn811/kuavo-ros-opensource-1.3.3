@@ -15,7 +15,8 @@
       "stance",
       "vr_remote_control",
       "walk",
-      "trot"
+      "trot",
+      "climb_stair"
     ]
   },
   "transitions": {
@@ -345,6 +346,30 @@
         "source": "vr_remote_control",
         "dest": "vr_remote_control",
         "before": "stop_record_vr_rosbag_callback"
+      },
+      {
+        "trigger": "start_stair_detect",
+        "source": "stance",
+        "dest": "climb_stair",
+        "before": "start_stair_detect_callback"
+      },
+      {
+        "trigger": "stair_climb",
+        "source": "climb_stair",
+        "dest": "stance",
+        "before": "stair_climb_callback"
+      },
+      {
+        "trigger": "stop_stair_detect",
+        "source": "climb_stair",
+        "dest": "stance",
+        "before": "stop_stair_detect_callback"
+      },
+      {
+        "trigger": "stop",
+        "source": "climb_stair",
+        "dest": "initial",
+        "before": "stop_callback"
       }
     ]
   }

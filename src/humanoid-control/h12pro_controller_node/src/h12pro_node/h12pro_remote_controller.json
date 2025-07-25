@@ -143,6 +143,7 @@
       "customize_action_LL_C":["E_LEFT", "F_LEFT", "C_PRESS"],
       "customize_action_LL_D":["E_LEFT", "F_LEFT", "D_PRESS"],
       "start_vr_remote_control":["A_LONG_PRESS"],
+      "start_stair_detect":["C_LONG_PRESS"],
       "stop":["C_LONG_PRESS","D_LONG_PRESS"]
     },
     "walk":{
@@ -159,6 +160,11 @@
       "stop_vr_remote_control":["B_LONG_PRESS"],
       "record_vr_rosbag":["C_PRESS"],
       "stop_record_vr_rosbag":["D_PRESS"],
+      "stop":["C_LONG_PRESS","D_LONG_PRESS"]
+    },
+    "climb_stair":{
+      "stair_climb":["A_PRESS"],
+      "stop_stair_detect":["B_PRESS"],
       "stop":["C_LONG_PRESS","D_LONG_PRESS"]
     }
   },

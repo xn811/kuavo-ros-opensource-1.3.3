@@ -62,12 +62,34 @@ fi
 echo "Current ROS_MASTER_URI: $ROS_MASTER_URI"
 echo "Current ROS_IP: $ROS_IP"
 echo "Current ROS_HOSTNAME:$ROS_HOSTNAME"
+
+# 询问用户选择楼梯建图相机类型
+echo "请问机器人楼梯建图的相机类型为："
+echo "1. 奥比中光"
+echo "2. D435"
+echo -n "请选择 (默认为奥比中光，直接回车选择默认): "
+read -r camera_choice
+
+case $camera_choice in
+    2)
+        STAIR_DETECTION_CAMERA="d435"
+        echo "已选择: D435"
+        ;;
+    1|""|*)
+        STAIR_DETECTION_CAMERA="orbbec"
+        echo "已选择: 奥比中光"
+        ;;
+esac
+
+echo "楼梯建图相机类型: $STAIR_DETECTION_CAMERA"
+
 sed -i "s|^Environment=ROS_MASTER_URI=.*|Environment=ROS_MASTER_URI=$ROS_MASTER_URI|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^Environment=ROS_IP=.*|Environment=ROS_IP=$ROS_IP|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^Environment=ROS_HOSTNAME=.*|Environment=ROS_HOSTNAME=$ROS_HOSTNAME|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^Environment=KUAVO_ROS_CONTROL_WS_PATH=.*|Environment=KUAVO_ROS_CONTROL_WS_PATH=$KUAVO_ROS_CONTROL_WS_PATH|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^Environment=ROBOT_VERSION=.*|Environment=ROBOT_VERSION=$ROBOT_VERSION|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^Environment=NODE_SCRIPT=.*|Environment=NODE_SCRIPT=$START_OCS2_H12PRO_NODE|" $OCS2_H12PRO_MONITOR_SERVICE
+sed -i "s|^Environment=STAIR_DETECTION_CAMERA=.*|Environment=STAIR_DETECTION_CAMERA=$STAIR_DETECTION_CAMERA|" $OCS2_H12PRO_MONITOR_SERVICE
 sed -i "s|^ExecStart=.*|ExecStart=$MONITOR_OCS2_H12PRO|" $OCS2_H12PRO_MONITOR_SERVICE
 
 sudo cp $OCS2_H12PRO_MONITOR_SERVICE /etc/systemd/system/
