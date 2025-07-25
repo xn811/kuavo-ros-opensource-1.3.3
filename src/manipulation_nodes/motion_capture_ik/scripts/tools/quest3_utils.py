@@ -71,7 +71,7 @@ fullBodyBoneIds_leju_arms = [bone_name_to_index[name] for name in bone_names]
 # Create a reverse mapping from index to bone name
 index_to_bone_name = {index: bone_names[index] for index in range(len(bone_names))}
 
-bias_chest_to_base_link = [0.0, 0, 0.23]
+bias_chest_to_base_link = [0.0, 0, 0.42]
 
 class HeadBodyPose:
     head_pitch = 0.0
@@ -84,10 +84,11 @@ class HeadBodyPose:
 
 
 class Quest3ArmInfoTransformer:
-    def __init__(self, model_path, vis_pub=True, predict_gesture=False, eef_visual_stl_files=None):
+    def __init__(self, model_path, vis_pub=True, predict_gesture=False, eef_visual_stl_files=None, hand_reference_mode="thumb_index"):
         self.predict_gesture = predict_gesture
         self.model_path = model_path
         self.vis_pub = vis_pub
+        self.hand_reference_mode = hand_reference_mode  # "fingertips", "middle_finger", "thumb_index"
         self.left_finger_joints = None # down dom to 6 dof
         self.right_finger_joints = None
         self.left_hand_pose = None # pos + quaternion
@@ -252,6 +253,130 @@ class Quest3ArmInfoTransformer:
             rospy.logerr(f"Error in get_relative_finger_poses: {e}")
             return np.zeros(63)
 
+    def get_hand_transform(self, side):
+        """
+        根据配置的hand_reference_mode获取手部变换矩阵
+        """
+        if self.pose_info_list is None:
+            return None
+            
+        if self.hand_reference_mode == "palm":
+            return self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+        elif self.hand_reference_mode == "fingertips":
+            T_hand = self.compute_hand_center_from_fingertips(side)
+            if T_hand is None:
+                T_hand = self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+            return T_hand
+        elif self.hand_reference_mode == "middle_finger":
+            T_hand = self.compute_hand_center_from_middle_finger(side)
+            if T_hand is None:
+                T_hand = self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+            return T_hand
+        elif self.hand_reference_mode == "thumb_index":
+            T_hand = self.compute_hand_center_from_thumb_index(side)
+            if T_hand is None:
+                T_hand = self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+            return T_hand
+        else:
+            # 默认使用手掌
+            return self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+
+    def compute_hand_center_from_middle_finger(self, side):
+        """
+        使用中指尖作为手的参考点
+        """
+        if self.pose_info_list is None:
+            return None
+            
+        try:
+            # 获取中指尖的位置
+            middle_finger_pose = self.pose_info_list[bone_name_to_index[side + "HandMiddleTip"]]
+            middle_finger_pos = [middle_finger_pose.position.x, middle_finger_pose.position.y, middle_finger_pose.position.z]
+            
+            # 使用手掌的方向
+            hand_palm_pose = self.pose_info_list[bone_name_to_index[side + "HandPalm"]]
+            hand_orientation = hand_palm_pose.orientation
+            
+            # 构建变换矩阵
+            T_hand_middle = np.eye(4)
+            T_hand_middle[:3, 3] = middle_finger_pos
+            quat = [hand_orientation.x, hand_orientation.y, hand_orientation.z, hand_orientation.w]
+            T_hand_middle[:3, :3] = quaternion_to_matrix(quat)
+            
+            return T_hand_middle
+            
+        except (KeyError, IndexError):
+            return None
+
+    def compute_hand_center_from_thumb_index(self, side):
+        """
+        使用拇指和食指中点作为手的参考点
+        """
+        if self.pose_info_list is None:
+            return None
+            
+        try:
+            # 获取拇指尖和食指尖的位置
+            thumb_pose = self.pose_info_list[bone_name_to_index[side + "HandThumbTip"]]
+            index_pose = self.pose_info_list[bone_name_to_index[side + "HandIndexTip"]]
+            
+            thumb_pos = np.array([thumb_pose.position.x, thumb_pose.position.y, thumb_pose.position.z])
+            index_pos = np.array([index_pose.position.x, index_pose.position.y, index_pose.position.z])
+            
+            # 计算中点
+            center_pos = (thumb_pos + index_pos) / 2.0
+            
+            # 使用手掌的方向
+            hand_palm_pose = self.pose_info_list[bone_name_to_index[side + "HandPalm"]]
+            hand_orientation = hand_palm_pose.orientation
+            
+            # 构建变换矩阵
+            T_hand_center = np.eye(4)
+            T_hand_center[:3, 3] = center_pos
+            quat = [hand_orientation.x, hand_orientation.y, hand_orientation.z, hand_orientation.w]
+            T_hand_center[:3, :3] = quaternion_to_matrix(quat)
+            
+            return T_hand_center
+            
+        except (KeyError, IndexError):
+            return None
+
+    def compute_hand_center_from_fingertips(self, side):
+        """
+        计算手指尖的中心位置作为手的参考点
+        """
+        if self.pose_info_list is None:
+            return None
+            
+        # 获取所有手指尖的位置
+        finger_tips = ["HandThumbTip", "HandIndexTip", "HandMiddleTip", "HandRingTip", "HandLittleTip"]
+        finger_positions = []
+        
+        for finger_tip in finger_tips:
+            try:
+                pose_info = self.pose_info_list[bone_name_to_index[side + finger_tip]]
+                finger_positions.append([pose_info.position.x, pose_info.position.y, pose_info.position.z])
+            except (KeyError, IndexError):
+                continue
+        
+        if len(finger_positions) < 3:  # 至少需要3个手指尖
+            return None
+            
+        # 计算手指尖的中心位置
+        center_pos = np.mean(finger_positions, axis=0)
+        
+        # 使用手掌的方向
+        hand_palm_pose = self.pose_info_list[bone_name_to_index[side + "HandPalm"]]
+        hand_orientation = hand_palm_pose.orientation
+        
+        # 构建变换矩阵
+        T_hand_center = np.eye(4)
+        T_hand_center[:3, 3] = center_pos
+        quat = [hand_orientation.x, hand_orientation.y, hand_orientation.z, hand_orientation.w]
+        T_hand_center[:3, :3] = quaternion_to_matrix(quat)
+        
+        return T_hand_center
+
     def compute_finger_joints(self, side):
         if self.predict_gesture:
             gesture, confidence, inference_time = self.hand_gesture_predictor.predict(self.get_relative_finger_poses(side))
@@ -268,7 +393,10 @@ class Quest3ArmInfoTransformer:
         """
         if self.pose_info_list is None:
             return None
-        T_hand = self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandPalm"]])
+        
+        # 根据配置的hand_reference_mode获取手部变换矩阵
+        T_hand = self.get_hand_transform(side)
+        
         T_finger_thumb_tip = self.pose_info2_transform(self.pose_info_list[bone_name_to_index[side + "HandThumbTip"]])
         finger_index_tip_ori = self.pose_info_list[bone_name_to_index[side + "HandIndexTip"]].orientation
         finger_middle_tip_ori = self.pose_info_list[bone_name_to_index[side + "HandMiddleTip"]].orientation
@@ -555,7 +683,7 @@ class Quest3ArmInfoTransformer:
                     self.right_lower_arm_lengths.pop(0) 
             # Use the latest measurements for scaling
             radi1 = self.upper_arm_length/human_upper_arm_length
-            radi2 = self.lower_arm_length/human_lower_arm_length
+            radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length)
         else:
             # Use average measurements for scaling
             if side == "Left":
@@ -708,12 +836,12 @@ class Quest3ArmInfoTransformer:
         T = pos_rpy_to_transform(pos, rpy)
         return T
     
-    def construct_marker(self, arm_pose_p, arm_pose_q, r, g, b, side):
+    def construct_marker(self, arm_pose_p, arm_pose_q, rgba, side, marker_id):
         if len(arm_pose_q) != 4 or len(arm_pose_p)!= 3:
             print("Invalid arm pose, cannot construct marker")
             return None
         marker = Marker()
-        # marker.id = id
+        marker.id = marker_id
         marker.header.frame_id = (
             "base_link"  # set frame_id according to the actual situation
         )
@@ -740,10 +868,10 @@ class Quest3ArmInfoTransformer:
         marker.scale.x = 1
         marker.scale.y = 1
         marker.scale.z = 1
-        marker.color.a = 0.3
-        marker.color.r = r
-        marker.color.g = g
-        marker.color.b = b
+        marker.color.a = rgba[3]
+        marker.color.r = rgba[0]
+        marker.color.g = rgba[1]
+        marker.color.b = rgba[2]
         marker.header.stamp = rospy.Time.now()
         marker.pose.position.x = arm_pose_p[0]
         marker.pose.position.y = arm_pose_p[1]

@@ -60,13 +60,19 @@ add_message_files(
   armPoseWithTimeStamp.msg
   headBodyPose.msg
   robotHandPosition.msg
+  picoPoseInfo.msg
+  picoPoseInfoList.msg
   gaitTimeName.msg
-  questJoySticks.msg
+  JoySticks.msg
   armTargetPoses.msg
   robotHeadMotionData.msg
+  robotBodyMatrices.msg
   footPose.msg
+  footPose6D.msg
   footPoses.msg
+  footPoses6D.msg
   footPoseTargetTrajectories.msg
+  footPose6DTargetTrajectories.msg
   gestureInfo.msg
   gestureTask.msg
   lejuClawState.msg
@@ -81,6 +87,9 @@ add_message_files(
   AprilTagDetection.msg
   AprilTagDetectionArray.msg
   motorParam.msg
+  footPoseWithVision.msg
+  footPoseWithVisionArray.msg
+
   # motion_capture_ik
   robotArmQVVD.msg
   ikSolveError.msg
@@ -96,11 +105,17 @@ add_message_files(
   jointBezierTrajectory.msg
   planArmState.msg
   RobotActionState.msg
+  tagDataArray.msg
   qv.msg
   fullBodyTargetTrajectories.msg
 
   # kuavo_tf2_web_republisher
   TFArray.msg
+
+  # kuavo_arm_collision_check
+  armCollisionCheckInfo.msg
+
+  MmDetectionMsg.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -118,6 +133,7 @@ add_service_files(
   controlLejuClaw.srv
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
+  footPose6DTargetTrajectoriesSrv.srv
   getCurrentGaitName.srv
   handForceLevel.srv
   enableHandTouchSensor.srv
@@ -133,6 +149,7 @@ add_service_files(
 
   SpeechSynthesis.srv
   setMmCtrlFrame.srv
+  GetTargetPartPoseInCamera.srv
   ExecuteArmAction.srv
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv

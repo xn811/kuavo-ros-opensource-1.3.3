@@ -7,7 +7,8 @@ import argparse
 import argparse
 from std_msgs.msg import Float32, Float32MultiArray, Int32
 from sensor_msgs.msg import JointState
-from handcontrollerdemorosnode.msg import armPoseWithTimeStamp, robotHandPosition
+from handcontrollerdemorosnode.msg import armPoseWithTimeStamp
+from kuavo_msgs.msg import robotHandPosition
 from kuavo_msgs.srv import controlLejuClaw, controlLejuClawRequest
 from kuavo_msgs.msg import lejuClawCommand
 import time
@@ -20,7 +21,7 @@ from tools.drake_trans import *
 
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeKuavo
 from kuavo_msgs.msg import sensorsData
-from std_srvs.srv import Trigger, TriggerResponse
+from std_srvs.srv import Trigger, TriggerResponse, SetBool, SetBoolRequest, SetBoolResponse
 
 import numpy as np
 from pydrake.all import (
@@ -51,7 +52,8 @@ from ik.torso_ik import ArmIk
 
 import rospy
 from noitom_hi5_hand_udp_python.msg import handRotationEular
-from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
+from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList
+from kuavo_msgs.msg import JoySticks
 from tools.quest3_utils import Quest3ArmInfoTransformer
 from kuavo_msgs.msg import ikSolveError, handPose, robotArmQVVD, armHandPose, twoArmHandPose, twoArmHandPoseCmd
 
@@ -107,7 +109,7 @@ control_finger_type = 0
 control_torso = 0
 
 class IkRos:
-    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True, predict_gesture=False):
+    def __init__(self, ik, ctrl_arm_idx=ArmIdx.LEFT, q_limit=None, publish_err=True, use_original_pose=False, end_effector_type="", send_srv=True, predict_gesture=False, hand_reference_mode="thumb_index"):
         self.__start_time = None
         self.__timestamp = None
         self.__ctrl_arm_idx = ctrl_arm_idx
@@ -142,6 +144,7 @@ class IkRos:
         if rospy.has_param('/only_half_up_body'):
             self.only_half_up_body = rospy.get_param('/only_half_up_body')
 
+        self.use_arm_collision = rospy.get_param('~use_arm_collision', False)
         # 添加服务
         self.arm_mode_service = rospy.Service('/quest3/set_arm_mode_changing', Trigger, self.set_arm_mode_changing_callback)
 
@@ -149,7 +152,7 @@ class IkRos:
 
 
         model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path, predict_gesture=predict_gesture)
+        self.quest3_arm_info_transformer = Quest3ArmInfoTransformer(model_path, predict_gesture=predict_gesture, hand_reference_mode=hand_reference_mode)
         self.quest3_arm_info_transformer.control_torso = control_torso
         initial_state = np.array([0, 0, 0, 0, 0, 0])  # 初始状态 [x, y, z, vx, vy, vz]
         initial_covariance = np.eye(6)  # 初始协方差矩阵
@@ -184,13 +187,18 @@ class IkRos:
             "/sensors_data_raw", sensorsData, self.sensor_data_raw_callback
         )
         self.arm_mode_changing = False
+        # 检测到碰撞后，由外部控制手臂
+        self.collision_check_control = False
         self.sensor_data_raw = None
-        self.maxSpeed = rospy.get_param("/arm_move_spd_half_up_body", 0.18)
+        self.maxSpeed = rospy.get_param("/arm_move_spd_half_up_body", 0.21)
         self.threshold_arm_diff_half_up_body = rospy.get_param("/threshold_arm_diff_half_up_body", 0.2)
         self._interp_time_last = rospy.Time.now().to_sec()
 
 
-        self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=10)
+        if self.use_arm_collision:
+            self.pub = rospy.Publisher("/arm_collision/kuavo_arm_traj", JointState, queue_size=10)
+        else:
+            self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=10)
         self.pub_origin_joint = rospy.Publisher("/kuavo_arm_traj_origin", Float32MultiArray, queue_size=10)
         self.pub_filtered_joint = rospy.Publisher("/kuavo_arm_traj_filtered", Float32MultiArray, queue_size=10)
         self.pub_real_arm_hand_pose = rospy.Publisher("/drake_ik/real_arm_hand_pose", twoArmHandPose, queue_size=10)
@@ -553,12 +561,11 @@ class IkRos:
                 arm_agl_interpolated = arm_current_state + delta_state * scale
             
             msg.position = 180.0 / np.pi * np.array(arm_agl_interpolated)
-            self.pub.publish(msg)
         else:
             # 非插值模式下直接使用目标状态
             msg.position = 180.0 / np.pi * np.array(arm_agl_limited)
-            self.pub.publish(msg)
         
+        self.pub.publish(msg)
 
     def kuavo_joint_states_callback(self, joint_states_msg):
         # 手臂状态正解
@@ -856,6 +863,7 @@ class IkRos:
             print(f"\033[91m[IK]Reset arm mode.\033[0m")
             self.trigger_reset_mode = True
             self.arm_mode_changing = False
+            self.collision_check_control = False
         elif new_mode == 2:
             print(f"\033[91m[IK]Arm mode changing.\033[0m")
             self.arm_mode_changing = True
@@ -883,9 +891,21 @@ class IkRos:
                 for i in range(20):
                     self.pub.publish(msg)
                     rate.sleep()
+
         response = TriggerResponse()
         response.success = True
         response.message = "Arm mode changing set to True"
+        return response
+    
+    def collision_control_complete(self, req):
+        """服务回调函数，设置collision_check_control状态"""
+        self.collision_check_control = req.data
+        if not req.data:
+            self.arm_mode_changing = True
+
+        response = SetBoolResponse()
+        response.success = True
+        response.message = "Collision check control set to " + str(self.collision_check_control)
         return response
 
 if __name__ == "__main__":
@@ -910,6 +930,7 @@ if __name__ == "__main__":
     parser.add_argument("--control_torso", type=int, default=0, help="0: do NOT control, 1: control torso.")
     parser.add_argument("--predict_gesture", type=str2bool, default=False, help="Use Neural Network to predict hand gesture, True or False.")
     parser.add_argument("--eef_z_bias", type=float, default=-0.0, help="End effector z-axis bias distance.")
+    parser.add_argument("--hand_reference_mode", type=str, default="thumb_index", help="Hand reference mode: fingertips, middle_finger, or thumb_index.")
     args, unknown = parser.parse_known_args()
     # ee_type
     end_effector_type=""
@@ -930,6 +951,7 @@ if __name__ == "__main__":
     control_finger_type = args.control_finger_type
     control_torso = args.control_torso
     predict_gesture = args.predict_gesture
+    hand_reference_mode = args.hand_reference_mode
 
     print(f"\033[92mControl {ctrl_arm_idx.name()} arms.\033[0m")
     print(f"\033[92mIk type: {ik_type_idx.name()}\033[0m")
@@ -1012,4 +1034,4 @@ if __name__ == "__main__":
     rospy.set_param("/quest3/lower_arm_length", float(lower_arm_length))
     rospy.set_param("/quest3/shoulder_width", float(shoulder_width))
     print(f"\033[92mLeft Arm Length: {arm_length_left:.3f} m, Right Arm Length:{arm_length_right:.3f} m.\033[0m")
-    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv, predict_gesture=predict_gesture)
+    ik_ros = IkRos(arm_ik, ctrl_arm_idx=ctrl_arm_idx, q_limit=q_limit, end_effector_type=end_effector_type, send_srv=send_srv, predict_gesture=predict_gesture, hand_reference_mode=hand_reference_mode)
