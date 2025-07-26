@@ -229,74 +229,7 @@ class KuavoPicoInfoTransformer():
 
         self._init_movement_detector()
 
-        self._init_predifined_actions()
-
         self.tools = KuavoRobotTools()
-
-    def _init_predifined_actions(self) -> None:
-        """Initialize predefined actions."""
-        self.predifined_actions = {
-            "forward_step_left": {
-                "type": "single",
-                "foot_type": 0,  # Left foot
-                "movement": [0.5, 0.0, 0.0, 0.0, 0.4]  # [x, y, z, yaw]
-            },
-            # "backward_step_left": {
-            #     "type": "single", 
-            #     "foot_type": 0,
-            #     "movement": [-0.4, 0.0, 0.0, 0.0, 0.4]
-            # },
-            "forward_step_right": {
-                "type": "single",
-                "foot_type": 1,  
-                "movement": [0.5, 0.0, 0.0, 0.0, 0.4]  # [x, y, z, yaw]
-            },
-            # "backward_step_right": {
-            #     "type": "single", 
-            #     "foot_type": 1,
-            #     "movement": [-0.4, 0.0, 0.0, 0.0, 0.4]
-            # },
-            # "left_step": {
-            #     "type": "single",
-            #     "foot_type": 0, 
-            #     "movement": [0.0, 0.6, 0.0, 0.0, 0.4]
-            # },
-            # "left_step_back": {
-            #     "type": "single",
-            #     "foot_type": 0, 
-            #     "movement": [0.0, -0.3, 0.0, 0.0, 0.4]  
-            # },
-            # "right_step": {
-            #     "type": "single",
-            #     "foot_type": 1,  # Right foot
-            #     "movement": [0.0, -0.6, 0.0, 0.0, 0.4]
-            # },
-            # "right_step_back": {
-            #     "type": "single",
-            #     "foot_type": 1,
-            #     "movement": [0.0, 0.3, 0.0, 0.0, 0.4]
-            # },
-            # "turn_left": {
-            #     "type": "single",
-            #     "foot_type": 0,
-            #     "movement": [0.0, 0.3, 0.0, 90.0, 0.4]  # 30 degrees left
-            # },
-            # "turn_left_back": {
-            #     "type": "single",
-            #     "foot_type": 0,
-            #     "movement": [0.0, 0.3, 0.0, -30.0, 0.4]  # 30 degrees left
-            # },
-            # "turn_right": {
-            #     "type": "single", 
-            #     "foot_type": 1,
-            #     "movement": [0.0, 0.3, 0.0, -30.0, 0.4]  # 30 degrees right
-            # },
-            # "turn_right_back": {
-            #     "type": "single",
-            #     "foot_type": 1,
-            #     "movement": [0.0, 0.3, 0.0, 30.0, 0.4]  # 30 degrees right
-            # }
-        }
 
     def _init_bone_names(self) -> None:
         """Initialize bone names and their indices."""
@@ -421,7 +354,8 @@ class KuavoPicoInfoTransformer():
             'initial_left_foot_pose': [0.0, 0.1, 0.0, 0.0],
             'initial_right_foot_pose': [0.0, -0.1, 0.0, 0.0],
             'initial_body_pose': None,      # Initial body pose reference
-            
+            'max_step_length_x': 0.3,       # 最大步长x
+            'max_step_length_y': 0.15,      # 最大步长y
             # 新增：完整动作检测器参数
             'detection_mode': 'complete_action',  # 'threshold' 或 'complete_action'
             'complete_action': {
@@ -490,7 +424,7 @@ class KuavoPicoInfoTransformer():
         # Initialize trajectory queue and thread management
         self.queue_lock = threading.Lock()
         self.trajectory_queue = queue.Queue(maxsize=10)  # Limit queue size to prevent memory issues
-        self.movement_queue = queue.Queue(maxsize=1)  # Limit queue size to prevent memory issues
+        self.movement_queue = queue.Queue(maxsize=10)  # Limit queue size to prevent memory issues
         self.active_queue = None
         self.is_running = True
         self.trajectory_executor_thread = None
@@ -594,55 +528,20 @@ class KuavoPicoInfoTransformer():
 
     def _trajectory_executor_worker(self) -> None:
         """Worker thread that executes trajectory messages from the queue."""
-        last_mode = ModeNumber.FF
-        ss_command_issued = False
         while self.is_running:
             try:
-                with self.mpc_mode_lock:
-                    new_mode = self.mpc_mode
-
-                if new_mode == ModeNumber.SS:
-                    if not ss_command_issued:
-                        if self.complete_action_detector['left']['use_real_foot_data']:
-                            movement = self.movement_queue.get()
-                            SDKLogger.info(f"movement: {movement}, time: {time.time()}")
-                            foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
-                                movement['foot_type'], 
-                                [movement['movement_vector']], 
-                                0.4, 
-                                True
-                            )
-                            # time.sleep(0.4)
-                        else:
-                            foot_pose_traj_msg = self.trajectory_queue.get()
-                            SDKLogger.info(f"foot_pose_traj_msg: {foot_pose_traj_msg}, time: {time.time()}")
-                        if foot_pose_traj_msg is not None:
-                            self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
-                            # time.sleep(0.4)
-                            ss_command_issued = True
-                        else:
-                            SDKLogger.warning("Movement is illegal !!!")
-                    last_mode = new_mode
-                else:
-                    ss_command_issued = False
-                    if new_mode.value != last_mode.value:
-                        if self.foot_controller.is_execution_window(last_mode, new_mode):
-                            if self.complete_action_detector['left']['use_real_foot_data']:
-                                movement = self.movement_queue.get()
-                                SDKLogger.info(f"movement: {movement}, time: {time.time()}")
-                                foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
-                                    movement['foot_type'], 
-                                    [movement['movement_vector']], 
-                                    0.4, 
-                                    True
-                                )
-                                time.sleep(0.4)
-                            else:
-                                foot_pose_traj_msg = self.trajectory_queue.get()
-                                SDKLogger.info(f"foot_pose_traj_msg: {foot_pose_traj_msg}, time: {time.time()}")
-                            self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
-                            last_mode = ModeNumber(new_mode.value)
-                            time.sleep(0.4)
+                if self.complete_action_detector['left']['use_real_foot_data']:
+                    movement = self.movement_queue.get()
+                    SDKLogger.info(f"movement: {movement}, time: {time.time()}")
+                    foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
+                        movement['foot_type'], 
+                        [movement['movement_vector']], 
+                        0.4, 
+                        True
+                    )
+                if foot_pose_traj_msg is not None:
+                        self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
+                        time.sleep(5)   # TODO: judge if torso reached target
             except queue.Empty:
                 # No message in queue, continue waiting
                 continue
@@ -692,52 +591,6 @@ class KuavoPicoInfoTransformer():
             right_foot_pose[2]
         ]
         self.foot_pose_pub.publish(foot_pose_msg)
-
-    def test_predefined_action(self, action_name: str = "forward_step") -> bool:
-        """Test predefined action sequences.
-        
-        Args:
-            action_name: Name of the predefined action
-                - "forward_step": Single forward step
-                - "backward_step": Single backward step  
-                - "left_step": Single left step
-                - "right_step": Single right step
-                - "turn_left": Turn left in place
-                - "turn_right": Turn right in place
-                - "walk_forward": Multiple forward steps
-                - "walk_backward": Multiple backward steps
-                - "sidestep_left": Multiple left steps
-                - "sidestep_right": Multiple right steps
-        
-        Returns:
-            bool: True if action was successfully added to queue
-        """
-        if action_name not in self.predifined_actions:
-            SDKLogger.error(f"Unknown action: {action_name}")
-            SDKLogger.info(f"Available actions: {list(self.predifined_actions.keys())}")
-            return False
-        
-        action = self.predifined_actions[action_name]
-        SDKLogger.info(f"Testing predefined action: {action_name}")
-        
-        if action["type"] == "single":
-            # Single foot movement
-            foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
-                action["foot_type"], 
-                [action["movement"]], 
-                0.4, 
-                True
-            )
-            self.add_trajectory_to_queue(foot_pose_traj_msg)
-
-        return True
-
-    def get_available_test_actions(self) -> list:
-        """Get list of available predefined test actions."""
-        actions = []
-        for key in self.predifined_actions:
-            actions.append(key)
-        return actions
 
     def cleanup(self) -> None:
         """Cleanup resources and stop threads."""
@@ -1737,11 +1590,6 @@ class KuavoPicoInfoTransformer():
             yaw_diff -= 360
         while yaw_diff < -180:
             yaw_diff += 360
-        
-        yaw_diff = 0.0 if -20 < yaw_diff < 20 else yaw_diff
-        pos_diff[0] = 0.0 if -0.05 < pos_diff[0] < 0.05 else pos_diff[0]
-        pos_diff[1] = 0.0 if -0.05 < pos_diff[1] < 0.05 else pos_diff[1]
-        print(f"修正后的yaw:{yaw_diff}")
 
         return [pos_diff[0], pos_diff[1], pos_diff[2], yaw_diff]
     
@@ -2148,8 +1996,9 @@ class KuavoSingleFootController:
         self.robot_tools = KuavoRobotTools()
         self.pico_info_transformer = pico_info_transformer
 
-        self.default_foot_spacing = 0.25
-        self.safe_foot_spacing = 0.65
+        self.init_com_z = None
+        self.init_foot_spacing = 0.2
+        self.safe_foot_spacing = 0.5
         self.safe_back_foot_spacing = 0.3
 
         self.current_left_foot = np.array([0.0, 0.1, 0.0, 0.0])
@@ -2180,13 +2029,21 @@ class KuavoSingleFootController:
             self.mpc_plan_target[:3] = state_traj.value[6:9]
             # SDKLogger.info(f"MPC plan target: {self.mpc_plan_target}")
 
-    def get_delta_com_z(self, step_length):
-        if step_length <= 0.25:
-            delta_com_z = 0.0
-        elif 0.25 < step_length <= 0.6:
-            delta_com_z = (step_length - 0.2) * (0.1 - step_length)
-        else:
-            delta_com_z = -0.2
+    # def get_delta_com_z(self, step_length):
+    #     if step_length <= 0.25:
+    #         delta_com_z = 0.0
+    #     elif 0.25 < step_length <= 0.6:
+    #         delta_com_z = (step_length - 0.2) * (0.1 - step_length)
+    #     else:
+    #         delta_com_z = -0.2
+    #     return delta_com_z
+
+    def get_delta_com_z(self, step_length, current_com_z):
+        """Calculate delta com_z based on step length."""
+        leg_length = np.sqrt(self.init_com_z ** 2 + (self.init_foot_spacing / 2) ** 2)
+        com_z = np.sqrt(leg_length**2 - (step_length / 2)**2)
+        delta_com_z = (com_z - current_com_z) * 2
+
         return delta_com_z
     
     def process_movement_pose(self, movement_pose):
@@ -2194,16 +2051,11 @@ class KuavoSingleFootController:
 
         step_length = np.sqrt(movement_pose[0]**2 + movement_pose[1]**2)
 
-        # max_step_length = 0.2 if movement_pose[0] < 0.0 and not stride2stance else 0.6
-        max_step_length = 0.6
-        scale = 1.0 if step_length < max_step_length else max_step_length / step_length
+        max_step_length_x = self.pico_info_transformer.movement_detector['max_step_length_x']
+        max_step_length_y = self.pico_info_transformer.movement_detector['max_step_length_y']
 
-        movement_pose[0] = 0.0 if -0.05 < movement_pose[0] < 0.05 else movement_pose[0]
-        movement_pose[1] = 0.0 if -0.05 < movement_pose[1] < 0.05 else movement_pose[1]
-        movement_pose[3] = 0.0 if -20 < movement_pose[3] < 20 else movement_pose[3]
-
-        movement_pose[0] *= scale
-        movement_pose[1] *= scale
+        movement_pose[0] = min(max_step_length_x, max(-max_step_length_x, movement_pose[0]))
+        movement_pose[1] = min(max_step_length_y, max(-max_step_length_y, movement_pose[1]))
 
         return movement_pose
     
@@ -2216,15 +2068,23 @@ class KuavoSingleFootController:
         
         if self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']:
             current_left_foot_base = self.robot_tools.get_tf_transform(
-                target_frame="odom",
+                target_frame="base_link",
                 source_frame="leg_l6_link",
                 return_type="pose_quaternion"
             )
             current_right_foot_base = self.robot_tools.get_tf_transform(
-                target_frame="odom",
+                target_frame="base_link",
                 source_frame="leg_r6_link",
                 return_type="pose_quaternion"
             )
+            current_torso = self.robot_tools.get_base_to_odom()
+
+            current_com_z = current_torso.position[2]
+            SDKLogger.info(f"Current COM Z:{current_com_z}")
+            if self.init_com_z is None:
+                self.init_com_z = current_com_z
+                SDKLogger.info(f"Initial COM Z set to: {self.init_com_z}")
+            
             _, _, yaw_l6 = euler_from_quaternion(current_left_foot_base.orientation)
             _, _, yaw_r6 = euler_from_quaternion(current_right_foot_base.orientation)
 
@@ -2232,8 +2092,8 @@ class KuavoSingleFootController:
             SDKLogger.info(f"current_right_foot_base: {current_right_foot_base.position}, yaw_r6: {yaw_r6}")
             SDKLogger.info(f"mpc_plan_target: {self.mpc_plan_target}")
 
-            self.current_left_foot = np.array([*current_left_foot_base.position, yaw_l6]) - self.mpc_plan_target
-            self.current_right_foot = np.array([*current_right_foot_base.position, yaw_r6]) - self.mpc_plan_target
+            self.current_left_foot = np.array([*current_left_foot_base.position, yaw_l6])
+            self.current_right_foot = np.array([*current_right_foot_base.position, yaw_r6])
         else:
             self.current_left_foot = np.array(self.pico_info_transformer.movement_detector['initial_left_foot_pose'])
             self.current_right_foot = np.array(self.pico_info_transformer.movement_detector['initial_right_foot_pose'])
@@ -2263,37 +2123,36 @@ class KuavoSingleFootController:
             SDKLogger.info(f"foot_pose_after:{foot_pose}")
 
             target_pose_safe = current_swing_foot.copy() + foot_pose.copy()
-            step_length_safe = np.linalg.norm(target_pose_safe[:2] - current_support_foot[:2])
-
-            if step_length_safe > self.safe_foot_spacing:
-                return None
             
-            target_pose_safe[0] = -0.25 if target_pose_safe[0] < -0.25 else target_pose_safe[0]
+            target_pose_safe[0] = -0.2 if target_pose_safe[0] < -0.2 else target_pose_safe[0]
             
+            # Ensure foot spacing > 0.3 m && yaw of foot2base is non-positive
             if foot_type == 0:
-                target_pose_safe[1] = current_support_foot[1] + 0.2 if target_pose_safe[1] < current_support_foot[1] + 0.2 else target_pose_safe[1]
+                target_pose_safe[1] = current_support_foot[1] + 0.3 if target_pose_safe[1] < current_support_foot[1] + 0.3 else target_pose_safe[1]
+                target_pose_safe[3] = max(0, target_pose_safe[3])
             else:
-                target_pose_safe[1] = current_support_foot[1] - 0.2 if target_pose_safe[1] > current_support_foot[1] - 0.2 else target_pose_safe[1]
+                target_pose_safe[1] = current_support_foot[1] - 0.3 if target_pose_safe[1] > current_support_foot[1] - 0.3 else target_pose_safe[1]
+                target_pose_safe[3] = min(0, target_pose_safe[3])
 
             print(f"target_pose_safe:{target_pose_safe}")
+            step_length_safe = np.linalg.norm(target_pose_safe[:2] - current_support_foot[:2])
+            
+            if step_length_safe > self.safe_foot_spacing:
+                return None
 
             torso_pose_before = (current_swing_foot.copy() + current_support_foot.copy()) / 2
             torso_pose_after = (target_pose_safe.copy() + current_support_foot.copy()) / 2
             torso_pose = torso_pose_after.copy() - torso_pose_before.copy()
+            torso_pose[2] = self.get_delta_com_z(step_length_safe, current_com_z)
 
-            torso_height_before = self.get_delta_com_z(step_length_before)
-            torso_height_after = self.get_delta_com_z(step_length_safe)
-            torso_height_offset = torso_height_after - torso_height_before
-            torso_pose[2] = torso_height_offset
+            if target_pose_safe[0] < 0 and current_support_foot[0] < 0:
+                torso_pose[0] = min(torso_pose[0], target_pose_safe[0] / 2)
 
             target_pose_safe[2] = 0.0
 
             print(f"step_length_before:{step_length_before}")
             print(f"step_length_after:{step_length_after}")
             print(f"step_length_safe:{step_length_safe}")
-            print(f"torso_height_before:{torso_height_before}")
-            print(f"torso_height_after:{torso_height_after}")
-            print(f"torso_height_offset:{torso_height_offset}")
 
             print(f"use_real_foot_data: {self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']}")
             if not self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']:

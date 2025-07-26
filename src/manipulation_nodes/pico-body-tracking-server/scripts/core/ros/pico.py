@@ -171,26 +171,42 @@ class KuavoPicoNode:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def __init__(self):
+    def __init__(self, play_mode: bool = False):
         """Initialize the Pico node."""
         if not hasattr(self, '_initialized'):
             KuavoPicoNodeManager.get_instance('kuavo_pico_node')
-            
+            self._play_mode = play_mode
             # Initialize parameters
             self._init_parameters()
-            
             # Initialize model and transformers
             self._init_model_and_transformers()
-            
             # Initialize publishers
             self._init_publishers()
-            
             # Initialize subscribers
             self._init_subscribers()
-
             self.robot_matrix_publisher = RobotMatrixPublisher()
-            
             self._initialized = True
+        else:
+            # Allow updating play_mode if already initialized
+            self._play_mode = play_mode
+
+    def set_play_mode(self, enable: bool):
+        """Enable or disable play mode (controls /robot_body_matrices subscription)."""
+        if hasattr(self, '_play_mode') and self._play_mode == enable:
+            return
+        self._play_mode = enable
+        # Remove or add the subscriber as needed
+        if enable:
+            if not hasattr(self, '_robot_body_matrices_sub') or self._robot_body_matrices_sub is None:
+                self._robot_body_matrices_sub = rospy.Subscriber(
+                    "/robot_body_matrices",
+                    robotBodyMatrices,
+                    self.robot_body_matrices_callback
+                )
+        else:
+            if hasattr(self, '_robot_body_matrices_sub') and self._robot_body_matrices_sub is not None:
+                self._robot_body_matrices_sub.unregister()
+                self._robot_body_matrices_sub = None
 
     def _init_parameters(self) -> None:
         """Initialize node parameters."""
@@ -234,11 +250,14 @@ class KuavoPicoNode:
             self.pico_hands_poses_callback
             # self.pico_hands_poses_callback_ik
         )
-        rospy.Subscriber(
-            "/robot_body_matrices", 
-            robotBodyMatrices, 
-            self.robot_body_matrices_callback
-        )
+        # Only subscribe to /robot_body_matrices if play_mode is True
+        self._robot_body_matrices_sub = None
+        if getattr(self, '_play_mode', False):
+            self._robot_body_matrices_sub = rospy.Subscriber(
+                "/robot_body_matrices",
+                robotBodyMatrices,
+                self.robot_body_matrices_callback
+            )
 
     def set_robot_model_params(self) -> str:
         """Set robot model parameters."""
@@ -306,12 +325,13 @@ class KuavoPicoNode:
 
     def robot_body_matrices_callback(self, robot_body_matrices_msg: robotBodyMatrices) -> None:
         """Callback for robot body matrices."""
-        pass
+
+        # process data of hands
         robot_urdf_matrices, current_time = self.robot_matrix_publisher.get_all_matrices_from_message(robot_body_matrices_msg)
         self.pico_info_transformer.publish_local_poses(robot_urdf_matrices, current_time)
-    
+
+        # process data of foots
         self.pico_info_transformer.process_foot_poses_parallel(robot_urdf_matrices)
-        # self.pico_info_transformer.test_foot_controller()
 
     def pico_hands_poses_callback(self, pico_hands_poses_msg: picoPoseInfoList) -> None:
         """Callback for Pico hands poses."""

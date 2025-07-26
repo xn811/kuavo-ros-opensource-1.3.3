@@ -218,14 +218,6 @@ class KuavoPicoServer:
         if not self.send_initial_message():
             SDKLogger.error("Failed to establish initial connection")
             return
-        
-        # while not KuavoPicoNodeManager.get_ros_is_shutdown():
-        #     actions = self.pico_node.pico_info_transformer.get_available_test_actions()
-        #     # self.pico_node.pico_info_transformer.test_predefined_action(actions[0])
-        #     for action in actions:
-        #         self.pico_node.pico_info_transformer.test_predefined_action(action)
-        #         time.sleep(10)
-        #     # break
 
         SDKLogger.info("Waiting for data...")
         while not KuavoPicoNodeManager.get_ros_is_shutdown():

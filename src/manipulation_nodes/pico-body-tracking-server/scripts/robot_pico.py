@@ -60,6 +60,9 @@ class KuavoRobotPico:
         self.service_mode = True
         self._running = True
         
+        # Play mode flag
+        self._play_mode = False
+        
         # State management
         self.robot_state = RobotState.DISCONNECTED
         self.error_state = ErrorState.NORMAL
@@ -99,7 +102,7 @@ class KuavoRobotPico:
                 # Create new KuavoPicoServer instance with specified host and port
                 self.pico_server = KuavoPicoServer(host=host, port=port)
                 # Create KuavoPicoNode instance for configuration
-                self.pico_node = KuavoPicoNode()
+                self.pico_node = KuavoPicoNode(play_mode=self._play_mode)
                 self.robot_state = RobotState.CONNECTED
                 self.error_state = ErrorState.NORMAL
                 SDKLogger.info(f"Successfully connected to Pico at {host}:{port}")
@@ -208,6 +211,13 @@ class KuavoRobotPico:
         if self.pico_node:
             self.pico_node.send_srv = enable
         SDKLogger.info(f"Service mode set to {enable}")
+
+    def set_play_mode(self, enable: bool):
+        """Enable or disable play mode (controls /robot_body_matrices subscription)."""
+        self._play_mode = enable
+        if self.pico_node:
+            if hasattr(self.pico_node, 'set_play_mode'):
+                self.pico_node.set_play_mode(enable)
 
     def change_arm_ctrl_mode(self, mode: int):
         """Change arm control mode.
