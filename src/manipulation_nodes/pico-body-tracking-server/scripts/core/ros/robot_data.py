@@ -24,6 +24,7 @@ class RobotDataServer:
         self.last_claw_time = 0
         self.rate = rate
         self.downsample_interval = 1 / self.rate  # 50ms = 20Hz
+        self.only_push_half_body_data = True
 
     def start(self):
         try:
@@ -84,7 +85,10 @@ class RobotDataServer:
     def sensor_data_cur_callback(self, data):
         now = time.time()
         if now - self.last_sensor_time >= self.downsample_interval:
-            self.sensor_queue.put(data.data)
+            if self.only_push_half_body_data:
+                self.sensor_queue.put(data.data[12:26])
+            else:
+                self.sensor_queue.put(data.data)
             self.last_sensor_time = now
 
 
@@ -100,9 +104,14 @@ class RobotDataServer:
     def claw_data_cur_callback(self, data):
         if self.eef_type == "lejuclaw":
             now = time.time()
-            if now - self.last_claw_time >= self.downsample_interval:
-                self.claw_queue.put(data.data.effort)
+            effort = data.data.effort
+            if len(effort) == 2:
+                # 每个值后面补5个0
+                padded_effort = [effort[0]] + [0.0]*5 + [effort[1]] + [0.0]*5
+                self.claw_queue.put(padded_effort)
                 self.last_claw_time = now
+            else:
+                rospy.logwarn(f"收到的 claw effort 长度不为2: {effort}")
 
     def _periodic_push(self):
         last_eef_cur = None
