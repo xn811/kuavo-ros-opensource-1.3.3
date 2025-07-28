@@ -16,18 +16,19 @@ import rospy
 import rospkg
 import tf
 import numpy as np
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Tuple, Any, Set
 from tf2_msgs.msg import TFMessage
+from std_msgs.msg import Float64MultiArray,Float64
 from kuavo_msgs.msg import (
     twoArmHandPoseCmd, robotBodyMatrices, headBodyPose,
     picoPoseInfoList, robotHeadMotionData, ikSolveParam, 
     footPoseTargetTrajectories
 )
 from kuavo_msgs.srv import changeArmCtrlMode
-from noitom_hi5_hand_udp_python.msg import JoySticks # TODO: 从noitom_hi5_hand_udp_python导入是临时的，等待该消息迁移到 kuavo_msgs
+from kuavo_msgs.msg import JoySticks 
 from .pico_utils import KuavoPicoInfoTransformer
+from .joyticks_handler import JoySticksHandler
 from common.logger import SDKLogger
-
 
 class KuavoPicoNodeManager:
     """Singleton class for managing ROS node initialization."""
@@ -184,7 +185,11 @@ class KuavoPicoNode:
             self._init_publishers()
             # Initialize subscribers
             self._init_subscribers()
+
+            # Initialize joy handler
+            self._init_joy_handler()
             self.robot_matrix_publisher = RobotMatrixPublisher()
+                        
             self._initialized = True
         else:
             # Allow updating play_mode if already initialized
@@ -217,6 +222,12 @@ class KuavoPicoNode:
         self.send_srv = True
         self.last_pico_running_state = False
         self.button_y_last = False
+        self.item_mass_force =  {
+            'item_mass': 1.5, # 物品重量 单位 kg
+            'lforce': [0.0, 15.0, 5.0],
+            'rforce': [0.0, -15.0, 5.0]
+        }
+        self.option_hand_wrench = False  # 施加/松开
 
     def _init_model_and_transformers(self) -> None:
         """Initialize model and transformers."""
@@ -241,6 +252,10 @@ class KuavoPicoNode:
             twoArmHandPoseCmd, 
             queue_size=10
         )
+        self.pub_hand_wrench_cmd = rospy.Publisher( # 发布手臂末端 6 维力
+            '/hand_wrench_cmd', 
+            Float64MultiArray, 
+            queue_size=1)
 
     def _init_subscribers(self) -> None:
         """Initialize ROS subscribers."""
@@ -258,6 +273,45 @@ class KuavoPicoNode:
                 robotBodyMatrices,
                 self.robot_body_matrices_callback
             )
+        
+        rospy.Subscriber(
+            "/pico/joy", 
+            JoySticks, 
+            self.pico_joy_callback
+        )   
+    
+    """Joy Callbacks"""
+    def _hand_wrench_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for hand wrench."""
+        if not self.option_hand_wrench:
+            SDKLogger.info(f"施加手部力:{self.item_mass_force}kg")
+            self.publish_hand_wrench_cmd(self.item_mass_force)
+            self.option_hand_wrench = True
+        else:
+            SDKLogger.info(f"松开手部力")
+            mass_force =  {
+                'item_mass': 0.0, # 物品重量 单位 kg
+                'lforce': [0.0, 0.0, 0.0],
+                'rforce': [0.0, 0.0, 0.0],
+            }
+            self.publish_hand_wrench_cmd(mass_force)
+            self.option_hand_wrench = False
+
+    def _init_joy_handler(self) -> None:
+        """Initialize joy handler."""
+        self.joy_handler = JoySticksHandler()
+        # 手柄 XYAB 组合键映射
+        JOY_BTN_MAPPING = {
+            "hand_wrench": { # 临时的,如果冲突需要重新定义
+                # X 长按 + Y 长按 + A 按下 + B 空闲
+                'key_combination': set(['X_LONG_PRESSED', 'Y_LONG_PRESSED', 'A_PRESSED', 'B_IDLE']),
+                'callback': self._hand_wrench_callback
+            }
+        }
+        for key, value in JOY_BTN_MAPPING.items():
+            self.joy_handler.add_callback(key, 
+                                          value['key_combination'], 
+                                          value['callback'])
 
     def set_robot_model_params(self) -> str:
         """Set robot model parameters."""
@@ -333,6 +387,19 @@ class KuavoPicoNode:
         # process data of foots
         self.pico_info_transformer.process_foot_poses_parallel(robot_urdf_matrices)
 
+    def publish_hand_wrench_cmd(self, item_mass_force: dict) -> None:
+        """Publish hand wrench command."""
+        msg = Float64MultiArray()
+        left_force = item_mass_force['lforce'] + [0,0,0]
+        right_force = item_mass_force['rforce'] + [0,0,0]
+        msg.data = left_force + right_force
+        self.pub_hand_wrench_cmd.publish(msg)
+    
+    def pico_joy_callback(self, pico_joy_msg: JoySticks) -> None:
+        """Callback for Pico joy."""        
+        # 处理手柄按键逻辑，组合按键会在内部回调
+        self.joy_handler.update(pico_joy_msg)
+
     def pico_hands_poses_callback(self, pico_hands_poses_msg: picoPoseInfoList) -> None:
         """Callback for Pico hands poses."""
         self.pico_info_transformer.read_msg_hand(pico_hands_poses_msg)
@@ -403,6 +470,11 @@ class KuavoPicoNode:
             self.pub_ik.publish(eef_pose_msg)
         else:
             SDKLogger.warn("Not publishing to /ik/two_arm_hand_pose_cmd because is_running is False")
+    def set_item_mass_force(self, mass, left_force, right_force)->None:
+        """Set item mass force."""
+        self.item_mass_force['item_mass'] = mass
+        self.item_mass_force['lforce'] = left_force
+        self.item_mass_force['rforce'] = right_force
 
 class RobotMatrixPublisher:
     """Publisher for robot body matrices data recording."""

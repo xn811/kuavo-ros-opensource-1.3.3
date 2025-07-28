@@ -147,6 +147,9 @@ class RobotDataServer:
                     "motor_cur": motor_cur,
                     "eef_cur": eef_cur,
                 }
+                # 上传反馈: 当前设置的末端力大小和物品重量
+                if hasattr(self, "hand_wrench_and_item_mass"):
+                    push_data["itemMassForce"] = self.hand_wrench_and_item_mass
                 self.send_to_client(json.dumps(push_data))
 
             except queue.Empty:
@@ -157,6 +160,13 @@ class RobotDataServer:
             time2 = time.time()
             time.sleep(max(0, 1/self.rate - (time2 - time1)))
 
+    def update_hand_wrench_and_item_mass(self, mass:float, left_force:list):
+        self.hand_wrench_and_item_mass = {
+            "itemMass": mass,
+            "lforceX": left_force[0] if len(left_force) > 0 else 0.0,
+            "lforceY": left_force[1] if len(left_force) > 1 else 0.0,
+            "lforceZ": left_force[2] if len(left_force) > 2 else 0.0,
+        }
 
 def main():
     target_ip = "192.168.1.100"  # <-- 替换为目标客户端 IP

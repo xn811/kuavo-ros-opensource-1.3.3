@@ -117,6 +117,7 @@ class RobotInfoBroadcaster:
                 "eef_type": self.eef_type,
             }
         }
+        self.running = True
 
     #     self.start_test_pause_thread()
 
@@ -145,6 +146,12 @@ class RobotInfoBroadcaster:
         SDKLogger.info("Robot info broadcast resumed")
     
 
+    def quit(self):
+        """Quit the robot info broadcaster."""
+        self.running = False
+        with self.broadcast_condition:
+            self.broadcast_condition.notify_all()
+
     def broadcast(self):
         """Broadcast robot information."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -153,8 +160,8 @@ class RobotInfoBroadcaster:
         
         try:
             for local_ip, broadcast_ip in self.ip_pairs:
-                SDKLogger.info(f"Broadcast IP: {local_ip}:{self.broadcast_port}")            
-            while True:
+                SDKLogger.info(f"Broadcast IP: {local_ip}")            
+            while self.running:
                 try:
                     # 使用条件信号等待广播恢复或超时
                     with self.broadcast_condition:
@@ -167,12 +174,13 @@ class RobotInfoBroadcaster:
                             self.robot_info["data"]["robot_ip"] = local_ip
                             message = json.dumps(self.robot_info).encode("utf-8")
                             sock.sendto(message, (broadcast_ip, self.broadcast_port))
-                            SDKLogger.debug(f"Broadcasting to {broadcast_ip}:{self.broadcast_port}")
+                            # SDKLogger.debug(f"Broadcasting to {broadcast_ip}:{self.broadcast_port}")
                     time.sleep(1)
                 except Exception as e:
                     SDKLogger.error(f"Error broadcasting robot info: {e}")
                     break
         finally:
+            SDKLogger.info("机器人信息广播线程已退出.")
             sock.close()
 
 
@@ -689,18 +697,6 @@ class KuavoPicoInfoTransformer():
             ros_matrices[idx] = ros_matrices[idx] @ T_RIGHT_ARM_CORRECTION
         return ros_matrices
 
-    def parse_joy_data(self, data_str):
-        """Parse JSON format joy data."""
-        try:
-            data = json.loads(data_str)
-            if 'controllers' in data:
-                return data['controllers']
-            else:
-                return None
-        except Exception as e:
-            SDKLogger.error(f"Error parsing JSON data: {e}")
-            return None
-
     def parse_transform_data(self, data_str):
         """Parse JSON format transform data."""
         try:
@@ -1160,7 +1156,7 @@ class KuavoPicoInfoTransformer():
         
         self.bone_frame_publisher.publish_pose_info_list(pose_info_list)
 
-    def publish_pico_joys(self, joy_data):
+    def publish_pico_joys(self, joy_data:json):
         """Publish pico joys"""
         joy_msg = JoySticks()
         try:   
@@ -1189,13 +1185,17 @@ class KuavoPicoInfoTransformer():
                         ]
                     }
                 else:
-                    SDKLogger.error(f"Process Joy data lost {side} in json!")
+                    SDKLogger.error(f"处理 Joy 数据时在 json 中丢失了{side}!")
                     return  {
                         "buttons":  [False]*4,
                         "axes": [0.0]*4
                     }
-            left_joy = process_joy_data(joy_data, 'left')
-            right_joy = process_joy_data(joy_data, 'right')
+            if not 'controllers' in joy_data:
+                SDKLogger.error(f"处理 Joy 数据时在 json 中丢失了 controllers!")
+                return None
+            controller_data = joy_data['controllers']
+            left_joy = process_joy_data(controller_data, 'left')
+            right_joy = process_joy_data(controller_data, 'right')
             joy_msg.left_x = left_joy["axes"][0]
             joy_msg.left_y = left_joy["axes"][1]
             joy_msg.left_grip = left_joy["axes"][2]

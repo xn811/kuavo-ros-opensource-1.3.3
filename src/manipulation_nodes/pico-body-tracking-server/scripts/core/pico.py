@@ -9,6 +9,7 @@ import threading
 import argparse
 import signal
 import time
+import json
 from enum import Enum
 import numpy as np
 import tf
@@ -102,6 +103,7 @@ class KuavoPicoServer:
         self.broadcast_thread = threading.Thread(target=self.broadcaster.broadcast, daemon=True)
         self.broadcast_thread.start()
 
+        # 上传机器人手臂/手指电流, 接收下发控制指令
         self.robot_data_server = RobotDataServer(self.broadcaster.eef_type)
         self.robot_data_server_thread = threading.Thread(target=self.robot_data_server.start, daemon=True)
         self.robot_data_server_thread.start()
@@ -132,6 +134,7 @@ class KuavoPicoServer:
         """Cleanup when the object is destroyed."""
         if self.socket:
             self.socket.close()
+        self.broadcaster.quit()    
         SDKLogger.info("Stopped UDP server")
 
     def handle_error(self, error, error_state):
@@ -147,7 +150,37 @@ class KuavoPicoServer:
         time.sleep(self.retry_delay)
         return True
 
+
+    def _parse_data(self, data_str):
+        """Parse data."""
+        try:
+            data = json.loads(data_str)
+            return data
+        except Exception as e:
+            SDKLogger.error(f"KuavoPicoServer: Error parsing JSON data: {e}")
+            return None
+
     def process_data(self, data_str):
+        """Process data."""
+        data = self._parse_data(data_str)
+        if data is None:
+            return
+        
+        # 处理不同类型的数据
+        if 'dataType' in data:
+            if data['dataType'] == 'bodyTracking':
+                self.process_body_tracking_data(data_str) # 处理全身模式 骨骼信息
+            elif data['dataType'] == 'controller':
+                self.process_pico_joy_data(data) # 处理pico手柄数据
+            elif data['dataType'] == 'VrCommand':
+                self.process_vr_command(data) # 处理VR下发的命令
+            elif data['dataType'] == 'upperBody':
+                # TODO 处理半身模式
+                pass 
+        else:
+            SDKLogger.warn("no data type")
+    
+    def process_body_tracking_data(self, data_str):
         """Process data."""
         robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix(data_str)
         self.robot_matrix_publisher.publish_matrices(robot_urdf_matrices, current_time)
@@ -182,16 +215,39 @@ class KuavoPicoServer:
         #     self.pico_node.pico_info_transformer.compute_head_body_pose(robot_urdf_matrices)
         #     self.pico_node.pico_info_transformer.pub_head_body_pose_msg(self.pico_node.pico_info_transformer.head_body_pose)
     
-    def process_pico_joy_data(self, data_str):
+    def process_pico_joy_data(self, data_json):
         """Process pico joy data and print to console."""
         try:
-            joy_data = self.pico_node.pico_info_transformer.parse_joy_data(data_str)
-            if not joy_data:
-                SDKLogger.warn("no pico joy data")
-                return
-            self.pico_node.pico_info_transformer.publish_pico_joys(joy_data)
+            self.pico_node.pico_info_transformer.publish_pico_joys(data_json)
         except Exception as e:
             SDKLogger.error(f"Error processing pico joy data: {e}")
+
+    def process_vr_command(self, data_json:json):
+        """Process VR command."""
+        try:
+            if 'itemMassForce' in data_json:
+                if 'itemMass' not in data_json.get('itemMassForce') \
+                    or 'lforceX' not in data_json.get('itemMassForce') \
+                    or 'lforceY' not in data_json.get('itemMassForce') \
+                    or 'lforceZ' not in data_json.get('itemMassForce'):
+                    mass = data_json.get('itemMassForce').get('itemMass')
+                    lforce_x = data_json.get('itemMassForce').get('lforceX')
+                    lforce_y = data_json.get('itemMassForce').get('lforceY')
+                    lforce_z = data_json.get('itemMassForce').get('lforceZ')
+                    rforce_x = lforce_x
+                    rforce_y = -lforce_y
+                    rforce_z = lforce_z
+                    # SDKLogger.error("VR command data is not contain all required mass/force.")
+                    left_force = [lforce_x, lforce_y, lforce_z]
+                    right_force = [rforce_x, rforce_y, rforce_z]
+                    self.pico_node.set_item_mass_force(mass, left_force, right_force)         # 更新末端力
+                    self.robot_data_server.update_hand_wrench_and_item_mass(mass, left_force) # 上传末端力配置
+                else:
+                    SDKLogger.error("VR command data is not contain all required mass/force.")
+            else:
+                SDKLogger.error("VR command data is not contain itemMassForce.")
+        except Exception as e:
+            SDKLogger.error(f"Error processing VR command: {e}")
 
     def process_data_thread(self):
         """Thread function for processing data."""
@@ -200,7 +256,6 @@ class KuavoPicoServer:
             try:
                 data_str = self.data_queue.get(timeout=0.1)
                 self.process_data(data_str)
-                self.process_pico_joy_data(data_str) # 处理pico手柄数据
             except queue.Empty:
                 continue
             except Exception as e:

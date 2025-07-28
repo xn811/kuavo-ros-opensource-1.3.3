@@ -17,7 +17,15 @@ def setup_logger():
         log_dir = f'./{log_suffix}'
         Path(log_dir).mkdir(parents=True, exist_ok=True)        
     log_file = f'{log_dir}/kuavo_pico_vr.log'
-
+    # Create .gitignore if log directory is not in /var
+    if not log_dir.startswith('/var'):
+        gitignore_path = os.path.join(log_dir, '.gitignore')
+        if not os.path.exists(gitignore_path):
+            try:
+                with open(gitignore_path, 'w') as f:
+                    f.write('*\n')
+            except Exception as e:
+                print(f'Warning: Could not create .gitignore in {log_dir}: {e}')
     print(f'kuavo-pico-vr log_file: {log_file}')
 
     fh = RotatingFileHandler(log_file, maxBytes=2*1024*1024, backupCount=5)  # 每个日志文件最大 2 MB，保留 5 个备份文件
