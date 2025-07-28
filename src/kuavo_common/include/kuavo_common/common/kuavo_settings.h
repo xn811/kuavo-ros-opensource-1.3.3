@@ -6,7 +6,7 @@
 #include <Eigen/Core>
 #include "kuavo_common/common/robot_state.h"
 #include "kuavo_common/common/json_config_reader.hpp"
-
+#include "kuavo_common/common/common.h"
 namespace HighlyDynamic
 {
 
@@ -153,8 +153,8 @@ namespace HighlyDynamic
             motors_exist.resize(num_joints);
             motors_disable.resize(num_joints);
         }
-        std::string getEcmasterType(int robot_version_int=40);
-        std::string getIMUType(int robot_version_int = 40);
+        std::string getEcmasterType(RobotVersion rb_version = RobotVersion(4, 0));
+        std::string getIMUType(RobotVersion rb_version = RobotVersion(4, 0));
 
     };
 
