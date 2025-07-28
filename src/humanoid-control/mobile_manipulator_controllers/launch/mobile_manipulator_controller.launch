@@ -39,7 +39,6 @@
   <!-- </group> -->
 
   <node pkg="mobile_manipulator_controllers" type="mobile_manipulator_controllers_node" name="mobile_manipulator_controllers_node" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)"/>
-  <node pkg="mobile_manipulator_controllers" type="mobile_manipulator_controllers_ik_target" name="mobile_manipulator_controllers_ik_target" output="screen" required="true" launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)"/>
 
   <node if="$(arg rviz)" pkg="ocs2_mobile_manipulator_ros" type="mobile_manipulator_target" name="mobile_manipulator_target" 
         output="screen" launch-prefix="" />

@@ -1,3 +1,4 @@
+#include <pinocchio/fwd.hpp>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <ros/ros.h>

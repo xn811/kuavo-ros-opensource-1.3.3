@@ -19,6 +19,7 @@ namespace mobile_manipulator_controller
     : MobileManipulatorControllerBase(nh, taskFile, libFolder, urdfFile, mpcType, freq, dummySimBase, dummySimArm, visualizeMm)
     , nh_(nh)
   {
+    ikTargetManager_->setEnableHumanoidObservationCallback(false);
   }
 
   bool MobileManipulatorControllerGeneral::init(double comHeight)
@@ -73,6 +74,7 @@ namespace mobile_manipulator_controller
       recievedObservation_ = true;
       ROS_INFO("Recieved first humanoid state");
     }
+    ikTargetManager_->setHumanoidObservationByMmState(humanoidState_);
   }
 
   void MobileManipulatorControllerGeneral::update()

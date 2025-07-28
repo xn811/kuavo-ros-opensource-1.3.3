@@ -1,6 +1,8 @@
 #pragma once
 
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
+#include "mobile_manipulator_controllers/mobileManipulatorIkTarget.h"
 #include <ocs2_core/misc/Benchmark.h>
 #include <ocs2_mpc/MPC_MRT_Interface.h>
 #include <ocs2_mpc/SystemObservation.h>
@@ -42,7 +44,7 @@ namespace mobile_manipulator_controller
     ~MobileManipulatorControllerBase();
     int update(const vector_t& externalState, vector_t& nextState);
     int update(const vector_t& externalState, vector_t& nextState, vector_t& optimizedInput);
-    void stop() { updateRunning_ = false; observationPublishing_ = false; }
+    void stop() { updateRunning_ = false; observationPublishing_ = false; ikTargetManager_->stop(); }
     void start() { updateRunning_ = true; }
     bool isObservationPublishing() const { return observationPublishing_; }
     /**
@@ -77,6 +79,10 @@ namespace mobile_manipulator_controller
     int getOptimizedStateAndInput(const SystemObservation& currentObservation, vector_t& optimizedStateMrt, vector_t& optimizedInputMrt);
     int anomaly_check(const SystemObservation& currentObservation, const PrimalSolution& policy, const CommandData& command, const PerformanceIndex& performanceIndices);
     /**
+     * @brief 检查MPC线程是否已经完全暂停
+     * @return true如果线程已暂停，false如果线程仍在运行
+     */
+    bool isMpcThreadPaused() const;        /**
      * Creates MPC Policy message.
      *
      * @param [in] primalSolution: The policy data of the MPC.
@@ -164,12 +170,16 @@ namespace mobile_manipulator_controller
     std::atomic_bool controllerRunning_{}, mpcRunning_{}, updateRunning_{};
     
     // Thread synchronization for reset operations
-    std::mutex mpcThreadMutex_;
+    mutable std::mutex mpcThreadMutex_;
     std::condition_variable mpcThreadCondition_;
     std::atomic_bool mpcThreadPaused_{false};
     
     // Flag to track if observations are being published
     std::atomic_bool observationPublishing_{false};
+    
+    // Thread synchronization configuration
+    int maxThreadWaitTimeMs_{1000};  // 最大线程等待时间(毫秒)
+    int threadCheckIntervalMs_{2};   // 线程检查间隔(毫秒)
     
     benchmark::RepeatedTimer mpcTimer_;
 
@@ -195,6 +205,8 @@ namespace mobile_manipulator_controller
     const std::string robotName_ = "mobile_manipulator";
     std::unique_ptr<humanoid::TopicLogger> ros_logger_;
     MpcType mpcType_;
+
+    std::unique_ptr<MobileManipulatorIkTarget> ikTargetManager_;
   };
 
 } // namespace mobile_manipulator_controller

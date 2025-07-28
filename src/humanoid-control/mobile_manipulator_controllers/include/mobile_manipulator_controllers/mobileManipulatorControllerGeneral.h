@@ -1,3 +1,4 @@
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
 #include <ocs2_mpc/SystemObservation.h>
 #include <ocs2_ros_interfaces/command/TargetTrajectoriesRosPublisher.h>

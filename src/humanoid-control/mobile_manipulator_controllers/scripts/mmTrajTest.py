@@ -101,7 +101,7 @@ def main():
 
     # Path to the CSV file
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_file_name = '../data/mm_poses_0.csv'
+    csv_file_name = '../data/mm_poses_1.csv'
     file_path = os.path.join(script_dir, csv_file_name)
 
     if not os.path.isfile(file_path):
@@ -125,6 +125,7 @@ def main():
         msg = armTargetPoses()
         msg.times = times
         msg.values = values
+        msg.frame = 2   # 0 keep current frame  1 world frame (based on odom)  2  local frame  3  VRFrame  4  manipulation world frame
 
         rospy.loginfo("Publishing mobile manipulator target poses to topic '/mm/end_effector_trajectory'")
         

@@ -32,6 +32,5 @@
   <param name="com_height"    value="$(arg com_height)" />
 
   <node pkg="mobile_manipulator_controllers" type="mobile_manipulator_controllers_node_general" name="mobile_manipulator_controllers_node_general" output="screen" />
-  <node pkg="mobile_manipulator_controllers" type="mobile_manipulator_controllers_ik_target" name="mobile_manipulator_controllers_ik_target" output="screen" />
 
 </launch>

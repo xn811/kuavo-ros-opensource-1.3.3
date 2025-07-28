@@ -243,6 +243,7 @@ class Quest3Node:
             return
         if self.quest3_arm_info_transformer.is_runing and self.predict_time <= 1e-5:
             eef_pose_msg = twoArmHandPoseCmd()
+            eef_pose_msg.frame = 3
             eef_pose_msg.hand_poses.left_pose.pos_xyz = left_pose[0]
             eef_pose_msg.hand_poses.left_pose.quat_xyzw = left_pose[1]
             eef_pose_msg.hand_poses.left_pose.elbow_pos_xyz = left_elbow_pos

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
