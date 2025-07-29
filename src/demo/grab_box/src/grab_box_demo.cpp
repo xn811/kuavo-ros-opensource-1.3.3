@@ -147,7 +147,7 @@ int main(int argc, char **argv)
   factory.registerNodeType<GetPartPose>("GetPartPose");
   factory.registerNodeType<SelectHandSide>("SelectHandSide");
 
-  RobotVersion robot_version(4, 2);
+  RobotVersion rb_version(4, 2);
 
   if (nh.hasParam("/robot_version"))
   {
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
   // Register the custom logger
   CSVLogger::getInstance().initialize("behavior_tree_log.csv");
   // Create a behavior tree from a string
-  const std::string version_int_str = "kuavo_v" + std::to_string(robot_version.versionInt());
+  const std::string version_int_str = "kuavo_v" + rb_version.to_string();
   YAML::Node config = YAML::LoadFile(GrabBox::getPath() + "/cfg/" + version_int_str + "/bt_config.yaml");
   std::string bt_xml_string = config["bt_xml_file"].as<std::string>();
   std::string bt_xml_string_reset = config["bt_xml_file_reset"].as<std::string>();

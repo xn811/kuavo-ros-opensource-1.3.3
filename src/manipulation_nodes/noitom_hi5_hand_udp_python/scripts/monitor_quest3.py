@@ -415,7 +415,6 @@ def get_local_broadcast_ips():
         rospy.logerr(f"Error getting broadcast IPs using 'netifaces': {e}. Ensure 'netifaces' is installed and network interfaces are configured correctly.")
         return []
 
-
 if __name__ == "__main__":
     publisher = Quest3BoneFramePublisher()
 
