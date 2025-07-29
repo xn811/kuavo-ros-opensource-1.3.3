@@ -31,6 +31,11 @@ def get_test_traj_msg():
     torso_traj = [[0.1, 0.0, 0, 0], [0.1, 0.0, 0, 0], [0.2, 0.0, 0, 0], [0.2, 0.0, 0, 0]]
     time_traj = [0.5, 1.0, 1.5, 2]# 时间序列，递增
     foot_idx_traj = [0, 2, 1, 2]
+
+    # foot_traj = [[0.2, 0.1, 0, 0.2], [0.2, 0.1, 0, 0.2]]
+    # torso_traj = [[0.1, 0.0, 0, 0.1], [0.1, 0.0, 0.0, 0.1]]
+    # time_traj = [0.5, 1.0]# 时间序列，递增
+    # foot_idx_traj = [0, 2]
     
     # foot_traj = [[0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0]]
     # torso_traj = [[0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0]]
@@ -43,7 +48,7 @@ def get_test_traj_msg():
     msg.footPoseTrajectory = []  # 初始化脚姿态轨迹
     num = len(foot_traj)
 
-    for i in range(3):
+    for i in range(num):
         # 创建脚姿态信息
         msg.timeTrajectory.append(time_traj[i])
         msg.footIndexTrajectory.append(foot_idx_traj[i])
@@ -62,6 +67,11 @@ def get_test_traj_msg2():
     time_traj = [0.5, 1.0, 1.5, 2]# 时间序列，递增
     foot_idx_traj = [0, 2, 1, 2]
     
+    # foot_traj = [[0.0, 0.1, 0, 0.0], [0.0, 0.1, 0, 0.0]]
+    # torso_traj = [[0.1, 0.0, 0.0, 0.1], [0.0, 0.0, 0.0, 0.0]]
+    # time_traj = [0.5, 1.0]# 时间序列，递增
+    # foot_idx_traj = [0, 2]
+    
     # foot_traj = [[0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0]]
     # torso_traj = [[0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0]]
     # time_traj = [0.1, 0.5, 0.6]# 时间序列，递增
@@ -73,7 +83,7 @@ def get_test_traj_msg2():
     msg.footPoseTrajectory = []  # 初始化脚姿态轨迹
     num = len(foot_traj)
 
-    for i in range(3):
+    for i in range(num):
         # 创建脚姿态信息
         msg.timeTrajectory.append(time_traj[i])
         msg.footIndexTrajectory.append(foot_idx_traj[i])

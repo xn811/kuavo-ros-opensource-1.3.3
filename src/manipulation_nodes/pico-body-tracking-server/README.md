@@ -77,6 +77,52 @@ body_tracker_role = [
   ![PICO手柄](./assets/imgs/pico-joy.png)
 
 
+
+## 录制播放功能
+
+### 录制功能
+使用 `robot_pico_recorder.py` 脚本可以录制机器人控制数据，支持录制以下话题：
+- `/ik/two_arm_hand_pose_cmd` - 双臂手部位姿命令
+- `/mm/two_arm_hand_pose_cmd` - 移动操作手部位姿命令  
+- `/humanoid_mpc_foot_pose_target_trajectories` - 人形机器人足部轨迹
+
+#### 录制命令
+```bash
+# 录制控制数据到指定bag文件
+python3 robot_pico_recorder.py record <bag文件名>
+
+# 示例：录制到 my_control_session.bag
+python3 robot_pico_recorder.py record my_control_session.bag
+```
+
+### 播放功能
+播放录制的控制数据，自动调用必要的控制服务：
+- `/change_arm_ctrl_mode` - 切换手臂控制模式
+- `/mobile_manipulator_mpc_control` - 启用移动操作MPC控制
+- `/enable_mm_wbc_arm_trajectory_control` - 启用手臂轨迹控制
+
+#### 播放命令
+```bash
+# 播放录制的bag文件
+python3 robot_pico_recorder.py play <bag文件名>
+
+# 示例：播放 my_control_session.bag
+python3 robot_pico_recorder.py play my_control_session.bag
+```
+
+### 使用场景
+- **动作录制**: 录制复杂的机器人操作序列
+- **动作回放**: 重复执行录制的操作
+- **教学演示**: 录制标准操作流程用于教学
+- **调试分析**: 录制问题场景用于后续分析
+
+### 注意事项
+- 录制时确保网络连接稳定
+- 播放前检查机器人状态和安全
+- 录制的bag文件包含时间戳信息
+- Ctrl+C中断录制/播放
+
+
 ## 接口文档
 
 详情见 docs/api_docs.md, [文档链接](./docs/api_docs.md)

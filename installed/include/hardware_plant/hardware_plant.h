@@ -24,6 +24,8 @@
 #include "touch_hand_controller.h"
 #include "hipnuc_imu_receiver.h"
 #include "motor_status_manager.h"
+#include <set>
+#include <mutex>
 
 namespace HighlyDynamic
 {
@@ -102,7 +104,8 @@ public:
     void jointFiltering(std::vector<JointParam_t> &joint_data, double dt);
     void setDefaultJointPos(std::vector<double> default_joint_pos);
 
-    bool diableMotor(int motorIndex);
+    // 修改接口，支持reason参数，默认值为"Joint protection triggered"
+    bool disableMotor(int motorIndex, const std::string& reason = "Joint protection triggered");
     void setEcmasterDriverType(std::string type = "elmo");
     static void signalHandler(int sig);
     bool setCurrentPositionAsOffset();
@@ -160,6 +163,35 @@ public:
     
     // 电机状态管理器
     std::unique_ptr<MotorStatusManager> motor_status_manager_;
+
+    // 新增：禁用电机相关成员和方法
+    std::mutex disable_motor_mtx_;
+    std::set<int> disableMotor_;
+    inline int getDisableMotorId()
+    {
+        std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+        if (disableMotor_.empty())
+        {
+            return -1;
+        }
+        auto first_id = *disableMotor_.begin();
+        disableMotor_.erase(first_id);
+        return first_id;
+    }
+
+    // 禁用电机ID管理接口
+    bool addDisableMotorId(int id) 
+    {
+        std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+        auto result = disableMotor_.insert(id);
+        return result.second; // true: 新插入，false: 已存在
+    }
+
+    size_t getDisableMotorSize() 
+    {
+        std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+        return disableMotor_.size();
+    }
 
 private:
 
