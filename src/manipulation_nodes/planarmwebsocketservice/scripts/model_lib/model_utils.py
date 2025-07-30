@@ -67,7 +67,9 @@ class YOLO_detection:
             return
 
     def init_ros_node(self):
-        rospy.init_node('YOLO_detection', anonymous=True)
+
+        if not rospy.get_node_uri():
+            rospy.init_node('YOLO_detection', anonymous=True)
         
         for camera_name, camera_info in self.cameras.items():
             try:
@@ -96,7 +98,7 @@ class YOLO_detection:
             image = self.cameras[camera]['image']
 
         if image is not None:
-            results = model.predict(image, show=False, verbose=False)
+            results = model.predict(image, conf=0.8, show=False, verbose=False)
             self.publish_results(results, camera)
             return results
         else:

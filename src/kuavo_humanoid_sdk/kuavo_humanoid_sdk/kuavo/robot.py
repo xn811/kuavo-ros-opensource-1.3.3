@@ -422,7 +422,17 @@ class KuavoRobot(RobotBase):
             此函数需要在初始化SDK时设置 :attr:`KuavoSDK.Options.WithIK` 选项。
         """
         return self._robot_arm.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
-
+    def arm_ik_free(self, 
+                    left_pose: KuavoPose, 
+                    right_pose: KuavoPose, 
+                    left_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
+                    right_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
+                    arm_q0: list = None,
+                    params: KuavoIKParams=None) -> list:
+        """Inverse kinematics for the robot arm.
+        """
+        return self._robot_arm.arm_ik_free(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
+    
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         """机器人手臂的正运动学求解
         

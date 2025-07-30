@@ -10,7 +10,7 @@ import wave
 import tempfile
 from std_msgs.msg import Int16MultiArray, MultiArrayDimension, MultiArrayLayout
 from std_msgs.msg import Bool
-from kuavo_msgs.srv import playmusic, playmusicResponse
+from kuavo_audio_player.srv import playmusic, playmusicResponse
 import subprocess
 import signal
 import uuid

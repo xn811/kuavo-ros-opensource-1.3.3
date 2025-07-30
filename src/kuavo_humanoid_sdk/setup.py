@@ -53,7 +53,11 @@ setup(
     ]+find_msg_subpackages("kuavo_humanoid_sdk/msg"),
     install_requires=[
         "numpy", 
-        "transitions"
+        "transitions",
+        "pyOpenSSL>=22.1.0",
+        "scikit-learn",
+        "funasr",
+        "torchaudio"
     ],
     python_requires=">=3.8",
     classifiers=[

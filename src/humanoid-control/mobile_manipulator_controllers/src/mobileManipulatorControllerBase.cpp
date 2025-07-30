@@ -257,7 +257,7 @@ namespace mobile_manipulator_controller
 
       ocs2_msgs::mpc_flattened_controller mpcPolicyMsg =
           createMpcPolicyMsg(policy, command, performance_indices);
-      int result = anomaly_check(currentObservation, policy, command, performance_indices);
+      anomaly_check(currentObservation, policy, command, performance_indices);
       // if(result != 0)
       //   return result;
       // publish the message

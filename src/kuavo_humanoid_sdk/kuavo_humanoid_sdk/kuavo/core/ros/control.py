@@ -12,14 +12,14 @@ import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState, Joy
 from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import (gestureTask,robotHandPosition, robotHeadMotionData, armTargetPoses, switchGaitByName,
-                                footPose, footPoseTargetTrajectories, dexhandCommand, motorParam)
+                                footPose, footPoseTargetTrajectories, dexhandCommand, motorParam,twoArmHandPoseCmdFree)
 from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (gestureExecute, gestureExecuteRequest,gestureList, gestureListRequest,
                         controlLejuClaw, controlLejuClawRequest, changeArmCtrlMode, changeArmCtrlModeRequest,
                         changeTorsoCtrlMode, changeTorsoCtrlModeRequest, setMmCtrlFrame, setMmCtrlFrameRequest,
                         setTagId, setTagIdRequest, getMotorParam, getMotorParamRequest,
                         changeMotorParam, changeMotorParamRequest)
 from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, armHandPose, armCollisionCheckInfo
-from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv
+from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import twoArmHandPoseCmdSrv, fkSrv, twoArmHandPoseCmdFreeSrv
 from std_srvs.srv import SetBool, SetBoolRequest
 from std_msgs.msg import Float64MultiArray
 
@@ -704,7 +704,6 @@ AXIS_RIGHT_RT = 5  # 1 -> (-1)
 AXIS_LEFT_RIGHT_TRIGGER = 6
 AXIS_FORWARD_BACK_TRIGGER = 7
 
-
 class ControlRobotMotion:
     def __init__(self):
         self._pub_cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
@@ -818,7 +817,6 @@ class ControlRobotMotion:
         except Exception as e:
             SDKLogger.error(f"[Error] publish step ctrl: {e}")
             return False
-
 class KuavoRobotArmIKFK:
     def __init__(self):
         pass
@@ -879,6 +877,20 @@ class KuavoRobotArmIKFK:
         except Exception as e:
             print(f"Failed to call ik/fk_srv: {e}")
             return None
+    
+    def _srv_arm_ik_free(self, eef_pose_msg:twoArmHandPoseCmdFree)->list:
+        try:
+            rospy.wait_for_service('/ik/two_arm_hand_pose_cmd_free_srv',timeout=1.0)
+            ik_srv = rospy.ServiceProxy('/ik/two_arm_hand_pose_cmd_free_srv', twoArmHandPoseCmdFreeSrv)
+            res = ik_srv(eef_pose_msg)
+            return res.hand_poses.left_pose.joint_angles + res.hand_poses.right_pose.joint_angles
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+            return None
+        except Exception as e:
+            print(f"Failed to call ik/fk_srv: {e}")
+            return None
+
     def _srv_arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         try:
             rospy.wait_for_service('/ik/fk_srv',timeout=1.0)
@@ -1182,6 +1194,11 @@ class KuavoRobotControl:
                arm_q0: list = None, params: KuavoIKParams=None) -> list:
         return self.kuavo_arm_ik_fk.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
 
+    def arm_ik_free(self, left_pose: KuavoPose, right_pose: KuavoPose, 
+               left_elbow_pos_xyz: list = [0.0, 0.0, 0.0],  
+               right_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
+               arm_q0: list = None, params: KuavoIKParams=None) -> list:
+        return self.kuavo_arm_ik_fk.arm_ik_free(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
 
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         return self.kuavo_arm_ik_fk.arm_fk(q)

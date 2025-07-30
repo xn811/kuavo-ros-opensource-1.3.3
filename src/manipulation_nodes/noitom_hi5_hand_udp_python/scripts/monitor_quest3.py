@@ -59,9 +59,9 @@ class Quest3BoneFramePublisher:
         self.rate = rospy.Rate(100.0)
         
         self.br = tf.TransformBroadcaster()
-        self.pose_pub = rospy.Publisher('/leju_quest_bone_poses', PoseInfoList, queue_size=10)
+        self.pose_pub = rospy.Publisher('/leju_quest_bone_poses', PoseInfoList, queue_size=2)
         self.head_data_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=10)
-        self.joysticks_pub = rospy.Publisher('quest_joystick_data', JoySticks, queue_size=10)
+        self.joysticks_pub = rospy.Publisher('quest_joystick_data', JoySticks, queue_size=2)
         
         self.listener = tf.TransformListener()
         self.hand_finger_tf_pub = rospy.Publisher('/quest_hand_finger_tf', TFMessage, queue_size=10)

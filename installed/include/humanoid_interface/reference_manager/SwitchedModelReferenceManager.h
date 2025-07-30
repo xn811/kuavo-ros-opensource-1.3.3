@@ -29,11 +29,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include "humanoid_interface/foot_planner/SwingTrajectoryPlanner.h"
+
 #include <ocs2_core/thread_support/Synchronized.h>
 #include <ocs2_oc/synchronized_module/ReferenceManager.h>
 
 #include "humanoid_interface/foot_planner/InverseKinematics.h"
-#include "humanoid_interface/foot_planner/SwingTrajectoryPlanner.h"
 #include "humanoid_interface/foot_planner/SingleStepPlanner.h"
 #include "humanoid_interface/gait/GaitSchedule.h"
 #include "humanoid_interface/gait/MotionPhaseDefinition.h"
@@ -209,6 +210,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool singleStepControlCallback(kuavo_msgs::singleStepControl::Request &req, kuavo_msgs::singleStepControl::Response &res);
 
   void armTargetTrajectoriesCallback(const ocs2_msgs::mpc_target_trajectories::ConstPtr &msg);
+  
   TargetTrajectories interpolateArmTarget(scalar_t startTime, const vector_t& currentArmState, const vector_t& newDesiredArmState, scalar_t maxSpeed);
 
   void publishFootContactPoint();
@@ -266,6 +268,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Subscriber targetPoseSubscriber_;
   ros::Subscriber targetPoseWorldSubscriber_;
   ros::Subscriber armTargetTrajectoriesSubscriber_;
+  ros::Subscriber waistTargetTrajectoriesSubscriber_;
+  ros::Subscriber joyWaistTargetTrajectoriesSubscriber_;
   ros::Subscriber poseTargetTrajectoriesSubscriber_;
   ros::Subscriber footPoseTargetTrajectoriesSubscriber_;
   ros::Subscriber footPoseWorldTargetTrajectoriesSubscriber_;
@@ -278,6 +282,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::Publisher footContactPointPublisher_;
   ros::Publisher footDesiredPointPublisher_;
   ros::Publisher gaitTimeNamePublisher_;
+  ros::Publisher waistTargetCommandedPublisher_;
   ros::Publisher armTargetCommandedPublisher_;
   ros::Publisher isCustomGaitPublisher_;
   ros::Publisher singleStepModePublisher_;
@@ -312,6 +317,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool isCmdPoseCached = false;
   bool poseTargetUpdated_ = false;
   bool armTargetUpdated_ = false;
+  bool waistTargetUpdated_ = false;
   bool isFirstRun_ = true;
   bool isFirstVelPub_ = true;
   ArmControlMode currentArmControlMode_ = ArmControlMode::AUTO_SWING;
@@ -329,15 +335,18 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   int feetJointNums_ = 12;
   int armJointNums_ = 10;// will replace in initialize
   int armRealDof_ = 14;
+  int WaistNums = 1;
   
   std::mutex cmdvel_mtx_;
   std::mutex cmdPose_mtx_;
   std::mutex cmdPoseWorld_mtx_;
   std::mutex armTargetCommanded_mtx_;
+  std::mutex waistTargetCommanded_mtx_;
 
   vector_t currentCmdVel_ = vector_t::Zero(6);
   vector_t currentCmdPose_ = vector_t::Zero(6);
   vector_t cachedCmdPoseInWorldFrame_ = vector_t::Zero(6);
+  vector_t joyWaist_ = vector_t::Zero(WaistNums);
   bool ismdPoseInWorldFrameCached_ = false;
 
   ocs2::scalar_array_t c_relative_base_limit_{0.4, 0.15, 0.3, 0.4, 0.4, 0.4};
@@ -363,13 +372,13 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   CentroidalModelRbdConversions rbdConversions_;
   ros::Time lastArmControlModeWarnTime_ = ros::Time(0);
 
-
   double arm_move_spd_{1.2};
+  double waist_move_spd_{0.6};
   double terrainHeight_ = 0.0;
   double terrainHeightPrev_ = 0.0;
   double fullbodyScheduleStartTime_ = 0.0;
   double fullbodyScheduleEndTime_ = 0.0;
-  std::string last_gait_name_="stance";
+  std::string last_gait_name_="empty";
   double vel_norm_{0};
   bool only_half_up_body_{false};
 
@@ -390,6 +399,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   bool enable_slope_planning_ = false;
   bool enable_pitch_limit_ = false;
+  bool is_roban_version_ = false; // 标识是否为roban版本
 
   vector_t last_init_target_state;
 };

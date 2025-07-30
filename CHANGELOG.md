@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 新增 RobotVersion 版本号说明文档，详情见 [文档链接](./docs/robot_version版本号说明.md)
 - 重新调整运动控制文档结构并删除无用接口，[新的文档链接](./docs/运动控制API.md)
 - 新增 Kuavo Humanoid SDK 原子技能 v2 版搬箱子策略模块文档，[文档链接](./src/kuavo_humanoid_sdk/docs/markdown/pages/kuavo_strategy_v2.md)
 - 新增运动学 MPC VR 遥操作使用文档， [文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
@@ -18,6 +19,17 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- PICO VR 增加话题录制和播放脚本，使用文档，[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md)
+- 新增机器人 cali 校准环节支持堵转保护和峰值保护
+- 新增夸父5代模型，该模型在原先 4pro 版本基础上新增腰部关节
+- 新增标准版 45.1 与 49.1模型，版本号为 100045，100049
+- 新增全新的版本号管理机制，版本号形式`PPPPMMMMN`，其中 P 为 Patch 修订版本号，M 为 Major 主版本号，N 为 Minor 次版本号
+- PICO VR 支持手柄按键触发施加和释放末端力功能
+- PICO VR 全身遥操增加x和y方向步长配置和数据播放模式接口
+- PICO VR 新增处理手柄数据并发布到话题`/pico/joy`
+- 新增 4D 和 6D 世界系单步接口使用示例，示例脚本见[链接](./src/humanoid-control/humanoid_interface_ros/scripts/simStepControl6DWorld.py)
+- 新增 H12 遥控器集成走楼梯功能案例，[使用文档](./src/humanoid-control/h12pro_controller_node/ocs2_README.md)
+- 新增相机到固定支架的旋转矩阵示例工具脚本，[使用文档](./tools/extract_camera_pose/howto-kuavo-pose-calculator.md)
 - VR 增量控制新增保护功能，VR 和机器人手臂位置相近才能开启增量控制，[文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - Kuavo Humanoid SDK 在原子技能的手部运动控制同步接口上增加碰撞保护的功能, [使用示例](./src/kuavo_humanoid_sdk/examples/atomic_skills/ctrl_arm_example_protected.py)
 - 运动学 KMPC 新增 play_back 回放功能，[文档链接](./src/humanoid-control/mobile_manipulator_controllers/scripts/how_to_play_back.md)
@@ -58,6 +70,12 @@
 - Kuavo Humanoid SDK 新增搬箱子策略模块以及 gazebo 仿真策略使用示例
 
 ## 修复问题
+- 修复运动学 MPC 节点存在的程序崩溃问题以及控制手臂时异常抽抖问题
+- 修复增量控制 VR 启动失败问题
+- 修复接手柄启动 launch 文件机器人自动乱走问题
+- Kuavo Humanoid SDK 修复 opensource 版本无法在 dev 或 beta 分支本地安装问题
+- 修改手腕相机 URDF，将其与 camera_link 对齐，静态变换全 0
+- 修复躯干轨迹为空时搬箱子转身会崩溃的问题
 - 修复 KMPC 控制模式切换到 None 之外的其他模式时，收到 `mm/two_hand` 的话题数据不执行的问题
 - 修复不安全的多线程访问数据可能会导致段错误而引起机器摔倒的问题
 - 修复硬件自检脚本无法绘图的问题，原因是保存数据中索引越界
@@ -99,6 +117,7 @@
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
 
 ## 其他改进
+- Quest VR 节点依赖的消息统一移动到 kuavo_msgs 包中，比如手柄消息`Joysticks`
 - 添加工具类用于获取头和手腕相机到机器人底座的位置和转换，[工具使用文档](./tools/extract_camera_pose/howto-kuavo-pose-calculator.md)
 - 更新手臂末端三个电机和腿部的飞车保护阈值
 - VR 机器人 VR 节点新增广播机器人信息用于等待 VR 头盔连接

@@ -165,11 +165,6 @@ class AudioStreamPlayerNode:
                     source_sample_rate = int(dim.size)
                     break
             
-            # 如果音频块过小并且队列为空，补零填充到一个完整的块
-            if len(audio_chunk) < self.chunk_size and self.buffer_queue.qsize() == 0:
-                rospy.loginfo(f"音频块大小不足，补齐")
-                audio_chunk = np.concatenate((audio_chunk, np.zeros(self.chunk_size - len(audio_chunk), dtype=np.int16)))
-            
             # 重采样到当前设备采样率
             audio_chunk = self.resample_audio(audio_chunk, source_sample_rate)
             

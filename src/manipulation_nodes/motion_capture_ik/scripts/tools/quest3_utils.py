@@ -8,6 +8,7 @@ from drake_trans import *
 from geometry_msgs.msg import Pose, Quaternion
 from sensor_msgs.msg import JointState
 from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
 from noitom_hi5_hand_udp_python.msg import PoseInfo, PoseInfoList, JoySticks
 from kuavo_msgs.msg import headBodyPose
 import rospy
@@ -114,7 +115,7 @@ class Quest3ArmInfoTransformer:
         self.base_shoulder_x_bias = 0.0
         self.base_shoulder_y_bias = 0.15
         self.base_shoulder_z_bias = 0.42
-        self.shoulder_width = 0.29
+        self.shoulder_width = 0.15
         self.head_body_pose = HeadBodyPose()
         # Add new variables for arm length measurement
         self.measure_arm_length = True
@@ -134,6 +135,10 @@ class Quest3ArmInfoTransformer:
         self.marker_pub_elbow = rospy.Publisher("visualization_marker/elbow", Marker, queue_size=10)
         self.marker_pub_elbow_right = rospy.Publisher("visualization_marker_right/elbow", Marker, queue_size=10)
         self.marker_pub_shoulder = rospy.Publisher("visualization_marker/shoulder", Marker, queue_size=10)
+       
+        # 新增：一次性发布human三个部位的MarkerArray
+        self.marker_pub_human_array_left = rospy.Publisher("visualization_marker/human_array_left", MarkerArray, queue_size=10)
+        self.marker_pub_human_array_right = rospy.Publisher("visualization_marker/human_array_right", MarkerArray, queue_size=10)
         # self.marker_pub_shoulder_human = rospy.Publisher("visualization_marker/shoulder_human", Marker, queue_size=10)
         self.marker_pub_shoulder_right = rospy.Publisher("visualization_marker_right/shoulder", Marker, queue_size=10)
         # self.marker_pub_shoulder_human_right = rospy.Publisher("visualization_marker_right/shoulder_human", Marker, queue_size=10)
@@ -143,7 +148,9 @@ class Quest3ArmInfoTransformer:
         self.joint_state_puber = rospy.Publisher('/joint_states', JointState, queue_size=10)
         self.shoulder_angle_puber = rospy.Publisher('/quest3_debug/shoulder_angle', Float32MultiArray, queue_size=10)
         self.chest_axis_puber = rospy.Publisher('/quest3_debug/chest_axis', Float32MultiArray, queue_size=10)
-        self.head_body_pose_puber = rospy.Publisher('/kuavo_head_body_orientation', headBodyPose, queue_size=10)
+        self.head_body_pose_puber = rospy.Publisher('/kuavo_head_body_orientation_data', headBodyPose, queue_size=10)
+        self.head_body_pose_control_puber = rospy.Publisher('/kuavo_head_body_orientation', headBodyPose, queue_size=10)
+        
         self.left_joystick = None
         self.right_joystick = None
         if eef_visual_stl_files is not None:
@@ -154,25 +161,30 @@ class Quest3ArmInfoTransformer:
             self.hand_gesture_predictor = HandGesturePredictor(hand_gesture_model_path)
         self.listener = tf.TransformListener()
         if rospy.has_param("/quest3/upper_arm_length"):
-            self.upper_arm_length = rospy.get_param("/quest3/upper_arm_length")/100.0
+            self.upper_arm_length = rospy.get_param("/quest3/upper_arm_length")
             print(f"get rosparams upper_arm_length: {self.upper_arm_length}")
+        else:
+            print("/quest3/upper_arm_length not found")
         if rospy.has_param("/quest3/lower_arm_length"):
-            self.lower_arm_length = rospy.get_param("/quest3/lower_arm_length")/100.0
+            self.lower_arm_length = rospy.get_param("/quest3/lower_arm_length")
             print(f"get rosparams lower_arm_length: {self.lower_arm_length}")
-        if rospy.has_param("/quest3/base_shoulder_x_bias"):
-            self.base_shoulder_x_bias = rospy.get_param("/quest3/base_shoulder_x_bias")
-            print(f"get rosparams base_shoulder_x_bias: {self.base_shoulder_x_bias}")
-        if rospy.has_param("/quest3/base_shoulder_y_bias"):
-            self.base_shoulder_y_bias = rospy.get_param("/quest3/base_shoulder_y_bias")
-            print(f"get rosparams base_shoulder_y_bias: {self.base_shoulder_y_bias}")
-        if rospy.has_param("/quest3/base_shoulder_z_bias"):
-            self.base_shoulder_z_bias = rospy.get_param("/quest3/base_shoulder_z_bias")
-            print(f"get rosparams base_shoulder_z_bias: {self.base_shoulder_z_bias}")
+        else:
+            print("/quest3/lower_arm_length not found")
+        if rospy.has_param("/quest3/base_height_offset"):
+            bias_chest_to_base_link[2] = rospy.get_param("/quest3/base_height_offset")
+            print(f"get rosparams base_height_offset: {bias_chest_to_base_link[2]}")
+        else:
+            print("/quest3/base_height_offset not found")
+        if rospy.has_param("/quest3/base_chest_offset_x"):
+            bias_chest_to_base_link[0] = rospy.get_param("/quest3/base_chest_offset_x")
+            print(f"get rosparams base_chest_offset_x: {bias_chest_to_base_link[0]}")
+        else:
+            print("/quest3/base_chest_offset_x not found")
         if rospy.has_param("/quest3/shoulder_width"):
-            self.shoulder_width = rospy.get_param("/quest3/shoulder_width")/100.0
+            self.shoulder_width = rospy.get_param("/quest3/shoulder_width")
             print(f"get rosparams shoulder_width: {self.shoulder_width}")
-        delta_z = self.base_shoulder_z_bias - 0.42
-        bias_chest_to_base_link[2] += delta_z
+        else:
+            print("/quest3/shoulder_width not found")
               
     def read_joySticks_msg(self, msg):
         self.left_joystick = [msg.left_trigger, msg.left_grip]
@@ -210,7 +222,7 @@ class Quest3ArmInfoTransformer:
             self.ok_gesture_counts = 0
             if(self.shot_gesture_counts >= max_counts):
                 self.is_runing = False
-        if self.is_runing and self.control_torso:
+        if self.is_runing:
             self.pub_head_body_pose_msg(self.head_body_pose)
 
 
@@ -664,7 +676,7 @@ class Quest3ArmInfoTransformer:
             scaled_elbow_pos: scaled elbow position
             scaled_hand_pos: scaled hand position
         """
-        human_upper_arm_length = math.sqrt((elbow_pos[0] - shoulder_pos[0])**2 + (elbow_pos[1] - shoulder_pos[1])**2 + (elbow_pos[2] - shoulder_pos[2])**2)
+        human_upper_arm_length = math.sqrt((elbow_pos[0] - human_shoulder_pos[0])**2 + (elbow_pos[1] - human_shoulder_pos[1])**2 + (elbow_pos[2] - human_shoulder_pos[2])**2)
         human_lower_arm_length = math.sqrt((hand_pos[0] - elbow_pos[0])**2 + (hand_pos[1] - elbow_pos[1])**2 + (hand_pos[2] - elbow_pos[2])**2)
 
         # Collect arm length data if measurement is active
@@ -687,23 +699,24 @@ class Quest3ArmInfoTransformer:
         else:
             # Use average measurements for scaling
             if side == "Left":
-                radi1 = self.upper_arm_length/self.avg_left_upper_arm_length
+                radi1 = self.upper_arm_length/human_upper_arm_length
                 # radi1 = self.upper_arm_length/self.left_upper_arm_lengths[-1]
-                radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_left_lower_arm_length + self.avg_left_upper_arm_length)
+                # radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_left_lower_arm_length + self.avg_left_upper_arm_length)
+                radi2 = self.lower_arm_length/human_lower_arm_length
                 # radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.left_lower_arm_lengths[-1] + self.left_upper_arm_lengths[-1])
             else:
-                radi1 = self.upper_arm_length/self.avg_right_upper_arm_length
+                radi1 = self.upper_arm_length/human_upper_arm_length
                 # radi1 = self.upper_arm_length/self.right_upper_arm_lengths[-1]
-                radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length)
+                # radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length)
                 # radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.right_lower_arm_lengths[-1] + self.right_upper_arm_lengths[-1])
-        
+                radi2 = self.lower_arm_length/human_lower_arm_length
         scaled_elbow_pos = np.zeros(3)
         scaled_hand_pos = np.zeros(3)
         for i in range(3):
             scaled_elbow_pos[i] = shoulder_pos[i] + radi1 * (elbow_pos[i] - human_shoulder_pos[i])
-            # scaled_hand_pos[i] = scaled_elbow_pos[i] + (hand_pos[i] - (human_shoulder_pos[i] + (elbow_pos[i] - shoulder_pos[i]) / radi1))*radi2
+            scaled_hand_pos[i] = scaled_elbow_pos[i] + (hand_pos[i] - elbow_pos[i])*radi2
             # scaled_hand_pos[i] = shoulder_pos[i] + radi2 * (hand_pos[i] - human_shoulder_pos[i])
-            scaled_hand_pos[i] = radi2 * (hand_pos[i])
+            # scaled_hand_pos[i] = radi2 * (hand_pos[i])
 
 
         return scaled_elbow_pos, scaled_hand_pos
@@ -773,12 +786,14 @@ class Quest3ArmInfoTransformer:
         
 
         human_shoulder_pos = list(shoulder_pos[:])
+
         if (side == "Right"):
             shoulder_pos[1] = -self.shoulder_width
         elif (side == "Left"):
             shoulder_pos[1] = self.shoulder_width
         # human_hand_pos = hand_pos[:].copy()
-
+        # human_elbow_pos = elbow_pos[:].copy()
+        # human_hand_pos = hand_pos[:].copy()
         # Scale arm positions
         elbow_pos, hand_pos = self.scale_arm_positions(shoulder_pos, elbow_pos, hand_pos, human_shoulder_pos, side)
         
@@ -787,16 +802,37 @@ class Quest3ArmInfoTransformer:
             marker = self.construct_point_marker(hand_pos, 0.08, 0.9, color=[1, 0, 0])
             elbow_marker = self.construct_point_marker(elbow_pos, 0.1, color=[0, 1, 0])
             shoulder_marker = self.construct_point_marker(shoulder_pos, 0.1, color=[0, 0, 1])
-            # huaman_marker = self.construct_point_marker(human_hand_pos, 0.1, 0.8, color=[1, 1, 1])
+            # human_shoulder_marker = self.construct_point_marker(human_shoulder_pos, 0.02, 0.8, color=[1, 1, 1])
+            # human_elbow_marker = self.construct_point_marker(human_elbow_pos, 0.02, 0.8, color=[1, 1, 1])
+            # human_hand_marker = self.construct_point_marker(human_hand_pos, 0.02, 0.8, color=[1, 1, 1])
+            # huaman_marker = self.construct_point_marker(human_hand_pos, 0.02, 0.8, color=[1, 1, 1])
             if side == "Left":
                 self.marker_pub.publish(marker)
                 self.marker_pub_elbow.publish(elbow_marker)
                 self.marker_pub_shoulder.publish(shoulder_marker)
+                # # 只保留一次性发布human三个部位的MarkerArray
+                # human_array = MarkerArray()
+                # human_shoulder_marker.id = 0
+                # human_elbow_marker.id = 1
+                # human_hand_marker.id = 2
+                # human_array.markers.append(human_shoulder_marker)
+                # human_array.markers.append(human_elbow_marker)
+                # human_array.markers.append(human_hand_marker)
+                # self.marker_pub_human_array_left.publish(human_array)
                 # self.marker_pub_human.publish(huaman_marker)
             else:
                 self.marker_pub_right.publish(marker)
                 self.marker_pub_elbow_right.publish(elbow_marker)
                 self.marker_pub_shoulder_right.publish(shoulder_marker)
+                # # 只保留一次性发布human三个部位的MarkerArray
+                # human_array = MarkerArray()
+                # human_shoulder_marker.id = 0
+                # human_elbow_marker.id = 1
+                # human_hand_marker.id = 2
+                # human_array.markers.append(human_shoulder_marker)
+                # human_array.markers.append(human_elbow_marker)
+                # human_array.markers.append(human_hand_marker)
+                # self.marker_pub_human_array_right.publish(human_array)
             chest_pos = [chest_pose.position.x, chest_pose.position.y, chest_pose.position.z]
             chest_marker = self.construct_point_marker(chest_pos, 0.1, 0.8)
             self.marker_pub_chest.publish(chest_marker)
@@ -812,7 +848,7 @@ class Quest3ArmInfoTransformer:
         """
         Check if the VR system is error.
         """
-        if self.left_hand_pose is None:
+        if self.left_hand_pose is None or self.right_hand_pose is None:
             return False
         left_hand_pos = self.left_hand_pose[0]
         right_hand_pos = self.right_hand_pose[0]
@@ -996,3 +1032,5 @@ class Quest3ArmInfoTransformer:
         msg.body_y = 0.0
         msg.body_height = max(-0.4, min(head_body_pose.body_height + 0.3, 0.2))
         self.head_body_pose_puber.publish(msg)
+        if self.control_torso:
+            self.head_body_pose_control_puber.publish(msg)
