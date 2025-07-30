@@ -67,6 +67,22 @@ roslaunch motion_capture_ik kinematic_mpc_vr_incremental_real.launch ip_address:
 | `control_torso` | `0` | 是否控制躯干（0=否，1=是） |
 | `incremental_control` | `1` | 增量控制模式（仅增量版本） |
 
+### 安全保护参数
+
+| 参数名 | 默认值 | 描述 | 建议范围 |
+|--------|--------|------|----------|
+| `enable_safety` | `1` | 启用安全保护（0=禁用，1=启用） | 0-1 |
+| `max_pos_diff` | `0.45` | 最大位置差异（米） | 0.1-1.0 |
+| `max_quat_diff` | `1` | 最大姿态差异（弧度） | 0.05-0.5 |
+
+### 安全保护参数
+
+| 参数名 | 默认值 | 描述 | 建议范围 |
+|--------|--------|------|----------|
+| `enable_safety` | `true` | 启用安全保护（false=禁用，true=启用） | bool |
+| `max_pos_diff` | `0.45` | 最大位置差异（米） | 0.1-1.0 |
+| `max_quat_diff` | `1` | 最大姿态差异（弧度） | 0.5-1 |
+
 ### 手部参考点模式
 
 | 模式 | 描述 | 适用场景 |
@@ -121,8 +137,10 @@ roslaunch motion_capture_ik kinematic_mpc_vr_real.launch \
 roslaunch motion_capture_ik kinematic_mpc_vr_incremental.launch \
     ip_address:=192.168.3.17 \
     incremental_control:=1 \
-    hand_reference_mode:=fingertips
-
+    hand_reference_mode:=fingertips \
+    enable_safety:=true \
+    max_pos_diff:=0.45 \
+    max_quat_diff:=1
 ```
 ### 增量控制实物操作
 ```bash
@@ -130,7 +148,10 @@ roslaunch motion_capture_ik kinematic_mpc_vr_incremental.launch \
 roslaunch motion_capture_ik kinematic_mpc_vr_incremental_real.launch \
     ip_address:=192.168.3.17 \
     incremental_control:=1 \
-    hand_reference_mode:=fingertips
+    hand_reference_mode:=fingertips \
+    enable_safety:=false \
+    max_pos_diff:=0.45 \
+    max_quat_diff:=1
 
 ```
 

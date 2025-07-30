@@ -18,6 +18,7 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- VR 增量控制新增保护功能，VR 和机器人手臂位置相近才能开启增量控制，[文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - Kuavo Humanoid SDK 在原子技能的手部运动控制同步接口上增加碰撞保护的功能, [使用示例](./src/kuavo_humanoid_sdk/examples/atomic_skills/ctrl_arm_example_protected.py)
 - 运动学 KMPC 新增 play_back 回放功能，[文档链接](./src/humanoid-control/mobile_manipulator_controllers/scripts/how_to_play_back.md)
 - 新增运动学 MPC 的异常检测机制
