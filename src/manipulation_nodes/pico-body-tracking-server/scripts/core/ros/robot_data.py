@@ -11,7 +11,8 @@ from kuavo_msgs.msg import lejuClawState
 from datetime import datetime
 import queue
 import os
-
+from . import body_tracking_extended_pb2 as proto
+from google.protobuf.timestamp_pb2 import Timestamp
 class RobotDataServer:
     def __init__(self, eef_type=None, target_client_ip=None, target_client_port=None, rate=20):
         self.robot_name = os.getenv("ROBOT_NAME", "KUAVO")
@@ -25,6 +26,8 @@ class RobotDataServer:
         self.rate = rate
         self.downsample_interval = 1 / self.rate  # 50ms = 20Hz
         self.only_push_half_body_data = True
+        self.control_mode = "FLLOW"
+        self.id = 0
 
     def start(self):
         try:
@@ -74,8 +77,6 @@ class RobotDataServer:
             return False
 
         try:
-            if isinstance(message, str):
-                message = message.encode('utf-8')
             self.server_socket.sendto(message, self.target_client_addr)
             return True
         except Exception as e:
@@ -86,8 +87,10 @@ class RobotDataServer:
         now = time.time()
         if now - self.last_sensor_time >= self.downsample_interval:
             if self.only_push_half_body_data:
-                self.sensor_queue.put(data.data[12:26])
+                data.data = [abs(x) for x in data.data[12:26]]
+                self.sensor_queue.put(data.data)
             else:
+                data.data = [abs(x) for x in data.data]
                 self.sensor_queue.put(data.data)
             self.last_sensor_time = now
 
@@ -97,6 +100,7 @@ class RobotDataServer:
             now = time.time()
             if now - self.last_hand_time >= self.downsample_interval:
                 hand_data = [x * 6 / 1000 for x in data.effort]  # 将0-100映射到0~0.6A
+                hand_data = [abs(x) for x in hand_data]
                 self.hand_queue.put(hand_data)
                 self.last_hand_time = now
 
@@ -108,6 +112,7 @@ class RobotDataServer:
             if len(effort) == 2:
                 # 每个值后面补5个0
                 padded_effort = [effort[0]] + [0.0]*5 + [effort[1]] + [0.0]*5
+                padded_effort = [abs(x) for x in padded_effort]
                 self.claw_queue.put(padded_effort)
                 self.last_claw_time = now
             else:
@@ -143,15 +148,31 @@ class RobotDataServer:
                 else:
                     eef_cur = []
 
-                push_data = {
-                    "motor_cur": motor_cur,
-                    "eef_cur": eef_cur,
-                }
-                # 上传反馈: 当前设置的末端力大小和物品重量
-                if hasattr(self, "hand_wrench_and_item_mass"):
-                    push_data["itemMassForce"] = self.hand_wrench_and_item_mass
-                self.send_to_client(json.dumps(push_data))
+                message = proto.VRData()
 
+                header = proto.Header()
+                timestamp = Timestamp()
+                timestamp.GetCurrentTime()
+                header.timestamp.CopyFrom(timestamp)
+                header.id = self.id
+                message.header.CopyFrom(header)
+        
+                robot_data = proto.RobotData()
+                robot_data.motor_cur.extend(motor_cur)
+                robot_data.eef_cur.extend(eef_cur)
+                if hasattr(self, "hand_wrench_and_item_mass"):
+                    robot_data.item_mass_force.item_mass = self.hand_wrench_and_item_mass["itemMass"]
+                    robot_data.item_mass_force.lforce_x = self.hand_wrench_and_item_mass["lforceX"]
+                    robot_data.item_mass_force.lforce_y = self.hand_wrench_and_item_mass["lforceY"]
+                    robot_data.item_mass_force.lforce_z = self.hand_wrench_and_item_mass["lforceZ"]
+                
+                control_mode_msg = proto.ControlMode()
+                control_mode_msg.control_mode = self.control_mode
+                robot_data.control_mode.CopyFrom(control_mode_msg)
+                message.robot_data.CopyFrom(robot_data)
+
+                self.send_to_client(message.SerializeToString())
+                self.id += 1
             except queue.Empty:
                 rospy.logwarn("传感器数据获取超时，motor_cur 队列为空")
             except Exception as e:

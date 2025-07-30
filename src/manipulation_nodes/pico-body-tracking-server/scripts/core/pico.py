@@ -21,6 +21,7 @@ from core.ros.pico import (
 from core.ros.pico_utils import RobotInfoBroadcaster
 from core.ros.robot_data import RobotDataServer
 from common.logger import SDKLogger
+from .ros import body_tracking_extended_pb2 as proto
 
 def signal_handler(self):
     """Handle signal for graceful exit."""
@@ -162,27 +163,27 @@ class KuavoPicoServer:
 
     def process_data(self, data_str):
         """Process data."""
-        data = self._parse_data(data_str)
-        if data is None:
-            return
         
-        # 处理不同类型的数据
-        if 'dataType' in data:
-            if data['dataType'] == 'bodyTracking':
-                self.process_body_tracking_data(data_str) # 处理全身模式 骨骼信息
-            elif data['dataType'] == 'controller':
-                self.process_pico_joy_data(data) # 处理pico手柄数据
-            elif data['dataType'] == 'VrCommand':
-                self.process_vr_command(data) # 处理VR下发的命令
-            elif data['dataType'] == 'upperBody':
-                # TODO 处理半身模式
-                pass 
-        else:
-            SDKLogger.warn("no data type")
+        message = proto.VRData()
+        message.ParseFromString(data_str)
+
+        if message.HasField('full_body'):
+            self.process_body_tracking_data(data_str)
+        
+        if message.HasField('upper_body'):
+            # TODO 处理半身模式
+            pass
+        
+        if message.HasField('controller'):
+            self.process_pico_joy_data(message.controller)
+        
+        if message.HasField('vr_command'):
+            self.process_vr_command(message.vr_command)
+        
     
     def process_body_tracking_data(self, data_str):
         """Process data."""
-        robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix(data_str)
+        robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix_from_proto(data_str)
         self.robot_matrix_publisher.publish_matrices(robot_urdf_matrices, current_time)
 
         # Publish TF transforms
@@ -215,39 +216,43 @@ class KuavoPicoServer:
         #     self.pico_node.pico_info_transformer.compute_head_body_pose(robot_urdf_matrices)
         #     self.pico_node.pico_info_transformer.pub_head_body_pose_msg(self.pico_node.pico_info_transformer.head_body_pose)
     
-    def process_pico_joy_data(self, data_json):
+    def process_pico_joy_data(self, controller_data):
         """Process pico joy data and print to console."""
         try:
-            self.pico_node.pico_info_transformer.publish_pico_joys(data_json)
+            self.pico_node.pico_info_transformer.publish_pico_joys(controller_data)
         except Exception as e:
             SDKLogger.error(f"Error processing pico joy data: {e}")
 
-    def process_vr_command(self, data_json:json):
-        """Process VR command."""
+    def process_vr_command(self, vr_command: proto.VrCommandData):
+        """Process VR command from RobotData protobuf message."""
         try:
-            if 'itemMassForce' in data_json:
-                if 'itemMass' not in data_json.get('itemMassForce') \
-                    or 'lforceX' not in data_json.get('itemMassForce') \
-                    or 'lforceY' not in data_json.get('itemMassForce') \
-                    or 'lforceZ' not in data_json.get('itemMassForce'):
-                    mass = data_json.get('itemMassForce').get('itemMass')
-                    lforce_x = data_json.get('itemMassForce').get('lforceX')
-                    lforce_y = data_json.get('itemMassForce').get('lforceY')
-                    lforce_z = data_json.get('itemMassForce').get('lforceZ')
-                    rforce_x = lforce_x
-                    rforce_y = -lforce_y
-                    rforce_z = lforce_z
-                    # SDKLogger.error("VR command data is not contain all required mass/force.")
-                    left_force = [lforce_x, lforce_y, lforce_z]
-                    right_force = [rforce_x, rforce_y, rforce_z]
-                    self.pico_node.set_item_mass_force(mass, left_force, right_force)         # 更新末端力
-                    self.robot_data_server.update_hand_wrench_and_item_mass(mass, left_force) # 上传末端力配置
-                else:
-                    SDKLogger.error("VR command data is not contain all required mass/force.")
+            if vr_command.HasField('item_mass_force'):
+                imf = vr_command.item_mass_force
+
+                # 提取质量和左手力
+                mass = imf.item_mass
+                lforce_x = imf.lforce_x
+                lforce_y = imf.lforce_y
+                lforce_z = imf.lforce_z
+
+                # 反向求右手力（假设 Y 方向相反）
+                rforce_x = lforce_x
+                rforce_y = -lforce_y
+                rforce_z = lforce_z
+
+                left_force = [lforce_x, lforce_y, lforce_z]
+                right_force = [rforce_x, rforce_y, rforce_z]
+
+                # 更新配置
+                self.pico_node.set_item_mass_force(mass, left_force, right_force)         # 更新末端力
+                self.robot_data_server.update_hand_wrench_and_item_mass(mass, left_force) # 上传末端力配置
             else:
-                SDKLogger.error("VR command data is not contain itemMassForce.")
+                SDKLogger.error("VR command protobuf missing item_mass_force field.")
+            if vr_command.HasField('control_mode'):
+                #TODO 更新控制模式
+                pass
         except Exception as e:
-            SDKLogger.error(f"Error processing VR command: {e}")
+            SDKLogger.error(f"Error processing VR command from protobuf: {e}")
 
     def process_data_thread(self):
         """Thread function for processing data."""
@@ -282,11 +287,11 @@ class KuavoPicoServer:
                     SDKLogger.debug(f"get new client: {addr}")
                     self.robot_data_server.target_client_addr = addr
                 try:
-                    self.data_queue.put(data.decode('utf-8'), block=False)
+                    self.data_queue.put(data, block=False)
                 except queue.Full:
                     try:
                         self.data_queue.get_nowait()
-                        self.data_queue.put_nowait(data.decode('utf-8'))
+                        self.data_queue.put_nowait(data)
                     except queue.Empty:
                         pass
             except socket.timeout:

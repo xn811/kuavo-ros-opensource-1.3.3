@@ -69,7 +69,7 @@ from pydrake.all import (
     Quaternion as DrakeQuaternion,
     RollPitchYaw,
 )
-
+from . import body_tracking_extended_pb2 as proto
 from .net_utils import get_localip_and_broadcast_ips
 
 # Module-level constants for bone names and indices
@@ -697,46 +697,39 @@ class KuavoPicoInfoTransformer():
             ros_matrices[idx] = ros_matrices[idx] @ T_RIGHT_ARM_CORRECTION
         return ros_matrices
 
-    def parse_transform_data(self, data_str):
-        """Parse JSON format transform data."""
-        try:
-            data = json.loads(data_str)
-            transforms = []
-            
-            for i, pose in enumerate(data['poses']):
-                transform = {
-                    'role': i,
-                    'position': np.array(pose[0:3]),  
-                    'rotation': np.array(pose[3:7])   
-                }
-                transforms.append(transform)
-            return transforms
-        except Exception as e:
-            SDKLogger.error(f"Error parsing JSON data: {e}")
-            SDKLogger.error(f"data: {data}")
-            return None
-        
-    def parse_transform_data_to_matrix(self, data_str):
-        """Parse JSON format transform data and return a [len(body_tracker_role), 4, 4] matrix."""
-        transforms = self.parse_transform_data(data_str)
-        if not transforms:
-            return None
-        
-        for i, transform in enumerate(transforms):
-            self.cached_matrices[i][:3, :3] = quaternion_matrix(transform['rotation'])[:3, :3]
-            self.cached_matrices[i][:3, 3] = transform['position']
-
-        return self.cached_matrices
     
-    def get_robot_urdf_matrix(self, data_str):
-        """Get the robot URDF matrix from the data string."""
-        matrices = self.parse_transform_data_to_matrix(data_str)
+    def get_robot_urdf_matrix_from_proto(self, proto_data):
+        """Get the robot URDF matrix from FullBodyData protobuf bytes."""
+        matrices = self.parse_full_body_to_matrix(proto_data)
         if matrices is None or matrices.size == 0:
             SDKLogger.warning("Received invalid matrices data")
             return
         robot_urdf_matrices = self.transform_matrix_to_ros(matrices)
         current_time = rospy.Time.now()
         return robot_urdf_matrices, current_time
+    
+    def parse_full_body_to_matrix(self, data_bytes: bytes):
+        """Parse protobuf FullBodyData bytes into [N, 4, 4] matrices."""
+        try:
+            full_body_msg = proto.VRData()
+            full_body_msg.ParseFromString(data_bytes)
+            
+            poses = full_body_msg.full_body.full_body
+            if not poses:
+                SDKLogger.warning("No poses in full_body")
+                return None
+            
+            for i, pose in enumerate(poses):
+                translation = np.array([pose.pos_x, pose.pos_y, pose.pos_z])
+                rotation = np.array([pose.rot_qx, pose.rot_qy, pose.rot_qz, pose.rot_qw])
+                
+                self.cached_matrices[i][:3, :3] = quaternion_matrix(rotation)[:3, :3]
+                self.cached_matrices[i][:3, 3] = translation
+            
+            return self.cached_matrices
+        except Exception as e:
+            SDKLogger.error(f"Error parsing FullBodyData protobuf: {e}")
+            return None
 
     def scale_arm_positions(self, shoulder_pos, elbow_pos, hand_pos, human_shoulder_pos, side):
         """Scale the arm positions from human scale to robot scale."""
@@ -1156,67 +1149,70 @@ class KuavoPicoInfoTransformer():
         
         self.bone_frame_publisher.publish_pose_info_list(pose_info_list)
 
-    def publish_pico_joys(self, joy_data:json):
-        """Publish pico joys"""
+    def publish_pico_joys(self, controller_data):
+        """Publish pico joys using protobuf ControllerData"""
         joy_msg = JoySticks()
-        try:   
-            def process_joy_data(joy_data, side)->dict:
-                if side in joy_data:
-                    data = joy_data[side]
-                    primary = data.get('primaryButton', False)
-                    secondary = data.get('secondaryButton', False)
-                    grip_btn = data.get('gripButton', False)
-                    trigger_btn = data.get('triggerButton', False)
-                    grip_val = data.get('gripValue', 0.0)
-                    trigger_val = data.get('triggerValue', 0.0)
-                    thumbstick = data.get('thumbstick', [0.0, 0.0])
-                    return  {
-                        "buttons":  [
-                            True if primary == 1 else False,    # X/A
-                            True if secondary == 1 else False,  # Y/B
-                            True if grip_btn == 1 else False,   # Grip
-                            True if trigger_btn == 1 else False # Trigger
-                        ],
-                        "axes": [
-                            float(thumbstick[0]), # thumbstick_x
-                            float(thumbstick[1]), # thumbstick_y
-                            float(grip_val),    # grip_value
-                            float(trigger_val)  # trigger_value
-                        ]
-                    }
-                else:
-                    SDKLogger.error(f"处理 Joy 数据时在 json 中丢失了{side}!")
-                    return  {
-                        "buttons":  [False]*4,
-                        "axes": [0.0]*4
-                    }
-            if not 'controllers' in joy_data:
-                SDKLogger.error(f"处理 Joy 数据时在 json 中丢失了 controllers!")
-                return None
-            controller_data = joy_data['controllers']
-            left_joy = process_joy_data(controller_data, 'left')
-            right_joy = process_joy_data(controller_data, 'right')
-            joy_msg.left_x = left_joy["axes"][0]
-            joy_msg.left_y = left_joy["axes"][1]
-            joy_msg.left_grip = left_joy["axes"][2]
-            joy_msg.left_trigger = left_joy["axes"][3]
-            joy_msg.left_first_button_pressed = bool(left_joy["buttons"][0])
-            joy_msg.left_second_button_pressed = bool(left_joy["buttons"][1])
-            joy_msg.left_first_button_touched = False  # 默认值
-            joy_msg.left_second_button_touched = False  # 默认值
-            
-            joy_msg.right_x = right_joy["axes"][0]
-            joy_msg.right_y = right_joy["axes"][1]
-            joy_msg.right_trigger = right_joy["axes"][3]
-            joy_msg.right_grip = right_joy["axes"][2]
-            joy_msg.right_first_button_pressed = bool(right_joy["buttons"][0])
-            joy_msg.right_second_button_pressed = bool(right_joy["buttons"][1])
-            joy_msg.right_first_button_touched = False  # 默认值
-            joy_msg.right_second_button_touched = False  # 默认值
-            # print(joy_msg)
+        try:
+            def process_controller_state(state: proto.ControllerState) -> dict:
+                thumbstick = state.thumbstick
+                thumb_x = float(thumbstick[0]) if len(thumbstick) > 0 else 0.0
+                thumb_y = float(thumbstick[1]) if len(thumbstick) > 1 else 0.0
+                return {
+                    "buttons": [
+                        bool(state.primary_button),    # A/X
+                        bool(state.secondary_button),  # B/Y
+                        bool(state.grip_button),       # Grip
+                        bool(state.trigger_button)     # Trigger
+                    ],
+                    "axes": [
+                        thumb_x,
+                        thumb_y,
+                        float(state.grip_value),
+                        float(state.trigger_value)
+                    ]
+                }
+
+            if not controller_data.HasField("controllers"):
+                SDKLogger.error("Missing 'controllers' field in ControllerData")
+                return
+
+            states = controller_data.controllers
+
+            if states.HasField("left"):
+                left = process_controller_state(states.left)
+            else:
+                SDKLogger.error("Missing 'left' controller in ControllerStates")
+                left = {"buttons": [False] * 4, "axes": [0.0] * 4}
+
+            if states.HasField("right"):
+                right = process_controller_state(states.right)
+            else:
+                SDKLogger.error("Missing 'right' controller in ControllerStates")
+                right = {"buttons": [False] * 4, "axes": [0.0] * 4}
+
+            # 填充 JoySticks 消息
+            joy_msg.left_x = left["axes"][0]
+            joy_msg.left_y = left["axes"][1]
+            joy_msg.left_grip = left["axes"][2]
+            joy_msg.left_trigger = left["axes"][3]
+            joy_msg.left_first_button_pressed = left["buttons"][0]
+            joy_msg.left_second_button_pressed = left["buttons"][1]
+            joy_msg.left_first_button_touched = False
+            joy_msg.left_second_button_touched = False
+
+            joy_msg.right_x = right["axes"][0]
+            joy_msg.right_y = right["axes"][1]
+            joy_msg.right_grip = right["axes"][2]
+            joy_msg.right_trigger = right["axes"][3]
+            joy_msg.right_first_button_pressed = right["buttons"][0]
+            joy_msg.right_second_button_pressed = right["buttons"][1]
+            joy_msg.right_first_button_touched = False
+            joy_msg.right_second_button_touched = False
+
         except Exception as e:
-            SDKLogger.error(f"Error processing joy data: {e}")
-            return None
+            SDKLogger.error(f"Error processing protobuf controller data: {e}")
+            return
+
         self.bone_frame_publisher.publish_pico_joys(joy_msg)
 
     def process_body_pose_for_stepping(self, robot_urdf_matrices):
