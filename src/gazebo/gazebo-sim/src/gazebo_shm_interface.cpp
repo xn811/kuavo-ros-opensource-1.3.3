@@ -160,9 +160,6 @@ void GazeboShmInterface::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
 
     // 等待并加载参数
     waitForParams();
-    
-    // 设置初始状态
-    setInitialState();
 
     // 解析配置
     if (!ParseImu(_sdf)) {
@@ -239,12 +236,6 @@ void GazeboShmInterface::waitForParams()
                 
                 if (param_valid && !robot_init_state_param_.empty()) {
 
-                    // 打印参数值用于调试
-                    std::cout << "robot_init_state_param: ";
-                    for (size_t i = 0; i < robot_init_state_param_.size(); ++i) {
-                        std::cout << robot_init_state_param_[i] << " ";
-                    }
-                    std::cout << std::endl;
                     
                     params_loaded_ = true;
                     break;
@@ -263,6 +254,26 @@ void GazeboShmInterface::waitForParams()
     if (!params_loaded_) {
         std::cerr << "Cannot load initial state: parameters not loaded" << std::endl;
         exit(1);
+    }else
+    {
+
+
+        // 获取腰部自由度
+        int waist_num = 0;
+        nh_->getParam("waistRealDof", waist_num);
+        std::cout << "GazeboShmInterface get waist_num: " << waist_num << std::endl;
+        if (waist_num > 0) {
+            for (int i = 0; i < waist_num; i++) {
+                robot_init_state_param_.insert(robot_init_state_param_.begin() + 7, 0.0);
+            }
+        }
+
+        // 打印参数值用于调试
+        std::cout << "robot_init_state_param: ";
+        for (size_t i = 0; i < robot_init_state_param_.size(); ++i) {
+            std::cout << robot_init_state_param_[i] << " ";
+        }
+        std::cout << std::endl;
     }
 }
 
@@ -274,12 +285,21 @@ void GazeboShmInterface::setInitialState()
     }
     std::cout << "[GazeboShmInterface] setInitialState: " << robot_init_state_param_.size() << std::endl;
 
+    // 自动暂停机制
+    auto world = model_->GetWorld();
+    bool was_paused = world->IsPaused();
+    if (!was_paused) {
+        world->SetPaused(true);
+        std::cout << "[GazeboShmInterface] Auto-pausing simulation for initial state setup" << std::endl;
+    }
+
     // 设置base位姿
     if (robot_init_state_param_.size() >= 7) {
         std::vector<double> base_pose(robot_init_state_param_.begin(), robot_init_state_param_.begin() + 7);
         ignition::math::Pose3d new_pose;
         new_pose.Pos().Set(base_pose[0], base_pose[1], base_pose[2]);
         new_pose.Rot().Set(base_pose[3], base_pose[4], base_pose[5], base_pose[6]);  // w,x,y,z
+        
         model_->SetWorldPose(new_pose);
         
         std::cout << "[GazeboShmInterface] Setting model pose to: "
@@ -302,6 +322,12 @@ void GazeboShmInterface::setInitialState()
         
         // 使用Gazebo的接口设置关节位置
         model_->SetJointPositions(joint_pos_map);
+    }
+    
+    // 自动恢复
+    if (!was_paused) {
+        world->SetPaused(false);
+        std::cout << "[GazeboShmInterface] Auto-resuming simulation after initial state setup" << std::endl;
     }
 }
 
@@ -369,6 +395,7 @@ void GazeboShmInterface::OnUpdate(const common::UpdateInfo& _info)
     if (first_update) {
         // 在第一次更新时设置初始状态
         setInitialState();
+        first_update = false;
     }
 
     // 更新IMU数据
@@ -415,15 +442,6 @@ void GazeboShmInterface::OnUpdate(const common::UpdateInfo& _info)
     shm_manager_->writeSensorsData(sensors_data_);
 
     // 应用关节命令
-    if (first_update)
-    {
-        std::cout << "[GazeboShmInterface] first update" << std::endl;   
-        first_update = false;
-        for (size_t i = 0; i < joints_.size(); ++i) {
-            joints_[i]->SetForce(0, 0);
-        }
-        return; 
-    }
 
     // 直接使用同步读取接口读取命令
     gazebo_shm::JointCommand cmd;

@@ -351,7 +351,7 @@ inputCost
     ; input costs for the arm DOFs
     arm
     {
-      scaling 1e-2
+      scaling 1e-1
 
       (0,0)  1.0  ; z_arm_l1 velocity
       (1,1)  1.0  ; z_arm_l2 velocity

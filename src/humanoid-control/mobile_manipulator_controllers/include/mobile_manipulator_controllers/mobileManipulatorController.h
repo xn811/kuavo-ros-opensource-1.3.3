@@ -109,6 +109,7 @@ namespace mobile_manipulator_controller
     // play back mode
     bool is_play_back_mode_ = false;
     ros::Subscriber mmControlTypeSubscriber_;
+    uint32_t observation_count_ = 0;
   };
 
 } // namespace mobile_manipulator_controller

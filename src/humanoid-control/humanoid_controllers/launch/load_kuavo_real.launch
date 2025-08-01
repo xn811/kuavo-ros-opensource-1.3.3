@@ -31,6 +31,9 @@
     <arg name="waist_move_spd"     default="0.8"/>
     <arg name="stand_up_protect" default="true"/>
     <arg name="redundant_imu" default="false"/>
+    <arg name="joint_protect_enable" default="true" />
+    <arg name="cmd_truncation_enable" default="true" />
+    <arg name="leg_disable_mode" default="true" doc="If true, when any leg joint fails, all leg joints (1-12) will be disabled" />
     <arg name="ruiwo_cxx_sdk" default="true"/>
     <arg name="arm_move_spd"      default="1.2"/>
 
@@ -74,6 +77,9 @@
     <param name="stand_up_protect" value="$(arg stand_up_protect)"/>
     <param name="redundant_imu" value="$(arg redundant_imu)"/>
     <param name="ruiwo_cxx_sdk" value="$(arg ruiwo_cxx_sdk)"/>
+    <param name="joint_protect_enable" value="$(arg joint_protect_enable)" />
+    <param name="cmd_truncation_enable" value="$(arg cmd_truncation_enable)" />
+    <param name="leg_disable_mode" value="$(arg leg_disable_mode)" />
     <rosparam param="isolated_cpus">[2, 3]</rosparam>
     <param name="enable_pull_up_protect" value="true"/>
     <param name="pull_up_force_threshold" value="0.70"/>
@@ -106,6 +112,8 @@
     <group unless="$(eval arg('robot_version') >= 30)">
         <param name="enable_pull_up_protect" value="false"/>
         <param name="stand_up_protect" value="false"/>
+        <param name="joint_protect_enable" value="false" />
+        <param name="cmd_truncation_enable" value="false" />
     </group>
     
     <!-- mpc node -->
@@ -131,9 +139,6 @@
     <arg name="cali" default="false" />
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
-    <arg name="joint_protect_enable" default="true" />
-    <arg name="cmd_truncation_enable" default="true" />
-    <arg name="leg_disable_mode" default="true" doc="If true, when any leg joint fails, all leg joints (1-12) will be disabled" />
 
     <!-- 是否进入到手臂展开的零点校准姿态 -->
     <arg name="cali_set_zero" default="false" />
@@ -150,9 +155,6 @@
         <param name="cali" value="true" />
     </group>
     
-    <param name="joint_protect_enable" value="$(arg joint_protect_enable)" />
-    <param name="cmd_truncation_enable" value="$(arg cmd_truncation_enable)" />
-    <param name="leg_disable_mode" value="$(arg leg_disable_mode)" />
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" respawn="false" 
        output="screen" required="true" clear_params="true"
        launch-prefix="$(find humanoid_controllers)/scripts/start_node.sh $(arg with_coredump)">

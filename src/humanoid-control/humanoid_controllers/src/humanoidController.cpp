@@ -2468,11 +2468,22 @@ namespace humanoid_controller
     gazebo_shm::SensorsData sensors_data;
     if (shm_manager_->readSensorsData(sensors_data)) {
         // std::cout << "sensors_data.sensor_time: "<< sensors_data.sensor_time << std::endl;
+        if (waistNum_ > 0)
+        {
+          for (size_t i = 0; i < waistNum_; ++i)
+          {
+            sensor_data_waist_.jointPos_(i) = sensors_data.joint_data[i].position;
+            sensor_data_waist_.jointVel_(i) = sensors_data.joint_data[i].velocity;
+            sensor_data_waist_.jointAcc_(i) = 0.0;
+            sensor_data_waist_.jointTorque_(i) = sensors_data.joint_data[i].effort;
+          }
+        }
+
         SensorData sensor_data;
         sensor_data.resize_joint(jointNumReal_+ armNumReal_ + waistNum_);
         
         // 关节数据
-        for (size_t i = 0; i < jointNumReal_+armNumReal_ + waistNum_; ++i) {
+        for (size_t i = 0; i < waistNum_+jointNumReal_+armNumReal_; ++i) {
             sensor_data.jointPos_(i) = sensors_data.joint_data[i].position;
             sensor_data.jointVel_(i) = sensors_data.joint_data[i].velocity;
             sensor_data.jointAcc_(i) = 0.0;  // 加速度在共享内存中未提供
@@ -2499,7 +2510,7 @@ namespace humanoid_controller
         msg.header.frame_id = "base_link";
         
         // 关节数据
-        for (size_t i = 0; i < jointNumReal_+ armNumReal_ + waistNum_; ++i) {
+        for (size_t i = 0; i < waistNum_+jointNumReal_+armNumReal_; ++i) {
             msg.joint_data.joint_q.push_back(sensors_data.joint_data[i].position);
             msg.joint_data.joint_v.push_back(sensors_data.joint_data[i].velocity);
             msg.joint_data.joint_vd.push_back(0.0);
@@ -2574,7 +2585,7 @@ namespace humanoid_controller
     }
 
     gazebo_shm::JointCommand joint_cmd;
-    joint_cmd.num_joints = jointNumReal_ + armNumReal_ + headNum_;
+    joint_cmd.num_joints = waistNum_ + jointNumReal_ + armNumReal_ + headNum_;
 
     // 从jointCmdMsg中复制数据到共享内存结构
     for (size_t i = 0; i < joint_cmd.num_joints; ++i) {

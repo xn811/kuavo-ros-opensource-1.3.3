@@ -161,8 +161,8 @@ class IkRos:
         self.quest3_arm_info_transformer.control_torso = control_torso
         initial_state = np.array([0, 0, 0, 0, 0, 0])  # 初始状态 [x, y, z, vx, vy, vz]
         initial_covariance = np.eye(6)  # 初始协方差矩阵
-        process_noise = np.eye(6) * 0.001  # 过程噪声协方差矩阵
-        measurement_noise = np.eye(3) * 1.1  # 测量噪声协方差矩阵
+        process_noise = np.eye(6) * 0.01  # 过程噪声协方差矩阵
+        measurement_noise = np.eye(3) * 0.01  # 测量噪声协方差矩阵
 
         initial_state[0:3] = self.arm_ik.left_hand_pose(self.arm_ik.q0())[0]
         self.kf_left = KalmanFilter3D(initial_state, initial_covariance, process_noise, measurement_noise)

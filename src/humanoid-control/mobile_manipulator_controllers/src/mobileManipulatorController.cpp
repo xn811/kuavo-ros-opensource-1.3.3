@@ -94,7 +94,11 @@ namespace mobile_manipulator_controller
       int result = MobileManipulatorControllerBase::update(mmObservation_.state, nextState);
       std::cout << "MPC initialized, result: " << result << std::endl;
     }
-    while(!recievedObservation_) { std::cout << "Waiting for observation..." << std::endl; return;}
+    while(!recievedObservation_) { 
+      if(observation_count_++ % 40 == 0)
+        std::cout << "[MobileManipulatorController] Waiting for observation..." << std::endl; 
+      return;
+    }
     if(!is_play_back_mode_){
       std_msgs::Int8 msg;
       msg.data = static_cast<int8_t>(controlType_);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from kuavo_msgs.msg import questJoySticks
+from kuavo_msgs.msg import JoySticks
 from std_srvs.srv import SetBool, SetBoolRequest
 from kuavo_msgs.srv import changeTorsoCtrlMode, changeTorsoCtrlModeRequest
 from geometry_msgs.msg import Twist
@@ -18,8 +18,8 @@ class Quest3FSMNode:
         rospy.init_node('quest3_fsm_node_for_rl', anonymous=True)
         
         # Initialize joystick data structures
-        self.joystick_data = questJoySticks()
-        self.joystick_data_prev = questJoySticks()
+        self.joystick_data = JoySticks()
+        self.joystick_data_prev = JoySticks()
         
         # Node state management
         self.node_active = True
@@ -35,7 +35,7 @@ class Quest3FSMNode:
         # Create subscriber for joystick data
         self.joystick_sub = rospy.Subscriber(
             "/quest_joystick_data", 
-            questJoySticks, 
+            JoySticks, 
             self.joystick_callback, 
             queue_size=1
         )
@@ -81,7 +81,7 @@ class Quest3FSMNode:
         Joystick data callback function for real-time input processing
         
         Args:
-            msg (questJoySticks): Incoming joystick data message
+            msg (JoySticks): Incoming joystick data message
         """
         # Store previous frame data for edge detection
         if self.first_data_received:
