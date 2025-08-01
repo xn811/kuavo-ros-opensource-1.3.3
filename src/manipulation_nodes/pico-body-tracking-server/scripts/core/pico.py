@@ -16,7 +16,8 @@ import tf
 from core.ros.pico import (
     KuavoPicoNodeManager,
     KuavoPicoNode,
-    RobotMatrixPublisher
+    RobotMatrixPublisher,
+    ControlMode
 )
 from core.ros.pico_utils import RobotInfoBroadcaster
 from core.ros.robot_data import RobotDataServer
@@ -249,8 +250,13 @@ class KuavoPicoServer:
             else:
                 SDKLogger.error("VR command protobuf missing item_mass_force field.")
             if vr_command.HasField('control_mode'):
-                #TODO 更新控制模式
-                pass
+                control_mode = vr_command.control_mode
+                if control_mode == "mobile_mpc":
+                    self.pico_node._set_control_mode(ControlMode.MOBILE_MPC_MODE.value)
+                elif control_mode == "follow":
+                    self.pico_node._set_control_mode(ControlMode.FOLLOW_MODE.value)
+                elif control_mode == "incremental":
+                    self.pico_node._set_control_mode(ControlMode.INCREMENTAL_MODE.value)
         except Exception as e:
             SDKLogger.error(f"Error processing VR command from protobuf: {e}")
 
