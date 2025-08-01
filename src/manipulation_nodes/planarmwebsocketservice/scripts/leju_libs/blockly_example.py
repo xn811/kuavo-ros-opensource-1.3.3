@@ -48,6 +48,8 @@ def main():
     robot_control.excute_action_file("roban2", "roban2", "2_抱拳.wav")
     # 播放音乐
     robot_control.play_music("2_抱拳.wav")
+    # 停止播放音乐
+    robot_control.stop_music()
     # 执行动作文件并播放音乐
     robot_control.excute_action_file("roban2", music_file="2_抱拳.wav")
     # 复位机器人本体    

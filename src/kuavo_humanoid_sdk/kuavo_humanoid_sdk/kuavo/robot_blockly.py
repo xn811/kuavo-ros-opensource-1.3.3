@@ -914,6 +914,14 @@ class RobotControlBlockly:
             bool: True if the music was played successfully, False otherwise.
         """
         return self.robot_audio.play_audio(music_number, volume, speed)
+    
+    def stop_music(self) -> bool:
+        """Stop the currently playing music.
+
+        Returns:
+            bool: True if the music was stopped successfully, False otherwise.
+        """
+        return self.robot_audio.stop_music()
 
     # ===== Stair Climbing Methods =====
     

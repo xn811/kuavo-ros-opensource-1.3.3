@@ -115,6 +115,11 @@ robot_control = RobotControlBlockly()
     - 描述：控制机器人的腰部在 yaw 方向上转动
     - 参数范围：[-120.0, 120.0]度
 
+18. **停止播放音乐**
+    - 函数：`robot_control.stop_music()`
+    - 参数类型：string
+    - 描述：控制机器人播放指定音频
+    - 备注：需将目标音频文件下载到 **/home/lab/.config/lejuconfig/music** 目录下  
 
 ## 导航类模块定义
 ```python
