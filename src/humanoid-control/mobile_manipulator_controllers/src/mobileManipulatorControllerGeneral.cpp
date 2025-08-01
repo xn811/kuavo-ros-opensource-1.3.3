@@ -85,7 +85,7 @@ namespace mobile_manipulator_controller
         stop();
         ROS_INFO("MPC is stopped, if you want to resume, please set control_mode to ArmOnly or BaseArm.");
       }
-      else{
+      else if(lastControlType_ == ControlType::None){
         reset(humanoidState_);
         ROS_INFO("MPC is reseted, now you can control the humanoid.");
       }

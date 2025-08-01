@@ -23,7 +23,7 @@ def parse_args():
                       help='Pico server host (default: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=12345,
                       help='Pico server port (default: 12345)')
-    parser.add_argument('--control_mode', type=str, default='WholeBody',
+    parser.add_argument('--control_mode', type=str, default='LowerBody',
                       choices=['WholeBody', 'UpperBody', 'LowerBody'],
                       help='Control mode (default: LowerBody)')
     parser.add_argument('--control_torso', type=int, default=0,
@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument('--use_real_foot_data', type=int, default=1,
                       help='Use real foot data for complete action detection (0: disabled, 1: enabled, default: 0)')
     # Add play mode argument
-    parser.add_argument('--play_mode', type=int, default=1,
+    parser.add_argument('--play_mode', type=int, default=0,
                       help='Enable play mode (0: disabled, 1: enabled, default: 0)')
     parser.add_argument('--max_step_length_x', type=float, default=0.3,
                       help='Maximum step length in x direction (default: 0.3)')

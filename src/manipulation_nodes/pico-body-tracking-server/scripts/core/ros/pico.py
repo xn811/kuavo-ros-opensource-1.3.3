@@ -16,19 +16,20 @@ import rospy
 import rospkg
 import tf
 import numpy as np
-from typing import List, Dict, Optional, Tuple, Any, Set
+from typing import List, Optional, Any
 from tf2_msgs.msg import TFMessage
 from std_msgs.msg import Float64MultiArray,Float64
 from kuavo_msgs.msg import (
-    twoArmHandPoseCmd, robotBodyMatrices, headBodyPose,
-    picoPoseInfoList, robotHeadMotionData, ikSolveParam, 
-    footPoseTargetTrajectories
+    twoArmHandPoseCmd, robotBodyMatrices, picoPoseInfoList,
+    robotHeadMotionData, ikSolveParam, footPoseTargetTrajectories,
+    JoySticks
 )
 from kuavo_msgs.srv import changeArmCtrlMode
 from kuavo_msgs.msg import JoySticks 
 from .pico_utils import KuavoPicoInfoTransformer
-from .joyticks_handler import JoySticksHandler
 from common.logger import SDKLogger
+from .joysticks_handler import JoySticksHandler
+from typing import Set
 
 class KuavoPicoNodeManager:
     """Singleton class for managing ROS node initialization."""
@@ -82,7 +83,7 @@ class KuavoPicoBoneFramePublisher:
             queue_size=10
         )
         self.foot_pose_pub = rospy.Publisher(
-            '/humanoid_mpc_foot_pose_target_trajectories', 
+            '/humanoid_mpc_foot_pose_world_target_trajectories',
             footPoseTargetTrajectories, 
             queue_size=10
         )
@@ -113,7 +114,7 @@ class KuavoPicoBoneFramePublisher:
 
     def publish_foot_pose_trajectory(self, foot_pose_trajectory: footPoseTargetTrajectories) -> None:
         """Publish foot pose trajectory."""
-        print("\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////")
+        SDKLogger.info(f"publish_foot_pose_trajectory finished[\\\\\\\\\\\\\\\\\\\\\\\\]")
         SDKLogger.info(f"publish_foot_pose_trajectory time: {rospy.Time.now().to_sec()}")
         self.foot_pose_pub.publish(foot_pose_trajectory)
 
@@ -126,17 +127,6 @@ class KuavoPicoBoneFramePublisher:
                 SDKLogger.error("ROS node is shutdown, cannot publish hands info list")
         except Exception as e:
             SDKLogger.error(f"Error publishing hands info list: {e}")
-
-    def publish_head_body_pose_msg(self, head_body_pose_msg: headBodyPose) -> None:
-        """Publish head body pose."""
-        SDKLogger.info("Attempting to publish head body pose...")
-        try:
-            if not rospy.is_shutdown():
-                self.head_body_pose_pub.publish(head_body_pose_msg)
-            else:
-                SDKLogger.error("ROS node is shutdown, cannot publish head body pose")
-        except Exception as e:
-            SDKLogger.error(f"Error publishing head motion data: {e}")
 
     def publish_tf(self, translation: List[float], rotation: List[float], 
                   child: str, parent: str) -> None:
@@ -191,6 +181,7 @@ class KuavoPicoNode:
             self.robot_matrix_publisher = RobotMatrixPublisher()
                         
             self._initialized = True
+            self._init_joy_controller()
         else:
             # Allow updating play_mode if already initialized
             self._play_mode = play_mode
@@ -313,6 +304,39 @@ class KuavoPicoNode:
                                           value['key_combination'], 
                                           value['callback'])
 
+    def _init_joy_controller(self) -> None:
+        """Initialize joy controller"""
+        self.joy_button_handler = JoySticksHandler()
+        rospy.Subscriber("/pico/joy", JoySticks, self.sub_callback)
+        self.joy_button_handler.add_callback("torso on", {"Y_PRESSED"}, self.torso_on_callback)
+        self.joy_button_handler.add_callback("torso off", {"Y_LONG_PRESSED"}, self.torso_off_callback)
+        self.joy_button_handler.add_callback("WholeBody Mode", {"X_LONG_PRESSED"}, self.whole_body_callback)
+        self.joy_button_handler.add_callback("UpperBody Mode", {"B_LONG_PRESSED"}, self.upper_body_callback)
+        self.joy_button_handler.add_callback("LowerBody Mode", {"A_LONG_PRESSED"}, self.lower_body_callback)
+
+    def sub_callback(self, joy: JoySticks) -> None:
+        self.joy_button_handler.update(joy)
+
+    def torso_on_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.last_pico_running_state = False
+        self.pico_info_transformer.set_control_torso_mode(True)
+    
+    def torso_off_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.last_pico_running_state = False
+        self.pico_info_transformer.set_control_torso_mode(False)
+
+    def whole_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.last_pico_running_state = False
+        self.pico_info_transformer.set_control_mode("WholeBody")
+
+    def upper_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.last_pico_running_state = False
+        self.pico_info_transformer.set_control_mode("UpperBody")
+
+    def lower_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.last_pico_running_state = False
+        self.pico_info_transformer.set_control_mode("LowerBody")
+
     def set_robot_model_params(self) -> str:
         """Set robot model parameters."""
         SDKLogger.info("Setting robot model parameters...")
@@ -365,6 +389,7 @@ class KuavoPicoNode:
             rospy.wait_for_service("/mobile_manipulator_mpc_control")
             changeHandTrackingMode_srv = rospy.ServiceProxy("/mobile_manipulator_mpc_control", changeArmCtrlMode)
             changeHandTrackingMode_srv(mode)
+            print(f"=================================changeHandTrackingMode_srv({mode})=============================================")
         except Exception as e:
             SDKLogger.error(f"Service /mobile_manipulator_mpc_control call failed: {e}")
 
@@ -418,7 +443,8 @@ class KuavoPicoNode:
         eef_pose_msg.ik_param = self.ik_solve_param
         # eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
         eef_pose_msg.use_custom_ik_param = False
-        eef_pose_msg.frame = 3
+        eef_pose_msg.frame = 1
+        
         
         # Check for VR errors
         if self.pico_info_transformer.check_if_vr_error():
@@ -427,8 +453,8 @@ class KuavoPicoNode:
             
         if self.pico_info_transformer.is_running:
             self.pub.publish(eef_pose_msg)
-            if self.pico_info_transformer.control_torso_mode:
-                self.pico_info_transformer.pub_head_body_pose_msg(self.pico_info_transformer.head_body_pose)
+            # if self.pico_info_transformer.control_torso_mode:
+            #     self.pico_info_transformer.pub_head_body_pose_msg(self.pico_info_transformer.head_body_pose)
         else:
             SDKLogger.warn("Not publishing to /mm/two_arm_hand_pose_cmd because is_running is False")
         
@@ -436,7 +462,10 @@ class KuavoPicoNode:
         if self.send_srv and (self.last_pico_running_state != self.pico_info_transformer.is_running):
             SDKLogger.info(f"Pico running state change to: {self.pico_info_transformer.is_running}")
             mode = 2 if self.pico_info_transformer.is_running else 0
-            mobile_mode = 1 if self.pico_info_transformer.is_running else 0
+            if self.pico_info_transformer.control_torso_mode:
+                mobile_mode = 3 if self.pico_info_transformer.is_running else 0
+            else:
+                mobile_mode = 1 if self.pico_info_transformer.is_running else 0
             wbc_mode = 1 if self.pico_info_transformer.is_running else 0
             self.change_arm_ctrl_mode(mode)
             self.change_mobile_ctrl_mode(mobile_mode)

@@ -27,8 +27,8 @@ model_information {
   ; end-effector frame of the robot (from URDF)
   eeFrame
   {
-    [0]   "zarm_l7_link"
-    [1]   "zarm_r7_link"
+    [0]   "zarm_l7_end_effector"
+    [1]   "zarm_r7_end_effector"
   }
 }
 

@@ -57,11 +57,10 @@ from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point, Quaternion, Twist
 from std_msgs.msg import Float32MultiArray, Bool
 from kuavo_msgs.msg import (
-    picoPoseInfo, picoPoseInfoList,
+    picoPoseInfo, picoPoseInfoList, JoySticks,
     footPoseTargetTrajectories, footPose
 )
 from ocs2_msgs.msg import mpc_observation, mpc_flattened_controller
-from noitom_hi5_hand_udp_python.msg import JoySticks # TODO: 从noitom_hi5_hand_udp_python导入是临时的，等待该消息迁移到 kuavo_msgs
 from enum import IntEnum
 from common.logger import SDKLogger
 from pydrake.all import (
@@ -220,14 +219,13 @@ class KuavoPicoInfoTransformer():
         # Initialize arm poses
         self._init_arm_poses()
         
-        # # Initialize shoulder rotation matrices
-        # self._init_shoulder_matrices()
-        
         # Initialize publishers
         self._init_publishers()
 
         # Initialize arm lengths
         self._init_arm_lengths()
+
+        self._init_pelvis_offset()
 
         # Initialize control mode
         self._init_control_mode()
@@ -261,7 +259,6 @@ class KuavoPicoInfoTransformer():
         self.head_body_pose = Twist()
         self.cached_matrices = np.tile(np.eye(4), (len(self.bone_names), 1, 1))
         self.T_spine3_to_base = translation_matrix([0, 0, 0.34])  # base_link is 0.34m below SPINE3
-        
 
     def _init_arm_poses(self) -> None:
         """Initialize arm pose variables."""
@@ -269,6 +266,8 @@ class KuavoPicoInfoTransformer():
         self.right_hand_pose = None
         self.left_elbow_pos = None
         self.right_elbow_pos = None
+        self.left_wrist_pose = None
+        self.right_wrist_pose = None
 
     def _init_publishers(self) -> None:
         """Initialize ROS publishers."""
@@ -289,9 +288,9 @@ class KuavoPicoInfoTransformer():
 
     def _init_arm_lengths(self) -> None:
         """Initialize arm length variables."""
-        self.upper_arm_length = rospy.get_param("/pico/upper_arm_length")/100.0
-        self.lower_arm_length = rospy.get_param("/pico/lower_arm_length")/100.0
-        self.shoulder_width = rospy.get_param("/pico/shoulder_width")/100.0
+        self.upper_arm_length = rospy.get_param("/pico/upper_arm_length")
+        self.lower_arm_length = rospy.get_param("/pico/lower_arm_length")
+        self.shoulder_width = rospy.get_param("/pico/shoulder_width")
         
         self.human_upper_arm_length = 0.3
         self.human_lower_arm_length = 0.3
@@ -301,12 +300,22 @@ class KuavoPicoInfoTransformer():
         self.arm_length_num = 30
         self.left_upper_arm_lengths = []
         self.left_lower_arm_lengths = []
+        self.left_hand_lengths = []
         self.right_upper_arm_lengths = []
         self.right_lower_arm_lengths = []
+        self.right_hand_lengths = []
         self.avg_left_upper_arm_length = None
         self.avg_left_lower_arm_length = None
+        self.avg_left_hand_length = None
         self.avg_right_upper_arm_length = None
         self.avg_right_lower_arm_length = None
+        self.avg_right_hand_length = None
+
+    def _init_pelvis_offset(self) -> None:
+        self.pelvis_offset = None
+        self.default_pelvis_x = None
+        self.default_pelvis_y = None
+        self.default_pelvis_z = None
 
     def _init_control_mode(self) -> None:
         """Initialize control mode."""
@@ -316,6 +325,8 @@ class KuavoPicoInfoTransformer():
         """Set control mode."""
         if mode in CONTROL_MODES:
             self.control_mode = mode
+            SDKLogger.info(f"===============set_control_mode:{self.control_mode}===============")
+            self.set_control_torso_mode(False)
         else:
             SDKLogger.warning(f"Invalid control mode: {mode}")
     
@@ -323,9 +334,18 @@ class KuavoPicoInfoTransformer():
         """Initialize torso control mode."""
         self.control_torso_mode = False
 
+    def reset_pelvis_offset(self) -> None:
+        self.pelvis_offset = None
+        self.default_pelvis_x = None
+        self.default_pelvis_y = None
+        self.default_pelvis_z = None
+
     def set_control_torso_mode(self, mode: bool) -> None:
         """Set torso control mode."""
-        self.control_torso_mode = mode
+        # Only allow torso control when `mode` is True and the overall control mode is not 'WholeBody' or 'LowerBody'.
+        self.control_torso_mode = mode and self.control_mode not in ("WholeBody", "LowerBody")
+        self.reset_pelvis_offset()
+        SDKLogger.info(f"===============set_control_torso_mode:{self.control_torso_mode}===============")
 
     def stop_arm_length_measurement(self) -> None:
         """Stop arm length measurement and switch to using average values."""
@@ -362,7 +382,7 @@ class KuavoPicoInfoTransformer():
             'initial_left_foot_pose': [0.0, 0.1, 0.0, 0.0],
             'initial_right_foot_pose': [0.0, -0.1, 0.0, 0.0],
             'initial_body_pose': None,      # Initial body pose reference
-            'max_step_length_x': 0.3,       # 最大步长x
+            'max_step_length_x': 0.4,       # 最大步长x
             'max_step_length_y': 0.15,      # 最大步长y
             # 新增：完整动作检测器参数
             'detection_mode': 'complete_action',  # 'threshold' 或 'complete_action'
@@ -432,7 +452,7 @@ class KuavoPicoInfoTransformer():
         # Initialize trajectory queue and thread management
         self.queue_lock = threading.Lock()
         self.trajectory_queue = queue.Queue(maxsize=10)  # Limit queue size to prevent memory issues
-        self.movement_queue = queue.Queue(maxsize=10)  # Limit queue size to prevent memory issues
+        self.movement_queue = queue.Queue(maxsize=1)  # Limit queue size to prevent memory issues
         self.active_queue = None
         self.is_running = True
         self.trajectory_executor_thread = None
@@ -533,23 +553,54 @@ class KuavoPicoInfoTransformer():
         self.trajectory_executor_thread.start()
         SDKLogger.info("Trajectory executor thread started")
         SDKLogger.info(f"Max size of movement queue: {self.movement_queue.maxsize}")
-
+    
     def _trajectory_executor_worker(self) -> None:
         """Worker thread that executes trajectory messages from the queue."""
+        last_mode = ModeNumber.FF
+        ss_command_issued = False
         while self.is_running:
             try:
-                if self.complete_action_detector['left']['use_real_foot_data']:
-                    movement = self.movement_queue.get()
-                    SDKLogger.info(f"movement: {movement}, time: {time.time()}")
-                    foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
-                        movement['foot_type'], 
-                        [movement['movement_vector']], 
-                        0.4, 
-                        True
-                    )
-                if foot_pose_traj_msg is not None:
-                        self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
-                        time.sleep(5)   # TODO: judge if torso reached target
+                with self.mpc_mode_lock:
+                    new_mode = self.mpc_mode
+
+                if new_mode == ModeNumber.SS:
+                    if not ss_command_issued:
+                        if self.complete_action_detector['left']['use_real_foot_data']:
+                            movement = self.movement_queue.get()
+                            SDKLogger.info(f"movement: {movement}, time: {time.time()}")
+                            foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
+                                movement['foot_type'], 
+                                [movement['movement_vector']], 
+                                0.4, 
+                                True
+                            )
+                        else:
+                            foot_pose_traj_msg = self.trajectory_queue.get()
+                            SDKLogger.info(f"foot_pose_traj_msg: {foot_pose_traj_msg}, time: {time.time()}")
+                        if foot_pose_traj_msg is not None:
+                            self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
+                            ss_command_issued = True
+                        else:
+                            SDKLogger.warning("Movement is illegal !!!")
+                    last_mode = new_mode
+                else:
+                    ss_command_issued = False
+                    if new_mode.value != last_mode.value:
+                        if self.foot_controller.is_execution_window(last_mode, new_mode):
+                            if self.complete_action_detector['left']['use_real_foot_data']:
+                                movement = self.movement_queue.get()
+                                SDKLogger.info(f"movement: {movement}, time: {time.time()}")
+                                foot_pose_traj_msg = self.foot_controller.get_single_foot_trajectory_msg(
+                                    movement['foot_type'], 
+                                    [movement['movement_vector']], 
+                                    0.4, 
+                                    True
+                                )
+                            else:
+                                foot_pose_traj_msg = self.trajectory_queue.get()
+                                SDKLogger.info(f"foot_pose_traj_msg: {foot_pose_traj_msg}, time: {time.time()}")
+                            self.bone_frame_publisher.publish_foot_pose_trajectory(foot_pose_traj_msg)
+                            last_mode = ModeNumber(new_mode.value)
             except queue.Empty:
                 # No message in queue, continue waiting
                 continue
@@ -731,42 +782,63 @@ class KuavoPicoInfoTransformer():
             SDKLogger.error(f"Error parsing FullBodyData protobuf: {e}")
             return None
 
-    def scale_arm_positions(self, shoulder_pos, elbow_pos, hand_pos, human_shoulder_pos, side):
+    def scale_arm_positions(self, shoulder_pos, elbow_pos, hand_pos, human_shoulder_pos, side, wrist_pos):
         """Scale the arm positions from human scale to robot scale."""
+        # 计算人类手臂各段长度
         human_upper_arm_length = math.sqrt((elbow_pos[0] - shoulder_pos[0])**2 + (elbow_pos[1] - shoulder_pos[1])**2 + (elbow_pos[2] - shoulder_pos[2])**2)
         human_lower_arm_length = math.sqrt((hand_pos[0] - elbow_pos[0])**2 + (hand_pos[1] - elbow_pos[1])**2 + (hand_pos[2] - elbow_pos[2])**2)
+        human_hand_length = math.sqrt((wrist_pos[0] - hand_pos[0])**2 + (wrist_pos[1] - hand_pos[1])**2 + (wrist_pos[2] - hand_pos[2])**2)
+
+        print(f"human_upper_arm_length: {human_upper_arm_length}")
+        print(f"human_lower_arm_length: {human_lower_arm_length}")
 
         if self.measure_arm_length:
             if side == "Left":
                 self.left_upper_arm_lengths.append(human_upper_arm_length)
                 self.left_lower_arm_lengths.append(human_lower_arm_length)
+                self.left_hand_lengths.append(human_hand_length)
+
                 if len(self.left_upper_arm_lengths) > self.arm_length_num:
                     self.left_upper_arm_lengths.pop(0)
                     self.left_lower_arm_lengths.pop(0)
-                # Calculate average when we have enough data
+                    self.left_hand_lengths.pop(0)
+
                 if len(self.left_upper_arm_lengths) >= self.arm_length_num:
                     self.avg_left_upper_arm_length = sum(self.left_upper_arm_lengths) / len(self.left_upper_arm_lengths)
                     self.avg_left_lower_arm_length = sum(self.left_lower_arm_lengths) / len(self.left_lower_arm_lengths)
+                    self.avg_left_hand_length = sum(self.left_hand_lengths) / len(self.left_hand_lengths)
+
+                    radi1 = self.upper_arm_length / self.avg_left_upper_arm_length
+                    radi2 = (self.lower_arm_length + self.avg_left_hand_length) / self.avg_left_lower_arm_length
+                else:
+                    radi1 = self.upper_arm_length / human_upper_arm_length
+                    radi2 = (self.lower_arm_length + human_hand_length) / human_lower_arm_length
+
             else:
                 self.right_upper_arm_lengths.append(human_upper_arm_length)
                 self.right_lower_arm_lengths.append(human_lower_arm_length)
+                self.right_hand_lengths.append(human_hand_length)
+
                 if len(self.right_upper_arm_lengths) > self.arm_length_num:
                     self.right_upper_arm_lengths.pop(0)
                     self.right_lower_arm_lengths.pop(0)
-                # Calculate average when we have enough data
+                    self.right_hand_lengths.pop(0)
+
                 if len(self.right_upper_arm_lengths) >= self.arm_length_num:
                     self.avg_right_upper_arm_length = sum(self.right_upper_arm_lengths) / len(self.right_upper_arm_lengths)
                     self.avg_right_lower_arm_length = sum(self.right_lower_arm_lengths) / len(self.right_lower_arm_lengths)
-            radi1 = self.upper_arm_length/human_upper_arm_length
-            radi2 = self.lower_arm_length/human_lower_arm_length 
+                    self.avg_right_hand_length = sum(self.right_hand_lengths) / len(self.right_hand_lengths)
+
+                    radi1 = self.upper_arm_length / self.avg_right_upper_arm_length
+                    radi2 = (self.lower_arm_length + self.avg_right_hand_length) / self.avg_right_lower_arm_length
+                else:
+                    radi1 = self.upper_arm_length / human_upper_arm_length
+                    radi2 = (self.lower_arm_length + human_hand_length) / human_lower_arm_length
         else:
-            if side == "Left":
-                radi1 = self.upper_arm_length/self.avg_left_upper_arm_length
-                radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_left_lower_arm_length + self.avg_left_upper_arm_length)
-            else:
-                radi1 = self.upper_arm_length/self.avg_right_upper_arm_length
-                radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length)
-        
+            radi1 = self.upper_arm_length / human_upper_arm_length
+            radi2 = self.lower_arm_length / human_lower_arm_length
+
+        # 缩放手肘和手的位置
         scaled_elbow_pos = np.zeros(3)
         scaled_hand_pos = np.zeros(3)
         for i in range(3):
@@ -796,6 +868,9 @@ class KuavoPicoInfoTransformer():
         """Read hand pose data from message without additional transformations."""
         if not msg.poses:
             return
+        
+        pelvis_idx = self.bone_name_to_index["Pelvis"]
+        pelvis_pose = msg.poses[pelvis_idx]
 
         left_hand_idx = self.bone_name_to_index["LEFT_HAND"]
         left_hand_pose = msg.poses[left_hand_idx]
@@ -805,12 +880,28 @@ class KuavoPicoInfoTransformer():
              left_hand_pose.orientation.z, left_hand_pose.orientation.w]
         ]
 
+        left_wrist_idx = self.bone_name_to_index["LEFT_WRIST"]
+        left_wrist_pose = msg.poses[left_wrist_idx]
+        self.left_wrist_pose = [
+            [left_wrist_pose.position.x, left_wrist_pose.position.y, left_wrist_pose.position.z],
+            [left_wrist_pose.orientation.x, left_wrist_pose.orientation.y, 
+             left_wrist_pose.orientation.z, left_wrist_pose.orientation.w]
+        ]
+
         right_hand_idx = self.bone_name_to_index["RIGHT_HAND"]
         right_hand_pose = msg.poses[right_hand_idx]
         self.right_hand_pose = [
             [right_hand_pose.position.x, right_hand_pose.position.y, right_hand_pose.position.z],
             [right_hand_pose.orientation.x, right_hand_pose.orientation.y, 
              right_hand_pose.orientation.z, right_hand_pose.orientation.w]
+        ]
+
+        right_wrist_idx = self.bone_name_to_index["RIGHT_WRIST"]
+        right_wrist_pose = msg.poses[right_wrist_idx]
+        self.right_wrist_pose = [
+            [right_wrist_pose.position.x, right_wrist_pose.position.y, right_wrist_pose.position.z],
+            [right_wrist_pose.orientation.x, right_wrist_pose.orientation.y, 
+             right_wrist_pose.orientation.z, right_wrist_pose.orientation.w]
         ]
 
         left_elbow_idx = self.bone_name_to_index["LEFT_ELBOW"]
@@ -845,8 +936,14 @@ class KuavoPicoInfoTransformer():
             right_shoulder_pose.position.z
         ]
 
-        self.left_elbow_pos, self.left_hand_pos = self.scale_arm_positions(self.left_shoulder_pos, self.left_elbow_pos, self.left_hand_pose[0], self.left_shoulder_pos, "Left")
-        self.right_elbow_pos, self.right_hand_pos = self.scale_arm_positions(self.right_shoulder_pos, self.right_elbow_pos, self.right_hand_pose[0], self.right_shoulder_pos, "Right")
+        left_human_shoulder_pos = self.left_shoulder_pos.copy()
+        # left_human_shoulder_pos[1] = pelvis_pose.position.y + self.shoulder_width
+
+        right_human_shoulder_pos = self.right_shoulder_pos.copy()
+        # right_human_shoulder_pos[1] = pelvis_pose.position.y - self.shoulder_width
+        
+        self.left_elbow_pos, self.left_hand_pos = self.scale_arm_positions(self.left_shoulder_pos, self.left_elbow_pos, self.left_hand_pose[0], left_human_shoulder_pos, "Left", self.left_wrist_pose[0])
+        self.right_elbow_pos, self.right_hand_pos = self.scale_arm_positions(self.right_shoulder_pos, self.right_elbow_pos, self.right_hand_pose[0], right_human_shoulder_pos, "Right", self.right_wrist_pose[0])
         
         self.is_running = True
         self.vr_error = False
@@ -871,7 +968,8 @@ class KuavoPicoInfoTransformer():
             print("Invalid pos, cannot construct marker")
             return None
         marker = Marker()
-        marker.header.frame_id = "base_link"
+        # marker.header.frame_id = "base_link" if not self.control_torso_mode else "odom"
+        marker.header.frame_id = "odom"
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
         marker.scale.x = scale
@@ -1095,7 +1193,19 @@ class KuavoPicoInfoTransformer():
                 "world"
             )
 
-    def get_local_pose(self, joint_matrix, spine3_matrix):
+    def align_pelvis(self, pelvis_matrix):
+        base_pose = self.tools.get_base_to_odom()
+        position = list(base_pose.position)
+
+        if self.pelvis_offset == None:
+            self.default_pelvis_x = position[0]
+            self.default_pelvis_y = position[1]
+            self.default_pelvis_z = position[2]
+            self.pelvis_offset = self.default_pelvis_z - pelvis_matrix[2,3]
+  
+        return pelvis_matrix
+
+    def get_local_pose(self, joint_matrix, pelvis_matrix):
         """
         Get joint pose relative to robot base_link
         Args:
@@ -1106,13 +1216,13 @@ class KuavoPicoInfoTransformer():
         """
         try:
             # Calculate transform from joint to base_link
-            # First transform joint to SPINE3 frame, then to base_link
-            T_joint_to_spine3 = np.linalg.inv(spine3_matrix) @ joint_matrix
-            T_joint_to_base = self.T_spine3_to_base @ T_joint_to_spine3
+            T_joint_to_base = np.linalg.inv(pelvis_matrix) @ joint_matrix
+            T_base_to_world = self.tools.get_base_to_odom(return_type="homogeneous")
+            T_joint_to_world = T_base_to_world.matrix @ T_joint_to_base
             
             # Extract position and orientation
-            pos = T_joint_to_base[:3, 3]
-            quat = quaternion_from_matrix(T_joint_to_base)
+            pos = T_joint_to_world[:3, 3]
+            quat = quaternion_from_matrix(T_joint_to_world)
             
             # Create picoPoseInfo message
             pose = picoPoseInfo()
@@ -1123,14 +1233,69 @@ class KuavoPicoInfoTransformer():
         except Exception as e:
             SDKLogger.error(f"Error getting local pose: {e}")
             return None
-        
+    
+    def get_world_pose(self, joint_matrix, pelvis_matrix):
+        try:
+            # Step 1: 得到 joint 相对 base 的变换（T_joint_to_base）
+            T_joint_to_base = np.linalg.inv(pelvis_matrix) @ joint_matrix
+
+            # Step 2: 得到 base 的当前姿态（实际带 pitch 和 z）
+            base_pose = self.tools.get_base_to_odom()
+            position = list(base_pose.position)
+            orientation = base_pose.orientation  # 四元数
+
+            # Step 3: 从 base 的四元数中提取 roll, pitch, yaw
+            roll, pitch, yaw = euler_from_quaternion(orientation)
+
+            _, pitch_in_vr, _ = self.matrix_to_rpy(pelvis_matrix[:3, :3])
+             
+            # Step 4: 构造一个虚拟 base，保留robot自身base_link的x, y, roll 和 yaw, z 和 pitch 替换为 height_in_vr 和 pitch_in_vr
+            new_quat = quaternion_from_euler(roll, pitch_in_vr, yaw)
+            T_base_virtual_rot = quaternion_matrix(new_quat)
+
+            # Step 5: 构造一个虚拟 base 的平移部分
+            #        或者也可以选择和 spine3 同一高度，视你的系统结构而定
+            height_in_vr = min(pelvis_matrix[2, 3] + self.pelvis_offset, self.default_pelvis_z)
+            # height_in_vr = pelvis_matrix[2, 3]
+            print(f'======================= height in vr {height_in_vr} ==================')
+            virtual_position = [self.default_pelvis_x, self.default_pelvis_y, height_in_vr] #使用进入torso control时刻的x, y
+            T_base_virtual_trans = translation_matrix(virtual_position)
+
+            # Step 6: 构造完整的虚拟 base 到世界的变换（无 pitch，无 z 偏移）
+            T_virtual_base_to_world = T_base_virtual_trans @ T_base_virtual_rot
+
+            # Step 7: 计算 joint 在世界系下的坐标（通过虚拟 base）
+            T_joint_to_world = T_virtual_base_to_world @ T_joint_to_base
+            
+            # Extract position and orientation
+            pos = T_joint_to_world[:3, 3]
+            quat = quaternion_from_matrix(T_joint_to_world)
+
+            # pos = joint_matrix[:3, 3]
+            # quat = quaternion_from_matrix(joint_matrix)
+            
+            # Create picoPoseInfo message
+            pose = picoPoseInfo()
+            pose.position = Point(*pos)
+            pose.orientation = Quaternion(*quat)
+            
+            return pose
+        except Exception as e:
+            SDKLogger.error(f"Error getting local pose: {e}")
+            return None
+
     def publish_local_poses(self, robot_urdf_matrices, current_time):
         """Publish local poses relative to base_link"""
-        self.compute_head_body_pose(robot_urdf_matrices)
+        # self.compute_head_body_pose(robot_urdf_matrices)
 
         # Get SPINE3 matrix for base_link calculations
         spine3_idx = BODY_TRACKER_ROLES.index('SPINE3')
         spine3_matrix = robot_urdf_matrices[spine3_idx]
+
+        pelvis_idx = BODY_TRACKER_ROLES.index('Pelvis')
+        pelvis_matrix = robot_urdf_matrices[pelvis_idx]
+
+        pelvis_matrix = self.align_pelvis(pelvis_matrix)
         
         pose_info_list = picoPoseInfoList()
         pose_info_list.timestamp_ms = int(current_time.to_sec() * 1000)  # Convert Time to milliseconds
@@ -1140,9 +1305,14 @@ class KuavoPicoInfoTransformer():
         for i, matrix in enumerate(robot_urdf_matrices):
             try:
                 # Create pose info for each bone
-                local_pose = self.get_local_pose(matrix, spine3_matrix)
-                if local_pose is not None:
-                    pose_info_list.poses.append(local_pose)
+                if self.control_torso_mode:
+                    joint_pose = self.get_world_pose(matrix, pelvis_matrix)
+                    # joint_pose = self.get_local_pose(matrix, pelvis_matrix)
+                else:
+                    joint_pose = self.get_local_pose(matrix, pelvis_matrix)
+                
+                if joint_pose is not None:
+                    pose_info_list.poses.append(joint_pose)
             except Exception as e:
                 SDKLogger.error(f"Error getting local pose for bone {i}: {e}")
                 continue
@@ -1322,7 +1492,7 @@ class KuavoPicoInfoTransformer():
     
     def compute_head_body_pose(self, robot_urdf_matrices):
         """Compute head body pose"""
-        init_R_wC = self.rpy_to_matrix([np.pi/2, 0, np.pi/2]) # rotation matrix from world to chest
+        init_R_wC = self.rpy_to_matrix([np.pi/2, 0, -np.pi/2]) # rotation matrix from world to chest
         chest_idx = self.bone_name_to_index["SPINE3"]
         T_wChest = robot_urdf_matrices[chest_idx]
         chest_pos, chest_quat = self.get_pose_from_matrix(T_wChest)
@@ -1369,13 +1539,6 @@ class KuavoPicoInfoTransformer():
         elif not significant:
             # SDKLogger.debug(f"{side} foot movement too small, continuing monitoring...")
             pass
-
-    def test_foot_controller(self):
-        """Test foot controller"""
-        actions = self.get_available_test_actions()
-        for action in actions:
-            SDKLogger.info(f"Testing action: {action}")
-            self.test_predefined_action(action)
 
     def process_foot_poses_parallel(self, robot_urdf_matrices):
         """并行处理左右脚姿态检测（推荐使用）
@@ -1994,8 +2157,11 @@ class KuavoSingleFootController:
 
         self.init_com_z = None
         self.init_foot_spacing = 0.2
-        self.safe_foot_spacing = 0.5
-        self.safe_back_foot_spacing = 0.3
+        self.safe_foot_spacing = 0.3
+        self.safe_step_forward = 0.4
+        self.safe_step_backward = 0.2
+        self.max_step_length_x = self.pico_info_transformer.movement_detector['max_step_length_x']
+        self.max_step_length_y = self.pico_info_transformer.movement_detector['max_step_length_y']
 
         self.current_left_foot = np.array([0.0, 0.1, 0.0, 0.0])
         self.current_right_foot = np.array([0.0, -0.1, 0.0, 0.0])
@@ -2025,33 +2191,22 @@ class KuavoSingleFootController:
             self.mpc_plan_target[:3] = state_traj.value[6:9]
             # SDKLogger.info(f"MPC plan target: {self.mpc_plan_target}")
 
-    # def get_delta_com_z(self, step_length):
-    #     if step_length <= 0.25:
-    #         delta_com_z = 0.0
-    #     elif 0.25 < step_length <= 0.6:
-    #         delta_com_z = (step_length - 0.2) * (0.1 - step_length)
-    #     else:
-    #         delta_com_z = -0.2
-    #     return delta_com_z
-
     def get_delta_com_z(self, step_length, current_com_z):
-        """Calculate delta com_z based on step length."""
         leg_length = np.sqrt(self.init_com_z ** 2 + (self.init_foot_spacing / 2) ** 2)
-        com_z = np.sqrt(leg_length**2 - (step_length / 2)**2)
-        delta_com_z = (com_z - current_com_z) * 2
-
-        return delta_com_z
+        target_com_z = min(np.sqrt(leg_length ** 2 - (step_length / 2) ** 2), self.init_com_z)
+        delta_com_z = target_com_z - current_com_z
+        SDKLogger.info(f"current_com_z:{current_com_z}")
+        SDKLogger.info(f"target_com_z:{target_com_z}")
+        SDKLogger.info(f"delta_com_z:{delta_com_z}")
+        return delta_com_z 
     
     def process_movement_pose(self, movement_pose):
         """处理运动轨迹"""
 
         step_length = np.sqrt(movement_pose[0]**2 + movement_pose[1]**2)
 
-        max_step_length_x = self.pico_info_transformer.movement_detector['max_step_length_x']
-        max_step_length_y = self.pico_info_transformer.movement_detector['max_step_length_y']
-
-        movement_pose[0] = min(max_step_length_x, max(-max_step_length_x, movement_pose[0]))
-        movement_pose[1] = min(max_step_length_y, max(-max_step_length_y, movement_pose[1]))
+        movement_pose[0] = min(self.max_step_length_x, max(-self.max_step_length_x, movement_pose[0]))
+        movement_pose[1] = min(self.max_step_length_y, max(-self.max_step_length_y, movement_pose[1]))
 
         return movement_pose
     
@@ -2062,14 +2217,18 @@ class KuavoSingleFootController:
         foot_traj = []
         torso_traj = []
         
+        ss_idx = 2
+        ss_duration = 0.4
+        ss_action = np.zeros(4, dtype=int).tolist()
+        
         if self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']:
-            current_left_foot_base = self.robot_tools.get_tf_transform(
-                target_frame="base_link",
+            current_left_foot = self.robot_tools.get_tf_transform(
+                target_frame="odom",
                 source_frame="leg_l6_link",
                 return_type="pose_quaternion"
             )
-            current_right_foot_base = self.robot_tools.get_tf_transform(
-                target_frame="base_link",
+            current_right_foot = self.robot_tools.get_tf_transform(
+                target_frame="odom",
                 source_frame="leg_r6_link",
                 return_type="pose_quaternion"
             )
@@ -2081,15 +2240,11 @@ class KuavoSingleFootController:
                 self.init_com_z = current_com_z
                 SDKLogger.info(f"Initial COM Z set to: {self.init_com_z}")
             
-            _, _, yaw_l6 = euler_from_quaternion(current_left_foot_base.orientation)
-            _, _, yaw_r6 = euler_from_quaternion(current_right_foot_base.orientation)
+            _, _, yaw_l6 = euler_from_quaternion(current_left_foot.orientation)
+            _, _, yaw_r6 = euler_from_quaternion(current_right_foot.orientation)
 
-            SDKLogger.info(f"current_left_foot_base: {current_left_foot_base.position}, yaw_l6: {yaw_l6}")
-            SDKLogger.info(f"current_right_foot_base: {current_right_foot_base.position}, yaw_r6: {yaw_r6}")
-            SDKLogger.info(f"mpc_plan_target: {self.mpc_plan_target}")
-
-            self.current_left_foot = np.array([*current_left_foot_base.position, yaw_l6])
-            self.current_right_foot = np.array([*current_right_foot_base.position, yaw_r6])
+            self.current_left_foot = np.array([*current_left_foot.position, yaw_l6])
+            self.current_right_foot = np.array([*current_right_foot.position, yaw_r6])
         else:
             self.current_left_foot = np.array(self.pico_info_transformer.movement_detector['initial_left_foot_pose'])
             self.current_right_foot = np.array(self.pico_info_transformer.movement_detector['initial_right_foot_pose'])
@@ -2105,57 +2260,59 @@ class KuavoSingleFootController:
             movement_yaw = np.radians(movement[3])
             movement_pose = np.array([*movement_pos, movement_yaw])
             movement_time = min(movement[4], dt) * (i + 1) if len(movement) > 4 else dt * (i + 1)
-            time_traj.append(movement_time)
+            ss_time = movement_time + ss_duration
+
+            time_traj.append(movement_time) 
             foot_idx_traj.append(foot_type)
+
+            time_traj.append(ss_time)
+            foot_idx_traj.append(ss_idx)
             
-            target_pose = current_swing_foot.copy() + movement_pose.copy()
             foot_pose = movement_pose.copy()
-
-            step_length_before = np.linalg.norm(current_swing_foot[:2] - current_support_foot[:2])
-            step_length_after = np.linalg.norm(target_pose[:2] - current_support_foot[:2])
-
             SDKLogger.info(f"foot_pose_before:{foot_pose}")
-            foot_pose = self.process_movement_pose(foot_pose)
+            foot_pose = self.process_movement_pose(movement_pose)
             SDKLogger.info(f"foot_pose_after:{foot_pose}")
 
             target_pose_safe = current_swing_foot.copy() + foot_pose.copy()
-            
-            target_pose_safe[0] = -0.2 if target_pose_safe[0] < -0.2 else target_pose_safe[0]
-            
-            # Ensure foot spacing > 0.3 m && yaw of foot2base is non-positive
+
+            # Limit Workspace Of Swing Foot
             if foot_type == 0:
-                target_pose_safe[1] = current_support_foot[1] + 0.3 if target_pose_safe[1] < current_support_foot[1] + 0.3 else target_pose_safe[1]
+                min_pos_x = current_support_foot[0] - self.safe_step_backward
+                max_pos_x = current_support_foot[0] + self.safe_step_forward
+                min_pos_y = current_support_foot[1] + self.safe_foot_spacing
+                max_pos_y = current_support_foot[1] + self.safe_foot_spacing + self.max_step_length_y
+                target_pose_safe[0] = min(max_pos_x, max(target_pose_safe[0], min_pos_x))
+                target_pose_safe[1] = min(max_pos_y, max(target_pose_safe[1], min_pos_y))
+                target_pose_safe[2] = 0.0
                 target_pose_safe[3] = max(0, target_pose_safe[3])
             else:
-                target_pose_safe[1] = current_support_foot[1] - 0.3 if target_pose_safe[1] > current_support_foot[1] - 0.3 else target_pose_safe[1]
+                min_pos_x = current_support_foot[0] - self.safe_step_backward
+                max_pos_x = current_support_foot[0] + self.safe_step_forward
+                min_pos_y = current_support_foot[1] - self.safe_foot_spacing - self.max_step_length_y
+                max_pos_y = current_support_foot[1] - self.safe_foot_spacing
+                target_pose_safe[0] = min(max_pos_x, max(target_pose_safe[0], min_pos_x))
+                target_pose_safe[1] = min(max_pos_y, max(target_pose_safe[1], min_pos_y))
+                target_pose_safe[2] = 0.0
                 target_pose_safe[3] = min(0, target_pose_safe[3])
 
             print(f"target_pose_safe:{target_pose_safe}")
+
             step_length_safe = np.linalg.norm(target_pose_safe[:2] - current_support_foot[:2])
-            
-            if step_length_safe > self.safe_foot_spacing:
-                return None
-
-            torso_pose_before = (current_swing_foot.copy() + current_support_foot.copy()) / 2
-            torso_pose_after = (target_pose_safe.copy() + current_support_foot.copy()) / 2
-            torso_pose = torso_pose_after.copy() - torso_pose_before.copy()
-            torso_pose[2] = self.get_delta_com_z(step_length_safe, current_com_z)
-
-            if target_pose_safe[0] < 0 and current_support_foot[0] < 0:
-                torso_pose[0] = min(torso_pose[0], target_pose_safe[0] / 2)
-
-            target_pose_safe[2] = 0.0
-
-            print(f"step_length_before:{step_length_before}")
-            print(f"step_length_after:{step_length_after}")
             print(f"step_length_safe:{step_length_safe}")
+
+            torso_pose = (target_pose_safe.copy() + current_support_foot.copy()) / 2
+            torso_pose[2] = self.get_delta_com_z(step_length_safe, current_com_z)
 
             print(f"use_real_foot_data: {self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']}")
             if not self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']:
                 self.pico_info_transformer.update_movement_detector(foot_type, foot_pose)
 
+            ss_action = torso_pose.copy()
             foot_traj.append(target_pose_safe)
             torso_traj.append(torso_pose)
+            foot_traj.append(target_pose_safe)
+            torso_traj.append(ss_action)
+
             print(f"foot_traj:{foot_traj}")
             print(f"torso_traj:{torso_traj}")
 
