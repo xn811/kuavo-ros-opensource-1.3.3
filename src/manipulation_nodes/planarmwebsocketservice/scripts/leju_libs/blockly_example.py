@@ -1,8 +1,8 @@
-import asyncio
+
 import time
 from kuavo_humanoid_sdk import RobotControlBlockly, RobotMicrophone, RobotNavigation, RobotSpeech
 
-async def main():
+def main():
     # 创建机器人控制实例
     robot_control = RobotControlBlockly()
     robot_navigation = RobotNavigation()
@@ -109,5 +109,5 @@ async def main():
         robot_speech.stop_speech()
 
 if __name__ == "__main__":
-    # 运行异步主函数
-    asyncio.run(main())
+    # 运行主函数
+    main()
