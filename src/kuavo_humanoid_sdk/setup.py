@@ -57,7 +57,8 @@ setup(
         "pyOpenSSL>=22.1.0",
         "scikit-learn",
         "funasr",
-        "torchaudio"
+        "torchaudio",
+        "websockets"
     ],
     python_requires=">=3.8",
     classifiers=[
