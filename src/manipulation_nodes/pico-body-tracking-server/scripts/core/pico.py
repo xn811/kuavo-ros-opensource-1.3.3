@@ -21,6 +21,7 @@ from core.ros.pico import (
 )
 from core.ros.pico_utils import RobotInfoBroadcaster
 from core.ros.robot_data import RobotDataServer
+from core.ros.system_identification import SystemIdentification
 from common.logger import SDKLogger
 from .ros import body_tracking_extended_pb2 as proto
 
@@ -109,6 +110,8 @@ class KuavoPicoServer:
         self.robot_data_server = RobotDataServer(self.broadcaster.eef_type)
         self.robot_data_server_thread = threading.Thread(target=self.robot_data_server.start, daemon=True)
         self.robot_data_server_thread.start()
+
+        self.system_identification = SystemIdentification()
         
     def get_head_motion_range(self):
         """Get head motion range from configuration."""
@@ -152,22 +155,21 @@ class KuavoPicoServer:
         time.sleep(self.retry_delay)
         return True
 
-
-    def _parse_data(self, data_str):
-        """Parse data."""
-        try:
-            data = json.loads(data_str)
-            return data
-        except Exception as e:
-            SDKLogger.error(f"KuavoPicoServer: Error parsing JSON data: {e}")
-            return None
-
     def process_data(self, data_str):
         """Process data."""
+        if self.system_identification.is_running():
+            # 延迟诊断中不处理数据
+            return
         
         message = proto.VRData()
         message.ParseFromString(data_str)
 
+        # 延迟诊断命令
+        if message.HasField('delayed_diagnosis_command'):
+            self.process_delayed_diagnosis_command(message.delayed_diagnosis_command)
+            # 延迟诊断中不处理其他数据
+            return
+        
         if message.HasField('full_body'):
             self.process_body_tracking_data(data_str)
         
@@ -181,7 +183,19 @@ class KuavoPicoServer:
         if message.HasField('vr_command'):
             self.process_vr_command(message.vr_command)
         
-    
+    def process_delayed_diagnosis_command(self, command):
+        """Process delayed diagnosis command."""
+        # 停止延迟诊断
+        if not command.run:
+            self.system_identification.stop()
+            return
+        # 启动延迟诊断
+        if not self.system_identification.is_running():
+            self.system_identification.start()
+        else:
+            SDKLogger.warning("延迟诊断正在进行中，不会处理其他数据")
+            return
+
     def process_body_tracking_data(self, data_str):
         """Process data."""
         robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix_from_proto(data_str)

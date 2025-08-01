@@ -32,6 +32,7 @@ print(f"Current mode: {info['current_mode']}")
 """
 
 import os
+import sys
 import socket
 import json
 import time
@@ -68,6 +69,8 @@ from pydrake.all import (
     Quaternion as DrakeQuaternion,
     RollPitchYaw,
 )
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
 from . import body_tracking_extended_pb2 as proto
 from .net_utils import get_localip_and_broadcast_ips
 

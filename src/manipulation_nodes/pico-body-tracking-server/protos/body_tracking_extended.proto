@@ -2,6 +2,8 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
+import "delayed_diagnosis.proto";
+
 message VRData {
   Header header = 1;
   optional FullBodyData full_body = 2;
@@ -9,6 +11,7 @@ message VRData {
   optional ControllerData controller = 4;
   optional RobotData robot_data = 5;
   optional VrCommandData vr_command = 6;
+  optional DelayDiagnosticCommand delayed_diagnosis_command = 7; // 开启延迟诊断命令
 }
 
 message Header{
@@ -58,6 +61,7 @@ message RobotData {
   repeated double motor_cur = 2;
   repeated double eef_cur = 3;
   ControlMode control_mode = 4;
+  optional DelayedDiagnosisResult delayed_diagnosis_result = 5; // 延迟诊断结果
 }
 
 message VrCommandData {
@@ -74,4 +78,8 @@ message ItemMassForce {
 
 message ControlMode {
   string control_mode = 1;
+}
+
+message DelayDiagnosticCommand {
+  bool run = 1; // True  启动 // False 停止/取消
 }

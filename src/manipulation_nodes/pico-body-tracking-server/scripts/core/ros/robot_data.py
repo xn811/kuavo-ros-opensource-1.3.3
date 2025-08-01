@@ -5,13 +5,16 @@ import json
 import time
 import logging
 import rospy
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray,Float32
+from diagnostic_msgs.msg import DiagnosticStatus
 from sensor_msgs.msg import JointState
+
 from kuavo_msgs.msg import lejuClawState
 from datetime import datetime
 import queue
 import os
 from . import body_tracking_extended_pb2 as proto
+from . import delayed_diagnosis_pb2
 from google.protobuf.timestamp_pb2 import Timestamp
 class RobotDataServer:
     def __init__(self, eef_type=None, target_client_ip=None, target_client_port=None, rate=20):
@@ -36,6 +39,11 @@ class RobotDataServer:
             self.sensor_queue = queue.Queue(maxsize=1000)
             self.hand_queue = queue.Queue(maxsize=1000)
             self.claw_queue = queue.Queue(maxsize=1000)
+
+            # 延迟诊断队列
+            self.delayed_diagnosis_result_queue = queue.Queue(maxsize=100)
+            self.delayed_diagnosis_progress_queue = queue.Queue(maxsize=100)
+
             self.hand_queue.put([0.0] * 12)
             self.claw_queue.put([0.0] * 2)
             self.running = True
@@ -71,6 +79,9 @@ class RobotDataServer:
         rospy.Subscriber("dexhand/state", JointState, self.hand_data_cur_callback)
         rospy.Subscriber("/leju_claw_state", lejuClawState, self.claw_data_cur_callback)
 
+        # 延迟诊断
+        rospy.Subscriber("/pico/system_identification/result", DiagnosticStatus, self.delayed_diagnosis_result_callback)
+        rospy.Subscriber("/pico/system_identification/progress", Float32, self.delayed_diagnosis_progress_callback)
     def send_to_client(self, message):
         if not self.target_client_addr:
             # rospy.logwarn("未指定目标客户端地址")
@@ -118,6 +129,67 @@ class RobotDataServer:
             else:
                 rospy.logwarn(f"收到的 claw effort 长度不为2: {effort}")
 
+    def delayed_diagnosis_result_callback(self, data):
+        """延迟诊断结果回调"""
+        self.delayed_diagnosis_result_queue.put(data)
+        
+    def delayed_diagnosis_progress_callback(self, data):
+        """延迟诊断进度回调"""
+        self.delayed_diagnosis_progress_queue.put(data)
+
+    def _process_delayed_diagnosis_result(self):
+        # 延迟诊断进度处理
+        def get_result():
+            try:
+                return self.delayed_diagnosis_result_queue.get_nowait()
+            except queue.Empty:
+                return None
+        def get_progress():
+            try:
+                return self.delayed_diagnosis_progress_queue.get_nowait()
+            except queue.Empty:
+                return None
+            
+        result = get_result()
+        progress = get_progress()
+        if result or progress: 
+            proto_msg = delayed_diagnosis_pb2.DelayedDiagnosisResult()
+            if result:
+                proto_msg.progress = 100
+                proto_msg.message = result.message
+                if result.level == DiagnosticStatus.OK:
+                    # 成功
+                    proto_msg.status = delayed_diagnosis_pb2.Status.SUCCESS
+                elif result.level == DiagnosticStatus.WARN:
+                    # 强制停止
+                    proto_msg.status = delayed_diagnosis_pb2.Status.FORCE_KILLED
+                else:
+                    # 失败
+                    proto_msg.status = delayed_diagnosis_pb2.Status.FAILED
+                # 赋值结果
+                for kv in result.values:
+                    try:
+                        # 直接设置字段值，不使用HasField检查
+                        setattr(proto_msg.result, kv.key, float(kv.value))
+                    except Exception as e:
+                        # rospy.logwarn(f"设置字段 {kv.key} 失败: {e}")
+                        continue
+                # 清空进度队列
+                while not self.delayed_diagnosis_progress_queue.empty():
+                    try:
+                        self.delayed_diagnosis_progress_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                print(f"延迟诊断结果: {proto_msg}")   
+            elif progress:
+                # 更新诊断进度
+                proto_msg.progress = progress.data
+                proto_msg.status = delayed_diagnosis_pb2.Status.IN_PROGRESS
+                proto_msg.message = "延迟诊断进行中"
+            return proto_msg
+        else:
+            return None
+
     def _periodic_push(self):
         last_eef_cur = None
         last_motor_cur = [0.0] * 28
@@ -160,6 +232,17 @@ class RobotDataServer:
                 robot_data = proto.RobotData()
                 robot_data.motor_cur.extend(motor_cur)
                 robot_data.eef_cur.extend(eef_cur)
+                
+                # 延迟诊断结果处理
+                try:
+                    delayed_diagnosis_result = self._process_delayed_diagnosis_result()
+                    if delayed_diagnosis_result:
+                        robot_data.delayed_diagnosis_result.CopyFrom(delayed_diagnosis_result)
+                        # print(f"延迟诊断结果: {delayed_diagnosis_result}")
+                except Exception as e:
+                    pass
+                    # print(f"延迟诊断结果处理出错: {e}")
+
                 if hasattr(self, "hand_wrench_and_item_mass"):
                     robot_data.item_mass_force.item_mass = self.hand_wrench_and_item_mass["itemMass"]
                     robot_data.item_mass_force.lforce_x = self.hand_wrench_and_item_mass["lforceX"]
