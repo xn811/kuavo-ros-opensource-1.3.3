@@ -4,6 +4,7 @@
 - 无
 
 ## 文档相关
+- 新增奥比中光 335L 相机回传 quest3 VR，相关文档 [文档链接](./src/manipulation_nodes/noitom_hi5_hand_udp_python/docs/Quest3_视频回传显示.md)
 - 新增 RobotVersion 版本号说明文档，详情见 [文档链接](./docs/robot_version版本号说明.md)
 - 重新调整运动控制文档结构并删除无用接口，[新的文档链接](./docs/运动控制API.md)
 - 新增 Kuavo Humanoid SDK 原子技能 v2 版搬箱子策略模块文档，[文档链接](./src/kuavo_humanoid_sdk/docs/markdown/pages/kuavo_strategy_v2.md)
