@@ -24,7 +24,7 @@ class MusicPlayerNode:
     # 播放控制
     PUBLISH_RATE_HZ = 10
     CHUNK_SIZE = 65536
-    DEFAULT_GAIN = 3.0
+    DEFAULT_GAIN = 1.0
     
     # FFmpeg参数
     FFMPEG_FORMAT = 'wav'
@@ -157,7 +157,6 @@ class MusicPlayerNode:
                 '-acodec', self.FFMPEG_CODEC,
                 '-ar', str(self.DEFAULT_SAMPLE_RATE),
                 '-ac', str(self.DEFAULT_CHANNELS),
-                '-af', f'volume={volume}dB',
                 '-y', temp_wav
             ]
             

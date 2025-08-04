@@ -6,9 +6,10 @@ import math
 import time
 import threading
 import numpy as np
+import os
 from humanoid_plan_arm_trajectory.srv import planArmTrajectoryBezierCurve, planArmTrajectoryBezierCurveRequest
 from humanoid_plan_arm_trajectory.msg import bezierCurveCubicPoint, jointBezierTrajectory
-from kuavo_msgs.msg import robotHandPosition, robotHeadMotionData
+from kuavo_msgs.msg import robotHandPosition, robotHeadMotionData, sensorsData
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest
 from ocs2_msgs.msg import mpc_observation
 from sensor_msgs.msg import JointState
@@ -48,12 +49,18 @@ class ArmTrajectoryBezierDemo:
         self.control_head_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=1,
                                                 tcp_nodelay=True)
 
-        self.mpc_obs_sub = rospy.Subscriber('/humanoid_mpc_observation', mpc_observation, self.mpc_obs_callback)
-        # 添加发布者
+        self.sensor_data_sub = rospy.Subscriber('/sensors_data_raw', 
+                                                sensorsData,
+                                                self.sensors_data_raw_callback,   
+                                                queue_size=1, 
+                                                tcp_nodelay=True)
+         # 添加发布者
         self.robot_action_state_pub = rospy.Publisher('/robot_action_state', RobotActionState, queue_size=1)
 
         # Add service to execute arm actions
         self.execute_service = rospy.Service('/execute_arm_action', ExecuteArmAction, self.handle_execute_action)
+        
+        self.kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
 
         # Store the file path base directory for actions
         # self.action_files_path = "/home/lab/kuavo-ros-control/src/humanoid-control/humanoid_plan_arm_trajectory/script/action_files"
@@ -65,8 +72,10 @@ class ArmTrajectoryBezierDemo:
         # self.run()
         rospy.spin()
 
-    def mpc_obs_callback(self, msg):
-        self.current_arm_joint_state = msg.state.value[24:]
+
+
+    def sensors_data_raw_callback(self, msg):
+        self.current_arm_joint_state = msg.joint_data.joint_q[12:26]
         self.current_arm_joint_state = [round(pos, 2) for pos in self.current_arm_joint_state]
         self.current_arm_joint_state.extend([0] * 14)
 
@@ -131,6 +140,23 @@ class ArmTrajectoryBezierDemo:
 
     def add_init_frame(self, frames):
         action_data = {}
+
+        # rl 要在刚开始插入当前状态为初始值来平滑过渡，ocs2 不需要
+        if self.kuavo_control_scheme == "rl":
+            import copy
+            for frame in frames:
+                frame["keyframe"] += 100
+            frame0 = copy.deepcopy(frames[0])
+            # 如果原来的长度长则补全，否则就需要裁剪
+            if len(self.current_arm_joint_state) > len(frame0["servos"]):
+                # 当前状态长度更长，需要裁剪到原始长度
+                frame0["servos"] = [math.degrees(pos) for pos in self.current_arm_joint_state[:len(frame0["servos"])]]
+            else:
+                # 当前状态长度更短或相等，需要补全到原始长度
+                frame0["servos"] = [math.degrees(pos) for pos in self.current_arm_joint_state] + [0] * (len(frame0["servos"]) - len(self.current_arm_joint_state))
+            frame0["keyframe"] = 0
+            frames.insert(0, frame0)
+
         for frame in frames:
             servos, keyframe, attribute = frame["servos"], frame["keyframe"], frame["attribute"]
             for index, value in enumerate(servos):
@@ -282,7 +308,9 @@ class ArmTrajectoryBezierDemo:
         self.x_shift = self.START_FRAME_TIME  # 动态调整 x_shift
 
         # 读取动作完成时间
-        finish_time = data.get("finish", 0) * 0.01  # 转换为秒
+        finish_time = data.get("finish", 0) * 0.01 # 转换为秒
+        if self.kuavo_control_scheme == "rl":
+            finish_time += 1.0
         self.END_FRAME_TIME = finish_time
 
         action_data = self.add_init_frame(data["frames"])
