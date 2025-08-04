@@ -147,7 +147,6 @@
     "eef_z_offset": -0.0,
     "base_height_offset": 0.23,
     "base_chest_offset_x": -0.0,
-
     "motor_velocities_factor": 0.005,
     "joint_velocities_limit": {
         "head_pitch": [

@@ -117,6 +117,11 @@ add_message_files(
 
   # kuavo_tf2_web_republisher
   TFArray.msg
+  armHandPoseFree.msg
+  twoArmHandPoseCmdFree.msg
+  twoArmHandPoseFree.msg
+
+  JoySticks.msg
 
   # kuavo_arm_collision_check
   armCollisionCheckInfo.msg
@@ -175,6 +180,8 @@ add_service_files(
 
   # kuavo_tf2_web_republisher
   RepublishTFs.srv
+
+  twoArmHandPoseCmdFreeSrv.srv
 )
 
 ## Generate actions in the 'action' folder
