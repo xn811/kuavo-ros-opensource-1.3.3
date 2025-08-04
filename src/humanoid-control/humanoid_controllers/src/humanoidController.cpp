@@ -7,6 +7,9 @@
 #include <fstream>
 
 #include "humanoid_controllers/humanoidController.h"
+#ifdef USE_DDS
+#include "humanoid_controllers/CommonDDS.h"
+#endif
 
 #include <ocs2_centroidal_model/AccessHelperFunctions.h>
 #include <ocs2_centroidal_model/CentroidalModelPinocchioMapping.h>
@@ -418,6 +421,24 @@ namespace humanoid_controller
 
     // Hardware interface
     // TODO: setup hardware controller interface
+    
+#ifdef USE_DDS
+    // Initialize DDS client
+    dds_client_ = std::make_unique<HumanoidControllerDDSClient>();
+    
+    auto callback = [this](const unitree_hg::msg::dds_::LowState_& data) {
+        this->LowStateCallback(data);
+    };
+    dds_client_->state_listener_->setLowdstateCallback(callback);
+    
+    // Start the DDS client
+    dds_client_->start();
+    
+    std::cout << "DDS communication initialized" << std::endl;
+#else
+    std::cout << "DDS communication disabled (compile with -DUSE_DDS to enable)" << std::endl;
+#endif
+    
     // create a ROS subscriber to receive the joint pos and vel
     jointPos_ = vector_t::Zero(info.actuatedDofNum);
     jointPos_.setZero();
@@ -443,7 +464,10 @@ namespace humanoid_controller
     acc_filter_.setParams(dt_, acc_filter_params);
     // free_acc_filter_.setParams(dt_, acc_filter_params);
     gyro_filter_.setParams(dt_, gyro_filter_params);
+#ifndef USE_DDS
+    // Only subscribe to sensor data via ROS when DDS is not enabled
     sensorsDataSub_ = controllerNh_.subscribe<kuavo_msgs::sensorsData>("/sensors_data_raw", 10, &humanoidController::sensorsDataCallback, this);
+#endif
     robotLocalizationSub_ = controllerNh_.subscribe<nav_msgs::Odometry>("/odometry/filtered", 10, &humanoidController::robotlocalizationCallback, this);
     mpcStartSub_ = controllerNh_.subscribe<std_msgs::Bool>("/start_mpc", 10, &humanoidController::startMpccallback, this);
     arm_joint_trajectory_.initialize(armNumReal_);
@@ -699,6 +723,104 @@ namespace humanoid_controller
     robotlocalizationDataQueue.push(robot_localization_);
   }
 
+#ifdef USE_DDS
+  void humanoidController::LowStateCallback(const unitree_hg::msg::dds_::LowState_& data)
+  {
+    SensorData sensor_data;
+    sensor_msgs::Imu imu_msg;
+    sensor_data.resize_joint(jointNumReal_+armNumReal_+headNum_);
+    // JOINT DATA
+    for (size_t i = 0; i < jointNumReal_+armNumReal_+headNum_; ++i)
+    {
+      sensor_data.jointPos_(i) = data.motor_state()[i].q();
+      sensor_data.jointVel_(i) = data.motor_state()[i].dq();
+      sensor_data.jointAcc_(i) = data.motor_state()[i].ddq();
+      sensor_data.jointTorque_(i) = data.motor_state()[i].tau_est();
+    }
+    // Convert timestamp from reserve fields: [0]=seconds, [1]=nanoseconds
+    uint32_t timestamp_sec = data.reserve()[0];
+    uint32_t timestamp_nsec = data.reserve()[1];
+    sensor_data.timeStamp_ = ros::Time(timestamp_sec, timestamp_nsec);
+    double sensor_time_diff = 0;
+    ros_logger_->publishValue("/monitor/time_cost/sensor_to_controller", sensor_time_diff);
+    // IMU
+    sensor_data.quat_.coeffs().w() = data.imu_state().quaternion()[0];
+    sensor_data.quat_.coeffs().x() = data.imu_state().quaternion()[1];
+    sensor_data.quat_.coeffs().y() = data.imu_state().quaternion()[2];
+    sensor_data.quat_.coeffs().z() = data.imu_state().quaternion()[3];
+    sensor_data.angularVel_ << data.imu_state().gyroscope()[0], data.imu_state().gyroscope()[1], data.imu_state().gyroscope()[2];
+    sensor_data.linearAccel_ << data.imu_state().accelerometer()[0], data.imu_state().accelerometer()[1], data.imu_state().accelerometer()[2];
+    sensor_data.orientationCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+    sensor_data.angularVelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+    sensor_data.linearAccelCovariance_ << Eigen::Matrix<scalar_t, 3, 3>::Zero();
+    // if(imuType_ == 2)
+    {
+      sensor_data.linearAccel_ = acc_filter_.update(sensor_data.linearAccel_);
+      sensor_data.angularVel_ = gyro_filter_.update(sensor_data.angularVel_);
+      
+    }
+    ros_logger_->publishVector("/state_estimate/imu_data_filtered/linearAccel", sensor_data.linearAccel_);
+    ros_logger_->publishVector("/state_estimate/imu_data_filtered/angularVel", sensor_data.angularVel_);
+    sensors_data_buffer_ptr_->addData(sensor_data.timeStamp_.toSec(), sensor_data);
+
+    // std::cout << "sensor_data.jointPos_.size()" << sensor_data.jointPos_.size() << std::endl;
+    // std::cout << "jointNumReal_+armNumReal_ + headNum_" << jointNumReal_+armNumReal_ + headNum_ << std::endl;
+    if (headNum_ > 0 && sensor_data.jointPos_.size() == jointNumReal_+armNumReal_ + headNum_)
+    {
+      int head_start_index  =sensor_data.jointPos_.size() - headNum_;
+      for (size_t i = 0; i < headNum_; ++i)
+      {
+        sensor_data_head_.jointPos_(i) = data.motor_state()[head_start_index + i].q();
+        sensor_data_head_.jointVel_(i) = data.motor_state()[head_start_index + i].dq();
+        sensor_data_head_.jointAcc_(i) = data.motor_state()[head_start_index + i].ddq();
+        sensor_data_head_.jointTorque_(i) = data.motor_state()[head_start_index + i].tau_est(); 
+      }
+    }
+    
+    // Save latest DDS sensor data for comparison
+    latest_dds_sensor_data_ = sensor_data;
+    has_dds_data_ = true;
+    
+    // // Compare DDS and ROS sensor data if both are available
+    // if (has_dds_data_ && has_ros_data_) {
+    //   std::cout << "=== DDS vs ROS Sensor Data Comparison ===" << std::endl;
+    //   std::cout << "DDS timestamp: " << latest_dds_sensor_data_.timeStamp_ << std::endl;
+    //   std::cout << "ROS timestamp: " << latest_ros_sensor_data_.timeStamp_ << std::endl;
+      
+    //   // Compare joint positions (first 3 joints as example)
+    //   for (int i = 0 ; i < std::min(10, (int)latest_dds_sensor_data_.jointPos_.size()); ++i) {
+    //     double dds_pos = latest_dds_sensor_data_.jointPos_(i);
+    //     double ros_pos = latest_ros_sensor_data_.jointPos_(i);
+    //     double pos_diff = std::abs(dds_pos - ros_pos);
+    //     std::cout << "Joint " << i << " pos - DDS: " << dds_pos << ", ROS: " << ros_pos 
+    //               << ", diff: " << pos_diff << std::endl;
+    //   }
+      
+    //   // Compare IMU data
+    //   auto dds_quat = latest_dds_sensor_data_.quat_;
+    //   auto ros_quat = latest_ros_sensor_data_.quat_;
+    //   std::cout << "DDS quat: [" << dds_quat.w() << ", " << dds_quat.x() << ", " 
+    //             << dds_quat.y() << ", " << dds_quat.z() << "]" << std::endl;
+    //   std::cout << "ROS quat: [" << ros_quat.w() << ", " << ros_quat.x() << ", " 
+    //             << ros_quat.y() << ", " << ros_quat.z() << "]" << std::endl;
+      
+    //   auto dds_gyro = latest_dds_sensor_data_.angularVel_;
+    //   auto ros_gyro = latest_ros_sensor_data_.angularVel_;
+    //   std::cout << "DDS gyro: [" << dds_gyro.transpose() << "]" << std::endl;
+    //   std::cout << "ROS gyro: [" << ros_gyro.transpose() << "]" << std::endl;
+      
+    //   auto dds_acc = latest_dds_sensor_data_.linearAccel_;
+    //   auto ros_acc = latest_ros_sensor_data_.linearAccel_;
+    //   std::cout << "DDS acc: [" << dds_acc.transpose() << "]" << std::endl;
+    //   std::cout << "ROS acc: [" << ros_acc.transpose() << "]" << std::endl;
+    //   std::cout << "=========================================" << std::endl;
+    // }
+    
+    if (!is_initialized_)
+      is_initialized_ = true;
+  }
+#endif
+
   void humanoidController::sensorsDataCallback(const kuavo_msgs::sensorsData::ConstPtr &msg)
   {
     auto &joint_data = msg->joint_data;
@@ -813,6 +935,10 @@ namespace humanoid_controller
     // sensorDataQueue.push(sensor_data);
     // sensor_data_mutex_.unlock();
     sensors_data_buffer_ptr_->addData(sensor_data.timeStamp_.toSec(), sensor_data);
+    
+    // Save latest ROS sensor data for comparison
+    latest_ros_sensor_data_ = sensor_data;
+    has_ros_data_ = true;
 
     if (headNum_ > 0 && joint_data.joint_q.size() == jointNumReal_ + armNumReal_ + headNum_ + waistNum_)
     {
@@ -1244,9 +1370,53 @@ namespace humanoid_controller
       jointCmdMsg.joint_kp.push_back(0);
       jointCmdMsg.joint_kd.push_back(0);
     }
+#ifdef USE_DDS
+    // Publish via DDS when DDS is enabled
+    if (dds_client_) {
+        // Convert jointCmdMsg to DDS LowCmd_
+        unitree_hg::msg::dds_::LowCmd_ low_cmd;
+        
+        // Initialize motor commands array (35 motors)
+        for (size_t i = 0; i < 35; ++i) {
+            auto& motor_cmd = low_cmd.motor_cmd()[i];
+            if (i < jointCmdMsg.joint_q.size()) {
+                // Map data from jointCmdMsg to DDS motor command
+                motor_cmd.mode(static_cast<uint8_t>(jointCmdMsg.control_modes[i]));
+                motor_cmd.q(static_cast<float>(jointCmdMsg.joint_q[i]));
+                motor_cmd.dq(static_cast<float>(jointCmdMsg.joint_v[i]));
+                motor_cmd.tau(static_cast<float>(jointCmdMsg.tau[i]));
+                motor_cmd.kp(static_cast<float>(jointCmdMsg.joint_kp[i]));
+                motor_cmd.kd(static_cast<float>(jointCmdMsg.joint_kd[i]));
+                motor_cmd.reserve(0);
+            } else {
+                // Zero out unused motors
+                motor_cmd.mode(0);
+                motor_cmd.q(0.0f);
+                motor_cmd.dq(0.0f);
+                motor_cmd.tau(0.0f);
+                motor_cmd.kp(0.0f);
+                motor_cmd.kd(0.0f);
+                motor_cmd.reserve(0);
+            }
+        }
+        
+        // Set mode machine and mode_pr
+        low_cmd.mode_machine(1);  // Default mode
+        low_cmd.mode_pr(1);       // Default mode
+        
+        // Calculate and set CRC
+        uint32_t crc = Crc32Core((uint32_t*)&low_cmd, (sizeof(low_cmd) >> 2) - 1);
+        low_cmd.crc(crc);
+        
+        dds_client_->publishLowCmd(low_cmd);
+    }
+#else
+    // Use ROS publishing when DDS is disabled
+    jointCmdPub_.publish(jointCmdMsg);
+#endif
+    
     // if (use_shm_communication_) 
     //     publishJointCmdToShm(jointCmdMsg);
-    jointCmdPub_.publish(jointCmdMsg);
 
     if (!wheel_arm_robot_ && stand_up_protect_ && is_real_)
     {
@@ -1714,7 +1884,7 @@ namespace humanoid_controller
         stop_msg.data = true;
         stop_pub_.publish(stop_msg);
         usleep(100000);
-        // TODO: send the stop command to hardware interface
+
         return;
       }
 
@@ -1933,9 +2103,50 @@ namespace humanoid_controller
     // }
 
     // 发布控制命令
-    if (use_shm_communication_) 
-        publishJointCmdToShm(jointCmdMsg);
+#ifdef USE_DDS
+    // Publish via DDS when DDS is enabled
+    if (dds_client_) {
+        // Convert jointCmdMsg to DDS LowCmd_
+        unitree_hg::msg::dds_::LowCmd_ low_cmd;
+        
+        // Initialize motor commands array (35 motors)
+        for (size_t i = 0; i < 35; ++i) {
+            auto& motor_cmd = low_cmd.motor_cmd()[i];
+            if (i < jointCmdMsg.joint_q.size()) {
+                // Map data from jointCmdMsg to DDS motor command
+                motor_cmd.mode(static_cast<uint8_t>(jointCmdMsg.control_modes[i]));
+                motor_cmd.q(static_cast<float>(jointCmdMsg.joint_q[i]));
+                motor_cmd.dq(static_cast<float>(jointCmdMsg.joint_v[i]));
+                motor_cmd.tau(static_cast<float>(jointCmdMsg.tau[i]));
+                motor_cmd.kp(static_cast<float>(jointCmdMsg.joint_kp[i]));
+                motor_cmd.kd(static_cast<float>(jointCmdMsg.joint_kd[i]));
+                motor_cmd.reserve(0);
+            } else {
+                // Zero out unused motors
+                motor_cmd.mode(0);
+                motor_cmd.q(0.0f);
+                motor_cmd.dq(0.0f);
+                motor_cmd.tau(0.0f);
+                motor_cmd.kp(0.0f);
+                motor_cmd.kd(0.0f);
+                motor_cmd.reserve(0);
+            }
+        }
+        
+        // Set mode machine and mode_pr
+        low_cmd.mode_machine(1);  // Default mode
+        low_cmd.mode_pr(1);       // Default mode
+        
+        // Calculate and set CRC
+        uint32_t crc = Crc32Core((uint32_t*)&low_cmd, (sizeof(low_cmd) >> 2) - 1);
+        low_cmd.crc(crc);
+        
+        dds_client_->publishLowCmd(low_cmd);
+    }
+#else
+    // Use ROS and SHM publishing when DDS is disabled
     jointCmdPub_.publish(jointCmdMsg);
+#endif
     
     // Visualization
     if (visualizeHumanoid_)
@@ -2333,7 +2544,7 @@ namespace humanoid_controller
       } catch (const std::exception& e) {
         controllerRunning_ = false;
         ROS_ERROR_STREAM("[Ocs2 MPC thread] Error : " << e.what());
-        //TODO: send the stop command to hardware interface
+
       }
     } });
     setThreadPriority(HumanoidInterface_->sqpSettings().threadPriority, mpcThread_);

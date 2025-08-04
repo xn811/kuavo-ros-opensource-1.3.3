@@ -47,6 +47,10 @@
 #include "dexhand_mujoco_node.h"
 #include "dexhand/json.hpp"
 
+#ifdef USE_DDS
+#include "mujoco_dds.h"
+#endif
+
 //  ************************* lcm ****************************
 
 #include "lcm_interface/LcmInterface.h"
@@ -81,6 +85,10 @@ namespace
   ros::Publisher sensorsPub;
   ros::Publisher pubOdom;
   ros::Publisher pubTimeDiff;
+
+#ifdef USE_DDS
+  std::unique_ptr<MujocoDdsClient> dds_client;
+#endif
   std::queue<std::vector<double>> controlCommands;
   std::vector<double> joint_tau_cmd;
   bool cmd_updated = false;
@@ -508,7 +516,24 @@ namespace
 
     sensors_data.joint_data = joint_data;
     sensors_data.imu_data = imu_data;
+
+#ifdef USE_DDS
+    // Publish DDS LowState via DDS (instead of ROS when DDS is enabled)
+    if (dds_client) {
+      unitree_hg::msg::dds_::LowState_ dds_state;
+      Eigen::Vector3d angVel_eigen(angVel[0], angVel[1], angVel[2]);
+      Eigen::Vector4d ori_eigen(ori[0], ori[1], ori[2], ori[3]);
+      dds_client->convertMujocoToDdsState(joint_data.joint_q, joint_data.joint_v, joint_data.joint_vd, joint_data.joint_torque, acc_eigen, angVel_eigen, free_acc, ori_eigen, dds_state);
+      dds_client->publishLowState(dds_state);
+    }
+    else
+    {
+      std::cout << "NOT PUB" << std::endl;
+    }
+#else
+    // Publish ROS sensor data only when DDS is disabled
     sensorsPub.publish(sensors_data);
+#endif
 
     // bodyOdom = Odometry();
     bodyOdom.header.stamp = sim_time;
@@ -830,6 +855,26 @@ bool handleSimStart(std_srvs::SetBool::Request &req,
   sim->run = req.data;
   return true;
 }
+#ifdef USE_DDS
+void ddsLowCmdCallback(const unitree_hg::msg::dds_::LowCmd_& cmd)
+{
+  // Convert DDS LowCmd to MuJoCo joint commands
+  std::vector<double> tau(numJoints, 0.0);
+  
+  // Map motor commands to joint torques (first 28 motors)
+  size_t joint_count = std::min((size_t)numJoints, KUAVO_JOINT_COUNT);
+  for (size_t i = 0; i < joint_count && i < cmd.motor_cmd().size(); ++i) {
+    const auto& motor_cmd = cmd.motor_cmd()[i];
+    tau[i] = static_cast<double>(motor_cmd.tau());
+  }
+  
+  std::lock_guard<std::mutex> lock(queueMutex);
+  joint_tau_cmd = tau;
+  cmd_updated = true;
+  
+}
+#endif
+
 void jointCmdCallback(const kuavo_msgs::jointCmd::ConstPtr &msg)
 {
    auto is_match_size = [&](size_t size)
@@ -950,8 +995,19 @@ void PhysicsThread(mj::Simulate *sim, const char *filename)
   ros::ServiceServer service = g_nh_ptr->advertiseService("sim_start", handleSimStart);
 
   // // 创建订阅器
+#ifndef USE_DDS
   ros::Subscriber jointCmdSub = g_nh_ptr->subscribe("/joint_cmd", 10, jointCmdCallback);
+#endif
   ros::Subscriber extWrenchSub = g_nh_ptr->subscribe("/external_wrench", 10, extWrenchCallback);
+
+#ifdef USE_DDS
+      // 初始化DDS通信
+    std::cout << "[MuJoCo DDS] Initializing DDS communication..." << std::endl;
+    dds_client = std::make_unique<MujocoDdsClient>();
+    dds_client->setLowCmdCallback(ddsLowCmdCallback);
+    dds_client->start();
+    std::cout << "[MuJoCo DDS] DDS communication started" << std::endl;
+#endif
 
   // 初始化灵巧手ROS
   if(!RHandJointsAddr.ctrladr().invalid()) {

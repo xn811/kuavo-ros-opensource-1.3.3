@@ -43,7 +43,11 @@
 #include "kuavo_msgs/robotHeadMotionData.h"
 #include "kuavo_msgs/getCurrentGaitName.h"
 #include "humanoid_controllers/shm_manager.h"
-#include <std_msgs/Int8.h> 
+#include <std_msgs/Int8.h>
+#ifdef USE_DDS
+#include "humanoid_controllers/CommonDDS.h"
+#endif 
+
 #include "kuavo_common/common/common.h"
 
 namespace humanoid_controller
@@ -205,6 +209,9 @@ namespace humanoid_controller
     void getEnableMpcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
     void getEnableWbcFlagCallback(const std_msgs::Bool::ConstPtr &msg);
     void checkMpcPullUp(double current_time, vector_t & current_state, const TargetTrajectories& planner_target_trajectories);
+#ifdef USE_DDS
+    void LowStateCallback(const unitree_hg::msg::dds_::LowState_& data);
+#endif
 
     /**
      * Creates MPC Policy message.
@@ -479,6 +486,17 @@ namespace humanoid_controller
     bool enable_pull_up_protect_ = false;
 
     std::vector<std::pair<double, double> > head_joint_limits_ = {{-80, 80}, {-25, 25}};
+    
+    // Unitree DDS hardware interface
+#ifdef USE_DDS
+    std::unique_ptr<HumanoidControllerDDSClient> dds_client_;
+#endif
+    
+    // Latest sensor data for comparison
+    SensorData latest_dds_sensor_data_;
+    SensorData latest_ros_sensor_data_;
+    bool has_dds_data_ = false;
+    bool has_ros_data_ = false;
     std::vector<std::pair<double, double> > waist_joint_limits_ = {{-120, 120}};  // 添加腰部关节限制
 
     void publishWbcArmEndEffectorPose();

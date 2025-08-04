@@ -78,7 +78,7 @@ class HardwarePlant
     HardwarePlant(double dt = 1e-3, HardwareParam hardware_param = HardwareParam(), const std::string & hardware_abs_path = "", uint8_t control_mode = MOTOR_CONTROL_MODE_TORQUE,
                  uint16_t num_actuated = 0,
                  uint16_t nq_f = 7, uint16_t nv_f = 6);
-    ~HardwarePlant(){HWPlantDeInit();}
+    virtual ~HardwarePlant(){HWPlantDeInit();}
     void Update(RobotState_t state_des, Eigen::VectorXd actuation);
     void joint2motor(const RobotState_t &state_des_, const Eigen::VectorXd &actuation, Eigen::VectorXd &cmd_out);
     void motor2joint(SensorData_t sensor_data_motor, SensorData_t &sensor_data_joint);
@@ -265,7 +265,11 @@ private:
     
     /* only used in half-up body mode */
     std::unique_ptr<std::array<double, 12>> stance_leg_joint_pos_ = nullptr;
-  };
+
+public:
+    // Virtual methods for DDS functionality (implemented in derived classes)
+    virtual void publishStateViaDDS(const SensorData_t& sensor_data, uint32_t timestamp_sec, uint32_t timestamp_nsec) {}
+};
 
   void Invt_imudate(SensorData_t &sensor_data);
   Eigen::Vector3d removeGravity(const Eigen::Vector3d &rawAccel, const Eigen::Quaterniond &orientation);
