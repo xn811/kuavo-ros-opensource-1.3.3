@@ -58,6 +58,8 @@ class Quest3Node:
         print(f"upper_arm_length: {upper_arm_length}, lower_arm_length: {lower_arm_length}, shoulder_width: {shoulder_width}")
         rospy.set_param("/quest3/upper_arm_length", upper_arm_length)
         rospy.set_param("/quest3/lower_arm_length", lower_arm_length)
+        rospy.set_param("/quest3/base_height_offset", model_config.get("base_height_offset", 0.23))
+    
         rospy.set_param("/quest3/shoulder_width", shoulder_width)
         
         # Get hand reference mode from parameter or use default
@@ -145,12 +147,8 @@ class Quest3Node:
             self.button_y_last = joyStick_data.left_second_button_pressed
 
             for i in range(6):
-                if i <= 2:
-                    left_hand_position[i] = int(100.0 * joyStick_data.left_trigger)
-                    right_hand_position[i] = int(100.0 * joyStick_data.right_trigger)
-                else:
-                    left_hand_position[i] = int(100.0 * joyStick_data.left_grip)
-                    right_hand_position[i] = int(100.0 * joyStick_data.right_grip)
+                left_hand_position[i] = int(100.0 * joyStick_data.left_trigger)
+                right_hand_position[i] = int(100.0 * joyStick_data.right_trigger)
 
                 # Clamp values to [0, 100]
                 left_hand_position[i] = max(0, min(left_hand_position[i], 100))
@@ -243,6 +241,7 @@ class Quest3Node:
             return
         if self.quest3_arm_info_transformer.is_runing and self.predict_time <= 1e-5:
             eef_pose_msg = twoArmHandPoseCmd()
+            eef_pose_msg.frame = 3
             eef_pose_msg.hand_poses.left_pose.pos_xyz = left_pose[0]
             eef_pose_msg.hand_poses.left_pose.quat_xyzw = left_pose[1]
             eef_pose_msg.hand_poses.left_pose.elbow_pos_xyz = left_elbow_pos

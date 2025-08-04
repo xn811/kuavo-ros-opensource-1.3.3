@@ -11,6 +11,11 @@ from tools.drake_trans import *
 from tools.quest3_utils import Quest3ArmInfoTransformer
 import argparse
 import enum
+import tf2_ros
+import tf2_geometry_msgs
+from geometry_msgs.msg import TransformStamped, PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
+from std_msgs.msg import ColorRGBA
 
 from kuavo_msgs.msg import twoArmHandPoseCmd, ikSolveParam, sensorsData
 from kuavo_msgs.srv import changeTorsoCtrlMode, changeTorsoCtrlModeRequest, changeArmCtrlMode, changeArmCtrlModeRequest
@@ -94,6 +99,17 @@ class Quest3Node:
         # 计算增量的 VR 锚点
         self._left_anchor_pose = (None, None)
         self._right_anchor_pose = (None, None)
+        
+        # Marker可视化开关
+        self.enable_markers = rospy.get_param('/quest3/enable_markers', True)
+        self.enable_safety = rospy.get_param('/quest3/enable_safety', True)
+        # 安全保护参数
+        self.max_pos_diff = rospy.get_param('/quest3/max_pos_diff', 0.45)
+        self.max_quat_diff = rospy.get_param('/quest3/max_quat_diff', 0.1)  
+        
+        print(f"安全保护参数:")
+        print(f"  目标与当前位置最大差异: {self.max_pos_diff}m")
+        print(f"  目标与当前姿态最大差异: {self.max_quat_diff}rad ({np.degrees(self.max_quat_diff):.1f}度)")
 
         kuavo_assests_path = get_package_path("kuavo_assets")
         robot_version = os.environ.get('ROBOT_VERSION', '40')
@@ -118,6 +134,13 @@ class Quest3Node:
         self.control_robot_hand_position_pub = rospy.Publisher("control_robot_hand_position", robotHandPosition, queue_size=10)
         self.pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
         self.leju_claw_command_pub = rospy.Publisher("leju_claw_command", lejuClawCommand, queue_size=10)
+
+        # Marker发布器 - 用于可视化末端位置
+        self.marker_pub = rospy.Publisher('/quest3/end_effector_markers', MarkerArray, queue_size=10)
+
+        # TF监听器
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         rospy.Subscriber("/leju_quest_bone_poses", PoseInfoList, self.quest_bone_poses_callback)
         rospy.Subscriber("/quest_joystick_data", JoySticks, self.joySticks_data_callback)
@@ -289,6 +312,174 @@ class Quest3Node:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
         return None
+    
+    def get_current_end_effector_poses(self):
+        """通过TF获取机器人当前末端位姿"""
+        try:
+            # 获取左手末端位姿
+            left_transform = self.tf_buffer.lookup_transform(
+                'base_link', 'zarm_l7_link', rospy.Time(0), rospy.Duration(0.1)
+            )
+            left_pos = np.array([
+                left_transform.transform.translation.x,
+                left_transform.transform.translation.y,
+                left_transform.transform.translation.z
+            ])
+            left_quat = np.array([
+                left_transform.transform.rotation.x,
+                left_transform.transform.rotation.y,
+                left_transform.transform.rotation.z,
+                left_transform.transform.rotation.w
+            ])
+            
+            # 获取右手末端位姿
+            right_transform = self.tf_buffer.lookup_transform(
+                'base_link', 'zarm_r7_link', rospy.Time(0), rospy.Duration(0.1)
+            )
+            right_pos = np.array([
+                right_transform.transform.translation.x,
+                right_transform.transform.translation.y,
+                right_transform.transform.translation.z
+            ])
+            right_quat = np.array([
+                right_transform.transform.rotation.x,
+                right_transform.transform.rotation.y,
+                right_transform.transform.rotation.z,
+                right_transform.transform.rotation.w
+            ])
+            
+            return {
+                'left_pos': left_pos,
+                'left_quat': left_quat,
+                'right_pos': right_pos,
+                'right_quat': right_quat
+            }
+            
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            rospy.logwarn(f"TF lookup failed: {e}")
+            return None
+
+    def create_end_effector_markers(self, left_target_pose, right_target_pose, left_current_pose=None, right_current_pose=None):
+        """创建末端执行器的可视化Marker"""
+        marker_array = MarkerArray()
+        
+        # 创建左手目标位置Marker
+        if left_target_pose[0] is not None:
+            left_target_marker = Marker()
+            left_target_marker.header.frame_id = "base_link"
+            left_target_marker.header.stamp = rospy.Time.now()
+            left_target_marker.ns = "left_target"
+            left_target_marker.id = 0
+            left_target_marker.type = Marker.SPHERE
+            left_target_marker.action = Marker.ADD
+            
+            # 设置位置
+            left_target_marker.pose.position.x = left_target_pose[0][0]
+            left_target_marker.pose.position.y = left_target_pose[0][1]
+            left_target_marker.pose.position.z = left_target_pose[0][2]
+            
+            # 设置姿态
+            left_target_marker.pose.orientation.x = left_target_pose[1][0]
+            left_target_marker.pose.orientation.y = left_target_pose[1][1]
+            left_target_marker.pose.orientation.z = left_target_pose[1][2]
+            left_target_marker.pose.orientation.w = left_target_pose[1][3]
+            
+            # 设置大小和颜色
+            left_target_marker.scale.x = 0.05
+            left_target_marker.scale.y = 0.05
+            left_target_marker.scale.z = 0.05
+            left_target_marker.color = ColorRGBA(1.0, 0.0, 0.0, 0.8)  # 红色，目标位置
+            
+            marker_array.markers.append(left_target_marker)
+        
+        # 创建右手目标位置Marker
+        if right_target_pose[0] is not None:
+            right_target_marker = Marker()
+            right_target_marker.header.frame_id = "base_link"
+            right_target_marker.header.stamp = rospy.Time.now()
+            right_target_marker.ns = "right_target"
+            right_target_marker.id = 1
+            right_target_marker.type = Marker.SPHERE
+            right_target_marker.action = Marker.ADD
+            
+            # 设置位置
+            right_target_marker.pose.position.x = right_target_pose[0][0]
+            right_target_marker.pose.position.y = right_target_pose[0][1]
+            right_target_marker.pose.position.z = right_target_pose[0][2]
+            
+            # 设置姿态
+            right_target_marker.pose.orientation.x = right_target_pose[1][0]
+            right_target_marker.pose.orientation.y = right_target_pose[1][1]
+            right_target_marker.pose.orientation.z = right_target_pose[1][2]
+            right_target_marker.pose.orientation.w = right_target_pose[1][3]
+            
+            # 设置大小和颜色
+            right_target_marker.scale.x = 0.05
+            right_target_marker.scale.y = 0.05
+            right_target_marker.scale.z = 0.05
+            right_target_marker.color = ColorRGBA(0.0, 1.0, 0.0, 0.8)  # 绿色，目标位置
+            
+            marker_array.markers.append(right_target_marker)
+        
+        # 创建左手当前位置Marker
+        if left_current_pose is not None:
+            left_current_marker = Marker()
+            left_current_marker.header.frame_id = "base_link"
+            left_current_marker.header.stamp = rospy.Time.now()
+            left_current_marker.ns = "left_current"
+            left_current_marker.id = 2
+            left_current_marker.type = Marker.SPHERE
+            left_current_marker.action = Marker.ADD
+            
+            # 设置位置
+            left_current_marker.pose.position.x = left_current_pose[0]
+            left_current_marker.pose.position.y = left_current_pose[1]
+            left_current_marker.pose.position.z = left_current_pose[2]
+            
+            # 设置姿态
+            left_current_marker.pose.orientation.x = left_current_pose[3]
+            left_current_marker.pose.orientation.y = left_current_pose[4]
+            left_current_marker.pose.orientation.z = left_current_pose[5]
+            left_current_marker.pose.orientation.w = left_current_pose[6]
+            
+            # 设置大小和颜色
+            left_current_marker.scale.x = 0.03
+            left_current_marker.scale.y = 0.03
+            left_current_marker.scale.z = 0.03
+            left_current_marker.color = ColorRGBA(1.0, 0.5, 0.0, 0.6)  # 橙色，当前位置
+            
+            marker_array.markers.append(left_current_marker)
+        
+        # 创建右手当前位置Marker
+        if right_current_pose is not None:
+            right_current_marker = Marker()
+            right_current_marker.header.frame_id = "base_link"
+            right_current_marker.header.stamp = rospy.Time.now()
+            right_current_marker.ns = "right_current"
+            right_current_marker.id = 3
+            right_current_marker.type = Marker.SPHERE
+            right_current_marker.action = Marker.ADD
+            
+            # 设置位置
+            right_current_marker.pose.position.x = right_current_pose[0]
+            right_current_marker.pose.position.y = right_current_pose[1]
+            right_current_marker.pose.position.z = right_current_pose[2]
+            
+            # 设置姿态
+            right_current_marker.pose.orientation.x = right_current_pose[3]
+            right_current_marker.pose.orientation.y = right_current_pose[4]
+            right_current_marker.pose.orientation.z = right_current_pose[5]
+            right_current_marker.pose.orientation.w = right_current_pose[6]
+            
+            # 设置大小和颜色
+            right_current_marker.scale.x = 0.03
+            right_current_marker.scale.y = 0.03
+            right_current_marker.scale.z = 0.03
+            right_current_marker.color = ColorRGBA(0.0, 0.5, 1.0, 0.6)  # 蓝色，当前位置
+            
+            marker_array.markers.append(right_current_marker)
+        
+        return marker_array
 
     def quest_bone_poses_callback(self, quest_bone_poses_msg):
         self.quest3_arm_info_transformer.read_msg(quest_bone_poses_msg)
@@ -316,6 +507,10 @@ class Quest3Node:
 
             if is_incremental_control(self.joySticks_data):
                 if self.control_mode != Quest3Node.ControlMode.INCREMENTAL_MODE:
+
+                    if self.enable_safety and not self.safe_check_enter_incremental_mode(left_pose, right_pose):
+                        return
+
                     print("\033[93m++++++++++++++++++++开始增量模式+++++++++++++++++\033[0m")
                     # 刚开始切换到增量控制模式
                     self.control_mode = Quest3Node.ControlMode.INCREMENTAL_MODE
@@ -427,6 +622,20 @@ class Quest3Node:
                 eef_pose_msg.hand_poses.right_pose.quat_xyzw = self._right_target_pose[1]
                 eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = right_elbow_pos
 
+                # 发布Marker用于可视化
+                # current_poses = self.get_current_end_effector_poses()
+                # left_current_pose = None
+                # right_current_pose = None
+                # if current_poses is not None:
+                #     left_current_pose = np.concatenate([current_poses['left_pos'], current_poses['left_quat']])
+                #     right_current_pose = np.concatenate([current_poses['right_pos'], current_poses['right_quat']])
+                
+                # marker_array = self.create_end_effector_markers(
+                #     self._left_target_pose, self._right_target_pose,
+                #     left_current_pose, right_current_pose
+                # )
+                # self.marker_pub.publish(marker_array)
+
             else: # Incremental mode OFF
                 if self.control_mode == Quest3Node.ControlMode.INCREMENTAL_MODE:
                     print("\033[93m--------------------退出增量模式-----------------\033[0m")
@@ -464,6 +673,65 @@ class Quest3Node:
         self.quest3_arm_info_transformer.read_joySticks_msg(msg)
         self.joySticks_data = msg
         self.pub_robot_end_hand(joyStick_data=self.joySticks_data)
+
+    def safe_check_enter_incremental_mode(self, left_pose, right_pose):
+
+        # 额外的安全检查：确保目标位姿与机器人当前位姿的差异不会过大
+        def check_target_vs_current_safety(target_pos, target_quat, current_pos, current_quat, hand_name):
+            # 如果禁用安全保护，直接返回True
+            if not self.enable_safety:
+                return True
+            
+            if current_pos is None or current_quat is None:
+                return True  # 如果没有当前位姿信息，跳过检查
+            
+            # 使用可配置的安全阈值
+            max_pos_diff = self.max_pos_diff
+            max_quat_diff = self.max_quat_diff
+            
+            # 检查位置差异
+            pos_diff = np.linalg.norm(target_pos - current_pos)
+            if pos_diff > max_pos_diff:
+                print(f"\033[91m[安全警告] {hand_name}目标位置与当前位置差异过大: {pos_diff:.3f}m > {max_pos_diff}m\033[0m")
+                return False
+            
+            # 检查姿态差异
+            def quaternion_angle_difference(q1, q2):
+                dot_product = np.clip(np.abs(np.dot(q1, q2)), -1.0, 1.0)
+                return 2.0 * np.arccos(dot_product)
+            
+            quat_diff = quaternion_angle_difference(target_quat, current_quat)
+            if quat_diff > max_quat_diff:
+                print(f"\033[91m[安全警告] {hand_name}目标姿态与当前姿态差异过大: {quat_diff:.3f}rad > {max_quat_diff}rad\033[0m")
+                return False
+            
+            return True
+        
+        # 获取当前机器人位姿（通过TF）
+        current_left_pos = None
+        current_left_quat = None
+        current_right_pos = None
+        current_right_quat = None
+        
+        current_poses = self.get_current_end_effector_poses()
+        if current_poses is not None:
+            current_left_pos = current_poses['left_pos']
+            current_left_quat = current_poses['left_quat']
+            current_right_pos = current_poses['right_pos']
+            current_right_quat = current_poses['right_quat']
+        
+        # 执行安全检查
+        left_safe = check_target_vs_current_safety(
+            left_pose[0],
+            left_pose[1],
+            current_left_pos, current_left_quat, "左手"
+        )
+        right_safe = check_target_vs_current_safety(
+            right_pose[0],
+            right_pose[1],
+            current_right_pos, current_right_quat, "右手"
+        )
+        return left_safe and right_safe
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)

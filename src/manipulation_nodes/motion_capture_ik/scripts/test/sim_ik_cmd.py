@@ -46,8 +46,24 @@ def get_joint_states_msg(q_now):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--use_topic", type=bool, default=False, help="use topic or not")
+    parser.add_argument("--frame", type=int, default=3, help="frame type")
     args = parser.parse_args()
     use_topic = args.use_topic
+    frame = args.frame
+    if frame == 0:
+        frame_name = "Current Frame"
+    if frame == 1:
+        frame_name = "World Frame"
+    elif frame == 2:
+        frame_name = "Local Frame"
+    elif frame == 3:
+        frame_name = "VR Frame"
+    elif frame == 4:
+        frame_name = "MM World Frame"
+    else:
+        frame_name = "Unknown Frame"
+    print(f"use_topic: {use_topic}")
+    print(f"frame: {frame_name}")
 
     rospy.init_node("sim_ik_cmd", anonymous=True)
     pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
@@ -70,6 +86,7 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():# and idx <= 10:
         eef_pose_msg = twoArmHandPoseCmd()
         eef_pose_msg.ik_param = ik_solve_param
+        eef_pose_msg.frame = frame
         eef_pose_msg.use_custom_ik_param = use_custom_ik_param
         eef_pose_msg.joint_angles_as_q0 = joint_angles_as_q0
 
