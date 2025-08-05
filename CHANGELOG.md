@@ -7,6 +7,7 @@
 ## 新增功能
 
 ## 修复问题
+- 修复桌面软件无法控制 roban 转腰的问题，planarmwebsocketservice 代码中相关路径由于代码合并缺失
 
 ## 其他改进
 

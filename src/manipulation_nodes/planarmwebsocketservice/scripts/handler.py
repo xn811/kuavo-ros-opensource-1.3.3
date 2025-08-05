@@ -23,6 +23,9 @@ from std_srvs.srv import Trigger
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
 from kuavo_msgs.msg import sensorsData
+from pathlib import Path
+import subprocess
+
 # Replace multiprocessing values with simple variables
 plan_arm_state_progress = 0
 plan_arm_state_status = False
@@ -32,6 +35,27 @@ ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
 g_robot_type = ""
 ocs2_current_joint_state = []
 robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
+
+
+# 下位机音乐文件存放路径，如果不存在则进行创建
+sudo_user = os.environ.get("SUDO_USER")
+if sudo_user:
+    user_info = pwd.getpwnam(sudo_user)
+    home_path = user_info.pw_dir
+else:
+    home_path = os.path.expanduser("~")
+
+MUSIC_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'music')
+try:
+    Path(MUSIC_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"创建目录时出错: {e}")
+
+# H12 遥控器按键功能配置文件路径
+h12_package_name = "h12pro_controller_node"
+h12_package_path = rospkg.RosPack().get_path(h12_package_name)
+H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
+
 
 if robot_version >= 40:
     joint_names = [
