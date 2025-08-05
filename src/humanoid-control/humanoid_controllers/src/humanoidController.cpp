@@ -2145,6 +2145,9 @@ namespace humanoid_controller
     }
 #else
     // Use ROS and SHM publishing when DDS is disabled
+    if (use_shm_communication_){
+      publishJointCmdToShm(jointCmdMsg);
+    } 
     jointCmdPub_.publish(jointCmdMsg);
 #endif
     
