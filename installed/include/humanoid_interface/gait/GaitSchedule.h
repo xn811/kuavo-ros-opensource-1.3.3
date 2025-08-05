@@ -241,6 +241,11 @@ namespace ocs2
      
       inline void setAutoGaitEnabled(bool enabled) { autoGaitEnabled_ = enabled; }
       inline bool isAutoGaitEnabled() const { return autoGaitEnabled_; }
+
+      inline void addGait(scalar_t startTime, const std::string &name)
+      {
+        gaitManager_.add(startTime, name);
+      }
       /**
        * Gets the mode sequence template.
        */

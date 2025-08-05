@@ -308,7 +308,6 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   int estContactState_ = ModeNumber::SS;
   bool isContactStateUpdated_ = false;
 
-
   scalar_t cmdHeight_;
   scalar_t cmdPitch_;
   bool velCmdUpdated_ = false;
@@ -326,6 +325,10 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool isArmControlModeChanged_ = false;
   bool isArmControlModeChangedTrigger_ = false;
   bool update_stop_single_step_ = false;
+
+  bool begin_step_gait = false;
+  scalar_t customGait_start_time = 0;
+  scalar_t customGait_end_time = 0;
 
   vector_t TargetState_, initTargetState_;
   scalar_array_t lastTimeTrajectoryWithVel;
