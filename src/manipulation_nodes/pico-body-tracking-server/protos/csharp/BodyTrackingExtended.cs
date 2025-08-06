@@ -23,42 +23,42 @@ public static partial class BodyTrackingExtendedReflection {
     byte[] descriptorData = global::System.Convert.FromBase64String(
         string.Concat(
           "Chxib2R5X3RyYWNraW5nX2V4dGVuZGVkLnByb3RvGh9nb29nbGUvcHJvdG9i",
-          "dWYvdGltZXN0YW1wLnByb3RvGhdkZWxheWVkX2RpYWdub3Npcy5wcm90byKS",
-          "AwoGVlJEYXRhEhcKBmhlYWRlchgBIAEoCzIHLkhlYWRlchIlCglmdWxsX2Jv",
-          "ZHkYAiABKAsyDS5GdWxsQm9keURhdGFIAIgBARInCgp1cHBlcl9ib2R5GAMg",
-          "ASgLMg4uVXBwZXJCb2R5RGF0YUgBiAEBEigKCmNvbnRyb2xsZXIYBCABKAsy",
-          "Dy5Db250cm9sbGVyRGF0YUgCiAEBEiMKCnJvYm90X2RhdGEYBSABKAsyCi5S",
-          "b2JvdERhdGFIA4gBARInCgp2cl9jb21tYW5kGAYgASgLMg4uVnJDb21tYW5k",
-          "RGF0YUgEiAEBEj8KGWRlbGF5ZWRfZGlhZ25vc2lzX2NvbW1hbmQYByABKAsy",
-          "Fy5EZWxheURpYWdub3N0aWNDb21tYW5kSAWIAQFCDAoKX2Z1bGxfYm9keUIN",
-          "CgtfdXBwZXJfYm9keUINCgtfY29udHJvbGxlckINCgtfcm9ib3RfZGF0YUIN",
-          "CgtfdnJfY29tbWFuZEIcChpfZGVsYXllZF9kaWFnbm9zaXNfY29tbWFuZCJD",
-          "CgZIZWFkZXISLQoJdGltZXN0YW1wGAEgASgLMhouZ29vZ2xlLnByb3RvYnVm",
-          "LlRpbWVzdGFtcBIKCgJpZBgCIAEoAyIoCgxGdWxsQm9keURhdGESGAoJZnVs",
-          "bF9ib2R5GAEgAygLMgUuUG9zZSIqCg1VcHBlckJvZHlEYXRhEhkKCnVwcGVy",
-          "X2JvZHkYASADKAsyBS5Qb3NlInMKBFBvc2USDQoFcG9zX3gYASABKAESDQoF",
-          "cG9zX3kYAiABKAESDQoFcG9zX3oYAyABKAESDgoGcm90X3F4GAQgASgBEg4K",
-          "BnJvdF9xeRgFIAEoARIOCgZyb3RfcXoYBiABKAESDgoGcm90X3F3GAcgASgB",
-          "IjgKDkNvbnRyb2xsZXJEYXRhEiYKC2NvbnRyb2xsZXJzGAEgASgLMhEuQ29u",
-          "dHJvbGxlclN0YXRlcyJTChBDb250cm9sbGVyU3RhdGVzEh4KBGxlZnQYASAB",
-          "KAsyEC5Db250cm9sbGVyU3RhdGUSHwoFcmlnaHQYAiABKAsyEC5Db250cm9s",
-          "bGVyU3RhdGUirwEKD0NvbnRyb2xsZXJTdGF0ZRIWCg5wcmltYXJ5X2J1dHRv",
-          "bhgBIAEoCBIYChBzZWNvbmRhcnlfYnV0dG9uGAIgASgIEhMKC2dyaXBfYnV0",
-          "dG9uGAMgASgIEhYKDnRyaWdnZXJfYnV0dG9uGAQgASgIEhIKCmdyaXBfdmFs",
-          "dWUYBSABKAESFQoNdHJpZ2dlcl92YWx1ZRgGIAEoARISCgp0aHVtYnN0aWNr",
-          "GAcgAygBItkBCglSb2JvdERhdGESJwoPaXRlbV9tYXNzX2ZvcmNlGAEgASgL",
-          "Mg4uSXRlbU1hc3NGb3JjZRIRCgltb3Rvcl9jdXIYAiADKAESDwoHZWVmX2N1",
-          "chgDIAMoARIiCgxjb250cm9sX21vZGUYBCABKAsyDC5Db250cm9sTW9kZRI+",
-          "ChhkZWxheWVkX2RpYWdub3Npc19yZXN1bHQYBSABKAsyFy5EZWxheWVkRGlh",
-          "Z25vc2lzUmVzdWx0SACIAQFCGwoZX2RlbGF5ZWRfZGlhZ25vc2lzX3Jlc3Vs",
-          "dCJcCg1WckNvbW1hbmREYXRhEicKD2l0ZW1fbWFzc19mb3JjZRgBIAEoCzIO",
-          "Lkl0ZW1NYXNzRm9yY2USIgoMY29udHJvbF9tb2RlGAIgASgLMgwuQ29udHJv",
-          "bE1vZGUiWAoNSXRlbU1hc3NGb3JjZRIRCglpdGVtX21hc3MYASABKAESEAoI",
-          "bGZvcmNlX3gYAiABKAESEAoIbGZvcmNlX3kYAyABKAESEAoIbGZvcmNlX3oY",
-          "BCABKAEiIwoLQ29udHJvbE1vZGUSFAoMY29udHJvbF9tb2RlGAEgASgJIiUK",
-          "FkRlbGF5RGlhZ25vc3RpY0NvbW1hbmQSCwoDcnVuGAEgASgIYgZwcm90bzM="));
+          "dWYvdGltZXN0YW1wLnByb3RvGhdkZWxheWVkX2RpYWdub3Npcy5wcm90bxoV",
+          "aGFuZF93cmVuY2hfc3J2LnByb3RvIpIDCgZWUkRhdGESFwoGaGVhZGVyGAEg",
+          "ASgLMgcuSGVhZGVyEiUKCWZ1bGxfYm9keRgCIAEoCzINLkZ1bGxCb2R5RGF0",
+          "YUgAiAEBEicKCnVwcGVyX2JvZHkYAyABKAsyDi5VcHBlckJvZHlEYXRhSAGI",
+          "AQESKAoKY29udHJvbGxlchgEIAEoCzIPLkNvbnRyb2xsZXJEYXRhSAKIAQES",
+          "IwoKcm9ib3RfZGF0YRgFIAEoCzIKLlJvYm90RGF0YUgDiAEBEicKCnZyX2Nv",
+          "bW1hbmQYBiABKAsyDi5WckNvbW1hbmREYXRhSASIAQESPwoZZGVsYXllZF9k",
+          "aWFnbm9zaXNfY29tbWFuZBgHIAEoCzIXLkRlbGF5RGlhZ25vc3RpY0NvbW1h",
+          "bmRIBYgBAUIMCgpfZnVsbF9ib2R5Qg0KC191cHBlcl9ib2R5Qg0KC19jb250",
+          "cm9sbGVyQg0KC19yb2JvdF9kYXRhQg0KC192cl9jb21tYW5kQhwKGl9kZWxh",
+          "eWVkX2RpYWdub3Npc19jb21tYW5kIkMKBkhlYWRlchItCgl0aW1lc3RhbXAY",
+          "ASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEgoKAmlkGAIgASgD",
+          "IigKDEZ1bGxCb2R5RGF0YRIYCglmdWxsX2JvZHkYASADKAsyBS5Qb3NlIioK",
+          "DVVwcGVyQm9keURhdGESGQoKdXBwZXJfYm9keRgBIAMoCzIFLlBvc2UicwoE",
+          "UG9zZRINCgVwb3NfeBgBIAEoARINCgVwb3NfeRgCIAEoARINCgVwb3NfehgD",
+          "IAEoARIOCgZyb3RfcXgYBCABKAESDgoGcm90X3F5GAUgASgBEg4KBnJvdF9x",
+          "ehgGIAEoARIOCgZyb3RfcXcYByABKAEiOAoOQ29udHJvbGxlckRhdGESJgoL",
+          "Y29udHJvbGxlcnMYASABKAsyES5Db250cm9sbGVyU3RhdGVzIlMKEENvbnRy",
+          "b2xsZXJTdGF0ZXMSHgoEbGVmdBgBIAEoCzIQLkNvbnRyb2xsZXJTdGF0ZRIf",
+          "CgVyaWdodBgCIAEoCzIQLkNvbnRyb2xsZXJTdGF0ZSKvAQoPQ29udHJvbGxl",
+          "clN0YXRlEhYKDnByaW1hcnlfYnV0dG9uGAEgASgIEhgKEHNlY29uZGFyeV9i",
+          "dXR0b24YAiABKAgSEwoLZ3JpcF9idXR0b24YAyABKAgSFgoOdHJpZ2dlcl9i",
+          "dXR0b24YBCABKAgSEgoKZ3JpcF92YWx1ZRgFIAEoARIVCg10cmlnZ2VyX3Zh",
+          "bHVlGAYgASgBEhIKCnRodW1ic3RpY2sYByADKAEi6gEKCVJvYm90RGF0YRI4",
+          "ChhpdGVtX21hc3NfZm9yY2VfcmVzcG9uc2UYASABKAsyFi5JdGVtTWFzc0Zv",
+          "cmNlUmVzcG9uc2USEQoJbW90b3JfY3VyGAIgAygBEg8KB2VlZl9jdXIYAyAD",
+          "KAESIgoMY29udHJvbF9tb2RlGAQgASgLMgwuQ29udHJvbE1vZGUSPgoYZGVs",
+          "YXllZF9kaWFnbm9zaXNfcmVzdWx0GAUgASgLMhcuRGVsYXllZERpYWdub3Np",
+          "c1Jlc3VsdEgAiAEBQhsKGV9kZWxheWVkX2RpYWdub3Npc19yZXN1bHQijAEK",
+          "DVZyQ29tbWFuZERhdGESOwoXaXRlbV9tYXNzX2ZvcmNlX3JlcXVlc3QYASAB",
+          "KAsyFS5JdGVtTWFzc0ZvcmNlUmVxdWVzdEgAiAEBEiIKDGNvbnRyb2xfbW9k",
+          "ZRgCIAEoCzIMLkNvbnRyb2xNb2RlQhoKGF9pdGVtX21hc3NfZm9yY2VfcmVx",
+          "dWVzdCIjCgtDb250cm9sTW9kZRIUCgxjb250cm9sX21vZGUYASABKAkiJQoW",
+          "RGVsYXlEaWFnbm9zdGljQ29tbWFuZBILCgNydW4YASABKAhiBnByb3RvMw=="));
     descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-        new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::DelayedDiagnosisReflection.Descriptor, },
+        new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::DelayedDiagnosisReflection.Descriptor, global::HandWrenchSrvReflection.Descriptor, },
         new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
           new pbr::GeneratedClrTypeInfo(typeof(global::VRData), global::VRData.Parser, new[]{ "Header", "FullBody", "UpperBody", "Controller", "RobotData", "VrCommand", "DelayedDiagnosisCommand" }, new[]{ "FullBody", "UpperBody", "Controller", "RobotData", "VrCommand", "DelayedDiagnosisCommand" }, null, null, null),
           new pbr::GeneratedClrTypeInfo(typeof(global::Header), global::Header.Parser, new[]{ "Timestamp", "Id" }, null, null, null, null),
@@ -68,9 +68,8 @@ public static partial class BodyTrackingExtendedReflection {
           new pbr::GeneratedClrTypeInfo(typeof(global::ControllerData), global::ControllerData.Parser, new[]{ "Controllers" }, null, null, null, null),
           new pbr::GeneratedClrTypeInfo(typeof(global::ControllerStates), global::ControllerStates.Parser, new[]{ "Left", "Right" }, null, null, null, null),
           new pbr::GeneratedClrTypeInfo(typeof(global::ControllerState), global::ControllerState.Parser, new[]{ "PrimaryButton", "SecondaryButton", "GripButton", "TriggerButton", "GripValue", "TriggerValue", "Thumbstick" }, null, null, null, null),
-          new pbr::GeneratedClrTypeInfo(typeof(global::RobotData), global::RobotData.Parser, new[]{ "ItemMassForce", "MotorCur", "EefCur", "ControlMode", "DelayedDiagnosisResult" }, new[]{ "DelayedDiagnosisResult" }, null, null, null),
-          new pbr::GeneratedClrTypeInfo(typeof(global::VrCommandData), global::VrCommandData.Parser, new[]{ "ItemMassForce", "ControlMode" }, null, null, null, null),
-          new pbr::GeneratedClrTypeInfo(typeof(global::ItemMassForce), global::ItemMassForce.Parser, new[]{ "ItemMass", "LforceX", "LforceY", "LforceZ" }, null, null, null, null),
+          new pbr::GeneratedClrTypeInfo(typeof(global::RobotData), global::RobotData.Parser, new[]{ "ItemMassForceResponse", "MotorCur", "EefCur", "ControlMode", "DelayedDiagnosisResult" }, new[]{ "DelayedDiagnosisResult" }, null, null, null),
+          new pbr::GeneratedClrTypeInfo(typeof(global::VrCommandData), global::VrCommandData.Parser, new[]{ "ItemMassForceRequest", "ControlMode" }, new[]{ "ItemMassForceRequest" }, null, null, null),
           new pbr::GeneratedClrTypeInfo(typeof(global::ControlMode), global::ControlMode.Parser, new[]{ "ControlMode_" }, null, null, null, null),
           new pbr::GeneratedClrTypeInfo(typeof(global::DelayDiagnosticCommand), global::DelayDiagnosticCommand.Parser, new[]{ "Run" }, null, null, null, null)
         }));
@@ -2436,7 +2435,7 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public RobotData(RobotData other) : this() {
-    itemMassForce_ = other.itemMassForce_ != null ? other.itemMassForce_.Clone() : null;
+    itemMassForceResponse_ = other.itemMassForceResponse_ != null ? other.itemMassForceResponse_.Clone() : null;
     motorCur_ = other.motorCur_.Clone();
     eefCur_ = other.eefCur_.Clone();
     controlMode_ = other.controlMode_ != null ? other.controlMode_.Clone() : null;
@@ -2450,15 +2449,15 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
     return new RobotData(this);
   }
 
-  /// <summary>Field number for the "item_mass_force" field.</summary>
-  public const int ItemMassForceFieldNumber = 1;
-  private global::ItemMassForce itemMassForce_;
+  /// <summary>Field number for the "item_mass_force_response" field.</summary>
+  public const int ItemMassForceResponseFieldNumber = 1;
+  private global::ItemMassForceResponse itemMassForceResponse_;
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public global::ItemMassForce ItemMassForce {
-    get { return itemMassForce_; }
+  public global::ItemMassForceResponse ItemMassForceResponse {
+    get { return itemMassForceResponse_; }
     set {
-      itemMassForce_ = value;
+      itemMassForceResponse_ = value;
     }
   }
 
@@ -2526,7 +2525,7 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
     if (ReferenceEquals(other, this)) {
       return true;
     }
-    if (!object.Equals(ItemMassForce, other.ItemMassForce)) return false;
+    if (!object.Equals(ItemMassForceResponse, other.ItemMassForceResponse)) return false;
     if(!motorCur_.Equals(other.motorCur_)) return false;
     if(!eefCur_.Equals(other.eefCur_)) return false;
     if (!object.Equals(ControlMode, other.ControlMode)) return false;
@@ -2538,7 +2537,7 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public override int GetHashCode() {
     int hash = 1;
-    if (itemMassForce_ != null) hash ^= ItemMassForce.GetHashCode();
+    if (itemMassForceResponse_ != null) hash ^= ItemMassForceResponse.GetHashCode();
     hash ^= motorCur_.GetHashCode();
     hash ^= eefCur_.GetHashCode();
     if (controlMode_ != null) hash ^= ControlMode.GetHashCode();
@@ -2561,9 +2560,9 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
     output.WriteRawMessage(this);
   #else
-    if (itemMassForce_ != null) {
+    if (itemMassForceResponse_ != null) {
       output.WriteRawTag(10);
-      output.WriteMessage(ItemMassForce);
+      output.WriteMessage(ItemMassForceResponse);
     }
     motorCur_.WriteTo(output, _repeated_motorCur_codec);
     eefCur_.WriteTo(output, _repeated_eefCur_codec);
@@ -2585,9 +2584,9 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-    if (itemMassForce_ != null) {
+    if (itemMassForceResponse_ != null) {
       output.WriteRawTag(10);
-      output.WriteMessage(ItemMassForce);
+      output.WriteMessage(ItemMassForceResponse);
     }
     motorCur_.WriteTo(ref output, _repeated_motorCur_codec);
     eefCur_.WriteTo(ref output, _repeated_eefCur_codec);
@@ -2609,8 +2608,8 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public int CalculateSize() {
     int size = 0;
-    if (itemMassForce_ != null) {
-      size += 1 + pb::CodedOutputStream.ComputeMessageSize(ItemMassForce);
+    if (itemMassForceResponse_ != null) {
+      size += 1 + pb::CodedOutputStream.ComputeMessageSize(ItemMassForceResponse);
     }
     size += motorCur_.CalculateSize(_repeated_motorCur_codec);
     size += eefCur_.CalculateSize(_repeated_eefCur_codec);
@@ -2632,11 +2631,11 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
     if (other == null) {
       return;
     }
-    if (other.itemMassForce_ != null) {
-      if (itemMassForce_ == null) {
-        ItemMassForce = new global::ItemMassForce();
+    if (other.itemMassForceResponse_ != null) {
+      if (itemMassForceResponse_ == null) {
+        ItemMassForceResponse = new global::ItemMassForceResponse();
       }
-      ItemMassForce.MergeFrom(other.ItemMassForce);
+      ItemMassForceResponse.MergeFrom(other.ItemMassForceResponse);
     }
     motorCur_.Add(other.motorCur_);
     eefCur_.Add(other.eefCur_);
@@ -2668,10 +2667,10 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
           break;
         case 10: {
-          if (itemMassForce_ == null) {
-            ItemMassForce = new global::ItemMassForce();
+          if (itemMassForceResponse_ == null) {
+            ItemMassForceResponse = new global::ItemMassForceResponse();
           }
-          input.ReadMessage(ItemMassForce);
+          input.ReadMessage(ItemMassForceResponse);
           break;
         }
         case 18:
@@ -2714,10 +2713,10 @@ public sealed partial class RobotData : pb::IMessage<RobotData>
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
           break;
         case 10: {
-          if (itemMassForce_ == null) {
-            ItemMassForce = new global::ItemMassForce();
+          if (itemMassForceResponse_ == null) {
+            ItemMassForceResponse = new global::ItemMassForceResponse();
           }
-          input.ReadMessage(ItemMassForce);
+          input.ReadMessage(ItemMassForceResponse);
           break;
         }
         case 18:
@@ -2785,7 +2784,7 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public VrCommandData(VrCommandData other) : this() {
-    itemMassForce_ = other.itemMassForce_ != null ? other.itemMassForce_.Clone() : null;
+    itemMassForceRequest_ = other.itemMassForceRequest_ != null ? other.itemMassForceRequest_.Clone() : null;
     controlMode_ = other.controlMode_ != null ? other.controlMode_.Clone() : null;
     _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
   }
@@ -2796,15 +2795,18 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
     return new VrCommandData(this);
   }
 
-  /// <summary>Field number for the "item_mass_force" field.</summary>
-  public const int ItemMassForceFieldNumber = 1;
-  private global::ItemMassForce itemMassForce_;
+  /// <summary>Field number for the "item_mass_force_request" field.</summary>
+  public const int ItemMassForceRequestFieldNumber = 1;
+  private global::ItemMassForceRequest itemMassForceRequest_;
+  /// <summary>
+  /// 物品质量与力相关请求
+  /// </summary>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public global::ItemMassForce ItemMassForce {
-    get { return itemMassForce_; }
+  public global::ItemMassForceRequest ItemMassForceRequest {
+    get { return itemMassForceRequest_; }
     set {
-      itemMassForce_ = value;
+      itemMassForceRequest_ = value;
     }
   }
 
@@ -2835,7 +2837,7 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
     if (ReferenceEquals(other, this)) {
       return true;
     }
-    if (!object.Equals(ItemMassForce, other.ItemMassForce)) return false;
+    if (!object.Equals(ItemMassForceRequest, other.ItemMassForceRequest)) return false;
     if (!object.Equals(ControlMode, other.ControlMode)) return false;
     return Equals(_unknownFields, other._unknownFields);
   }
@@ -2844,7 +2846,7 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public override int GetHashCode() {
     int hash = 1;
-    if (itemMassForce_ != null) hash ^= ItemMassForce.GetHashCode();
+    if (itemMassForceRequest_ != null) hash ^= ItemMassForceRequest.GetHashCode();
     if (controlMode_ != null) hash ^= ControlMode.GetHashCode();
     if (_unknownFields != null) {
       hash ^= _unknownFields.GetHashCode();
@@ -2864,9 +2866,9 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
     output.WriteRawMessage(this);
   #else
-    if (itemMassForce_ != null) {
+    if (itemMassForceRequest_ != null) {
       output.WriteRawTag(10);
-      output.WriteMessage(ItemMassForce);
+      output.WriteMessage(ItemMassForceRequest);
     }
     if (controlMode_ != null) {
       output.WriteRawTag(18);
@@ -2882,9 +2884,9 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-    if (itemMassForce_ != null) {
+    if (itemMassForceRequest_ != null) {
       output.WriteRawTag(10);
-      output.WriteMessage(ItemMassForce);
+      output.WriteMessage(ItemMassForceRequest);
     }
     if (controlMode_ != null) {
       output.WriteRawTag(18);
@@ -2900,8 +2902,8 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public int CalculateSize() {
     int size = 0;
-    if (itemMassForce_ != null) {
-      size += 1 + pb::CodedOutputStream.ComputeMessageSize(ItemMassForce);
+    if (itemMassForceRequest_ != null) {
+      size += 1 + pb::CodedOutputStream.ComputeMessageSize(ItemMassForceRequest);
     }
     if (controlMode_ != null) {
       size += 1 + pb::CodedOutputStream.ComputeMessageSize(ControlMode);
@@ -2918,11 +2920,11 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
     if (other == null) {
       return;
     }
-    if (other.itemMassForce_ != null) {
-      if (itemMassForce_ == null) {
-        ItemMassForce = new global::ItemMassForce();
+    if (other.itemMassForceRequest_ != null) {
+      if (itemMassForceRequest_ == null) {
+        ItemMassForceRequest = new global::ItemMassForceRequest();
       }
-      ItemMassForce.MergeFrom(other.ItemMassForce);
+      ItemMassForceRequest.MergeFrom(other.ItemMassForceRequest);
     }
     if (other.controlMode_ != null) {
       if (controlMode_ == null) {
@@ -2946,10 +2948,10 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
           break;
         case 10: {
-          if (itemMassForce_ == null) {
-            ItemMassForce = new global::ItemMassForce();
+          if (itemMassForceRequest_ == null) {
+            ItemMassForceRequest = new global::ItemMassForceRequest();
           }
-          input.ReadMessage(ItemMassForce);
+          input.ReadMessage(ItemMassForceRequest);
           break;
         }
         case 18: {
@@ -2975,10 +2977,10 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
           break;
         case 10: {
-          if (itemMassForce_ == null) {
-            ItemMassForce = new global::ItemMassForce();
+          if (itemMassForceRequest_ == null) {
+            ItemMassForceRequest = new global::ItemMassForceRequest();
           }
-          input.ReadMessage(ItemMassForce);
+          input.ReadMessage(ItemMassForceRequest);
           break;
         }
         case 18: {
@@ -2986,306 +2988,6 @@ public sealed partial class VrCommandData : pb::IMessage<VrCommandData>
             ControlMode = new global::ControlMode();
           }
           input.ReadMessage(ControlMode);
-          break;
-        }
-      }
-    }
-  }
-  #endif
-
-}
-
-public sealed partial class ItemMassForce : pb::IMessage<ItemMassForce>
-#if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    , pb::IBufferMessage
-#endif
-{
-  private static readonly pb::MessageParser<ItemMassForce> _parser = new pb::MessageParser<ItemMassForce>(() => new ItemMassForce());
-  private pb::UnknownFieldSet _unknownFields;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public static pb::MessageParser<ItemMassForce> Parser { get { return _parser; } }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public static pbr::MessageDescriptor Descriptor {
-    get { return global::BodyTrackingExtendedReflection.Descriptor.MessageTypes[10]; }
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  pbr::MessageDescriptor pb::IMessage.Descriptor {
-    get { return Descriptor; }
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public ItemMassForce() {
-    OnConstruction();
-  }
-
-  partial void OnConstruction();
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public ItemMassForce(ItemMassForce other) : this() {
-    itemMass_ = other.itemMass_;
-    lforceX_ = other.lforceX_;
-    lforceY_ = other.lforceY_;
-    lforceZ_ = other.lforceZ_;
-    _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public ItemMassForce Clone() {
-    return new ItemMassForce(this);
-  }
-
-  /// <summary>Field number for the "item_mass" field.</summary>
-  public const int ItemMassFieldNumber = 1;
-  private double itemMass_;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public double ItemMass {
-    get { return itemMass_; }
-    set {
-      itemMass_ = value;
-    }
-  }
-
-  /// <summary>Field number for the "lforce_x" field.</summary>
-  public const int LforceXFieldNumber = 2;
-  private double lforceX_;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public double LforceX {
-    get { return lforceX_; }
-    set {
-      lforceX_ = value;
-    }
-  }
-
-  /// <summary>Field number for the "lforce_y" field.</summary>
-  public const int LforceYFieldNumber = 3;
-  private double lforceY_;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public double LforceY {
-    get { return lforceY_; }
-    set {
-      lforceY_ = value;
-    }
-  }
-
-  /// <summary>Field number for the "lforce_z" field.</summary>
-  public const int LforceZFieldNumber = 4;
-  private double lforceZ_;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public double LforceZ {
-    get { return lforceZ_; }
-    set {
-      lforceZ_ = value;
-    }
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public override bool Equals(object other) {
-    return Equals(other as ItemMassForce);
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public bool Equals(ItemMassForce other) {
-    if (ReferenceEquals(other, null)) {
-      return false;
-    }
-    if (ReferenceEquals(other, this)) {
-      return true;
-    }
-    if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(ItemMass, other.ItemMass)) return false;
-    if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LforceX, other.LforceX)) return false;
-    if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LforceY, other.LforceY)) return false;
-    if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LforceZ, other.LforceZ)) return false;
-    return Equals(_unknownFields, other._unknownFields);
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public override int GetHashCode() {
-    int hash = 1;
-    if (ItemMass != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(ItemMass);
-    if (LforceX != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LforceX);
-    if (LforceY != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LforceY);
-    if (LforceZ != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LforceZ);
-    if (_unknownFields != null) {
-      hash ^= _unknownFields.GetHashCode();
-    }
-    return hash;
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public override string ToString() {
-    return pb::JsonFormatter.ToDiagnosticString(this);
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public void WriteTo(pb::CodedOutputStream output) {
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    output.WriteRawMessage(this);
-  #else
-    if (ItemMass != 0D) {
-      output.WriteRawTag(9);
-      output.WriteDouble(ItemMass);
-    }
-    if (LforceX != 0D) {
-      output.WriteRawTag(17);
-      output.WriteDouble(LforceX);
-    }
-    if (LforceY != 0D) {
-      output.WriteRawTag(25);
-      output.WriteDouble(LforceY);
-    }
-    if (LforceZ != 0D) {
-      output.WriteRawTag(33);
-      output.WriteDouble(LforceZ);
-    }
-    if (_unknownFields != null) {
-      _unknownFields.WriteTo(output);
-    }
-  #endif
-  }
-
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-    if (ItemMass != 0D) {
-      output.WriteRawTag(9);
-      output.WriteDouble(ItemMass);
-    }
-    if (LforceX != 0D) {
-      output.WriteRawTag(17);
-      output.WriteDouble(LforceX);
-    }
-    if (LforceY != 0D) {
-      output.WriteRawTag(25);
-      output.WriteDouble(LforceY);
-    }
-    if (LforceZ != 0D) {
-      output.WriteRawTag(33);
-      output.WriteDouble(LforceZ);
-    }
-    if (_unknownFields != null) {
-      _unknownFields.WriteTo(ref output);
-    }
-  }
-  #endif
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public int CalculateSize() {
-    int size = 0;
-    if (ItemMass != 0D) {
-      size += 1 + 8;
-    }
-    if (LforceX != 0D) {
-      size += 1 + 8;
-    }
-    if (LforceY != 0D) {
-      size += 1 + 8;
-    }
-    if (LforceZ != 0D) {
-      size += 1 + 8;
-    }
-    if (_unknownFields != null) {
-      size += _unknownFields.CalculateSize();
-    }
-    return size;
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public void MergeFrom(ItemMassForce other) {
-    if (other == null) {
-      return;
-    }
-    if (other.ItemMass != 0D) {
-      ItemMass = other.ItemMass;
-    }
-    if (other.LforceX != 0D) {
-      LforceX = other.LforceX;
-    }
-    if (other.LforceY != 0D) {
-      LforceY = other.LforceY;
-    }
-    if (other.LforceZ != 0D) {
-      LforceZ = other.LforceZ;
-    }
-    _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-  }
-
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public void MergeFrom(pb::CodedInputStream input) {
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    input.ReadRawMessage(this);
-  #else
-    uint tag;
-    while ((tag = input.ReadTag()) != 0) {
-      switch(tag) {
-        default:
-          _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-          break;
-        case 9: {
-          ItemMass = input.ReadDouble();
-          break;
-        }
-        case 17: {
-          LforceX = input.ReadDouble();
-          break;
-        }
-        case 25: {
-          LforceY = input.ReadDouble();
-          break;
-        }
-        case 33: {
-          LforceZ = input.ReadDouble();
-          break;
-        }
-      }
-    }
-  #endif
-  }
-
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-    uint tag;
-    while ((tag = input.ReadTag()) != 0) {
-      switch(tag) {
-        default:
-          _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-          break;
-        case 9: {
-          ItemMass = input.ReadDouble();
-          break;
-        }
-        case 17: {
-          LforceX = input.ReadDouble();
-          break;
-        }
-        case 25: {
-          LforceY = input.ReadDouble();
-          break;
-        }
-        case 33: {
-          LforceZ = input.ReadDouble();
           break;
         }
       }
@@ -3309,7 +3011,7 @@ public sealed partial class ControlMode : pb::IMessage<ControlMode>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public static pbr::MessageDescriptor Descriptor {
-    get { return global::BodyTrackingExtendedReflection.Descriptor.MessageTypes[11]; }
+    get { return global::BodyTrackingExtendedReflection.Descriptor.MessageTypes[10]; }
   }
 
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3498,7 +3200,7 @@ public sealed partial class DelayDiagnosticCommand : pb::IMessage<DelayDiagnosti
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public static pbr::MessageDescriptor Descriptor {
-    get { return global::BodyTrackingExtendedReflection.Descriptor.MessageTypes[12]; }
+    get { return global::BodyTrackingExtendedReflection.Descriptor.MessageTypes[11]; }
   }
 
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3531,6 +3233,9 @@ public sealed partial class DelayDiagnosticCommand : pb::IMessage<DelayDiagnosti
   /// <summary>Field number for the "run" field.</summary>
   public const int RunFieldNumber = 1;
   private bool run_;
+  /// <summary>
+  /// True  启动 // False 停止/取消
+  /// </summary>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public bool Run {

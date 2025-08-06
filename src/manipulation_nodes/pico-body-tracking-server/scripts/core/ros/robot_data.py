@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
+import queue
+import os
 import socket
 import threading
-import json
 import time
-import logging
 import rospy
+from typing import Dict, Optional
 from std_msgs.msg import Float64MultiArray,Float32
 from diagnostic_msgs.msg import DiagnosticStatus
 from sensor_msgs.msg import JointState
 
 from kuavo_msgs.msg import lejuClawState
-from datetime import datetime
-import queue
-import os
+
+from google.protobuf.timestamp_pb2 import Timestamp
 from . import body_tracking_extended_pb2 as proto
 from . import delayed_diagnosis_pb2
-from google.protobuf.timestamp_pb2 import Timestamp
+from . import hand_wrench_srv_pb2
+from ..config.pico_vr_config import PicoVrConfig, HandWrenchConfig
+
+
 class RobotDataServer:
     def __init__(self, eef_type=None, target_client_ip=None, target_client_port=None, rate=20):
         self.robot_name = os.getenv("ROBOT_NAME", "KUAVO")
@@ -31,6 +34,9 @@ class RobotDataServer:
         self.only_push_half_body_data = True
         self.control_mode = "FLLOW"
         self.id = 0
+        
+        # 初始化配置管理器
+        self.config_manager = PicoVrConfig()
 
     def start(self):
         try:
@@ -43,6 +49,9 @@ class RobotDataServer:
             # 延迟诊断队列
             self.delayed_diagnosis_result_queue = queue.Queue(maxsize=100)
             self.delayed_diagnosis_progress_queue = queue.Queue(maxsize=100)
+
+            # 物品质量与力队列
+            self.item_mass_force_response_queue = queue.Queue(maxsize=100)
 
             self.hand_queue.put([0.0] * 12)
             self.claw_queue.put([0.0] * 2)
@@ -190,12 +199,20 @@ class RobotDataServer:
         else:
             return None
 
+    def _process_item_mass_force_response(self):
+        # 物品质量与力响应处理
+        try:
+            return self.item_mass_force_response_queue.get_nowait()
+        except queue.Empty:
+            return None
+        return None
+
     def _periodic_push(self):
         last_eef_cur = None
         last_motor_cur = [0.0] * 28
         while self.running:
             if not self.target_client_addr:
-                # rospy.logwarn("未指定目标客户端地址，等待中...")
+                rospy.logwarn("未指定目标客户端地址，等待中...")
                 time.sleep(1)  # 阻塞等待 1 秒再检查
             time1 = time.time()
             try:
@@ -243,12 +260,12 @@ class RobotDataServer:
                     pass
                     # print(f"延迟诊断结果处理出错: {e}")
 
-                if hasattr(self, "hand_wrench_and_item_mass"):
-                    robot_data.item_mass_force.item_mass = self.hand_wrench_and_item_mass["itemMass"]
-                    robot_data.item_mass_force.lforce_x = self.hand_wrench_and_item_mass["lforceX"]
-                    robot_data.item_mass_force.lforce_y = self.hand_wrench_and_item_mass["lforceY"]
-                    robot_data.item_mass_force.lforce_z = self.hand_wrench_and_item_mass["lforceZ"]
-                
+                # 物品重量/末端力响应
+                imf_res = self._process_item_mass_force_response()
+                if imf_res:
+                    # print(f"imf_res: {imf_res.item_mass_forces}")
+                    robot_data.item_mass_force_response.CopyFrom(imf_res)
+                    # print(f"robot_data: {robot_data}")
                 control_mode_msg = proto.ControlMode()
                 control_mode_msg.control_mode = self.control_mode
                 robot_data.control_mode.CopyFrom(control_mode_msg)
@@ -263,15 +280,33 @@ class RobotDataServer:
 
             time2 = time.time()
             time.sleep(max(0, 1/self.rate - (time2 - time1)))
+    
+    def push_item_mass_force_config(self):
+        """推送手部力矩配置"""
+        res = hand_wrench_srv_pb2.ItemMassForceResponse()
+        res.operation = hand_wrench_srv_pb2.ItemMassForceOperation.GET
+        success, errmsg, hand_wrench_cases = self.config_manager.get_all_hand_wrench_cases()
+        if not success:
+            res.status = hand_wrench_srv_pb2.ItemMassForceResponse.OperationStatus.ERROR
+            res.description = errmsg
+        else:
+            for case_name, config in hand_wrench_cases.items():
+                # print(f"case_name: {config}")
+                item_mass_force = hand_wrench_srv_pb2.ItemMassForce()
+                item_mass_force.case_name = case_name
+                item_mass_force.description = config.description
+                item_mass_force.item_mass = config.itemMass
+                item_mass_force.lforce_x = config.lforceX
+                item_mass_force.lforce_y = config.lforceY
+                item_mass_force.lforce_z = config.lforceZ
+                res.item_mass_forces.append(item_mass_force)
+            res.status = hand_wrench_srv_pb2.ItemMassForceResponse.OperationStatus.SUCCESS
+            res.description = "success"    
+        self.add_item_mass_force_response(res)
 
-    def update_hand_wrench_and_item_mass(self, mass:float, left_force:list):
-        self.hand_wrench_and_item_mass = {
-            "itemMass": mass,
-            "lforceX": left_force[0] if len(left_force) > 0 else 0.0,
-            "lforceY": left_force[1] if len(left_force) > 1 else 0.0,
-            "lforceZ": left_force[2] if len(left_force) > 2 else 0.0,
-        }
-
+    def add_item_mass_force_response(self, response: hand_wrench_srv_pb2.ItemMassForceResponse):
+        # print(f"add_item_mass_force_response: {response}")
+        self.item_mass_force_response_queue.put(response)
 def main():
     target_ip = "192.168.1.100"  # <-- 替换为目标客户端 IP
     target_port = 9000           # <-- 替换为目标客户端端口

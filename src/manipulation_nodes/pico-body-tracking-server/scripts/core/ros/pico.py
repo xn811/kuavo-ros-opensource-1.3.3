@@ -35,6 +35,8 @@ from .joysticks_handler import JoySticksHandler
 from typing import Set
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
+from ..config.pico_vr_config import PicoVrConfig, HandWrenchConfig
+
 class ControlMode(enum.Enum):
         NONE_MODE = 0
         MOBILE_MPC_MODE = 1    # 运动学MPC模式
@@ -256,11 +258,10 @@ class KuavoPicoNode:
         self.send_srv = True
         self.last_pico_running_state = False
         self.button_y_last = False
-        self.item_mass_force =  {
-            'item_mass': 1.5, # 物品重量 单位 kg
-            'lforce': [0.0, 15.0, 5.0],
-            'rforce': [0.0, -15.0, 5.0]
-        }
+        self.config_manager = PicoVrConfig()
+
+        # hand wrench
+        self.hand_wrench_config = self.config_manager.get_default_hand_wrench_config()
         self.option_hand_wrench = False  # 施加/松开
 
     def _init_model_and_transformers(self) -> None:
@@ -325,9 +326,17 @@ class KuavoPicoNode:
     def _hand_wrench_callback(self, key_combination: Set[str], joy:JoySticks)->None:
         """Callback for hand wrench."""
         if not self.option_hand_wrench:
-            SDKLogger.info(f"施加手部力:{self.item_mass_force}kg")
-            self.publish_hand_wrench_cmd(self.item_mass_force)
-            self.option_hand_wrench = True
+            SDKLogger.info(f"施加手部力:{self.hand_wrench_config}")
+            if self.hand_wrench_config:
+                mass_force =  {
+                    'item_mass': self.hand_wrench_config.itemMass, # 物品重量 单位 kg
+                    'lforce': [self.hand_wrench_config.lforceX, self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
+                    'rforce': [self.hand_wrench_config.lforceX, -self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
+                }
+                self.publish_hand_wrench_cmd(mass_force)
+                self.option_hand_wrench = True
+            else:
+                SDKLogger.error("------------- item_mass_force is None --------------")
         else:
             SDKLogger.info(f"松开手部力")
             mass_force =  {
@@ -582,11 +591,10 @@ class KuavoPicoNode:
             self.change_mobile_ctrl_mode(mobile_mode)
             self.change_mm_wbc_arm_ctrl_mode(wbc_mode)
             self.last_pico_running_state = self.pico_info_transformer.is_running
-    def set_item_mass_force(self, mass, left_force, right_force)->None:
+    def set_item_mass_force(self, case_name:str, hand_wrench_config:HandWrenchConfig)->None:
         """Set item mass force."""
-        self.item_mass_force['item_mass'] = mass
-        self.item_mass_force['lforce'] = left_force
-        self.item_mass_force['rforce'] = right_force
+        self.hand_wrench_config = hand_wrench_config
+        SDKLogger.info(f"Set item mass force: {case_name} --- {hand_wrench_config}")
         
     def set_control_mode_callback(self, control_mode: Int32) -> None:
         """Set control mode."""

@@ -23,24 +23,22 @@ class UdpSenderForInfoToQuest3:
         print("--------------------------------")    
 
     def _send_udp_message(self, port):
-        broadcast_ip = ''
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                sock.settimeout(1)  # Set a timeout of 1 second
-                if len(self.broadcast_ips) == 0:
-                    print(f"No broadcast IPs found....")
-                    return
-                for ip in self.broadcast_ips:
-                    broadcast_ip = ip
+        if len(self.broadcast_ips) == 0:
+            print(f"No broadcast IPs found....")
+            return
+        for broadcast_ip in self.broadcast_ips:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    sock.settimeout(1)  # Set a timeout of 1 second
                     sock.sendto(self.message, (broadcast_ip, port))
-                    data, addr = sock.recvfrom(1024)
-                    print(f"Response from {broadcast_ip}:{port}: {data.decode()}")
-        except socket.timeout:
-            # print(f"No response from {broadcast_ip}:{port}")
-            pass
-        except Exception as e:
-            print(f"Error sending to {broadcast_ip}:{port}: {str(e)}")
+                    # data, addr = sock.recvfrom(1024)
+                    # print(f"Response from {broadcast_ip}:{port}: {data.decode()}")
+            except socket.timeout:
+                # print(f"No response from {broadcast_ip}:{port}")
+                pass
+            except Exception as e:
+                print(f"Error sending to {broadcast_ip}:{port}: {str(e)}")
 
     def _send_udp_message_periodically(self):
         while not self.stop_event.is_set():

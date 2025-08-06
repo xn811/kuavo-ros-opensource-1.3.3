@@ -3,6 +3,7 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 
 import "delayed_diagnosis.proto";
+import "hand_wrench_srv.proto";
 
 message VRData {
   Header header = 1;
@@ -57,7 +58,7 @@ message ControllerState {
 }
 
 message RobotData {
-  ItemMassForce item_mass_force = 1;
+  ItemMassForceResponse item_mass_force_response = 1;
   repeated double motor_cur = 2;
   repeated double eef_cur = 3;
   ControlMode control_mode = 4;
@@ -65,15 +66,8 @@ message RobotData {
 }
 
 message VrCommandData {
-  ItemMassForce item_mass_force = 1;
+  optional ItemMassForceRequest item_mass_force_request = 1; // 物品质量与力相关请求
   ControlMode control_mode = 2;
-}
-
-message ItemMassForce {
-  double item_mass = 1;
-  double lforce_x = 2;
-  double lforce_y = 3;
-  double lforce_z = 4;
 }
 
 message ControlMode {

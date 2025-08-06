@@ -5,9 +5,12 @@
 ## 文档相关
 
 ## 新增功能
+- PICO 节点新增配置文件，配置文件路径为 `~/.config/lejuconfig/pico_vr_config.yaml`
+- 改进 PICO 节点与 VR App 端末端力接口数据定义，本地默认提供数组预设参考值
 
 ## 修复问题
 - 修复桌面软件无法控制 roban 转腰的问题，planarmwebsocketservice 代码中相关路径由于代码合并缺失
+- 修复 Quest3 WebRTC 广播地址错误可能导致 VR App 无法正确接收到图像回传问题
 
 ## 其他改进
 

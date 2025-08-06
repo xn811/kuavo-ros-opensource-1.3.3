@@ -2,6 +2,11 @@
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 cd $SCRIPT_DIR/protos
 
-protoc --proto_path=/usr/include --proto_path=. --python_out=. --csharp_out=. body_tracking_extended.proto delayed_diagnosis.proto
+# Create directories if they don't exist
+mkdir -p python csharp
 
-cp body_tracking_extended_pb2.py delayed_diagnosis_pb2.py $SCRIPT_DIR/scripts/core/ros/
+# Generate Python and C# files
+protoc --proto_path=/usr/include --proto_path=. --python_out=python --csharp_out=csharp *.proto
+
+# Copy Python files to scripts/core/ros/ for backward compatibility
+cp python/*_pb2.py $SCRIPT_DIR/scripts/core/ros/

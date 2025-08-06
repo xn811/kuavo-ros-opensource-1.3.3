@@ -24,6 +24,8 @@ from core.ros.robot_data import RobotDataServer
 from core.ros.system_identification import SystemIdentification
 from common.logger import SDKLogger
 from .ros import body_tracking_extended_pb2 as proto
+from .ros import hand_wrench_srv_pb2
+from .config.pico_vr_config import HandWrenchConfig
 
 def signal_handler(self):
     """Handle signal for graceful exit."""
@@ -238,31 +240,39 @@ class KuavoPicoServer:
         except Exception as e:
             SDKLogger.error(f"Error processing pico joy data: {e}")
 
+    def _process_item_mass_force_request(self, req: hand_wrench_srv_pb2.ItemMassForceRequest):
+        """Process item mass force."""
+        if req.operation == hand_wrench_srv_pb2.ItemMassForceOperation.GET:
+            # 返回末端力
+            self.robot_data_server.push_item_mass_force_config()
+            print("get item mass force config")
+        elif req.operation == hand_wrench_srv_pb2.ItemMassForceOperation.SET:
+            # 设置末端力
+            hand_wrench_config = HandWrenchConfig(  
+                default=False,
+                description=req.data.description,
+                itemMass=req.data.item_mass,
+                lforceX=req.data.lforce_x,
+                lforceY=req.data.lforce_y,
+                lforceZ=req.data.lforce_z
+            )
+            self.pico_node.set_item_mass_force(req.data.case_name, hand_wrench_config)
+            res = hand_wrench_srv_pb2.ItemMassForceResponse()
+            res.operation = req.operation
+            res.description = "success"
+            res.status = hand_wrench_srv_pb2.ItemMassForceResponse.OperationStatus.SUCCESS
+            self.robot_data_server.add_item_mass_force_response(res)
+        else:
+            SDKLogger.error(f"Invalid operation: {req.operation}")
+
     def process_vr_command(self, vr_command: proto.VrCommandData):
         """Process VR command from RobotData protobuf message."""
         try:
-            if vr_command.HasField('item_mass_force'):
-                imf = vr_command.item_mass_force
-
-                # 提取质量和左手力
-                mass = imf.item_mass
-                lforce_x = imf.lforce_x
-                lforce_y = imf.lforce_y
-                lforce_z = imf.lforce_z
-
-                # 反向求右手力（假设 Y 方向相反）
-                rforce_x = lforce_x
-                rforce_y = -lforce_y
-                rforce_z = lforce_z
-
-                left_force = [lforce_x, lforce_y, lforce_z]
-                right_force = [rforce_x, rforce_y, rforce_z]
-
-                # 更新配置
-                self.pico_node.set_item_mass_force(mass, left_force, right_force)         # 更新末端力
-                self.robot_data_server.update_hand_wrench_and_item_mass(mass, left_force) # 上传末端力配置
+            if vr_command.HasField('item_mass_force_request'):
+                req = vr_command.item_mass_force_request
+                self._process_item_mass_force_request(req)
             else:
-                SDKLogger.error("VR command protobuf missing item_mass_force field.")
+                SDKLogger.error("VR command protobuf missing item_mass_force_request field.")
             if vr_command.HasField('control_mode'):
                 control_mode = vr_command.control_mode
                 if control_mode == "mobile_mpc":
