@@ -47,6 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <kuavo_msgs/changeTorsoCtrlMode.h>
 #include "kuavo_msgs/footPoseTargetTrajectoriesSrv.h"
 #include "kuavo_msgs/footPose6DTargetTrajectoriesSrv.h"
+#include "kuavo_msgs/kuavoModeSchedule.h"
 
 #include <ocs2_msgs/mpc_target_trajectories.h>
 #include "std_srvs/SetBool.h"
@@ -299,6 +300,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::ServiceServer stopSingleStepControlService_;
   ros::ServiceServer enable_pitch_limit_service_;
   ros::ServiceServer pitch_limit_status_service_;
+  ros::Publisher modeSchedulePublisher_;
 
   vector_t cmdVel_;
   vector_t cmdPose_;
@@ -405,6 +407,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool is_roban_version_ = false; // 标识是否为roban版本
 
   vector_t last_init_target_state;
+  scalar_t insert_time = 0.0;
+  kuavo_msgs::kuavoModeSchedule createModeScheduleMsg(const ModeSchedule &modeSchedule, scalar_t initTime);
 };
 
 }  // namespace humanoid

@@ -22,6 +22,7 @@
 #include "claw_types.h"
 #include "gesture_types.h"
 #include "touch_hand_controller.h"
+#include "revo2_hand_controller.h"
 #include "hipnuc_imu_receiver.h"
 #include "motor_status_manager.h"
 #include <set>
@@ -166,6 +167,7 @@ class HardwarePlant
     std::vector<double_t> max_joint_position_limits;
 
     std::unique_ptr<eef_controller::DexhandController> dexhand_actuator;
+    std::unique_ptr<eef_controller::Revo2HandController> revo2_actuator;
     std::string gesture_filepath_;
     
     // 电机状态管理器
