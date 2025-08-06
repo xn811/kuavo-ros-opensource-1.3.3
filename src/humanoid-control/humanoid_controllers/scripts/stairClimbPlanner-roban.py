@@ -40,13 +40,13 @@ def set_pitch_limit(enable):
 
 class StairClimbingPlanner:
     def __init__(self):
-        self.dt = 0.6  # 步态周期
-        self.ss_time = 0.5
+        self.dt = 1  # 步态周期
+        self.ss_time = 0.6
         self.foot_width = 0.108535  # 宽
         self.step_height = 0.08  # 台阶高度
-        self.step_length = 0.21  # 台阶长度,28,13
+        self.step_length = 0.28  # 台阶长度,28,13
         self.total_step = 0  # 总步数
-        self.is_left_foot = True
+        self.is_left_foot = False
         
     def generate_steps(self, torso_pos, torso_yaw, foot_height = 0):
         # 根据躯干位置计算落脚点
@@ -117,6 +117,11 @@ class StairClimbingPlanner:
         actual_step_x = dx / num_steps
         actual_step_y = dy / num_steps
         actual_step_yaw = dyaw / num_steps
+        
+        # 记录初始yaw角，用于计算目标yaw角
+        initial_yaw = current_torso_pos[3]
+        target_yaw = initial_yaw + np.radians(dyaw)
+        
         # is_left_foot = ((self.total_step - 1) % 2 == 0 or dyaw > 0)
         if dyaw > 0:
             self.is_left_foot = True
@@ -133,34 +138,38 @@ class StairClimbingPlanner:
             # 左右脚交替
             self.is_left_foot = not self.is_left_foot
             foot_idx_traj.append(0 if self.is_left_foot else 1)
+            
+            # 计算当前步的目标yaw角（线性插值，只在有转向需求时更新）
+            if abs(dyaw) > 0.1:  # 只有在需要显著转向时才更新yaw角
+                progress = (i + 1) / num_steps
+                current_torso_yaw = initial_yaw + progress * np.radians(dyaw)
+            else:
+                current_torso_yaw = initial_yaw  # 直线行走时保持yaw角不变
+            
             # 更新躯干位置
             if i == 0:
                 current_torso_pos[0] += actual_step_x/2
                 current_torso_pos[1] += actual_step_y/2
-                current_torso_pos[3] += np.radians(actual_step_yaw)
+                current_torso_pos[3] = current_torso_yaw
                 # 根据当前yaw角度计算落脚点偏移
-                current_yaw = current_torso_pos[3]
                 desire_torso_pos = [current_torso_pos[0]+actual_step_x/2, current_torso_pos[1]+actual_step_y/2, current_torso_pos[2]]
-                lf_foot, rf_foot = self.generate_steps(desire_torso_pos, current_yaw, current_height)
+                lf_foot, rf_foot = self.generate_steps(desire_torso_pos, current_torso_yaw, current_height)
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
             # elif i == num_steps - 1 or (abs(dyaw)>0 and i == num_steps - 2):
             elif i == num_steps - 1 :
                 current_torso_pos[0] += actual_step_x/2
                 current_torso_pos[1] += actual_step_y/2
-                # current_torso_pos[3] += np.radians(actual_step_yaw) if not (abs(dyaw)>0 and i == num_steps - 1) else 0
-                current_torso_pos[3] += 0
+                current_torso_pos[3] = target_yaw  # 最后一步确保达到目标yaw角
                 # 根据当前yaw角度计算落脚点偏移
-                current_yaw = current_torso_pos[3]
-                lf_foot, rf_foot = self.generate_steps(current_torso_pos[:3], current_yaw, current_height)
+                lf_foot, rf_foot = self.generate_steps(current_torso_pos[:3], current_torso_pos[3], current_height)
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
             else:
                 current_torso_pos[0] += actual_step_x
                 current_torso_pos[1] += actual_step_y
-                current_torso_pos[3] += np.radians(actual_step_yaw)
+                current_torso_pos[3] = current_torso_yaw
                 # 根据当前yaw角度计算落脚点偏移
-                current_yaw = current_torso_pos[3]
                 desire_torso_pos = [current_torso_pos[0]+actual_step_x/2, current_torso_pos[1]+actual_step_y/2, current_torso_pos[2]]
-                lf_foot, rf_foot = self.generate_steps(desire_torso_pos, current_yaw, current_height)
+                lf_foot, rf_foot = self.generate_steps(desire_torso_pos, current_torso_yaw, current_height)
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
             
             # 添加轨迹点
@@ -208,10 +217,10 @@ class StairClimbingPlanner:
             current_foot_pos = np.array([0.0, 0.0, STAND_HEIGHT])
 
         # 初始位置
-        torso_height_offset = -0.02  # 躯干高度偏移
+        torso_height_offset = 0.05  # 躯干高度偏移
         current_torso_pos[2] += torso_height_offset
         # current_foot_pos = np.array([0.0, 0.0, 0.0])
-        offset_x = [0.0, 0.0, 0.0, 0.0, 0.0]
+        offset_x = [0.02, 0.03, 0.0, 0.0, 0.0]
         first_step_offset = 0.35
         
         # 记录前一次的左右脚位置
@@ -619,7 +628,11 @@ class StairClimbingPlanner:
             step_fp.footPose = [x, y, z, yaw]
             additionalFootPoseTrajectory.data.append(step_fp)
             trajectory_points.append([x, y, z])
-            
+
+        if len(additionalFootPoseTrajectory.data) >= 2:
+            additionalFootPoseTrajectory.data.pop(0)  # 删除第一个点
+            additionalFootPoseTrajectory.data.pop(-1)  # 删除最后一个点
+
         # 如果需要绘图
         if plot:
             # 创建更密集的时间序列用于绘制平滑曲线

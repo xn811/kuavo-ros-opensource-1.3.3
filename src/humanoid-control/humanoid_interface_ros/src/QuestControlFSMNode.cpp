@@ -75,9 +75,10 @@ namespace ocs2
                 nodeHandle.getParam("/robot_version", rb_version_int);
                 rb_version = RobotVersion::create(rb_version_int);
             }
-
+            
             auto drake_interface_ = HighlyDynamic::HumanoidInterfaceDrake::getInstancePtr(rb_version, true, 2e-3);
-           
+            auto kuavo_settings = drake_interface_->getKuavoSettings();
+            waist_dof_ = kuavo_settings.hardware_settings.num_waist_joints;
             default_joint_state_ = drake_interface_->getDefaultJointState();
             com_height_ = drake_interface_->getIntialHeight();
             only_half_up_body_ = drake_interface_->getKuavoSettings().running_settings.only_half_up_body;
@@ -119,6 +120,9 @@ namespace ocs2
             change_arm_mode_service_VR_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/change_arm_ctrl_mode");
             
             get_arm_mode_service_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/humanoid_get_arm_ctrl_mode");
+            
+            // 添加 enable_wbc_arm_trajectory_control 服务客户端
+            enable_wbc_arm_trajectory_control_client_ = nodeHandle_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/enable_wbc_arm_trajectory_control");
             
             // 腰部控制相关的订阅者和发布者
             head_body_pose_sub_ = nodeHandle_.subscribe("/kuavo_head_body_orientation_data", 1, &QuestControlFSM::headBodyPoseCallback, this);
@@ -223,6 +227,22 @@ namespace ocs2
             }
         }
 
+        void callEnableWbcArmTrajectorySrv(int32_t enable)
+        {
+            kuavo_msgs::changeArmCtrlMode srv;
+            srv.request.control_mode = enable;
+
+            // 调用服务
+            if (enable_wbc_arm_trajectory_control_client_.call(srv))
+            {
+                ROS_INFO("EnableWbcArmTrajectorySrv call successful, enabled: %s", enable ? "true" : "false");
+            }
+            else
+            {
+                ROS_ERROR("Failed to call EnableWbcArmTrajectorySrv");
+            }
+        }
+
         void callTerminateSrv()
         {
         std::cout << "tigger callTerminateSrv" << std::endl;
@@ -267,7 +287,7 @@ namespace ocs2
             current_head_body_pose_ = *msg;
             
             // 在腰部控制模式下，发布腰部控制指令
-            if (torso_control_enabled_)
+            if (torso_control_enabled_ && waist_dof_ > 0)
             {
                 // 计算相对于零点的腰部位置
                 double current_yaw = current_head_body_pose_.body_yaw;
@@ -299,6 +319,25 @@ namespace ocs2
                   callTerminateSrv();
                   return;
             }
+            if (joystick_data_.left_trigger > 0.5)
+            {
+                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)
+                {
+                    // 使能 WBC 手臂轨迹控制
+                    callEnableWbcArmTrajectorySrv(1);
+                    return;
+                }
+            }
+            if (joystick_data_.left_grip > 0.5)
+            {
+                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)
+                {
+                    // 禁用 WBC 手臂轨迹控制
+                    callEnableWbcArmTrajectorySrv(0);
+                    return;
+                }
+            }
+
             if (joystick_data_.left_first_button_pressed) // 左边第一个按钮按下了，切换模式
             {
                 if (!joystick_data_prev_.right_second_button_pressed && joystick_data_.right_second_button_pressed) // 关闭手臂控制、自动摆手
@@ -325,6 +364,7 @@ namespace ocs2
 
                 return;
             }
+            
             
             // 腰部控制逻辑
             if (!joystick_data_prev_.left_second_button_pressed && joystick_data_.left_second_button_pressed) // 左边第二个按钮按下，切换腰部控制模式
@@ -389,6 +429,7 @@ namespace ocs2
 
         void updateTorsoControl()
         {
+            if (waist_dof_ == 0) return;
             // 使用右边摇杆控制腰部
             const float deadzone = 0.1f;
             float right_x = joystick_data_.right_x;
@@ -818,6 +859,7 @@ namespace ocs2
         ros::ServiceClient change_arm_mode_service_client_;
         ros::ServiceClient change_arm_mode_service_VR_client_;
         ros::ServiceClient get_arm_mode_service_client_;
+        ros::ServiceClient enable_wbc_arm_trajectory_control_client_;
         ros::ServiceServer arm_collision_control_service_;
 
         // 腰部控制相关的订阅者和发布者
@@ -855,6 +897,7 @@ namespace ocs2
 
         // 腰部控制相关变量
         bool torso_control_enabled_;
+        int waist_dof_{0};
         double torso_yaw_zero_;
         ros::Time torso_control_start_time_;
 

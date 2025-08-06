@@ -594,6 +594,11 @@ namespace humanoid_controller
           mpcArmControlMode_ = static_cast<ArmControlMode>(msg->data[0]);
           std::cout << "[controller] mpc arm control mode changed to: " << mpcArmControlMode_ << std::endl;
         }
+        if (msg->data[1] != mpcArmControlMode_desired_)
+        {
+          mpcArmControlMode_desired_ = static_cast<ArmControlMode>(msg->data[1]);
+          std::cout << "[controller] mpc arm control mode desired changed to: " << mpcArmControlMode_desired_ << std::endl;
+        }
       });
       
       armEefWbcPosePublisher_ = controllerNh_.advertise<std_msgs::Float64MultiArray>("/humanoid_controller/wbc_arm_eef_pose", 10, true);
@@ -1724,7 +1729,7 @@ namespace humanoid_controller
           optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
           optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
       }
-      else {
+      else if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL){// 只有外部控制模式才直接使用关节target
           // 位置、速度
           optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.pos;
           // optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.vel;//TODO: 临时去除
@@ -2149,6 +2154,11 @@ namespace humanoid_controller
       publishJointCmdToShm(jointCmdMsg);
     } 
     jointCmdPub_.publish(jointCmdMsg);
+    
+    // 发布到共享内存
+    if (use_shm_communication_) {
+        publishJointCmdToShm(jointCmdMsg);
+    }
 #endif
     
     // Visualization
