@@ -48,6 +48,7 @@
     <arg name="with_coredump" value="" unless="$(arg coredump)"/>
     <arg name="with_ik" default="true"/>
     <arg name="with_mm_ik" default="true"/>
+    <arg name="with_led" default="true"/>
     
     <!-- -->
     <arg name="teach_pendant" default="0"/>
@@ -259,5 +260,11 @@
         <arg name="coredump" value="$(arg coredump)"/>
       </include>
       </group>
+    </group>
+
+    <group if="$(arg with_led)">
+      <include file="$(find kuavo_led_controller)/launch/set_led_mode.launch">
+        <arg name="LED" value="enable"/>
+      </include>
     </group>
 </launch>

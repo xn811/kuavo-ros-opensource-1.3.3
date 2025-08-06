@@ -17,6 +17,7 @@ except ImportError:
 from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger, TriggerResponse
+from kuavo_msgs.srv import SetLEDMode, SetLEDModeRequest
 import subprocess
 import time
 import signal
@@ -72,6 +73,8 @@ class AudioStreamPlayerNode:
         self.playing = True
         self.empty_count = 0
         self.p = pyaudio.PyAudio()
+        self.is_breathing = False
+        self.colors = [(0, 0, 255)] * 10
         
         # 获取声卡默认采样率
         try:
@@ -175,13 +178,54 @@ class AudioStreamPlayerNode:
         except Exception as e:
             rospy.logerr(f"处理音频数据失败: {e}")
 
+
+    def play_breathing(self,control_mode):
+        rospy.wait_for_service('control_led')
+    
+        try:
+            # 创建服务客户端
+            led_service = rospy.ServiceProxy('control_led', SetLEDMode)
+            
+            # 创建请求
+            request = SetLEDModeRequest()
+            request.mode = control_mode  # 设置模式为1（呼吸模式）
+            request.color1 = self.colors[0]
+            request.color2 = self.colors[1]
+            request.color3 = self.colors[2]
+            request.color4 = self.colors[3]
+            request.color5 = self.colors[4]
+            request.color6 = self.colors[5]
+            request.color7 = self.colors[6]
+            request.color8 = self.colors[7]
+            request.color9 = self.colors[8]
+            request.color10 = self.colors[9]
+            # print(request)
+            
+            # 调用服务
+            response = led_service(request)
+            
+            # 输出结果
+            if response.success:
+                    rospy.loginfo("LED设置成功")
+            else:
+                    rospy.logerr("LED设置失败")
+        except Exception as e:
+                rospy.logerr(f"呼吸模式播放失败: {e}")
+
     def play_from_buffer(self):
         """音频播放线程，从队列中获取音频数据并直接播放"""
         while self.playing and not rospy.is_shutdown():
             try:
                 chunk = self.buffer_queue.get(timeout=self.QUEUE_GET_TIMEOUT)
+                
+                if not self.is_breathing:
+                    self.play_breathing(1)
+                    self.is_breathing = not self.is_breathing
                 self.stream.write(chunk.tobytes())
             except queue.Empty:
+                if self.is_breathing:
+                    self.play_breathing(0)
+                    self.is_breathing = not self.is_breathing
                 if(self.empty_count > self.EMPTY_COUNT_THRESHOLD):
                     rospy.logdebug("缓冲区为空，等待音频输入")
                     self.empty_count = 0

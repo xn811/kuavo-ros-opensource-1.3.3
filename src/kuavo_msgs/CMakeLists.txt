@@ -178,7 +178,8 @@ add_service_files(
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
   SetJoyTopic.srv
-
+  SetLEDMode.srv
+  SetLEDMode_free.srv
   # kuavo_tf2_web_republisher
   RepublishTFs.srv
 

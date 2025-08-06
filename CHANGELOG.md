@@ -46,6 +46,7 @@
 - 增加日志上传 coScene 工具使用文档，[文档链接](./tools/upload_log/doc/readme.md)
 
 ## 新增功能
+- 新增灯带控制节点，并增加音频灯带联动
 - PICO VR 增加话题录制和播放脚本，使用文档，[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md)
 - 新增机器人 cali 校准环节支持堵转保护和峰值保护
 - 新增夸父5代模型，该模型在原先 4pro 版本基础上新增腰部关节
