@@ -8,17 +8,7 @@
    # 此仓库需要依赖 ocs2_msgs 和 kuavo_ros_interfaces, 请此仓库克隆到在 kuavo-ros-control 或者 kuavo_ros1_workspace 工作空间中
    git clone https://www.lejuhub.com/highlydynamic/planarmwebsocketservice.git
    ```
-   
-   ```shell
-   # 此仓库需要依赖 ocs2_msgs 和 kuavo_ros_interfaces, 请此仓库克隆到在 kuavo-ros-control 或者 kuavo_ros1_workspace 工作空间中
-   git clone https://www.lejuhub.com/highlydynamic/planarmwebsocketservice.git
-   ```
 
-2. 编译功能包
-   
-   ```shell
-   catkin build humanoid_controllers humanoid_plan_arm_trajectory planarmwebsocketservice
-   ```
 2. 编译功能包
    
    ```shell
@@ -31,46 +21,7 @@
    cd planarmwebsocketservice
    pip install -r requirements.txt
    ```
-   
-   ```shell
-   cd planarmwebsocketservice
-   pip install -r requirements.txt
-   ```
 
-4. 运行
-   
-   ```shell
-   cd <catkin_workspace>
-   source devel/setup.bash
-   # kuavo 仿真
-   roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch
-   # bezier 曲线
-   roslaunch humanoid_plan_arm_trajectory humanoid_plan_arm_trajectory.launch
-   # server 如果是ocs2，请使用参数 robot_type:=ocs2
-   roslaunch planarmwebsocketservice plan_arm_action_websocket_server.launch robot_type:=kuavo
-   # client 成功后可以在 RViz 和 Gazebo 中看到动作
-   python3 ./src/manipulation_nodes/planarmwebsocketservice/scripts/websocket_client_demo.py --action_file_path src/manipulation_nodes/planarmwebsocketservice/action_files/wave_hand.tact
-   ```
-
-   action_file_path为保存动作的tact文件名，该文件需要事先保存在manipulation_nodes/planarmwebsocketservice/action_files文件夹中
-
-## 注意事项
-
-1. 运行之前要确认当前功能包有 `action_files`, 且包含需要的 `.tact` 文件。
-
-2. 如果在实机运行，确保 kuavo 程序以 ros 节点运行，并且机器人已经在站立状态。
-
-3. 检查参数设置是否指向同一个位置，确保通信中 MD5 校验通过，如：
-   
-   - `handler.py` 中的 `ACTION_FILE_FOLDER`
-   
-   - `plan_arm_action_websocket_server.py` 中的 `ROBOT_ACTION_FILE_FOLDER`
-   
-   - `websocket_client_demo.py` 中的 `message`
-
-## 手臂动作服务器
-
-这是一个 websocket 服务器在启动后会在所属网络中广播 `robot_info` 话题，内容如下：
 4. 运行
    
    ```shell
@@ -107,7 +58,7 @@
 这是一个 websocket 服务器在启动后会在所属网络中广播 `robot_info` 话题，内容如下：
 
 ```json
-robot_info = {
+{
     "data": {
         "robot_name": ROBOT_NAME,
         "robot_ip": ROBOT_IP,
@@ -115,9 +66,9 @@ robot_info = {
         "robot_ws_address": ROBOT_WS_ADDRESS,
         "robot_ws_logger_address": ROBOT_WS_LOGGER_ADDRESS,
         "robot_upload_folder": ROBOT_UPLOAD_FOLDER,
+        "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER,
         "robot_username": ROBOT_USERNAME,
         "robot_mac_address": ROBOT_MAC_ADDRESS,
-        "robot_action_file_folder": ROBOT_ACTION_FILE_FOLDER
     }
 }
 ```
@@ -310,6 +261,114 @@ response:
 }
 ```
 
+| 名称   | 类型  | 描述        |
+| ---- | --- | --------- |
+| code | int | 错误码 0: 成功 |
+
+### 下载音频文件后确认由上位机还是下位机来执行
+
+request:
+
+```json
+{
+    "cmd": "check_music_path",
+    "data": {
+        "is_reset_cmd": True,
+        "music_filename": "music_filename",
+    }
+}
+```
+
+| 名称       | 类型  | 描述                                                  |
+| -------- | --- | --------------------------------------------------- |
+| is_reset_cmd     | boolean | 是否是重置遥控器配置指令，重置则该值为 True，单独下载音频该值为 False |
+| music_filename   | string |   下载音乐文件的名字，单独下载音频的时候传入完整带后缀的文件名，如果改次是重置配置则传入空值  |
+
+response:
+
+```json
+{
+    "cmd": "check_music_path",
+    "data": {
+        "code": 0,
+        "msg": "Body NUC"
+    }
+}
+```
+
+| 名称       | 类型  | 描述                                                  |
+| -------- | --- | --------------------------------------------------- |
+| code     | int | 执行结果码，0: 成功，1：失败 |
+| msg   | string |   执行结果信息，如果 code 为 0，则返回 Body NUC/Head NUC，表示路径；如果 code 为 1 返回错误信息 |
+
+### 更新 h12 遥控器配置文件
+
+request:
+
+```json
+{
+    "cmd": "update_h12_config"
+}
+```
+
+response:
+
+```json
+{
+    "cmd": "update_h12_config",
+    "data": {
+        "code": 0,
+        "msg": "Body NUC"
+    }
+}
+```
+
+| 名称       | 类型  | 描述                                                  |
+| -------- | --- | --------------------------------------------------- |
+| code     | int | 执行结果码，0: 成功，1：失败 |
+| msg   | string |   执行结果信息，如果 code 为 0，则返回 Body NUC/Head NUC，表示音乐存放路径；如果 code 为 1 返回错误信息 |
+
+### 更新数据采集程序
+
+request:
+
+```json
+{
+    "cmd": "update_data_pilot"
+}
+```
+
+response:
+
+```json
+{
+    "cmd": "update_data_pilot",
+    "data": {
+        "code": 0,
+        "msg": "Success"
+    }
+}
+```
+
+| 名称       | 类型     | 描述                                                  |
+| -------- | ------ | --------------------------------------------------- |
+| code     | int | 执行结果码，0: 成功，1：失败 |
+| msg   | string |   执行结果信息，如果 code 为 0，则返回 "Success"；如果 code 为 1 返回具体错误信息 |
+
+**功能说明：**
+
+该接口用于更新训练场上位机的数据采集程序。系统会：
+
+1. 远程登录到上位机（后面通过 DHCP 配置获取 IP 地址）
+2. 在上位机指定目录创建必要的文件夹
+3. 下载最新的数据采集程序文件
+4. 返回执行结果
+
+**注意事项：**
+
+- 需要确保环境变量 `KUAVO_REMOTE_PASSWORD` 已正确设置（base64 编码的远程登录密码）
+- 需要确保网络连接正常，能够访问下载地址
+- 上位机需要有足够的磁盘空间存储下载的文件
 #### 获取零点
 
 从文件中获取所有电机的零点值
@@ -645,6 +704,34 @@ ws://{robot_ws_logger_address}
     "function": "start_robot"
 }
 ```
+
+### 11. 获取音乐列表 (get_music_list)
+
+**描述**: 获取可用的音乐文件列表。判断音频设备是否下位机，如果在下位机本地音乐文件列表，否则获取上位机的音乐文件列表
+
+**请求**:
+```json
+{
+  "cmd": "get_music_list",
+  "data": {}
+}
+```
+
+**响应**:
+```json
+{
+  "cmd": "get_music_list",
+  "data": {
+    "code": 0,
+    "music_list": [
+      "/home/robot/.config/lejuconfig/music/music.mp3",
+      "/home/robot/.config/lejuconfig/music/music.wav"
+    ]
+  }
+}
+
+```
+
 ## 导航功能
 
 ### 加载地图

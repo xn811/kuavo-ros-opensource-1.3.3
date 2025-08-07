@@ -13,6 +13,10 @@ import websockets
 import threading
 import time
 import math
+import subprocess
+import base64
+from pathlib import Path
+import yaml
 from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2
 import shutil
 import rosnode
@@ -23,19 +27,26 @@ from std_srvs.srv import Trigger
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
 from kuavo_msgs.msg import sensorsData
-from pathlib import Path
-import subprocess
-
+from h12pro_controller_node.msg import UpdateH12CustomizeConfig
+from kuavo_msgs.srv import adjustZeroPoint, adjustZeroPointRequest, LoadMap, LoadMapRequest, GetAllMaps, GetAllMapsRequest,SetInitialPose, SetInitialPoseRequest
+from std_msgs.msg import Bool
+from nav_msgs.msg import OccupancyGrid
+import cv2
+import numpy as np
+import tf
 # Replace multiprocessing values with simple variables
 plan_arm_state_progress = 0
 plan_arm_state_status = False
+should_stop = False
+terminate_process_result = False
+process = None
 response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
-ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
-g_robot_type = ""
-ocs2_current_joint_state = []
-robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
+package_name = 'planarmwebsocketservice'
+package_path = rospkg.RosPack().get_path(package_name)
 
+ACTION_FILE_FOLDER = package_path + "/action_files"
+UPLOAD_FILES_FOLDER = package_path + "/upload_files" 
 
 # 下位机音乐文件存放路径，如果不存在则进行创建
 sudo_user = os.environ.get("SUDO_USER")
@@ -46,8 +57,10 @@ else:
     home_path = os.path.expanduser("~")
 
 MUSIC_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'music')
+ACTION_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'action_files')
 try:
     Path(MUSIC_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(ACTION_FILE_FOLDER).mkdir(parents=True, exist_ok=True)
 except Exception as e:
     print(f"创建目录时出错: {e}")
 
@@ -56,6 +69,22 @@ h12_package_name = "h12pro_controller_node"
 h12_package_path = rospkg.RosPack().get_path(h12_package_name)
 H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
 
+# 获取仓库路径
+ # 获取当前 Python 文件的路径
+current_file = os.path.abspath(__file__)
+# 获取文件所在目录
+current_dir = os.path.dirname(current_file)
+repo_path_result = subprocess.run(
+    ['git', 'rev-parse', '--show-toplevel'],
+    capture_output=True,
+    text=True,
+    cwd=current_dir
+)
+REPO_PATH = repo_path_result.stdout.strip()
+
+g_robot_type = ""
+ocs2_current_joint_state = []
+robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
 
 if robot_version >= 40:
     joint_names = [
@@ -162,10 +191,11 @@ def timer_callback(event):
         control_head_pub.publish(ocs2_head_state)
 
 def init_publishers():
-    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub
+    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, update_h12_config_pub,load_map_pub
     kuavo_arm_traj_pub = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=1, tcp_nodelay=True)
     control_hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=1, tcp_nodelay=True)
     control_head_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=1, tcp_nodelay=True)
+    update_h12_config_pub = rospy.Publisher('/update_h12_customize_config', UpdateH12CustomizeConfig, queue_size=1, tcp_nodelay=True)
 
 async def init_ros_node():
     print("Initializing ROS node")
@@ -202,7 +232,7 @@ def create_bezier_request(action_data, start_frame_time, end_frame_time):
 
 def plan_arm_trajectory_bezier_curve_client(req):
     service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]
-    rospy.wait_for_service(service_name)
+    rospy.wait_for_service(service_name, timeout=1.0)
     try:
         plan_service = rospy.ServiceProxy(service_name, planArmTrajectoryBezierCurve)
         res = plan_service(req)
@@ -213,7 +243,7 @@ def plan_arm_trajectory_bezier_curve_client(req):
 
 def stop_plan_arm_trajectory_client():
     service_name = robot_settings[g_robot_type]["stop_plan_arm_trajectory_service_name"]
-    rospy.wait_for_service(service_name)
+    rospy.wait_for_service(service_name, timeout=1.0)
     try:
         if g_robot_type == "ocs2":
             stop_service = rospy.ServiceProxy(service_name, Trigger)
@@ -297,7 +327,7 @@ async def broadacast_handler(websocket: websockets.WebSocketServerProtocol, data
 async def preview_action_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
-    global g_robot_type
+    global g_robot_type, active_threads
     print(g_robot_type)
     # Cancel existing thread for this client if it exists
     if websocket in active_threads:
@@ -349,6 +379,8 @@ async def preview_action_handler(
     # Create a new stop event for this thread
     stop_event = threading.Event()
     active_threads[websocket] = stop_event
+    print("---------------------add event-------------------------------")
+    print(f"active_threads: {active_threads}")
 
     # Start a thread to update the progress
     thread = threading.Thread(
@@ -357,8 +389,241 @@ async def preview_action_handler(
     print("Starting thread to update progress")
     thread.start()
 
+async def adjust_zero_point_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="adjust_zero_point", data={"code": 0, "message": "Zero point adjusted successfully"}
+    )
 
-async def stop_preview_action_handler(websocket: websockets.WebSocketServerProtocol, data: dict):
+    data = data["data"]
+    print(f"received adjust zero point data: {data}")
+
+    try:
+        motor_index = data.get("motor_index")
+        adjust_pos = data.get("adjust_pos")
+
+        if motor_index is None or adjust_pos is None:
+            payload.data["code"] = 1
+            payload.data["message"] = "Missing required parameters motor_index or adjust_pos"
+            response = Response(payload=payload, target=websocket)
+            response_queue.put(response)
+            return
+
+
+        # Check if nodelet_manager is running
+        running_nodes = rosnode.get_node_names()
+        if '/nodelet_manager' in running_nodes:
+
+            # Check hardware ready status first
+            rospy.wait_for_service('hardware/get_hardware_ready', timeout=0.5)
+            get_hardware_ready = rospy.ServiceProxy('hardware/get_hardware_ready', Trigger)
+
+            hw_res = get_hardware_ready()
+            print(hw_res.message)
+            if hw_res.message == 'Hardware is ready':
+            
+                print(f"current cannot adjust motor zero point")
+                payload.data["code"] = 2
+                payload.data["message"] = f"current robot is ready pose, cannot adjust motor zero point, please run `roslaunch humanoid_controllers load_kuavo_real.launch cali_set_zero:=true` to reboot robot"
+                response = Response(payload=payload, target=websocket)
+                response_queue.put(response)
+                return
+        
+        rospy.wait_for_service('hardware/adjust_zero_point', timeout=0.5)
+        adjust_zero_point = rospy.ServiceProxy('hardware/adjust_zero_point', adjustZeroPoint)
+            # Create request
+        req = adjustZeroPointRequest()
+        req.motor_index = motor_index
+        req.offset = adjust_pos
+        
+        # Call service
+        res = adjust_zero_point(req)
+        print(f'motor_index : {motor_index}, adjust_pos: {adjust_pos}')
+        # return
+        if not res.success:
+            payload.data["code"] = 3
+            payload.data["message"] = f"Failed to adjust zero point: {res.message}"
+
+
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+    
+    except rospy.ServiceException as e:
+        print(f"Service call failed: {e}")
+        payload.data["code"] = 4
+        payload.data["message"] = f"Service call failed: {str(e)}"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+    except rospy.ROSException:
+        print("Service adjust_zero_point not available")
+        payload.data["code"] = 5
+        payload.data["message"] = "Service adjust_zero_point not available"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+    except Exception as e:
+        print(f"Failed to check nodelet_manager status: {e}")
+        payload.data["code"] = 6
+        payload.data["message"] = f"Failed to check nodelet_manager status: {str(e)}"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+
+
+async def set_zero_point_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="set_zero_point", data={"code": 0, "message": "Zero point set successfully"}
+    )
+
+    data = data["data"]
+    print(f"received zero point data: {data}")
+    
+    arm_zero_file_path = f"/root/.config/lejuconfig/arms_zero.yaml"
+    leg_zero_file_path = f"/root/.config/lejuconfig/offset.csv"
+    
+    robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
+    # Get kuavo_assets package path
+    kuavo_assets_path = rospkg.RosPack().get_path('kuavo_assets')
+    with open(f"{kuavo_assets_path}/config/kuavo_v{robot_version}/kuavo.json", 'r') as f:
+        json_config = json.load(f)
+    
+    arm_joints = json_config["NUM_ARM_JOINT"]
+    head_joints = json_config["NUM_HEAD_JOINT"]
+    if robot_version >= 11 and robot_version <= 19:
+        waist_joints = json_config["NUM_WAIST_JOINT"]
+    else:
+        waist_joints = 0
+    num_joints = json_config["NUM_JOINT"]
+    ec_joints = num_joints - arm_joints - head_joints
+    
+    try:
+        if "zero_pos" in data:
+            zero_pos = data["zero_pos"]
+            arm_zero_data = zero_pos[ec_joints:]
+            ec_zero_data = zero_pos[:ec_joints]
+
+            # Backup the zero point files
+            arm_zero_backup = f"{arm_zero_file_path}.bak"
+            leg_zero_backup = f"{leg_zero_file_path}.bak"
+            
+            try:
+                shutil.copy2(arm_zero_file_path, arm_zero_backup)
+                shutil.copy2(leg_zero_file_path, leg_zero_backup)
+            except Exception as e:
+                print(f"Failed to backup zero point files: {e}")
+                payload.data["code"] = 3 
+                payload.data["message"] = f"Failed to backup zero point files: {str(e)}"
+                response = Response(payload=payload, target=websocket)
+                response_queue.put(response)
+                return
+
+            with open(arm_zero_file_path, 'r') as f:
+                arm_zero_data_origin = yaml.safe_load(f)
+                arm_zero_data_origin_size = len(arm_zero_data_origin['arms_zero_position'])
+            
+            with open(leg_zero_file_path, 'r') as f:
+                ec_zero_data_origin = f.read()
+                ec_zero_data_origin = ec_zero_data_origin.split('\n')
+                # -1 去掉末尾的换行
+                if ec_zero_data_origin[-1] == '':
+                    ec_zero_data_origin_size = len(ec_zero_data_origin) - 1
+
+            arm_zero_data = arm_zero_data + [0] * (arm_zero_data_origin_size - len(arm_zero_data))
+            # Convert degrees to radians for arm zero data
+            arm_zero_data = [math.radians(float(x)) for x in arm_zero_data]
+            ec_zero_data = ec_zero_data + [0] * (ec_zero_data_origin_size - len(ec_zero_data))
+
+            
+            with open(arm_zero_file_path, 'w') as f:
+                arm_zero_data_origin['arms_zero_position'] = arm_zero_data
+                yaml.dump(arm_zero_data_origin, f)
+        
+            with open(leg_zero_file_path, 'w') as f:
+                f.write('\n'.join(str(x) for x in ec_zero_data))
+                f.write('\n')
+        
+            response = Response(payload=payload, target=websocket)
+            response_queue.put(response)
+        else :
+            payload.data["code"] = 1
+            payload.data["message"] = "Invalid zero point data"
+            response = Response(payload=payload, target=websocket)
+            response_queue.put(response)
+    except Exception as e:
+        print(f"Error saving zero point file: {e}")
+        payload.data["code"] = 2
+        payload.data["message"] = f"Error saving zero point file: {str(e)}"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+
+async def get_zero_point_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="get_zero_point", data={"code": 0, "message": "Zero point retrieved successfully"}
+    )
+
+    robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
+    # Get kuavo_assets package path
+    kuavo_assets_path = rospkg.RosPack().get_path('kuavo_assets')
+    with open(f"{kuavo_assets_path}/config/kuavo_v{robot_version}/kuavo.json", 'r') as f:
+        json_config = json.load(f)
+    
+    arm_joints = json_config["NUM_ARM_JOINT"]
+    head_joints = json_config["NUM_HEAD_JOINT"]
+    if robot_version >= 11 and robot_version <= 19:
+        waist_joints = json_config["NUM_WAIST_JOINT"]
+    else:
+        waist_joints = 0
+    num_joints = json_config["NUM_JOINT"]
+    num_joints = json_config["NUM_JOINT"]
+    ec_joints = num_joints - arm_joints - head_joints
+
+    arm_zero_file_path = f"/root/.config/lejuconfig/arms_zero.yaml"
+    leg_zero_file_path = f"/root/.config/lejuconfig/offset.csv"
+    
+    if not os.path.exists(arm_zero_file_path) or not os.path.exists(leg_zero_file_path):
+        payload.data["code"] = 1
+        payload.data["message"] = f"Zero point file not found: {arm_zero_file_path} or {leg_zero_file_path}"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+
+    try:
+        # Read the zero point data from file
+        with open(arm_zero_file_path, 'r') as file:
+            arm_zero_data = yaml.safe_load(file)
+
+        arm_zero_data = arm_zero_data['arms_zero_position']
+        arm_zero_data = arm_zero_data[:arm_joints]
+        # Convert arm zero data from radians to degrees
+        arm_zero_data = [math.degrees(float(x)) for x in arm_zero_data]
+
+        with open(leg_zero_file_path, 'r') as file: 
+            leg_zero_data = file.read()
+        leg_zero_data = [float(i) for i in leg_zero_data.split('\n') if i]
+        leg_zero_data = leg_zero_data[:ec_joints]
+        print(leg_zero_data + arm_zero_data)
+
+        payload.data["zero_pos"] = leg_zero_data + arm_zero_data
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+    except Exception as e:
+        print(f"Error reading zero point file: {e}")
+        payload.data["code"] = 2
+        payload.data["message"] = f"Error reading zero point file: {str(e)}"
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        
+async def stop_preview_action_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -386,7 +651,8 @@ async def get_robot_info_handler(
             "robot_type": robot_version,
             "music_folder_path": MUSIC_FILE_FOLDER,
             "maps_folder_path": MAP_FILE_FOLDER,
-            "h12_config_path": H12_CONFIG_PATH
+            "h12_config_path": H12_CONFIG_PATH,
+            "repo_path": REPO_PATH
         }
     )
 
@@ -490,13 +756,14 @@ async def execute_python_script_handler(
 async def get_robot_status_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     payload = Payload(
         cmd="get_robot_status", data={"code": 0, "isrun": True}
     )
 
     if not active_threads:
         payload.data["isrun"] = False
-        print("No activate threads")
+        print(f"No activate threads: {active_threads}")
     else:
         for key, value in active_threads.items():
             print(f"Key: {key}, Value: {value}")
@@ -511,6 +778,7 @@ async def get_robot_status_handler(
 async def run_node_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -540,6 +808,7 @@ async def run_node_handler(
 
 
 def execute_command_progress(websocket: websockets.WebSocketServerProtocol, response: Response, stop_event: threading.Event, execute_path, use_ros_env: bool = False, parameters: dict = None):
+    global active_threads
     payload = response.payload
     update_interval = 0.001 
 
@@ -633,6 +902,7 @@ def monitor_and_stop(process):
 async def stop_run_node_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -656,10 +926,259 @@ async def stop_run_node_handler(
         target=websocket,
     )
     response_queue.put(response)
+def is_player_in_body():
+    # 检查下位机是否有音频播放设备
+    result = False
+    try:
+        result_headphone = subprocess.run("pactl list | grep -i Headphone", shell=True, capture_output=True, text=True)
+        result_speaker = subprocess.run("pactl list | grep -i Speaker", shell=True, capture_output=True, text=True)
+        result_audio = subprocess.run("sudo aplay -l | grep -i Audio", shell=True, capture_output=True, text=True)
+        if result_headphone.stdout.strip() or result_speaker.stdout.strip() or result_audio.stdout.strip():
+            # 下位机有音频设备
+            result = True
+    except Exception as e:
+        print(f"An error occurred while checking the music path: {e}")
+    
+    return result
+
+def upload_music_file(music_filename=""):
+    # 将音乐文件上传到上位机指定路径
+    # TODO: 上位机是 AGX 用户名为 leju_kuavo 但这种情况下音频设备在下位机，不需要拷贝文件
+
+    result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+    if result.returncode == 0:
+        remote_host = "192.168.26.12"
+    else:
+        remote_host = "192.168.26.1"
+
+    remote_user = "kuavo"
+    remote_path = "/home/kuavo/.config/lejuconfig/"
+
+    encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
+    if encoded_password is None:
+        raise ValueError("Failed to get remote password.")
+    remote_password = base64.b64decode(encoded_password).decode('utf-8')
+
+    if not music_filename:
+        # 将全部音频文件拷贝过去, scp 命令中添加 -o StrictHostKeyChecking=no 参数，跳过主机验证，防止传输失败
+        scp_cmd = ["scp", "-r", "-o", "StrictHostKeyChecking=no", MUSIC_FILE_FOLDER]
+    else:
+        # 拷贝单个音频文件
+        scp_cmd = ["scp", "-o", "StrictHostKeyChecking=no", MUSIC_FILE_FOLDER, music_filename]
+    cmd = [
+        "sshpass", "-p", remote_password,
+        *scp_cmd,
+        f"{remote_user}@{remote_host}:{remote_path}"
+    ]
+    # print(f"cmd: {cmd}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    return result
+    
+
+
+async def check_music_path_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="check_music_path", data={"code": 0, "msg": "msg"}
+    )
+
+    is_reset_cmd = data.get("is_reset_cmd", False)
+    music_filename = data.get("music_filename", "")
+
+    try:
+        if is_player_in_body():
+            # 下位机有音频设备，无需额外操作
+            payload.data["code"] = 0
+            payload.data["msg"] = "Body NUC"
+        else:
+            # 下位机没有音频设备，需要将音频文件拷贝到上位机
+            result = upload_music_file(music_filename)
+            if result.returncode == 0:
+                payload.data["code"] = 0
+                payload.data["msg"] = "Head NUC"
+            else:
+                payload.data["code"] = 1
+                payload.data["msg"] = "Failed to copy music file."
+    except Exception as e:
+        print(f"An error occurred while checking the music path: {e}")
+        payload.data["code"] = 1
+        payload.data["msg"] = e
+    
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+async def update_h12_config_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    global update_h12_config_pub
+    payload = Payload(
+        cmd="update_h12_config", data={"code": 0, "msg": "msg"}
+    )
+
+    # 更新H12遥控器按键配置
+    msg = UpdateH12CustomizeConfig()
+    msg.update_msg = "Update H12 Config"
+    update_h12_config_pub.publish(msg)
+
+    try:
+        # 确认音乐文件在上位机还是下位机播放，并进行相应处理
+        if is_player_in_body():
+            payload.data["code"] = 0
+            payload.data["msg"] = "Body NUC"
+        else:
+            result = upload_music_file("")
+            if result.returncode == 0:
+                payload.data["code"] = 0
+                payload.data["msg"] = "Head NUC"
+            else:
+                payload.data["code"] = 1
+                payload.data["msg"] = "Failed to copy music file."
+    except Exception as e:
+        print(f"An error occurred while updating the H12 config: {e}")
+        payload.data["code"] = 1
+        payload.data["msg"] = e
+    
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+    response_queue.put(response)
+
+# 登录到上位机上面执行下载指令
+def download_data_pilot_to_head():
+    # TODO: 上位机是 AGX 用户名为 leju_kuavo 但这种情况下音频设备在下位机，不需要拷贝文件
+
+    result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+    if result.returncode == 0:
+        remote_host = "192.168.26.12"
+    else:
+        remote_host = "192.168.26.1"
+
+    remote_user = "leju_kuavo"
+    remote_path = "/home/leju_kuavo/kuavo_data_pilot/src/kuavo_data_pilot_bin/dist/app"
+    encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
+    if encoded_password is None:
+        raise ValueError("Failed to get remote password.")
+    remote_password = base64.b64decode(encoded_password).decode('utf-8')
+
+    # 远程登录到上位机，执行下载 https://kuavo.lejurobot.com/kuavo_data_pilot_app/kuavo_data_pilot_app_latest 文件
+    ssh_cmd = [
+        "sshpass", "-p", remote_password,
+        "ssh", f"{remote_user}@{remote_host}",
+        "mkdir", "-p", remote_path,
+        "&&", "cd", remote_path,
+        "&&", "wget", "-O", "kuavo_data_pilot_app_latest", "https://kuavo.lejurobot.com/kuavo_data_pilot_app/kuavo_data_pilot_app_latest",
+        "&&", "chmod", "+x", "kuavo_data_pilot_app_latest"
+    ]
+    result = subprocess.run(ssh_cmd, stdout=None, stderr=None)
+    return result
+
+# 更新训练场上位机 agx 程序
+async def update_data_pilot_handler(
+    websocket: websockets.WebSocketServerProtocol, data: dict
+):
+    payload = Payload(
+        cmd="update_data_pilot", data={"code": 0, "msg": "msg"}
+    )
+
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+
+    try:
+        result = download_data_pilot_to_head()
+        if result.returncode == 0:
+            payload.data["code"] = 0
+            payload.data["msg"] = "Success"
+        else:
+            payload.data["code"] = 1
+            payload.data["msg"] = "Failed to download data pilot to head."
+    except Exception as e:
+        print(f"An error occurred while updating the data pilot: {e}")
+        payload.data["code"] = 1
+        payload.data["msg"] = f"Error occurred while updating the data pilot: {str(e)}"
+
+    response_queue.put(response)
+
+
+def get_music_list():
+    # 指定路径下指定格式的文件列表
+    music_list = []
+
+    # 检查下位机是否有音频播放设备
+    if is_player_in_body():
+        music_folder = os.path.expanduser("/home/lab/.config/lejuconfig/music")
+
+        for root, dirs, files in os.walk(music_folder):
+            for file in files:
+                if file.endswith(".wav") or file.endswith(".mp3"):
+                    # 使用 os.path.join 规范路径拼接
+                    full_path = os.path.join(music_folder, file)
+                    # 确保UTF-8编码格式
+                    music_list.append(full_path.encode('utf-8').decode('utf-8'))
+
+    else:
+        result = subprocess.run(['systemctl', 'is-active', 'isc-dhcp-server'])
+        if result.returncode == 0:
+            remote_host = "192.168.26.12"
+        else:
+            remote_host = "192.168.26.1"
+
+
+        remote_user = "kuavo"
+        remote_path = "/home/kuavo/.config/lejuconfig/music"
+        encoded_password = os.getenv("KUAVO_REMOTE_PASSWORD")
+
+        if encoded_password is None:
+            raise ValueError("Failed to get remote password.")
+        remote_password = base64.b64decode(encoded_password).decode('utf-8')
+
+        # 获取远程路径下的音乐列表
+        ssh_cmd = (
+            f"sshpass -p '{remote_password}' ssh {remote_user}@{remote_host} "
+            f"'cd \"{remote_path}\" && find . -maxdepth 1 -type f \\( -name \"*.mp3\" -o -name \"*.wav\" \\) -printf \"%P\\n\"'"
+        )
+
+        result = subprocess.run(
+            ssh_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=True
+        )
+
+        if result.returncode == 0:
+            # 成功获取远程音乐文件列表
+            music_list = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            music_list = [os.path.join(remote_path, file) for file in music_list]
+        else:
+            music_list = []
+
+    return music_list
+
+async def get_music_list_handler(websocket: websockets.WebSocketServerProtocol, data: dict):
+    music_list = get_music_list()
+    payload = Payload(
+        cmd="get_music_list", data={"code": 0, "music_list": music_list}
+
+    )
+    response = Response(
+        payload=payload,
+        target=websocket,
+    )
+
+    response_queue.put(response)
 
 async def execute_demo_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -696,6 +1215,7 @@ async def execute_demo_handler(
 async def stop_execute_demo_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -724,6 +1244,7 @@ async def stop_execute_demo_handler(
 async def load_map_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]
@@ -949,6 +1470,7 @@ async def get_all_maps_handler(
 
 # Add a function to clean up when a websocket connection is closed
 def cleanup_websocket(websocket: websockets.WebSocketServerProtocol):
+    global active_threads
     if websocket in active_threads:
         active_threads[websocket].set()
         del active_threads[websocket]

@@ -6,6 +6,7 @@ import sys
 import stat
 import pwd
 from pathlib import Path
+import netifaces
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
@@ -123,7 +124,25 @@ async def broadcast_robot_info_wifi():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     robot_info = robot_infos["wifi"]
-    broadcast_ip = f"{robot_info['data']['robot_ip'].rsplit('.', 1)[0]}.255"
+    robot_ip = robot_info['data']['robot_ip']
+    
+    # Find the correct interface and broadcast address using netifaces
+    broadcast_ip = None
+    for iface_name in netifaces.interfaces():
+        if_addresses = netifaces.ifaddresses(iface_name)
+        if netifaces.AF_INET in if_addresses:
+            for link_addr in if_addresses[netifaces.AF_INET]:
+                local_ip = link_addr.get('addr')
+                if local_ip == robot_ip:
+                    broadcast_ip = link_addr.get('broadcast')
+                    break
+        if broadcast_ip:
+            break
+    
+    if not broadcast_ip:
+        # Fallback to the old method if broadcast address not found
+        broadcast_ip = f"{robot_ip.rsplit('.', 1)[0]}.255"
+    
     print(f"Broadcasting WiFi to {broadcast_ip}:{BROADCAST_PORT}")
     print(f"WiFi robot info: {robot_info}")
     
