@@ -5,7 +5,7 @@
   <arg name="debug"       default="false" />
   <!-- mpc_type 1 for SQP and 0 for DDP  -->
   <arg name="sqp_mpc"     default="1"/>
-  <arg name="dummy_sim"   default="0"/>
+  <arg name="dummy_sim"   default="1"/>
   <arg name="dummy_sim_arm" default="1"/>
   <arg name="visualize_humanoid" default="true"/>
   <arg name="visualize_mm" default="false"/>
@@ -44,5 +44,4 @@
         output="screen" launch-prefix="" />
   <!-- static TO-DO: 高度需要根据rosparam更改(12/13 by matthew) -->
   <!-- <node pkg="tf" type="static_transform_publisher" name="static_tf" args="0 0 0.82 0 0 0 odom world 100" /> -->
-  <node pkg="mobile_manipulator_controllers" type="error_monitor.py" name="error_monitor" output="screen" />
 </launch>

@@ -60,7 +60,6 @@ namespace mobile_manipulator_controller
     void humanoidObservationCallback(const ocs2_msgs::mpc_observation::ConstPtr& msg);
     void limitHumanoidTargetState(vector_t& humanoidTargetState);
     TargetTrajectories generateTargetTrajectories(const vector_t& currentState, const vector_t& desiredState, const SystemObservation& currentHumanoidObservation);
-    void controlBase(const vector_t& mmState, const vector_t& mmInput);
     void controlBasePos(const vector_t& mmState, const vector_t& mmInput);
     bool controlService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res);
     bool getKinematicMpcControlModeService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res);

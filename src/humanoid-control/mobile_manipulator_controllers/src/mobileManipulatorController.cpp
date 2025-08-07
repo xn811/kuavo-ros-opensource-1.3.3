@@ -335,60 +335,6 @@ namespace mobile_manipulator_controller
     humanoidTargetState(11) = 0.0;
   }
 
-  void MobileManipulatorController::controlBase(const vector_t& mmState, const vector_t& mmInput)
-  {
-    geometry_msgs::Twist msg;
-    switch(info_.manipulatorModelType)
-    {
-      case ManipulatorModelType::DefaultManipulator:
-        break;
-      case ManipulatorModelType::WheelBasedMobileManipulator:
-        msg.linear.x = mmInput(0); //v_x
-        msg.angular.z = mmInput(1);//yaw
-        break;
-      case ManipulatorModelType::FloatingArmManipulator:
-        break;
-      case ManipulatorModelType::FullyActuatedFloatingArmManipulator:
-        msg.linear.x = mmInput(0);
-        msg.linear.y = mmInput(1);
-        // msg.linear.z = mmInput(2);
-        msg.linear.z = mmState(2);
-        msg.angular.z = mmInput(3);//yaw
-        msg.angular.y = mmInput(4);//pitch
-        msg.angular.x = mmInput(5);//roll
-        break;
-      case ManipulatorModelType::ActuatedXYZYawPitchManipulator:
-        msg.linear.x = mmInput(0);
-        msg.linear.y = mmInput(1);
-        // msg.linear.z = mmInput(2);
-        msg.linear.z = mmState(2);
-        msg.angular.z = mmInput(3);//yaw
-        msg.angular.y = mmInput(4);//pitch
-        break;
-      case ManipulatorModelType::ActuatedZPitchManipulator:
-        msg.linear.z = mmInput(0);
-        msg.angular.y = mmInput(1);
-        break;
-      default:
-        break;
-    }
-    // limit vel
-    {
-      // TO-DO: 临时做法，后续需要修改(12/12 by Matthew)
-      // msg.linear.x = (msg.linear.x < 0.05) ? 0.0 : msg.linear.x;
-      // msg.linear.y = (msg.linear.y < 0.1) ? 0.0 : msg.linear.y;
-      // msg.angular.z = (msg.angular.z < 0.05) ? 0.0 : msg.angular.z;
-      msg.linear.z = std::max(-0.3, std::min(msg.linear.z, 0.05));
-    }
-    if((msg.linear.x < 0.05) && (msg.linear.y < 0.1))
-    {
-      ROS_INFO("Cmd_vel is too small, using position control.");
-      controlBasePos(mmState, mmInput);
-      return;
-    }
-    humanoidCmdVelPublisher_.publish(msg);
-  }
-
   void MobileManipulatorController::controlBasePos(const vector_t& mmState, const vector_t& mmInput)
   {
     Vector6d pose_now = Vector6d::Zero();
@@ -436,11 +382,6 @@ namespace mobile_manipulator_controller
         break;
       default:
         break;
-    }
-    // limit pos
-    {
-      msg.linear.z = std::max(-0.3, std::min(msg.linear.z, 0.05));
-      // msg.angular.y = std::max(0.0, std::min(msg.linear.z, 50.0*M_PI/180.0));
     }
     humanoidCmdPosPublisher_.publish(msg);
   }

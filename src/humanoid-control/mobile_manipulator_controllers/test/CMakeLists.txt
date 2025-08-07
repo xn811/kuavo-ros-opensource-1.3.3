@@ -87,4 +87,28 @@ if(GTEST_FOUND)
   # 添加IK Target测试到CTest
   add_test(NAME TestIkTargetLib 
            COMMAND test_ik_target_lib)
+  
+  # 死锁检测测试
+  add_executable(deadlockDetectionTest
+    deadlockDetectionTest.cpp
+    )
+  add_dependencies(deadlockDetectionTest
+    ${PROJECT_NAME}_base
+    ${catkin_EXPORTED_TARGETS}
+    )
+  target_link_libraries(deadlockDetectionTest
+    ${PROJECT_NAME}_base
+    ${catkin_LIBRARIES}
+    ${GTEST_LIBRARIES}
+    ${GTEST_MAIN_LIBRARIES}
+    gmock
+    gmock_main
+    pthread
+    )
+  target_compile_options(deadlockDetectionTest PRIVATE ${OCS2_CXX_FLAGS} -DROSCONSOLE_MIN_SEVERITY=ROSCONSOLE_SEVERITY_ERROR)
+  target_include_directories(deadlockDetectionTest PRIVATE ${GTEST_INCLUDE_DIRS})
+  
+  # 添加死锁检测测试到CTest
+  add_test(NAME DeadlockDetectionTest 
+           COMMAND deadlockDetectionTest)
 endif()

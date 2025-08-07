@@ -205,6 +205,7 @@ namespace mobile_manipulator_controller
     const std::string robotName_ = "mobile_manipulator";
     std::unique_ptr<humanoid::TopicLogger> ros_logger_;
     MpcType mpcType_;
+    unsigned int updateCount_{0};
 
     std::unique_ptr<MobileManipulatorIkTarget> ikTargetManager_;
   };

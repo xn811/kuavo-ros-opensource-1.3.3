@@ -104,7 +104,7 @@ namespace mobile_manipulator_controller
   void MobileManipulatorControllerBase::setupMrt()
   {
     mpcMrtInterface_ = std::make_shared<MPC_MRT_Interface>(*mpc_);
-    // mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
+    mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
     mpcTimer_.reset();
 
     controllerRunning_ = true;
@@ -212,7 +212,7 @@ namespace mobile_manipulator_controller
     SystemObservation obs = mmObservationDummy_;
     obs.time = mmObservationDummy_.time;
     obs.state = externalState;
-    obs.input.setZero();
+    obs.input.setZero();//TODO: 验证给mpc的input是否需要清零
     if(dummySim_)
       obs.state.head(baseDim) = mmObservationDummy_.state.head(baseDim);
     if(dummySimArm_)
@@ -242,6 +242,24 @@ namespace mobile_manipulator_controller
       mmPlanedTrajQueue_.pop_front();
     // visualize
     mmPlanedTrajPublisher_.publish(getVisualizeTrajectoryMsg(mmPlanedTrajQueue_, {0.1, 0.9, 0.1, 1.0}));
+    // filter abnormal state
+    double base_err_norm = (nextState - externalState).head(info_.stateDim - info_.armDim).norm();
+    double arm_err_norm = (nextState - externalState).tail(info_.armDim).norm();
+    ros_logger_->publishValue("/mm/base_err_norm", base_err_norm);
+    ros_logger_->publishValue("/mm/arm_err_norm", arm_err_norm);
+    
+    bool reset_by_count = (updateCount_ < 10);
+    bool reset_by_count_and_error = ((updateCount_ < 30) && (arm_err_norm > 0.2 || base_err_norm > 0.2));
+    if(reset_by_count || reset_by_count_and_error)
+    {
+      mmObservationDummy_.state = externalState;
+      mmObservationDummy_.input.setZero();
+      nextState = externalState;
+      optimizedInput = vector_t::Zero(info_.inputDim);
+    }
+    ++updateCount_;
+    ros_logger_->publishVector("/mm/dummy_state", mmObservationDummy_.state);
+    ros_logger_->publishValue("/mm/update_count", updateCount_);
     return 0;
   }
 
@@ -542,6 +560,7 @@ namespace mobile_manipulator_controller
 
   int MobileManipulatorControllerBase::reset(const vector_t& externalState)
   {
+    updateCount_ = 0;
     if(externalState.size() != info_.stateDim)
     {
       ROS_ERROR_STREAM("externalState.size() != info_.stateDim");
@@ -646,6 +665,10 @@ namespace mobile_manipulator_controller
       updateRunning_ = true;
       mpcThreadCondition_.notify_all();
     }
+    
+    // 给MPC求解器一些时间进行初始化
+    // 这可以减少后续调用getPerformanceIndices时的竞争条件
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     
     // 重置observation，保证update函数使用重置后的observation
     mmObservationDummy_ = resetObservation;

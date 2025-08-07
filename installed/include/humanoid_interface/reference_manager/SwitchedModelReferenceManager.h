@@ -222,6 +222,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   void checkSingleStepControlAndStop();
 
+  void generateTargetwithTorsoMove(scalar_t initTime, const vector_t &initState, const vector_t &torsoDisplacement,
+                                    const TargetTrajectories &targetTrajectories, vector_t &finalState, double &torso_max_time, double velocity_scale = 2.0);
+
   std::shared_ptr<GaitSchedule> gaitSchedulePtr_;
   std::shared_ptr<SwingTrajectoryPlanner> swingTrajectoryPtr_;
 
