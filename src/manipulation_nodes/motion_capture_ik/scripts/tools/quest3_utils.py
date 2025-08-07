@@ -1030,4 +1030,5 @@ class Quest3ArmInfoTransformer:
         msg.linear.x = 0.0
         msg.linear.y = 0.0
         msg.linear.z = max(-0.4, min(head_body_pose.body_height + 0.3, 0.2))
-        self.head_body_pose_puber.publish(msg)
+        if self.control_torso:
+            self.head_body_pose_puber.publish(msg)

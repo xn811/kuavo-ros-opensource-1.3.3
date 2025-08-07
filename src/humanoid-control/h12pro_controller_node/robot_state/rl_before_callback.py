@@ -35,7 +35,7 @@ VR_REMOTE_CONTROL_SESSION_NAME = "vr_remote_control"
 LAUNCH_HUMANOID_ROBOT_SIM_CMD = "roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch joystick_type:=h12 start_way:=auto"
 # LAUNCH_HUMANOID_ROBOT_SIM_CMD = "roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch joystick_type:=h12"
 LAUNCH_HUMANOID_ROBOT_REAL_CMD = "roslaunch humanoid_controllers load_kuavo_real.launch joystick_type:=h12 start_way:=auto"
-LAUNCH_VR_REMOTE_CONTROL_CMD = "roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch"
+LAUNCH_VR_REMOTE_CONTROL_CMD = "roslaunch motion_capture_ik kinematic_mpc_vr_for_rl.launch"
 ROS_MASTER_URI = os.getenv("ROS_MASTER_URI")
 ROS_IP = os.getenv("ROS_IP")
 ROS_HOSTNAME = os.getenv("ROS_HOSTNAME")
@@ -356,7 +356,6 @@ def launch_humanoid_robot(real_robot=True,calibrate=False):
         raise Exception("Failed to start humanoid_robot")
         
 
-# TODO: VR 路径怎么处理？
 def start_vr_remote_control_callback(event):
     source = event.kwargs.get("source")
     trigger = event.kwargs.get("trigger")
@@ -367,6 +366,7 @@ def start_vr_remote_control_callback(event):
         "-d",  
         f"bash -c -i 'source ~/.bashrc && \
           source {kuavo_ros_control_ws_path}/devel/setup.bash && \
+          export KUAVO_RL_WS_PATH={kuavo_rl_ws_path} && \
           export ROS_MASTER_URI={ROS_MASTER_URI} && \
           export ROS_IP={ROS_IP} && \
           export ROS_HOSTNAME={ROS_HOSTNAME} &&\

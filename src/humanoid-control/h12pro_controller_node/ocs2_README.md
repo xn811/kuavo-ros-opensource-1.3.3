@@ -219,7 +219,7 @@ rostopic echo /h12pro_channel
 - 部署时会询问建图的相机类型，目前支持奥比中光和realsense相机，请根据实际情况选择
 - 执行上楼梯前需要手动在上位机部署建图程序, 上楼梯相关文档：[文档](./../humanoid_controllers/scripts/上楼梯案例说明.md)
 - 上楼梯前，你需要手动把 `load_kuavo_real.launch` 中的 `joint_protect_enable` 参数设置为 `false`
-- 使用 RL 步态一键部署开机自启动 [脚本](scripts/rl_deploy_autostart.sh) 。由于使用了两个仓库，部署之前需要修改脚本中 `KUAVO_RL_WS_PATH`.
+- 使用 RL 步态一键部署开机自启动 [脚本](scripts/deploy_autostart.sh) 。在运行之前，需要修改环境变量 ROBOT_VERSION=46. 由于使用了两个仓库，部署之前需要修改脚本中 `KUAVO_RL_WS_PATH`.
 - 目前需要手动 VNC 连接上位机观察 Rviz 是否建图完毕
 - 遥控器按键组合中，长按(LONG_PRESS)表示按键按下后持续保持按下状态，直到听到遥控器发出 “滴” 的一声
 - 手臂动作存放在 `~/.config/lejuconfig/action_files` 路径下，文件名格式为 `arm_pose1.tact`, `arm_pose2.tact` 等

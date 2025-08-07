@@ -412,6 +412,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   vector_t last_init_target_state;
   scalar_t insert_time = 0.0;
   kuavo_msgs::kuavoModeSchedule createModeScheduleMsg(const ModeSchedule &modeSchedule, scalar_t initTime);
+  SwingTrajectoryPlanner::Config swingTrajectoryPlannerConfig_;
 };
 
 }  // namespace humanoid

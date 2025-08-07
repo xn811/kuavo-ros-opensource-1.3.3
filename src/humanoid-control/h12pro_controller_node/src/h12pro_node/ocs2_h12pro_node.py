@@ -714,7 +714,7 @@ class H12PROControllerNode:
     def _handle_joystick_input(self, msg: h12proRemoteControllerChannel) -> None:
         """Handle joystick input when no state transition occurs."""
         # 如果当前状态是stance，且头部控制模式开启，则处理摇杆输入
-        rospy.loginfo(f"[JoystickInput] head_control_mode={self.head_control_mode}")#日志打印测试是否进入head
+        # rospy.loginfo(f"[JoystickInput] head_control_mode={self.head_control_mode}")#日志打印测试是否进入head
 
         # stick_channels = Config.get_default_channels()
         # stick_channels[:4] = msg.channels[:4]
@@ -831,7 +831,8 @@ def main():
         rospy.loginfo("H12PRO Controller Node started successfully")
         
         while not rospy.is_shutdown():
-            node.h12_to_joy_node.process_channels()
+            if kuavo_control_scheme == "ocs2":
+                node.h12_to_joy_node.process_channels()
             node.publish_arm_joint_state()
             rate.sleep()
             

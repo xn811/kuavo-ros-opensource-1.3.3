@@ -119,6 +119,7 @@ swing_trajectory_config
   heelSwingHeight               0.02
   enable_slope_planner                                 false
   enable_interrupt_with_est_mode              false
+  enable_dynamic_qr             true
 
   deadBandVelocity             0.1
   heelToeMaxHeightVelocity     0.3
