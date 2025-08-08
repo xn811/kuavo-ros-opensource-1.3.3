@@ -42,10 +42,15 @@ terminate_process_result = False
 process = None
 response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
+ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
+g_robot_type = ""
+ocs2_current_joint_state = []
+robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
+
+current_arm_joint_state = None
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
 
-ACTION_FILE_FOLDER = package_path + "/action_files"
 UPLOAD_FILES_FOLDER = package_path + "/upload_files" 
 
 # 下位机音乐文件存放路径，如果不存在则进行创建
@@ -232,7 +237,13 @@ def create_bezier_request(action_data, start_frame_time, end_frame_time):
 
 def plan_arm_trajectory_bezier_curve_client(req):
     service_name = robot_settings[g_robot_type]["plan_arm_trajectory_bezier_service_name"]
-    rospy.wait_for_service(service_name, timeout=1.0)
+    # Check if service exists
+    try:
+        rospy.wait_for_service(service_name, timeout=1.0)
+    except Exception as e:
+        rospy.logerr(f"Service {service_name} not available")
+        return False
+    
     try:
         plan_service = rospy.ServiceProxy(service_name, planArmTrajectoryBezierCurve)
         res = plan_service(req)
@@ -243,7 +254,14 @@ def plan_arm_trajectory_bezier_curve_client(req):
 
 def stop_plan_arm_trajectory_client():
     service_name = robot_settings[g_robot_type]["stop_plan_arm_trajectory_service_name"]
-    rospy.wait_for_service(service_name, timeout=1.0)
+    
+    # Check if service exists
+    try:
+        rospy.wait_for_service(service_name, timeout=1.0)
+    except Exception as e:
+        rospy.logerr(f"Service {service_name} not available")
+        return False
+    
     try:
         if g_robot_type == "ocs2":
             stop_service = rospy.ServiceProxy(service_name, Trigger)
@@ -342,7 +360,7 @@ async def preview_action_handler(
     print(f"received message data: {data}")
 
     action_filename = data["action_filename"]
-    global ACTION_FILE_FOLDER
+    global ACTION_FILE_FOLDER, current_arm_joint_state
     action_file_path = os.path.expanduser(f"{ACTION_FILE_FOLDER}/{action_filename}")
     if not os.path.exists(action_file_path):
         print(f"Action file not found: {action_file_path}")
@@ -357,6 +375,12 @@ async def preview_action_handler(
         response = Response(payload=payload, target=websocket)
         response_queue.put(response)
         return
+    
+    if current_arm_joint_state is None:
+        payload.data["code"] = 3
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
 
     start_frame_time, end_frame_time = get_start_end_frame_time(action_file_path)
 
@@ -368,7 +392,11 @@ async def preview_action_handler(
         action_frames = frames_to_custom_action_data(action_file_path)
 
     req = create_bezier_request(action_frames, start_frame_time, end_frame_time)
-    plan_arm_trajectory_bezier_curve_client(req)
+    if not plan_arm_trajectory_bezier_curve_client(req):
+        payload.data["code"] = 4
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
     time.sleep(0.5)
     # If valid, create initial response
     response = Response(

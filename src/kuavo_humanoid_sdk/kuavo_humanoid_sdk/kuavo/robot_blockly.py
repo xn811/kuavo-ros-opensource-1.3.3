@@ -819,7 +819,7 @@ class RobotControlBlockly:
             move_time = max(move_time_left, move_time_right)
             times = [1.0, move_time]
             q_frames = [current_arm_joint_state[0:8], res]
-            self.robot.control_arm_target_poses(times, q_frames)
+            self.robot.control_arm_joint_trajectory(times, q_frames)
             time.sleep(move_time + 1.0)
             # self.set_auto_swing_arm_mode()
             # time.sleep(1.0)
@@ -872,7 +872,7 @@ class RobotControlBlockly:
                 res = list(res)
                 res[4:8] = current_arm_joint_state[4:8]
                 q_frames = [current_arm_joint_state[0:8], res]
-                self.robot.control_arm_target_poses(times, q_frames)
+                self.robot.control_arm_joint_trajectory(times, q_frames)
                 time.sleep(move_time + 1.0)
                 # self.set_auto_swing_arm_mode()
                 # time.sleep(1.0)
@@ -898,7 +898,7 @@ class RobotControlBlockly:
                 res = list(res)
                 res[0:4] = current_arm_joint_state[0:4]
                 q_frames = [current_arm_joint_state[0:8], res]
-                self.robot.control_arm_target_poses(times, q_frames)
+                self.robot.control_arm_joint_trajectory(times, q_frames)
                 time.sleep(move_time + 1.0)
         return True
 

@@ -3,7 +3,7 @@ import rospy
 import json
 import numpy as np
 import os
-from kuavo_sdk.msg import footPose
+from kuavo_msgs.msg import footPose
 from kuavo_msgs.msg import footPoseTargetTrajectories, armTargetPoses
 from kuavo_msgs.msg import gaitTimeName
 from kuavo_msgs.srv import changeArmCtrlMode
@@ -13,7 +13,7 @@ import math
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 import argparse
-import time
+import time;
 from std_msgs.msg import Float64MultiArray
 
 class ActionPlayer:

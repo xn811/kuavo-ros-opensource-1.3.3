@@ -16,6 +16,8 @@
 ## 修复问题
 - 修复桌面软件控制机器人导航相关的功能失败问题
 - 优化桌面软件连接机器人后会立刻掉线断连问题
+- 补充 Kuavo Humanoid sdk 中缺少的`arm_ik_free` 函数 
+- 修改 Kuavo Humanoid sdk 的错误调用 `control_arm_joint_trajectory`
 - 修复桌面软件无法控制 roban 转腰的问题，planarmwebsocketservice 代码中相关路径由于代码合并缺失
 - 修复基于 IK 方式 VR 遥操作由于卡尔曼滤波器修改导致额外延迟问题
 - Kuavo Humanoid SDK 修复未指定依赖 websockets 包而可能导致运行报错问题
@@ -149,6 +151,7 @@
 - 修复桌面软件上传文件存放路径错误的问题，存放路径为 `$HOME/.config/lejuconfig/action_files`
 - 修复半身控制模式下，启动机器人时手臂突然抽搐的错误
 - 修复触觉手控制器初始化两遍的错误，可能会影响灵巧手控制
+- 修复全身打太极找不到 kuavo_sdk.msg 模块的问题
 
 ## 其他改进
 - Quest VR 节点依赖的消息统一移动到 kuavo_msgs 包中，比如手柄消息`Joysticks`
