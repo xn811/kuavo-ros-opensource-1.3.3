@@ -72,7 +72,7 @@ from pydrake.all import (
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 from . import body_tracking_extended_pb2 as proto
-from .net_utils import get_localip_and_broadcast_ips
+from ..utils.net_utils import get_localip_and_broadcast_ips
 
 # Module-level constants for bone names and indices
 BODY_TRACKER_ROLES = [
@@ -120,7 +120,13 @@ class RobotInfoBroadcaster:
             }
         }
         self.running = True
-
+        SDKLogger.info("=============== Broadcasting info ===============")
+        for ip, broadcast_ip in self.ip_pairs:
+            robot_info = self.robot_info.copy()
+            robot_info["data"]["robot_ip"] = ip
+            message = json.dumps(robot_info).encode("utf-8")
+            SDKLogger.info(f"Broadcasting to {broadcast_ip}:{self.broadcast_port}, \n{message}")
+        SDKLogger.info("==================================================")
     #     self.start_test_pause_thread()
 
     # def start_test_pause_thread(self):
@@ -792,8 +798,8 @@ class KuavoPicoInfoTransformer():
         human_lower_arm_length = math.sqrt((hand_pos[0] - elbow_pos[0])**2 + (hand_pos[1] - elbow_pos[1])**2 + (hand_pos[2] - elbow_pos[2])**2)
         human_hand_length = math.sqrt((wrist_pos[0] - hand_pos[0])**2 + (wrist_pos[1] - hand_pos[1])**2 + (wrist_pos[2] - hand_pos[2])**2)
 
-        print(f"human_upper_arm_length: {human_upper_arm_length}")
-        print(f"human_lower_arm_length: {human_lower_arm_length}")
+        # print(f"human_upper_arm_length: {human_upper_arm_length}")
+        # print(f"human_lower_arm_length: {human_lower_arm_length}")
 
         if self.measure_arm_length:
             if side == "Left":

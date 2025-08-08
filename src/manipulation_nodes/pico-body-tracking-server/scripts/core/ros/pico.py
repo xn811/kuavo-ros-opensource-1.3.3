@@ -436,30 +436,36 @@ class KuavoPicoNode:
     def change_arm_ctrl_mode(self, mode: int) -> None:
         """Change arm control mode."""
         try:
-            rospy.wait_for_service("/change_arm_ctrl_mode")
+            rospy.wait_for_service("/change_arm_ctrl_mode", timeout=3.0)
             changeHandTrackingMode_srv = rospy.ServiceProxy("/change_arm_ctrl_mode", changeArmCtrlMode)
             changeHandTrackingMode_srv(mode)
+        except rospy.ROSException as e:
+            SDKLogger.error(f"\033[31m服务 /change_arm_ctrl_mode 连接超时或连接失败, 请检查服务是否启动: {e}\033[0m")
         except Exception as e:
-            SDKLogger.error(f"Service /change_arm_ctrl_mode call failed: {e}")
+            SDKLogger.error(f"服务 /change_arm_ctrl_mode 调用失败: {e}")
 
     def change_mobile_ctrl_mode(self, mode: int) -> None:
         """Change mobile control mode."""
         try:
-            rospy.wait_for_service("/mobile_manipulator_mpc_control")
+            rospy.wait_for_service("/mobile_manipulator_mpc_control", timeout=3.0)
             changeHandTrackingMode_srv = rospy.ServiceProxy("/mobile_manipulator_mpc_control", changeArmCtrlMode)
             changeHandTrackingMode_srv(mode)
-            print(f"=================================changeHandTrackingMode_srv({mode})=============================================")
+            # print(f"=================================changeHandTrackingMode_srv({mode})=============================================")
+        except rospy.ROSException as e:
+            SDKLogger.error(f"\033[31m服务 /mobile_manipulator_mpc_control 连接超时或连接失败, 请检查服务是否启动: {e}\033[0m")
         except Exception as e:
-            SDKLogger.error(f"Service /mobile_manipulator_mpc_control call failed: {e}")
+            SDKLogger.error(f"服务 /mobile_manipulator_mpc_control 调用失败: {e}")
 
     def change_mm_wbc_arm_ctrl_mode(self, mode: int) -> None:
         """Change MM WBC arm control mode."""
         try:
-            rospy.wait_for_service("/enable_mm_wbc_arm_trajectory_control")
+            rospy.wait_for_service("/enable_mm_wbc_arm_trajectory_control", timeout=3.0)
             changeHandTrackingMode_srv = rospy.ServiceProxy("/enable_mm_wbc_arm_trajectory_control", changeArmCtrlMode)
             changeHandTrackingMode_srv(mode)
+        except rospy.ROSException as e:
+            SDKLogger.error(f"\033[31m服务 /enable_mm_wbc_arm_trajectory_control 连接超时或连接失败, 请检查服务是否启动: {e}\033[0m")
         except Exception as e:
-            SDKLogger.error(f"Service /enable_mm_wbc_arm_trajectory_control call failed: {e}")
+            SDKLogger.error(f"服务 /enable_mm_wbc_arm_trajectory_control 调用失败: {e}")
 
 
     def reset_mm_mpc(self):

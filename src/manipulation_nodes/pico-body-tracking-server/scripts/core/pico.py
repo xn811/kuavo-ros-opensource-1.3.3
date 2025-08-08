@@ -271,10 +271,8 @@ class KuavoPicoServer:
             if vr_command.HasField('item_mass_force_request'):
                 req = vr_command.item_mass_force_request
                 self._process_item_mass_force_request(req)
-            else:
-                SDKLogger.error("VR command protobuf missing item_mass_force_request field.")
             if vr_command.HasField('control_mode'):
-                control_mode = vr_command.control_mode
+                control_mode = vr_command.control_mode.control_mode
                 if control_mode == "mobile_mpc":
                     self.pico_node._set_control_mode(ControlMode.MOBILE_MPC_MODE.value)
                 elif control_mode == "follow":

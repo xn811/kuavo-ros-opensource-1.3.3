@@ -212,7 +212,7 @@ class RobotDataServer:
         last_motor_cur = [0.0] * 28
         while self.running:
             if not self.target_client_addr:
-                rospy.logwarn("未指定目标客户端地址，等待中...")
+                # rospy.logwarn("未指定目标客户端地址，等待中...")
                 time.sleep(1)  # 阻塞等待 1 秒再检查
             time1 = time.time()
             try:
