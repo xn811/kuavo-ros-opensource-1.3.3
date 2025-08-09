@@ -23,6 +23,7 @@ from trajectory_msgs.msg import JointTrajectory
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import numpy as np
+from std_msgs.msg import Bool
 
 rospack = rospkg.RosPack()
 pkg_path = rospack.get_path('h12pro_controller_node')
@@ -263,6 +264,8 @@ class H12PROControllerNode:
         self.max_pitch = 23.0          # ±25度
         #zsh
 
+        self.is_navigation_mode = False # 导航状态变量
+
         # 添加线程池
         self.executor = ThreadPoolExecutor(max_workers=2)
         self._state_transition_lock = threading.Lock()
@@ -336,9 +339,26 @@ class H12PROControllerNode:
             self._update_h12_customize_config_callback,
             queue_size=1
         )
+
+        # 导航状态订阅者
+        self.navigation_state_sub = rospy.Subscriber(
+            "/navigation_control",
+            Bool,
+            self._navigation_state_callback,
+            queue_size=1
+        )
     
     def _update_h12_customize_config_callback(self, msg):
         self.robot_state_machine.update_customize_config()
+        
+    def _navigation_state_callback(self, msg):
+        # msg: std_msgs.msg.Bool - 导航状态消息 (false: H12 控制, true: 导航控制)
+        # 在导航中 joy 数据不参与控制
+        try:
+            self.is_navigation_mode = msg.data
+            rospy.loginfo(f"[NavigationState] Navigation mode {'enabled' if msg.data else 'disabled'}")
+        except Exception as e:
+            rospy.logerr(f"[NavigationState] Error processing navigation state: {e}")
         
     def publish_arm_joint_state(self):
         if self.plan_arm_is_finished is False and len(self.should_pub_arm_joint_state.position) > 0:
@@ -663,7 +683,7 @@ class H12PROControllerNode:
             except Exception as e:
                 rospy.logerr(f"Error during state transition: {e}")
 
-        if current_state != "vr_remote_control" and not self.head_control_mode:
+        if current_state != "vr_remote_control" and not self.head_control_mode and not self.is_navigation_mode:
             self._handle_joystick_input(msg)
 
 
