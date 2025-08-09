@@ -203,6 +203,10 @@ class KuavoRobot(RobotBase):
         Note:
             你可以调用 :meth:`KuavoRobotState.wait_for_step_control` 来等待机器人进入step-control模式。
             你可以调用 :meth:`KuavoRobotState.wait_for_stance` 来等待step-control完成。
+
+        tips:
+            坐标系: base_link坐标系
+            执行误差： 0.005~0.05m, 0.05°以下
         """    
         if len(target_pose) != 4:
             raise ValueError(f"[Robot] target_pose length must be 4 (x, y, z, yaw), but got {len(target_pose)}")
@@ -226,6 +230,10 @@ class KuavoRobot(RobotBase):
             
         Note:
             此命令会将机器人状态改变为'command_pose'。
+        
+        tips:
+            坐标系: base_link坐标系
+            执行误差： 0.05~0.1m, 0.2~5°
         """
         return self._kuavo_core.control_command_pose(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
 
@@ -246,6 +254,10 @@ class KuavoRobot(RobotBase):
             
         Note:
             此命令会将机器人状态改变为'command_pose_world'。
+
+        tips:
+            坐标系: odom坐标系
+            执行误差： 0.03~0.1m, 0.5~5°
         """
         return self._kuavo_core.control_command_pose_world(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
     
