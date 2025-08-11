@@ -54,3 +54,5 @@ topics:
   - /mm/end_effector_trajectory
   - /mm/.*
   - /grasp_box/.*
+  - /robot_body_matrices
+  - /action_detector_info

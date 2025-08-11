@@ -51,6 +51,7 @@ from tf.transformations import (
     quaternion_matrix,
     quaternion_from_matrix,
     euler_from_quaternion,
+    euler_from_matrix,
     quaternion_from_euler,
     translation_matrix
 )
@@ -294,6 +295,7 @@ class KuavoPicoInfoTransformer():
         self.marker_pub_shoulder_pico_right = rospy.Publisher("visualization_marker_right/shoulder_pico", Marker, queue_size=10)
         self.marker_pub_chest = rospy.Publisher("visualization_marker_chest", Marker, queue_size=10)
         self.foot_pose_pub = rospy.Publisher("foot_pose", Float32MultiArray, queue_size=10)
+        self.adaptive_threshold_pub = rospy.Publisher("action_detector_info", Float32MultiArray, queue_size=10)
 
     def _init_arm_lengths(self) -> None:
         """Initialize arm length variables."""
@@ -406,8 +408,9 @@ class KuavoPicoInfoTransformer():
                 # 新增：自适应阈值调整参数
                 'adaptive_threshold_enabled': True,  # 是否启用自适应阈值
                 'calibration_samples': 50,  # 校准样本数量
-                'adaptive_lift_offset': 0.02,  # 相对于基准高度的抬起偏移量
+                'adaptive_lift_offset': 0.01,  # 相对于基准高度的抬起偏移量
                 'adaptive_ground_offset': 0.005,  # 相对于基准高度的地面偏移量
+                'ground_tolerance': 0.005
             },
             
             # 新增：并行检测配置参数
@@ -798,9 +801,6 @@ class KuavoPicoInfoTransformer():
         human_lower_arm_length = math.sqrt((hand_pos[0] - elbow_pos[0])**2 + (hand_pos[1] - elbow_pos[1])**2 + (hand_pos[2] - elbow_pos[2])**2)
         human_hand_length = math.sqrt((wrist_pos[0] - hand_pos[0])**2 + (wrist_pos[1] - hand_pos[1])**2 + (wrist_pos[2] - hand_pos[2])**2)
 
-        # print(f"human_upper_arm_length: {human_upper_arm_length}")
-        # print(f"human_lower_arm_length: {human_lower_arm_length}")
-
         if self.measure_arm_length:
             if side == "Left":
                 self.left_upper_arm_lengths.append(human_upper_arm_length)
@@ -818,10 +818,10 @@ class KuavoPicoInfoTransformer():
                     self.avg_left_hand_length = sum(self.left_hand_lengths) / len(self.left_hand_lengths)
 
                     radi1 = self.upper_arm_length / self.avg_left_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.avg_left_hand_length) / self.avg_left_lower_arm_length
+                    radi2 = (self.lower_arm_length + self.upper_arm_length) / (self.avg_left_lower_arm_length + self.avg_left_upper_arm_length - self.avg_left_hand_length)
                 else:
                     radi1 = self.upper_arm_length / human_upper_arm_length
-                    radi2 = (self.lower_arm_length + human_hand_length) / human_lower_arm_length
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length - human_hand_length)
 
             else:
                 self.right_upper_arm_lengths.append(human_upper_arm_length)
@@ -839,10 +839,10 @@ class KuavoPicoInfoTransformer():
                     self.avg_right_hand_length = sum(self.right_hand_lengths) / len(self.right_hand_lengths)
 
                     radi1 = self.upper_arm_length / self.avg_right_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.avg_right_hand_length) / self.avg_right_lower_arm_length
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length - self.avg_right_hand_length)
                 else:
                     radi1 = self.upper_arm_length / human_upper_arm_length
-                    radi2 = (self.lower_arm_length + human_hand_length) / human_lower_arm_length
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length - human_hand_length)
         else:
             radi1 = self.upper_arm_length / human_upper_arm_length
             radi2 = self.lower_arm_length / human_lower_arm_length
@@ -852,7 +852,7 @@ class KuavoPicoInfoTransformer():
         scaled_hand_pos = np.zeros(3)
         for i in range(3):
             scaled_elbow_pos[i] = shoulder_pos[i] + radi1 * (elbow_pos[i] - human_shoulder_pos[i])
-            scaled_hand_pos[i] = scaled_elbow_pos[i] + radi2 * (hand_pos[i] - elbow_pos[i])
+            scaled_hand_pos[i] = shoulder_pos[i] + (hand_pos[i] - shoulder_pos[i])* radi2
 
         return scaled_elbow_pos, scaled_hand_pos
     
@@ -946,10 +946,10 @@ class KuavoPicoInfoTransformer():
         ]
 
         left_human_shoulder_pos = self.left_shoulder_pos.copy()
-        # left_human_shoulder_pos[1] = pelvis_pose.position.y + self.shoulder_width
+        left_human_shoulder_pos[1] = pelvis_pose.position.y + self.shoulder_width
 
         right_human_shoulder_pos = self.right_shoulder_pos.copy()
-        # right_human_shoulder_pos[1] = pelvis_pose.position.y - self.shoulder_width
+        right_human_shoulder_pos[1] = pelvis_pose.position.y - self.shoulder_width
         
         self.left_elbow_pos, self.left_hand_pos = self.scale_arm_positions(self.left_shoulder_pos, self.left_elbow_pos, self.left_hand_pose[0], left_human_shoulder_pos, "Left", self.left_wrist_pose[0])
         self.right_elbow_pos, self.right_hand_pos = self.scale_arm_positions(self.right_shoulder_pos, self.right_elbow_pos, self.right_hand_pose[0], right_human_shoulder_pos, "Right", self.right_wrist_pose[0])
@@ -1527,6 +1527,62 @@ class KuavoPicoInfoTransformer():
         msg.linear.z = max(-0.4, min(head_body_pose.linear.z - 1.24, 0.1))
         self.head_body_pose_puber.publish(msg)
 
+    def pub_adaptive_threshold_info(self):
+        """发布自适应阈值信息"""
+        self._publish_combined_threshold_info()
+
+    def _publish_combined_threshold_info(self):
+        """发布包含左右脚信息的单个消息
+        
+        消息结构：
+        [左脚信息..., 右脚信息...]
+        每个脚的信息包含：
+        - 校准状态 (1.0=完成, 0.0=未完成)
+        - 自适应抬起阈值
+        - 自适应地面阈值  
+        - 当前状态 (0.0=ground, 1.0=lifted, 2.0=action_complete)
+        - 抬起时间
+        - 着地时间
+        - 校准样本数量
+        """
+        msg_data = []
+        
+        # 处理左右脚信息
+        for side in ['left', 'right']:
+            detector = self.complete_action_detector.get(side, {})
+            
+            # 添加左脚信息
+            msg_data.extend([
+                1.0 if detector.get('calibration_complete', False) else 0.0,  # 校准状态
+                float(detector.get('adaptive_lift_threshold', 0.0)),  # 自适应抬起阈值
+                float(detector.get('adaptive_ground_threshold', 0.0)),  # 自适应地面阈值
+            ])
+            
+            # 添加当前状态信息
+            state_map = {'ground': 0.0, 'lifted': 1.0, 'action_complete': 2.0}
+            current_state = detector.get('state', 'ground')
+            msg_data.append(state_map.get(current_state, 0.0))
+            
+            # 添加时间信息
+            lift_time = detector.get('lift_time')
+            ground_time = detector.get('ground_time')
+            msg_data.extend([
+                float(lift_time) if lift_time is not None else 0.0,
+                float(ground_time) if ground_time is not None else 0.0,
+            ])
+            
+            # 添加校准样本数量
+            calibration_samples = detector.get('calibration_samples', [])
+            msg_data.append(float(len(calibration_samples)))
+        
+        # 创建并发布消息
+        msg = Float32MultiArray()
+        msg.data = msg_data
+        self.adaptive_threshold_pub.publish(msg)
+        
+        SDKLogger.debug(f"Published combined adaptive threshold info: {msg_data}")
+        # SDKLogger.debug(f"Message structure: [左脚校准状态, 左脚抬起阈值, 左脚地面阈值, 左脚状态, 左脚抬起时间, 左脚着地时间, 左脚样本数, 右脚校准状态, 右脚抬起阈值, 右脚地面阈值, 右脚状态, 右脚抬起时间, 右脚着地时间, 右脚样本数]")
+
     def process_foot_pose_for_stepping(self, robot_urdf_matrices, side):
         """Process foot pose for stepping"""
         # Convert side string to foot_type integer
@@ -1673,6 +1729,7 @@ class KuavoPicoInfoTransformer():
         
         # 获取阈值（自适应或固定）
         lift_threshold, ground_threshold = self._get_adaptive_thresholds(pose_type)
+        ground_tolerance = self.movement_detector['complete_action'].get('ground_tolerance', 0.005)
         
         # 状态机逻辑
         if detector['state'] == 'ground':
@@ -1685,7 +1742,7 @@ class KuavoPicoInfoTransformer():
         
         elif detector['state'] == 'lifted':
             # 检测是否回到地面
-            if current_height <= ground_threshold:
+            if current_height <= ground_threshold + ground_tolerance:
                 detector['state'] = 'action_complete'
                 detector['ground_time'] = current_time
                 detector['end_pose'] = current_pose
@@ -1808,8 +1865,9 @@ class KuavoPicoInfoTransformer():
         
         # 检查是否收集了足够的样本
         if len(detector['calibration_samples']) >= config.get('calibration_samples', 50):
-            # 计算基准高度（使用中位数，更稳定）
-            base_height = np.median(detector['calibration_samples'])
+            # 计算基准高度（测试发现中位数的高度有时偏高，使用平均值）
+            # base_height = np.median(detector['calibration_samples'])
+            base_height = np.mean(detector['calibration_samples'])
             detector['base_height'] = base_height
             
             # 计算自适应阈值
@@ -1826,6 +1884,7 @@ class KuavoPicoInfoTransformer():
                          f"base_height={base_height:.3f}m, "
                          f"lift_threshold={detector['adaptive_lift_threshold']:.3f}m, "
                          f"ground_threshold={detector['adaptive_ground_threshold']:.3f}m")
+            self.pub_adaptive_threshold_info()
         else:
             # 显示校准进度
             progress = len(detector['calibration_samples']) / config.get('calibration_samples', 50) * 100
@@ -2166,9 +2225,9 @@ class KuavoSingleFootController:
 
         self.init_com_z = None
         self.init_foot_spacing = 0.2
-        self.safe_foot_spacing = 0.3
+        self.safe_foot_spacing = 0.34
         self.safe_step_forward = 0.4
-        self.safe_step_backward = 0.2
+        self.safe_step_backward = -0.2
         self.max_step_length_x = self.pico_info_transformer.movement_detector['max_step_length_x']
         self.max_step_length_y = self.pico_info_transformer.movement_detector['max_step_length_y']
 
@@ -2219,7 +2278,75 @@ class KuavoSingleFootController:
 
         return movement_pose
     
-    def get_single_foot_trajectory_msg(self, foot_type, movements, dt=0.4, collision_check=True):
+    def get_safe_yaw_diff(self, current_support_foot, current_swing_foot, foot_type):
+        """Get safe yaw."""
+        delta_x = current_swing_foot[0] - current_support_foot[0]
+        delta_y = current_swing_foot[1] - current_support_foot[1]
+        yaw_diff = np.arctan2(delta_y, delta_x)
+        if foot_type == 0:
+            return abs(yaw_diff)
+        else:
+            return -abs(yaw_diff)
+
+    def get_R_t_from_4d_pose(self, pose_4d):
+        yaw = pose_4d[3]
+        R = np.array([[np.cos(yaw), -np.sin(yaw), 0],
+                      [np.sin(yaw),  np.cos(yaw), 0],
+                      [0,            0,           1]])
+        t = np.array(pose_4d[:3])
+        return R, t
+
+    def get_transform_matrix(self, R, t):
+        """Build 4x4 homogeneous transform matrix from R (3x3) and t (3,)"""
+        T = np.eye(4)
+        T[:3, :3] = R
+        T[:3, 3] = t
+        return T
+    
+    def get_invert_transform(self, T):
+        """Inverse of homogeneous transform matrix"""
+        R = T[:3, :3]
+        t = T[:3, 3]
+        R_inv = R.T
+        t_inv = -R_inv @ t
+        T_inv = self.get_transform_matrix(R_inv, t_inv)
+        return T_inv
+        
+    def get_target_pose_safe(self, foot_type, current_support_foot, current_swing_foot, target_pose):
+        R_support, t_support = self.get_R_t_from_4d_pose(current_support_foot)
+        T_support = self.get_transform_matrix(R_support, t_support)
+        T_support_inv = self.get_invert_transform(T_support)
+
+        R_target, t_target = self.get_R_t_from_4d_pose(target_pose)
+        T_target = self.get_transform_matrix(R_target, t_target)
+
+        T_target2support = T_support_inv @ T_target
+        target_pos_local = T_target2support[:3, 3]
+        _, _, yaw = euler_from_matrix(T_target2support)
+
+        target_pos_local[0] = min(self.safe_step_forward, max(self.safe_step_backward, target_pos_local[0]))
+        if foot_type == 0:
+            target_pos_local[1] = min((self.safe_foot_spacing + self.max_step_length_y), max(self.safe_foot_spacing, target_pos_local[1]))
+            max_yaw = self.get_safe_yaw_diff(current_support_foot, current_swing_foot, foot_type)
+            yaw = max(0.0, min(yaw, max_yaw))
+        else:
+            target_pos_local[1] = min(-self.safe_foot_spacing, max(-(self.safe_foot_spacing + self.max_step_length_y), target_pos_local[1]))
+            min_yaw = self.get_safe_yaw_diff(current_support_foot, current_swing_foot, foot_type)
+            yaw = min(0.0, max(yaw, min_yaw))
+
+        target_pose_safe_local = np.array([*target_pos_local, yaw])
+        R_target_safe, t_target_safe = self.get_R_t_from_4d_pose(target_pose_safe_local)
+        T_target_safe = self.get_transform_matrix(R_target_safe, t_target_safe)
+
+        T_target2world = T_support @ T_target_safe
+        target_pos_world = T_target2world[:3, 3]
+        _, _, yaw_safe = euler_from_matrix(T_target2world)
+        target_pos_world[2] = 0.0
+        target_pose_safe_world = np.array([*target_pos_world, yaw_safe])
+
+        return target_pose_safe_world
+
+    def get_single_foot_trajectory_msg(self, foot_type, movements, dt=0.5, collision_check=True):
         """Generate single foot control trajectory message."""
         time_traj = []
         foot_idx_traj = []
@@ -2227,7 +2354,7 @@ class KuavoSingleFootController:
         torso_traj = []
         
         ss_idx = 2
-        ss_duration = 0.4
+        ss_duration = dt
         ss_action = np.zeros(4, dtype=int).tolist()
         
         if self.pico_info_transformer.complete_action_detector['left']['use_real_foot_data']:
@@ -2263,12 +2390,12 @@ class KuavoSingleFootController:
 
         current_support_foot = self.current_right_foot.copy() if foot_type == 0 else self.current_left_foot.copy()
         current_swing_foot = self.current_left_foot.copy() if foot_type == 0 else self.current_right_foot.copy()
-        
+
         for i, movement in enumerate(movements):
             movement_pos = np.asarray(movement[:3])
             movement_yaw = np.radians(movement[3])
             movement_pose = np.array([*movement_pos, movement_yaw])
-            movement_time = min(movement[4], dt) * (i + 1) if len(movement) > 4 else dt * (i + 1)
+            movement_time = min(max(movement[4], 0.4), dt) * (i + 1) if len(movement) > 4 else dt * (i + 1)
             ss_time = movement_time + ss_duration
 
             time_traj.append(movement_time) 
@@ -2282,28 +2409,8 @@ class KuavoSingleFootController:
             foot_pose = self.process_movement_pose(movement_pose)
             SDKLogger.info(f"foot_pose_after:{foot_pose}")
 
-            target_pose_safe = current_swing_foot.copy() + foot_pose.copy()
-
-            # Limit Workspace Of Swing Foot
-            if foot_type == 0:
-                min_pos_x = current_support_foot[0] - self.safe_step_backward
-                max_pos_x = current_support_foot[0] + self.safe_step_forward
-                min_pos_y = current_support_foot[1] + self.safe_foot_spacing
-                max_pos_y = current_support_foot[1] + self.safe_foot_spacing + self.max_step_length_y
-                target_pose_safe[0] = min(max_pos_x, max(target_pose_safe[0], min_pos_x))
-                target_pose_safe[1] = min(max_pos_y, max(target_pose_safe[1], min_pos_y))
-                target_pose_safe[2] = 0.0
-                target_pose_safe[3] = max(0, target_pose_safe[3])
-            else:
-                min_pos_x = current_support_foot[0] - self.safe_step_backward
-                max_pos_x = current_support_foot[0] + self.safe_step_forward
-                min_pos_y = current_support_foot[1] - self.safe_foot_spacing - self.max_step_length_y
-                max_pos_y = current_support_foot[1] - self.safe_foot_spacing
-                target_pose_safe[0] = min(max_pos_x, max(target_pose_safe[0], min_pos_x))
-                target_pose_safe[1] = min(max_pos_y, max(target_pose_safe[1], min_pos_y))
-                target_pose_safe[2] = 0.0
-                target_pose_safe[3] = min(0, target_pose_safe[3])
-
+            target_pose = current_swing_foot.copy() + foot_pose.copy()
+            target_pose_safe = self.get_target_pose_safe(foot_type, current_support_foot, current_swing_foot, target_pose)
             print(f"target_pose_safe:{target_pose_safe}")
 
             step_length_safe = np.linalg.norm(target_pose_safe[:2] - current_support_foot[:2])
@@ -2594,6 +2701,7 @@ class ParallelFootDetector:
                 # 将foot_type和movement_vector一起放入movement_queue
                 movement_item = {'foot_type': foot_type, 'movement_vector': detection_result[1]}
                 success = self.transformer.add_trajectory_to_queue(movement_item)
+                self.transformer.pub_adaptive_threshold_info()
                 SDKLogger.info(f"add movement time: {time.time()}")
             else:
                 # 使用transformer的控制器实例生成轨迹

@@ -201,13 +201,10 @@ class KuavoPicoNode:
             self._init_publishers()
             # Initialize subscribers
             self._init_subscribers()
-
             # Initialize joy handler
             self._init_joy_handler()
             self.robot_matrix_publisher = RobotMatrixPublisher()
-
             self._initialized = True
-            self._init_joy_controller()
             self.arm_joint_angles = None
 
             self.control_mode = ControlMode.MOBILE_MPC_MODE
@@ -356,43 +353,53 @@ class KuavoPicoNode:
                 # X 长按 + Y 长按 + A 按下 + B 空闲
                 'key_combination': set(['X_LONG_PRESSED', 'Y_LONG_PRESSED', 'A_PRESSED', 'B_IDLE']),
                 'callback': self._hand_wrench_callback
-            }
+            },
+            "torso_on": {
+                'key_combination': set(['X_IDLE', 'Y_PRESSED', 'A_IDLE', 'B_IDLE']),
+                'callback': self._torso_on_callback
+            },
+            "torso_off": {
+                'key_combination': set(['X_IDLE', 'Y_LONG_PRESSED', 'A_IDLE', 'B_IDLE']),
+                'callback': self._torso_off_callback
+            },
+            "WholeBody_Mode": {
+                'key_combination': set(['X_LONG_PRESSED', 'Y_IDLE', 'A_IDLE', 'B_IDLE']),
+                'callback': self._whole_body_callback
+            },
+            "UpperBody_Mode": {
+                'key_combination': set(['X_IDLE', 'Y_IDLE', 'A_IDLE', 'B_LONG_PRESSED']),
+                'callback': self._upper_body_callback
+            },
+            "LowerBody_Mode": {
+                'key_combination': set(['X_IDLE', 'Y_IDLE', 'A_LONG_PRESSED', 'B_IDLE']),
+                'callback': self._lower_body_callback
+            },
         }
         for key, value in JOY_BTN_MAPPING.items():
             self.joy_handler.add_callback(key, 
                                           value['key_combination'], 
                                           value['callback'])
 
-    def _init_joy_controller(self) -> None:
-        """Initialize joy controller"""
-        self.joy_button_handler = JoySticksHandler()
-        rospy.Subscriber("/pico/joy", JoySticks, self.sub_callback)
-        self.joy_button_handler.add_callback("torso on", {"Y_PRESSED"}, self.torso_on_callback)
-        self.joy_button_handler.add_callback("torso off", {"Y_LONG_PRESSED"}, self.torso_off_callback)
-        self.joy_button_handler.add_callback("WholeBody Mode", {"X_LONG_PRESSED"}, self.whole_body_callback)
-        self.joy_button_handler.add_callback("UpperBody Mode", {"B_LONG_PRESSED"}, self.upper_body_callback)
-        self.joy_button_handler.add_callback("LowerBody Mode", {"A_LONG_PRESSED"}, self.lower_body_callback)
-
     def sub_callback(self, joy: JoySticks) -> None:
         self.joy_button_handler.update(joy)
 
-    def torso_on_callback(self, keys: Set[str], joy: JoySticks) -> None:
+    def _torso_on_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_torso_mode(True)
     
-    def torso_off_callback(self, keys: Set[str], joy: JoySticks) -> None:
+    def _torso_off_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_torso_mode(False)
 
-    def whole_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+    def _whole_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_mode("WholeBody")
 
-    def upper_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+    def _upper_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_mode("UpperBody")
 
-    def lower_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
+    def _lower_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_mode("LowerBody")
 
@@ -529,18 +536,13 @@ class KuavoPicoNode:
         eef_pose_msg.use_custom_ik_param = False
         eef_pose_msg.frame = 1
         
-        
         # Check for VR errors
         if self.pico_info_transformer.check_if_vr_error():
             SDKLogger.error("Detected VR ERROR!!! Please check the Pico device connection and status!")
             return
             
         if self.pico_info_transformer.is_running:
-            if self.control_mode_changing:
-                eef_pose_msg = self.interpolate_eef_pose(eef_pose_msg)
             self.pub.publish(eef_pose_msg)
-            # if self.pico_info_transformer.control_torso_mode:
-            #     self.pico_info_transformer.pub_head_body_pose_msg(self.pico_info_transformer.head_body_pose)
         else:
             SDKLogger.warn("Not publishing to /mm/two_arm_hand_pose_cmd because is_running is False")
         

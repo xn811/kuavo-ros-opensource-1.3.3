@@ -17,6 +17,7 @@ from std_msgs.msg import Float32MultiArray
 from visualization_msgs.msg import MarkerArray
 from geometry_msgs.msg import Point
 from enum import Enum
+
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 REMOTE_CONFIG_PATH = os.path.join(SCRIPT_PATH, "remote-config.json")
 TIME_OUT = 10
@@ -81,7 +82,7 @@ class VisionBasedStairClimbingPlanner:
         
         # 创建订阅器
         self.subscriber = rospy.Subscriber(
-            '/leju/odom/foot_pose_with_vision_array',
+            '/leju/odom/foot_pose_with_vision_array1',
             footPoseWithVisionArray,
             self.vision_callback,
             queue_size=1
@@ -94,14 +95,14 @@ class VisionBasedStairClimbingPlanner:
         #     self.stairs_boundary_callback,
         #     queue_size=1
         # )
-
+        
         self.modeSchedule_sub = rospy.Subscriber(
             'modeSchedule',
             kuavoModeSchedule,
             self.kuavoModeScheduleCallback,
             queue_size=1
         )
-        
+
         # 初始化变量
         self.stair_info = None
         self.is_planning = False
@@ -263,8 +264,8 @@ class VisionBasedStairClimbingPlanner:
         self.last_points.clear()
         self.last_points = points
         
-        # 标记规划完成
-        # self.planning_done = True
+    #     # 标记规划完成
+    #     # self.planning_done = True
         rospy.loginfo("Planning and publishing completed, waiting for Ctrl+C to exit...")
         print()
         
@@ -325,7 +326,7 @@ class VisionBasedStairClimbingPlanner:
                 foot_traj=foot_traj,
                 torso_traj=torso_traj,
                 swing_trajectories=swing_trajectories,
-                points = points,
+                points = points,                
                 last_points = self.last_points,
                 last_foot_traj=self.last_foot_traj,
                 last_swing_trajectories=self.last_swing_trajectories
@@ -525,7 +526,6 @@ class VisionBasedStairClimbingPlanner:
         for i in range(len(points)):
             if i > 0:
                 if points[i][0] - points[i-1][0] > 0.4 or points[i][2] - points[i-1][2] > 0.18:
-                    rospy.logwarn("Distance between steps is too large, ignoring this detection")
                     return
 
         self.stair_info = points
@@ -568,7 +568,6 @@ class VisionBasedStairClimbingPlanner:
     def kuavoModeScheduleCallback(self, msg):
         """处理模式调度消息"""
         self.kuavoModeSchedule = msg
-
 
 
 planner = None  # 全局变量，供信号处理函数访问

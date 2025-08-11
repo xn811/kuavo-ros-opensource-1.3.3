@@ -99,8 +99,8 @@ class JoySticksHandler:
 
     def _handle_key_combination_callback(self, key_combination: Set[str], joy: JoySticks) -> None:
         for name, (expected_keys, callback) in self.callbacks.items():
-            # if expected_keys == key_combination:
-            if expected_keys.issubset(key_combination):
+            if expected_keys == key_combination:
+            # if expected_keys.issubset(key_combination):
                 callback(key_combination, joy)
                 break
 

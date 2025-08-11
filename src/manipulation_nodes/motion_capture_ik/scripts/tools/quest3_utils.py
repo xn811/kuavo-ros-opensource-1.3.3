@@ -16,7 +16,7 @@ import time
 import tf
 from std_msgs.msg import Float32MultiArray
 from tf.transformations import quaternion_from_matrix, quaternion_matrix
-from geometry_msgs.msg import TransformStamped,Twist
+from geometry_msgs.msg import TransformStamped, Twist
 from tf2_msgs.msg import TFMessage
 from constanst import gesture_corresponding_hand_position
 # to dev
@@ -1018,7 +1018,7 @@ class Quest3ArmInfoTransformer:
         # deal right hand thumb
         msg.position[vj_n + 24 + 1] *= -1
         self.joint_state_puber.publish(msg)
-       
+
     def pub_head_body_pose_msg(self, head_body_pose: HeadBodyPose):
         """Publish head body pose message."""
         msg = Twist()

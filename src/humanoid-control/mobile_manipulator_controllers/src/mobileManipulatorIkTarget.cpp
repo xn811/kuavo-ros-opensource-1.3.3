@@ -240,7 +240,7 @@ std::pair<Eigen::Vector3d, Eigen::Quaterniond> MobileManipulatorIkTarget::transT
 
 void MobileManipulatorIkTarget::ikCmdCallback(const kuavo_msgs::twoArmHandPoseCmd::ConstPtr& msg)
 {
-    auto &hand_poses = msg->hand_poses;
+    auto &hand_poses = msg->hand_poses; // cppcheck-suppress variableScope
     FrameType frameType = static_cast<FrameType>(msg->frame);
 
     // if (frameType != FrameType::CurrentFrame)

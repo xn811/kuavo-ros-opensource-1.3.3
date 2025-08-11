@@ -163,6 +163,10 @@ class KuavoPicoServer:
             # 延迟诊断中不处理数据
             return
         
+        if self.is_play_mode():
+            SDKLogger.debug("Skipping all data processing in play mode")
+            return
+        
         message = proto.VRData()
         message.ParseFromString(data_str)
 
@@ -184,7 +188,11 @@ class KuavoPicoServer:
         
         if message.HasField('vr_command'):
             self.process_vr_command(message.vr_command)
-        
+
+    def is_play_mode(self):
+        """Check if the system is in play mode."""
+        return hasattr(self.pico_node, '_play_mode') and self.pico_node._play_mode
+
     def process_delayed_diagnosis_command(self, command):
         """Process delayed diagnosis command."""
         # 停止延迟诊断
@@ -197,7 +205,7 @@ class KuavoPicoServer:
         else:
             SDKLogger.warning("延迟诊断正在进行中，不会处理其他数据")
             return
-
+        
     def process_body_tracking_data(self, data_str):
         """Process data."""
         robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix_from_proto(data_str)
@@ -223,15 +231,9 @@ class KuavoPicoServer:
         elif self.pico_node.pico_info_transformer.control_mode == 'LowerBody':
             # Process foot pose for stepping using parallel detection
             self.pico_node.pico_info_transformer.process_foot_poses_parallel(robot_urdf_matrices)
-            # self.pico_node.pico_info_transformer.publish_foot_pose(robot_urdf_matrices)
 
             # Process body pose for stepping (Another option of lower body control)
             # self.pico_node.pico_info_transformer.process_body_pose_for_stepping(robot_urdf_matrices)
-
-        # # Control torso (TODO: fix this)
-        # if self.pico_node.pico_info_transformer.is_running and self.pico_node.pico_info_transformer.control_torso_mode:
-        #     self.pico_node.pico_info_transformer.compute_head_body_pose(robot_urdf_matrices)
-        #     self.pico_node.pico_info_transformer.pub_head_body_pose_msg(self.pico_node.pico_info_transformer.head_body_pose)
     
     def process_pico_joy_data(self, controller_data):
         """Process pico joy data and print to console."""
