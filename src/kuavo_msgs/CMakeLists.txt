@@ -121,6 +121,7 @@ add_message_files(
   armCollisionCheckInfo.msg
 
   MmDetectionMsg.msg
+  AudioReceiverData.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -159,6 +160,7 @@ add_service_files(
   planArmTrajectoryBezierCurve.srv
   planArmTrajectoryCubicSpline.srv
   SetJoyTopic.srv
+  SetLEDMode.srv
 
   # kuavo_tf2_web_republisher
   RepublishTFs.srv

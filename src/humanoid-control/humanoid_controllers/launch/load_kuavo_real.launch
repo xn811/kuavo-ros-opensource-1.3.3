@@ -237,4 +237,12 @@
         <arg name="coredump" value="$(arg coredump)"/>
       </include>
     </group>
+    <arg name="microphone" default="true" />
+
+    <group if="$(arg microphone)">
+      <!-- 添加音频接收节点 -->
+      <include file="$(find kuavo_audio_receiver)/launch/receive_voice.launch"/>
+
+    </group>
+
 </launch>
