@@ -27,6 +27,10 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 
 from std_msgs.msg import Float64MultiArray
 
+import inspect
+from model_utils import *
+import model_utils as model_utils
+
 
 from enum import IntEnum
 # Global flag for handling Ctrl+C
@@ -1046,3 +1050,94 @@ class RobotControlBlockly:
         except Exception as e:
             print(f"Robot waist control failed: {str(e)}")
 
+    def alignment_target(self, class_name: str, x: float, y: float, z: float):
+        """
+        使机器人对准指定类别到对象，并移动到目标前
+        :param class_name: yolo 检测中需要检测的对象名称，和训练模型中的类别名称一致
+        :param x: 图像 x 方向的偏移值，物体中心的 x 小于该参数 -x 时，机器人左移，大于该参数 x 时，机器人右移
+        :param y: 图像 y 方向的偏移值，物体中心的 y 小于该参数 y 时，机器人前进，否则停止移动
+        :param z: 机器人上下蹲的高度控制
+        """
+        try:
+            # 加载 yolo 模型
+            yolo_detection = model_utils.yolo_detection
+            model = model_utils.model
+            is_yolo_init = model_utils.is_yolo_init
+
+            if  not is_yolo_init:
+                yolo_detection = YOLO_detection()
+                yolo_detection.init_ros_node()
+                caller_file_path = inspect.stack()[1].filename
+                model_path = os.path.join(os.path.dirname(caller_file_path), 'best.pt')
+                # print(f"函数被文件调用: {model_path}")
+                model = yolo_detection.load_model(model_path)
+
+
+            IMAGE_CENTER_X = yolo_detection.cv_image_shape[1] / 2.0
+            IMAGE_CENTER_Y = yolo_detection.cv_image_shape[0] / 2.0
+            # rospy.loginfo(f"IMAGE_CENTER_X: {IMAGE_CENTER_X}")
+            # rospy.loginfo(f"IMAGE_CENTER_Y: {IMAGE_CENTER_Y}")
+            MOVE_SPEED_Y = 0.05  # Y方向移动速度
+            MOVE_SPEED_X = 0.10  # X方向移动速度
+
+            while not rospy.is_shutdown():
+
+                results = yolo_detection.get_detections("head", model)
+
+                if not results:
+                    continue
+
+                # 存储所有符合条件的目标信息
+                targets = []
+                for result in results:
+
+                    boxes = result.boxes.cpu().numpy()  # 边界框数据转NumPy数组
+                    xywh = boxes.xywh  # [中心x, 中心y, 宽, 高]
+                    class_names = [result.names[cls.item()] for cls in result.boxes.cls.int()]  # 类别名称列表
+
+                    # 遍历每个检测框，提取目标信息
+                    for i in range(len(xywh)):
+                        if class_names[i] == class_name:  # 筛选目标类别
+                            targets.append({
+                                "class": class_names[i],
+                                "x": xywh[i][0],  # 目标中心x坐标
+                                "y": xywh[i][1],  # 目标中心y坐标
+                                "area": xywh[i][2] * xywh[i][3]  # 目标面积（宽×高）
+                            })
+
+                if not targets:
+                    continue  # 无目标时继续循环
+
+                # 选择面积最大的目标
+                best_target = max(targets, key=lambda t: t["area"])
+
+                # 计算相对于图像中心的偏移量
+                offset_x = best_target["x"] - IMAGE_CENTER_X
+                offset_y = best_target["y"] - IMAGE_CENTER_Y
+
+                # rospy.loginfo(f"目标中心偏移: x={offset_x:.2f}, y={offset_y:.2f}")
+
+                # 根据偏移量控制机器人移动
+                if abs(offset_x) > x:
+                    # X方向偏移过大，左右移动调整
+                    speed_y = -MOVE_SPEED_Y if offset_x > x else MOVE_SPEED_Y
+                    self.walk_angle(0.00, speed_y, 0.00)
+                elif offset_y < y:
+                    # Y方向偏移过大，向前移动调整
+                    self.walk_angle(MOVE_SPEED_X, 0.00, 0.00)
+                else:
+                    # 偏移量在可接受范围内，停止移动
+                    self.stop()
+
+                    # 控制机器人高度
+                    if z >= 0:
+                        self.control_robot_height("up", z)
+                    else:
+                        self.control_robot_height("down", -z)
+
+                    break
+
+                time.sleep(0.1)
+
+        except Exception as e:
+            print(f"Robot alignment to target failed: {str(e)}")
