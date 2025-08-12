@@ -956,7 +956,10 @@ class KuavoPicoInfoTransformer():
         
         self.left_elbow_pos, self.left_hand_pos = self.scale_arm_positions(self.left_shoulder_pos, self.left_elbow_pos, self.left_hand_pose[0], left_human_shoulder_pos, "Left", self.left_wrist_pose[0])
         self.right_elbow_pos, self.right_hand_pos = self.scale_arm_positions(self.right_shoulder_pos, self.right_elbow_pos, self.right_hand_pose[0], right_human_shoulder_pos, "Right", self.right_wrist_pose[0])
-        
+
+        self.left_hand_pose[0] = self.left_hand_pos
+        self.right_hand_pose[0] = self.right_hand_pos
+
         self.is_running = True
         self.vr_error = False
         
