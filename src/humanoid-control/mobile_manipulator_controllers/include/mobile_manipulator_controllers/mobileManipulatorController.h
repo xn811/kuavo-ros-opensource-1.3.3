@@ -30,21 +30,11 @@ namespace mobile_manipulator_controller
   using namespace ocs2::mobile_manipulator;
   typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
-  enum class ControlType
-  {
-    None = 0,
-    ArmOnly,
-    BaseOnly,
-    BaseArm, // 通过base_pose_cmd强制控制base位置
-  };
-
-  std::string controlTypeToString(ControlType controlType);
-
   class MobileManipulatorController : public MobileManipulatorControllerBase
   {
   public:
     MobileManipulatorController(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true, bool anomalyStopMpc=false);
+      ControlType control_type=ControlType::BaseArm, bool dummySimArm=true, bool visualizeMm=true, bool anomalyStopMpc=false);
     ~MobileManipulatorController();
     bool init(ros::NodeHandle &nh);
     void update();
@@ -93,8 +83,8 @@ namespace mobile_manipulator_controller
     bool recievedObservation_ = false;
     
     // Control configuration
-    ControlType controlType_ = ControlType::None;
-    ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
+    // ControlType controlType_ = ControlType::None;
+    // ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
 
     bool mpcInitialized_ = false;
 

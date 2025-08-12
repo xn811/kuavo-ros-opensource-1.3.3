@@ -23,7 +23,8 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("libFolder: " << libFolder);
   ROS_INFO_STREAM("urdfFile: " << urdfFile);
 
-  MobileManipulatorControllerBase controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, 100, false, true, true);
+  ControlType control_type = ControlType::None;
+  MobileManipulatorControllerBase controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, 100, control_type, true, true);
 
   ros::Rate rate(100);
   size_t count = 0;

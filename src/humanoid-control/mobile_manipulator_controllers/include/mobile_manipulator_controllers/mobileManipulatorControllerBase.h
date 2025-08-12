@@ -36,11 +36,21 @@ namespace mobile_manipulator_controller
     SQP
   };
 
+  enum class ControlType
+  {
+    None = 0,
+    ArmOnly,
+    BaseOnly,
+    BaseArm, // 通过base_pose_cmd强制控制base位置
+  };
+
+  std::string controlTypeToString(ControlType controlType);
+
   class MobileManipulatorControllerBase
   {
   public:
     MobileManipulatorControllerBase(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true);
+      ControlType control_type=ControlType::BaseArm, bool dummySimArm=true, bool visualizeMm=true);
     ~MobileManipulatorControllerBase();
     int update(const vector_t& externalState, vector_t& nextState);
     int update(const vector_t& externalState, vector_t& nextState, vector_t& optimizedInput);
@@ -165,6 +175,9 @@ namespace mobile_manipulator_controller
     DetectionResult detectEefAnomaliesNew(const std::vector<EefPoseError>& poseErrors, const std::vector<scalar_t>& velocityMagnitudes);
     void publishDetectionResult(const DetectionResult& result);
   protected:
+    ControlType controlType_ = ControlType::None;
+    ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
+    std::mutex control_type_mutex_;
     std::thread mpcThread_;
 
     std::atomic_bool controllerRunning_{}, mpcRunning_{}, updateRunning_{};

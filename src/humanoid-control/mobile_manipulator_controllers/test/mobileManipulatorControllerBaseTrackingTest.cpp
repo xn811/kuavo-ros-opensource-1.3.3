@@ -305,7 +305,8 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("libFolder: " << libFolder);
   ROS_INFO_STREAM("urdfFile: " << urdfFile);
 
-  MobileManipulatorControllerBase controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, 100, false, true, true);
+  ControlType control_type = ControlType::None;
+  MobileManipulatorControllerBase controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, 100, control_type, true, true);
 
   // 等待控制器初始化
   ros::Duration(2.0).sleep();

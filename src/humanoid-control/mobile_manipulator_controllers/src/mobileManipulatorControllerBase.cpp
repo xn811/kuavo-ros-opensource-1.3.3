@@ -17,13 +17,25 @@
 
 namespace mobile_manipulator_controller
 {
+  std::string controlTypeToString(ControlType controlType)
+  {
+    switch (controlType)
+    {
+      case ControlType::None: return "None";
+      case ControlType::ArmOnly: return "ArmOnly";
+      case ControlType::BaseOnly: return "BaseOnly";
+      case ControlType::BaseArm: return "BaseArm";
+      default: return "Unknown";
+    }
+  }
+
   MobileManipulatorControllerBase::MobileManipulatorControllerBase(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, 
     const std::string& urdfFile, MpcType mpcType, int freq, 
-    bool dummySimBase, bool dummySimArm, bool visualizeMm)
+    ControlType control_type, bool dummySimArm, bool visualizeMm)
   : controllerNh_(nh)
   , mpcType_(mpcType)
   , freq_(freq)
-  , dummySim_(dummySimBase)
+  , controlType_(control_type)
   , dummySimArm_(dummySimArm)
   , visualizeMm_(visualizeMm)
   {
@@ -213,8 +225,20 @@ namespace mobile_manipulator_controller
     obs.time = mmObservationDummy_.time;
     obs.state = externalState;
     obs.input.setZero();//TODO: 验证给mpc的input是否需要清零
-    if(dummySim_)
-      obs.state.head(baseDim) = mmObservationDummy_.state.head(baseDim);
+    switch(controlType_){
+      case ControlType::None:
+      case ControlType::ArmOnly:
+        break;
+      case ControlType::BaseOnly:
+      case ControlType::BaseArm:
+        // 被控维度使用dummy state
+        obs.state(2) = mmObservationDummy_.state(2); // z
+        obs.state(4) = mmObservationDummy_.state(4); // pitch
+        break;
+      default:
+        ROS_ERROR("[MobileManipulatorControllerBase] Invalid control type");
+        break;
+    }
     if(dummySimArm_)
       obs.state.tail(info_.armDim) = mmObservationDummy_.state.tail(info_.armDim);
 
