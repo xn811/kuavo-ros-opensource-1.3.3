@@ -32,7 +32,7 @@ class RobotDataServer:
         self.rate = rate
         self.downsample_interval = 1 / self.rate  # 50ms = 20Hz
         self.only_push_half_body_data = True
-        self.control_mode = "FLLOW"
+        self.control_mode = "mobile_mpc"
         self.id = 0
         
         # 初始化配置管理器

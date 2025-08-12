@@ -276,11 +276,17 @@ class KuavoPicoServer:
             if vr_command.HasField('control_mode'):
                 control_mode = vr_command.control_mode.control_mode
                 if control_mode == "mobile_mpc":
+                    self.pico_node.pico_info_transformer.is_mobile_mpc = True
                     self.pico_node._set_control_mode(ControlMode.MOBILE_MPC_MODE.value)
                 elif control_mode == "follow":
+                    self.pico_node.pico_info_transformer.is_mobile_mpc = False
+                    self.pico_node.pico_info_transformer.control_torso_mode = False
                     self.pico_node._set_control_mode(ControlMode.FOLLOW_MODE.value)
                 elif control_mode == "incremental":
+                    self.pico_node.pico_info_transformer.is_mobile_mpc = False
+                    self.pico_node.pico_info_transformer.control_torso_mode = False
                     self.pico_node._set_control_mode(ControlMode.INCREMENTAL_MODE.value)
+                self.robot_data_server.control_mode = control_mode
         except Exception as e:
             SDKLogger.error(f"Error processing VR command from protobuf: {e}")
 

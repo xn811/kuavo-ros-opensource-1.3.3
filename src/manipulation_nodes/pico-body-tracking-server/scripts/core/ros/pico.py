@@ -577,7 +577,8 @@ class KuavoPicoNode:
         eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = right_elbow_pos
         eef_pose_msg.ik_param = self.ik_solve_param
         eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
-        
+        eef_pose_msg.frame = 3
+
         # Check for VR errors
         if self.pico_info_transformer.check_if_vr_error():
             SDKLogger.error("Detected VR ERROR!!! Please check the Pico device connection and status!")
@@ -701,9 +702,6 @@ class KuavoPicoNode:
                 # 刚开始切换到增量控制模式
                 self.control_mode = ControlMode.INCREMENTAL_MODE
                 
-                # 重置MPC状态
-                print("\033[94m重置 Mobile Manipulator MPC...\033[0m")
-                self.reset_mm_mpc()
                 
                 self.change_mobile_ctrl_mode(IncrementalMpcCtrlMode.ArmOnly.value)
                 # 设置当前VR的末端位姿为锚点

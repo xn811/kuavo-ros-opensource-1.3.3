@@ -216,6 +216,7 @@ class KuavoPicoInfoTransformer():
         # Store external dependencies
         self.tf_broadcaster = tf_broadcaster
         self.bone_frame_publisher = bone_frame_publisher
+        self.is_mobile_mpc = True
         
         # Initialize bone names and indices
         self._init_bone_names()
@@ -357,6 +358,8 @@ class KuavoPicoInfoTransformer():
         self.control_torso_mode = mode and self.control_mode not in ("WholeBody", "LowerBody")
         self.reset_pelvis_offset()
         SDKLogger.info(f"===============set_control_torso_mode:{self.control_torso_mode}===============")
+        if self.control_torso_mode:
+            self.is_mobile_mpc = True
 
     def stop_arm_length_measurement(self) -> None:
         """Stop arm length measurement and switch to using average values."""
@@ -977,8 +980,8 @@ class KuavoPicoInfoTransformer():
             print("Invalid pos, cannot construct marker")
             return None
         marker = Marker()
-        # marker.header.frame_id = "base_link" if not self.control_torso_mode else "odom"
-        marker.header.frame_id = "odom"
+        marker.header.frame_id = "base_link" if not self.is_mobile_mpc else "odom"
+        # marker.header.frame_id = "odom"
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
         marker.scale.x = scale
@@ -1242,6 +1245,34 @@ class KuavoPicoInfoTransformer():
         except Exception as e:
             SDKLogger.error(f"Error getting local pose: {e}")
             return None
+        
+    def get_base_pose(self, joint_matrix, pelvis_matrix):
+        """
+        Get joint pose relative to robot base_link
+        Args:
+            joint_matrix: 4x4 transformation matrix of the joint
+            spine3_matrix: 4x4 transformation matrix of SPINE3
+        Returns:
+            pose: picoPoseInfo message with pose relative to base_link
+        """
+        try:
+            # Calculate transform from joint to base_link
+            T_joint_to_base = np.linalg.inv(pelvis_matrix) @ joint_matrix
+            
+            
+            # Extract position and orientation
+            pos = T_joint_to_base[:3, 3]
+            quat = quaternion_from_matrix(T_joint_to_base)
+            
+            # Create picoPoseInfo message
+            pose = picoPoseInfo()
+            pose.position = Point(*pos)
+            pose.orientation = Quaternion(*quat)
+            
+            return pose
+        except Exception as e:
+            SDKLogger.error(f"Error getting local pose: {e}")
+            return None
     
     def get_world_pose(self, joint_matrix, pelvis_matrix):
         try:
@@ -1318,7 +1349,10 @@ class KuavoPicoInfoTransformer():
                     joint_pose = self.get_world_pose(matrix, pelvis_matrix)
                     # joint_pose = self.get_local_pose(matrix, pelvis_matrix)
                 else:
-                    joint_pose = self.get_local_pose(matrix, pelvis_matrix)
+                    if self.is_mobile_mpc:
+                        joint_pose = self.get_local_pose(matrix, pelvis_matrix)
+                    else:
+                        joint_pose = self.get_base_pose(matrix, pelvis_matrix)
                 
                 if joint_pose is not None:
                     pose_info_list.poses.append(joint_pose)
