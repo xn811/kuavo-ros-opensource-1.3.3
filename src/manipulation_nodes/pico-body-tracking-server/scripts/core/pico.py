@@ -208,6 +208,10 @@ class KuavoPicoServer:
         
     def process_body_tracking_data(self, data_str):
         """Process data."""
+        # 控制遥操解锁/锁定
+        if not self.pico_node.toggle_teleop_unlock:
+            return
+
         robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix_from_proto(data_str)
         self.robot_matrix_publisher.publish_matrices(robot_urdf_matrices, current_time)
 

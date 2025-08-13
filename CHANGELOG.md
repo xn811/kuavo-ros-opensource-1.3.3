@@ -5,6 +5,7 @@
 ## 文档相关
 
 ## 新增功能
+- PICO VR 新增手柄按键控制遥操功能，按键功能见[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md)
 - Quest3 VR 遥操作支持手柄上板机控制灵巧手全部手指开合
 - PICO VR 全身遥操增加控制模式切换功能，提供全身、手、腿以及躯干控制四种模式
 - PICO VR 新增支持增量控制模式，支持平滑插值切换不同控制模式

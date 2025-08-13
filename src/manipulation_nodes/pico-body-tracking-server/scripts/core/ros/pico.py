@@ -17,18 +17,21 @@ import rospkg
 import tf
 import numpy as np
 import enum
+import time
+import math
 from typing import List, Optional, Any
 from tf2_msgs.msg import TFMessage
 from std_msgs.msg import Float64MultiArray,Float64
 from kuavo_msgs.msg import (
     twoArmHandPoseCmd, robotBodyMatrices, picoPoseInfoList,
     robotHeadMotionData, ikSolveParam, footPoseTargetTrajectories,
-    JoySticks, sensorsData
+    JoySticks, sensorsData, switchGaitByName,
+    lejuClawCommand,robotHandPosition,dexhandCommand
 )
 from kuavo_msgs.srv import changeArmCtrlMode, changeTorsoCtrlMode, changeTorsoCtrlModeRequest, changeArmCtrlMode, changeArmCtrlModeRequest
 from kuavo_msgs.srv import fkSrv
-from kuavo_msgs.msg import JoySticks 
-from std_msgs.msg import Float32MultiArray, Int32
+from std_msgs.msg import Float32MultiArray, Int32, Bool
+from geometry_msgs.msg import Twist
 from .pico_utils import KuavoPicoInfoTransformer
 from common.logger import SDKLogger
 from .joysticks_handler import JoySticksHandler
@@ -36,12 +39,86 @@ from typing import Set
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
 from ..config.pico_vr_config import PicoVrConfig, HandWrenchConfig
+from ..utils.toggle_switch import ToggleSwitch, ToggleEvent
 
 class ControlMode(enum.Enum):
         NONE_MODE = 0
         MOBILE_MPC_MODE = 1    # 运动学MPC模式
         FOLLOW_MODE = 2         # 手臂跟随模式
         INCREMENTAL_MODE = 3    # 增量控制模式
+
+# 速度控制常量定义
+class CmdVelConstants:
+    """命令速度控制常量"""
+    # 线性速度限制 (m/s)
+    MAX_FORWARD_SPEED = 0.4      # 最大前进速度
+    MAX_BACKWARD_SPEED = 0.2     # 最大后退速度
+    
+    # 角速度限制 (度/秒)
+    MAX_ANGULAR_SPEED_DEG = 10.0  # 最大角速度
+    MAX_ANGULAR_SPEED_RAD = MAX_ANGULAR_SPEED_DEG * 3.14159 / 180.0  # 转换为弧度/秒
+    
+    # 死区阈值
+    LINEAR_DEADZONE = 0.05       # 线性速度死区
+    ANGULAR_DEADZONE = 0.05      # 角速度死区
+
+# 身体倾斜控制常量定义
+class BodyTiltConstants:
+    """身体倾斜控制常量"""
+    # 倾斜角度限制 (弧度)
+    MAX_FORWARD_TILT = 0.2       # 最大前倾角度
+    MAX_BACKWARD_TILT = 0.2      # 最大后仰角度
+    
+    # 死区阈值
+    TILT_DEADZONE = 0.05         # 倾斜死区
+
+def clamp(value: float, min_val: float, max_val: float) -> float:
+    """限制值在指定范围内"""
+    return max(min_val, min(value, max_val))
+
+def apply_deadzone(value: float, deadzone: float) -> float:
+    """应用死区，如果值在死区内则返回0"""
+    if abs(value) < deadzone:
+        return 0.0
+    return value
+
+
+def limit_linear_velocity(joy_x: float) -> float:
+    """限制线性速度"""
+    # 应用死区
+    joy_x = apply_deadzone(joy_x, CmdVelConstants.LINEAR_DEADZONE)
+    
+    # 根据方向应用不同的速度限制
+    if joy_x > 0:
+        # 前进
+        return clamp(joy_x * CmdVelConstants.MAX_FORWARD_SPEED, 0, CmdVelConstants.MAX_FORWARD_SPEED)
+    else:
+        # 后退
+        return clamp(joy_x * CmdVelConstants.MAX_BACKWARD_SPEED, -CmdVelConstants.MAX_BACKWARD_SPEED, 0)
+
+def limit_angular_velocity(joy_y: float) -> float:
+    """限制角速度"""
+    # 应用死区
+    joy_y = apply_deadzone(joy_y, CmdVelConstants.ANGULAR_DEADZONE)
+    
+    # 限制角速度范围
+    return clamp(joy_y * CmdVelConstants.MAX_ANGULAR_SPEED_RAD, 
+                -CmdVelConstants.MAX_ANGULAR_SPEED_RAD, 
+                CmdVelConstants.MAX_ANGULAR_SPEED_RAD)
+
+def banner_echo(msg: str, color:str='green'):
+    if color == 'green':
+        color = "\033[32m"
+    elif color == 'red':
+        color = "\033[31m"
+    elif color == 'yellow':
+        color = "\033[33m"
+    else:
+        color = "\033[0m"
+    SDKLogger.info(f"{color}==============================================\033[0m")
+    SDKLogger.info(f"{color}{msg}\033[0m")
+    SDKLogger.info(f"{color}==============================================\033[0m")
+
 
 class IncrementalMpcCtrlMode(enum.Enum):
     """表示Kuavo机器人 Manipulation MPC 控制模式的枚举类"""
@@ -95,6 +172,8 @@ class KuavoPicoBoneFramePublisher:
         
         # Create TF broadcaster
         self.tf_broadcaster = tf.TransformBroadcaster()
+        # Create TF listener
+        self.tf_listener = tf.TransformListener()
 
     def _init_publishers(self) -> None:
         """Initialize ROS publishers."""
@@ -195,6 +274,8 @@ class KuavoPicoNode:
             self._play_mode = play_mode
             # Initialize parameters
             self._init_parameters()
+            # Initialize toggle switch
+            self._init_toggle_switch()
             # Initialize model and transformers
             self._init_model_and_transformers()
             # Initialize publishers
@@ -202,8 +283,10 @@ class KuavoPicoNode:
             # Initialize subscribers
             self._init_subscribers()
             # Initialize joy handler
-            self._init_joy_handler()
+            self._init_joy_controller()
+
             self.robot_matrix_publisher = RobotMatrixPublisher()
+
             self._initialized = True
             self.arm_joint_angles = None
 
@@ -257,9 +340,115 @@ class KuavoPicoNode:
         self.button_y_last = False
         self.config_manager = PicoVrConfig()
 
+        # 末端执行器类型
+        self.eef_type = rospy.get_param('/end_effector_type', 'qiangnao')
+        self.last_eef_command = None # 记录上一次的末端执行器命令
+
+    def _init_toggle_switch(self) -> None:
         # hand wrench
+        def on_hand_wrench_changed(event: ToggleEvent):
+            SDKLogger.info(f"末端力施加状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                banner_echo(f"施加末端力", 'green')
+                SDKLogger.info(f"末端力: {self.hand_wrench_config}")
+                if self.hand_wrench_config:
+                    mass_force =  {
+                        'item_mass': self.hand_wrench_config.itemMass, # 物品重量 单位 kg
+                        'lforce': [self.hand_wrench_config.lforceX, self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
+                        'rforce': [self.hand_wrench_config.lforceX, -self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
+                    }
+                    self.publish_hand_wrench_cmd(mass_force)
+                else:
+                    SDKLogger.error("------------- item_mass_force is None --------------")
+            else:
+                banner_echo(f"释放末端力", 'yellow')
+                mass_force =  {
+                    'item_mass': 0.0, # 物品重量 单位 kg
+                    'lforce': [0.0, 0.0, 0.0],
+                    'rforce': [0.0, 0.0, 0.0],
+                }
+                self.publish_hand_wrench_cmd(mass_force)
         self.hand_wrench_config = self.config_manager.get_default_hand_wrench_config()
-        self.option_hand_wrench = False  # 施加/松开
+        self.toggle_hand_wrench = ToggleSwitch("hand_wrench") # 末端力施加开关
+        self.toggle_hand_wrench.add_callback(on_hand_wrench_changed)
+        #//////////////////////////////////
+        # freeze finger
+        def on_freeze_finger_changed(event: ToggleEvent):
+            SDKLogger.info(f"手指锁定状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                banner_echo(f"手指锁定", 'green')
+            else:
+                banner_echo(f"手指解锁", 'yellow')
+        self.toggle_freeze_finger = ToggleSwitch("freeze_finger")
+        self.toggle_freeze_finger.add_callback(on_freeze_finger_changed)
+        #//////////////////////////////////
+        # teleop unlock
+        def on_teleop_unlock_changed(event: ToggleEvent):
+            SDKLogger.info(f"遥操作锁定状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                if self.pico_info_transformer.control_mode == "UpperBody":
+                    self.toggle_auto_swing_arm.turn_off() # 手臂关闭自动摆手模式
+                else:
+                    self.last_pico_running_state = False
+                banner_echo(f"遥操作已解锁", 'green')
+            else:
+                banner_echo(f"遥操作已锁定", 'yellow')
+        self.toggle_teleop_unlock = ToggleSwitch("teleop_unlock")
+        self.toggle_teleop_unlock.add_callback(on_teleop_unlock_changed)
+
+        # record_bag
+        def on_record_rosbag_changed(event: ToggleEvent):
+            SDKLogger.info(f"录制rosbag状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                banner_echo(f"开始录制rosbag", 'green')
+                # TODO: 实现开始录制rosbag的逻辑
+            else:
+                banner_echo(f"停止录制rosbag", 'yellow')
+                # TODO: 实现停止录制rosbag的逻辑
+        self.toggle_record_bag = ToggleSwitch("record rosbag")
+        self.toggle_record_bag.add_callback(on_record_rosbag_changed)
+        #//////////////////////////////////
+        # switch view
+        def on_switch_view_changed(event: ToggleEvent):
+            SDKLogger.info(f"切换视角状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                banner_echo(f"切换到第一视角", 'green')
+                # TODO: 切换到第一视角
+            else:
+                banner_echo(f"切换到第三视角", 'yellow')
+                # TODO: 切换到第三视角
+        self.toggle_switch_view = ToggleSwitch("switch view")
+        self.toggle_switch_view.add_callback(on_switch_view_changed)
+        #//////////////////////////////////
+        # change arm mode
+        def on_change_arm_mode_changed(event: ToggleEvent):
+            SDKLogger.info(f"切换手臂模式状态变化: {event.old_state} -> {event.new_state}")
+            if event.new_state:
+                if self.control_mode == ControlMode.FOLLOW_MODE:
+                    self.change_arm_ctrl_mode(1)
+                elif self.control_mode == ControlMode.INCREMENTAL_MODE or self.control_mode == ControlMode.MOBILE_MPC_MODE:
+                    self.change_mobile_ctrl_mode(0)
+                    self.change_mm_wbc_arm_ctrl_mode(0)
+                    self.change_arm_ctrl_mode(1)
+                banner_echo(f"切换到自动摆臂模式", 'green')
+            else:
+                self.last_pico_running_state = False
+                banner_echo(f"切换到外部控制模式", 'yellow')
+        self.toggle_auto_swing_arm = ToggleSwitch("switch arm mode") # 切换手臂模式
+        self.toggle_auto_swing_arm.add_callback(on_change_arm_mode_changed)
+        #//////////////////////////////////
+        # increase arm mode
+        def on_increase_arm_mode_changed(event: ToggleEvent):
+            SDKLogger.info(f"增量手臂模式状态变化: {event.old_state} -> {event.new_state}")
+            if self.is_in_incremental_mode:
+                banner_echo(f"关闭增量控制模式", 'yellow')
+                self.set_in_incremental_mode(False)
+            else:
+                banner_echo(f"开启增量手臂模式", 'green')
+                self.set_in_incremental_mode(True)
+        self.toggle_increase_arm_mode = ToggleSwitch("switch increase arm mode")        
+        self.toggle_increase_arm_mode.add_callback(on_increase_arm_mode_changed)
+
 
     def _init_model_and_transformers(self) -> None:
         """Initialize model and transformers."""
@@ -289,6 +478,19 @@ class KuavoPicoNode:
             Float64MultiArray, 
             queue_size=1)
         
+        if self.eef_type == "lejuclaw": # 乐聚夹爪
+            self.pub_leju_claw_cmd = rospy.Publisher(
+                '/leju_claw_command', 
+                lejuClawCommand, 
+                queue_size=10)
+        elif self.eef_type.startswith('qiangnao'): # 灵巧手
+            self.pub_control_robot_hand_position = rospy.Publisher(
+                '/control_robot_hand_position', robotHandPosition, queue_size=10
+            )
+        self.pub_cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.pub_cmd_pose = rospy.Publisher('/cmd_pose', Twist, queue_size=10)
+        self.pub_switch_gait = rospy.Publisher('/humanoid_switch_gait_by_name', switchGaitByName, queue_size=10)
+        self.pub_stop_robot = rospy.Publisher('/stop_robot', Bool, queue_size=10)
 
     def _init_subscribers(self) -> None:
         """Initialize ROS subscribers."""
@@ -308,88 +510,241 @@ class KuavoPicoNode:
                 robotBodyMatrices,
                 self.robot_body_matrices_callback
             )
-        
-        rospy.Subscriber(
-            "/pico/joy", 
-            JoySticks, 
-            self.pico_joy_callback
-        )   
         rospy.Subscriber("/sensors_data_raw", sensorsData, self.sensors_data_raw_callback)
         rospy.Subscriber("/ik/error_norm", Float32MultiArray, self.ik_error_norm_callback)
         rospy.Subscriber("/pico/control_mode", Int32, self.set_control_mode_callback)
         rospy.Subscriber("/pico/incremental_mode", Int32, self.set_incremental_mode_callback)
     
-    """Joy Callbacks"""
+    """//////////////////////////////////// Joy Callbacks //////////////////////////////////////////"""
+    def _init_joy_controller(self) -> None:
+        """Initialize joy controller"""
+        self.joy_button_handler = JoySticksHandler()
+        rospy.Subscriber("/pico/joy", JoySticks, self.sub_joy_callback)
+        # 按键回调配置字典
+        self.joy_callbacks = {
+            "teleop_unlock": ({"LT_PRESSED", "LG_PRESSED"}, self._teleop_unlock_callback),  # 基础模式/全身遥操模式 - 解锁
+            "teleop_lock": ({"RT_PRESSED", "RG_PRESSED"}, self._teleop_lock_callback),      # 基础模式/全身遥操模式 - 上锁
+            "hand_wrench": ({"LT_PRESSED", "A_PRESSED"}, self._hand_wrench_callback),       # 基础模式/全身遥操模式 - 末端力施加开关
+            "freeze_finger": ({"Y_PRESSED"}, self._freeze_finger_callback),                 # 基础模式/全身遥操模式 - 锁定/解锁手指
+            # "record_rosbag": ({"X_PRESSED"}, self._record_rosbag_callback),                 # 基础模式/全身遥操模式 - 录制rosbag
+            "reset_to_stance": ({"A_PRESSED"}, self._reset_to_stance_callback),             # 基础模式/全身遥操模式 - 切换到站立模式
+            "stop_robot": ({"LT_PRESSED","RT_PRESSED", "A_LONG_PRESSED"}, self._stop_robot_callback),# 基础模式/全身遥操模式 - 停止机器人
+            # "switch_view": ({"Y_LONG_PRESSED"}, self._switch_view_callback),                # 基础模式/全身遥操模式 - 切换视角
+            "enter_walk": ({"B_PRESSED"}, self._enter_walk_callback),                       # 基础模式 - 切换到行走模式
+            "auto_swing_arm": ({"LT_PRESSED","Y_PRESSED"}, self._auto_swing_arm_callback),  # 基础模式 - 切换手臂模式
+            "switch_increase_arm": ({"LT_PRESSED", "X_PRESSED"}, self._switch_increase_arm_mode_callback)        # 基础模式/全身遥操模式 - 增量模式开启/关闭
+        }
+        for name, (key_combination, callback) in self.joy_callbacks.items():
+            self.joy_button_handler.add_callback(name, key_combination, callback)
+        # //////////////////////////// Debug CallBacks ////////////////////////////
+        # Debug: 用于调试的回调函数
+        dev_debug = False
+        if dev_debug:
+            def _debug_torso_change_callback(event: ToggleEvent):
+                SDKLogger.info(f"切换躯干模式状态变化: {event.old_state} -> {event.new_state}")
+                if event.new_state:
+                    self.last_pico_running_state = False
+                    self.pico_info_transformer.set_control_torso_mode(True)
+                    banner_echo(f"切换到躯干模式", 'green')
+                else:
+                    self.last_pico_running_state = False
+                    self.pico_info_transformer.set_control_torso_mode(False)
+                    banner_echo(f"切换到非躯干模式", 'yellow')
+            self.toggle_torso_change_debug = ToggleSwitch("torso change debug")
+            self.toggle_torso_change_debug.add_callback(_debug_torso_change_callback)
+            self.joy_debug_callbacks = {
+                "torso_on": (set(['RT_PRESSED', 'Y_PRESSED']), self._torso_change_callback),
+                "WholeBody_Mode": (set(['RT_PRESSED', 'X_LONG_PRESSED']), self._whole_body_callback),
+                "UpperBody_Mode": (set(['RT_PRESSED', 'B_LONG_PRESSED']), self._upper_body_callback),
+                "LowerBody_Mode": (set(['RT_PRESSED', 'A_LONG_PRESSED']), self._lower_body_callback)
+            }
+            for name, (key_combination, callback) in self.joy_debug_callbacks.items():
+                self.joy_button_handler.add_callback(name, key_combination, callback)
+        # //////////////////////////// Debug CallBacks ////////////////////////////
+    def sub_joy_callback(self, joy: JoySticks) -> None:
+        """订阅手柄回调"""
+
+        # 更新按键状态，内部处理组合按键回调，另外返回当前按键组合和是否触发了回调函数
+        key_combination, callback_triggered = self.joy_button_handler.update(joy)
+        
+        # 没有包含RG/LG的按键且没有触发回调时发布末端执行器控制, 否则保持上一次的末端执行器命令
+        has_rg_lg_keys = any('RG' in key or 'LG' in key for key in key_combination)
+        eef_freeze = (callback_triggered and has_rg_lg_keys) or self.toggle_freeze_finger
+        self.publish_end_effector_control(joy, eef_freeze)
+        
+        # 全身遥操不处理左右摇杆控制
+        if self.pico_info_transformer.control_mode == "UpperBody":
+            self.handle_joystick_movement(joy)
+
     def _hand_wrench_callback(self, key_combination: Set[str], joy:JoySticks)->None:
         """Callback for hand wrench."""
-        if not self.option_hand_wrench:
-            SDKLogger.info(f"施加手部力:{self.hand_wrench_config}")
-            if self.hand_wrench_config:
-                mass_force =  {
-                    'item_mass': self.hand_wrench_config.itemMass, # 物品重量 单位 kg
-                    'lforce': [self.hand_wrench_config.lforceX, self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
-                    'rforce': [self.hand_wrench_config.lforceX, -self.hand_wrench_config.lforceY, self.hand_wrench_config.lforceZ],
-                }
-                self.publish_hand_wrench_cmd(mass_force)
-                self.option_hand_wrench = True
-            else:
-                SDKLogger.error("------------- item_mass_force is None --------------")
+        # 下半身模式不响应
+        if self.pico_info_transformer.control_mode == "LowerBody":
+            SDKLogger.warning("\033[93m下半身遥操模式下无法切换手部力开关\033[0m")
+            return
+        if self.toggle_teleop_unlock:
+            self.toggle_hand_wrench.toggle() # 切换手部力开关
         else:
-            SDKLogger.info(f"松开手部力")
-            mass_force =  {
-                'item_mass': 0.0, # 物品重量 单位 kg
-                'lforce': [0.0, 0.0, 0.0],
-                'rforce': [0.0, 0.0, 0.0],
-            }
-            self.publish_hand_wrench_cmd(mass_force)
-            self.option_hand_wrench = False
+            SDKLogger.info("\033[93m遥操未解锁，无法切换手部力开关\033[0m")
 
-    def _init_joy_handler(self) -> None:
-        """Initialize joy handler."""
-        self.joy_handler = JoySticksHandler()
-        # 手柄 XYAB 组合键映射
-        JOY_BTN_MAPPING = {
-            "hand_wrench": { # 临时的,如果冲突需要重新定义
-                # X 长按 + Y 长按 + A 按下 + B 空闲
-                'key_combination': set(['X_LONG_PRESSED', 'Y_LONG_PRESSED', 'A_PRESSED', 'B_IDLE']),
-                'callback': self._hand_wrench_callback
-            },
-            "torso_on": {
-                'key_combination': set(['X_IDLE', 'Y_PRESSED', 'A_IDLE', 'B_IDLE']),
-                'callback': self._torso_on_callback
-            },
-            "torso_off": {
-                'key_combination': set(['X_IDLE', 'Y_LONG_PRESSED', 'A_IDLE', 'B_IDLE']),
-                'callback': self._torso_off_callback
-            },
-            "WholeBody_Mode": {
-                'key_combination': set(['X_LONG_PRESSED', 'Y_IDLE', 'A_IDLE', 'B_IDLE']),
-                'callback': self._whole_body_callback
-            },
-            "UpperBody_Mode": {
-                'key_combination': set(['X_IDLE', 'Y_IDLE', 'A_IDLE', 'B_LONG_PRESSED']),
-                'callback': self._upper_body_callback
-            },
-            "LowerBody_Mode": {
-                'key_combination': set(['X_IDLE', 'Y_IDLE', 'A_LONG_PRESSED', 'B_IDLE']),
-                'callback': self._lower_body_callback
-            },
-        }
-        for key, value in JOY_BTN_MAPPING.items():
-            self.joy_handler.add_callback(key, 
-                                          value['key_combination'], 
-                                          value['callback'])
+    def _freeze_finger_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for freeze finger."""
+        self.toggle_freeze_finger.toggle() # 锁定/解锁手指
 
-    def sub_callback(self, joy: JoySticks) -> None:
-        self.joy_button_handler.update(joy)
+    def _teleop_unlock_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for teleoperation unlock."""
+        self.toggle_teleop_unlock.turn_on() # 解锁遥操作
 
-    def _torso_on_callback(self, keys: Set[str], joy: JoySticks) -> None:
-        self.last_pico_running_state = False
-        self.pico_info_transformer.set_control_torso_mode(True)
-    
-    def _torso_off_callback(self, keys: Set[str], joy: JoySticks) -> None:
-        self.last_pico_running_state = False
-        self.pico_info_transformer.set_control_torso_mode(False)
+    def _teleop_lock_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for teleoperation lock."""
+        self.toggle_teleop_unlock.turn_off() # 锁定遥操作
+
+    def _record_rosbag_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for record rosbag."""
+        self.toggle_record_bag.toggle() # 开始/停止录制
+
+    def _switch_view_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for switch view."""
+        self.toggle_switch_view.toggle() # 切换视角
+
+    def _switch_increase_arm_mode_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for switch increament arm mode."""
+        if self.pico_info_transformer.control_mode == "LowerBody":
+            SDKLogger.warning("\033[93m下半身遥操模式下无法切换增量手臂控制模式\033[0m")
+            return
+
+        if self.control_mode != ControlMode.INCREMENTAL_MODE:
+            SDKLogger.warning("\033[93m当前模式不是增量控制模式，无法切换增量手臂控制模式\033[0m")
+            return
+        self.toggle_increase_arm_mode.toggle() # 增量手臂控制模式开启/关闭
+
+    def _enter_walk_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for walk mode."""
+        # 只在半身遥操模式下响应
+        if not self.pico_info_transformer.control_mode == "UpperBody":
+            SDKLogger.warning("\033[93m下半身遥操模式下无法切换到行走模式\033[0m")
+            return
+            
+        try:
+            banner_echo(f"切换到行走模式", 'green')
+            # Create switch gait message
+            gait_msg = switchGaitByName()
+            gait_msg.gait_name = "walk"  # Assuming the message has a gait_name field
+            
+            # Publish the gait switch command once
+            if not rospy.is_shutdown():
+                self.pub_switch_gait.publish(gait_msg)
+                SDKLogger.info("\033[92m行走模式切换命令已发布\033[0m")
+        except Exception as e:
+            SDKLogger.error(f"Error switching to walk mode: {e}")
+
+    def _reset_to_stance_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for stance mode."""
+        try:
+            banner_echo(f"切换到站立模式", 'green')
+            if not self.pico_info_transformer.control_mode == "UpperBody":
+                # Create switch gait message
+                gait_msg = switchGaitByName()
+                gait_msg.gait_name = "walk"  # Assuming the message has a gait_name field
+                
+                # Publish the gait switch command once
+                if not rospy.is_shutdown():
+                    self.pub_switch_gait.publish(gait_msg)
+                # 全身遥操/下半身遥操模式下 先踏步恢复步态然后再站立
+                SDKLogger.info("下半身/全身遥操模式自动踏步调整站立")
+                time.sleep(1.5)
+            # Create switch gait message
+            gait_msg = switchGaitByName()
+            gait_msg.gait_name = "stance"  # Assuming the message has a gait_name field
+            
+            # Publish the gait switch command once
+            if not rospy.is_shutdown():
+                self.pub_switch_gait.publish(gait_msg)
+                SDKLogger.info("\033[92m站立模式切换命令已发布\033[0m")
+        except Exception as e:
+            SDKLogger.error(f"Error switching to stance mode: {e}")
+
+    def _auto_swing_arm_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for arm reset."""
+        # 下半身遥操模式下不响应
+        if self.pico_info_transformer.control_mode == "LowerBody":
+            SDKLogger.warning("\033[93m下半身遥操模式下无法切换手臂模式\033[0m")
+            return
+            
+        if not self.toggle_teleop_unlock:
+            SDKLogger.warning("\033[93m遥操未解锁，无法切换手臂模式\033[0m")
+            return
+        self.toggle_auto_swing_arm.toggle()
+
+    def _stop_robot_callback(self, key_combination: Set[str], joy:JoySticks)->None:
+        """Callback for stop robot."""
+        #Squat down then publish stop robot command 3 times to ensure subscribers receive it.
+        try:
+            # Set squat height as a variable with default value
+            squat_height = 0.05  # Default squat height in meters
+
+            SDKLogger.info(f"\033[92m开始下蹲 {squat_height}m, 解锁机器人...\033[0m")
+            squat_msg = Twist()
+            squat_msg.linear.z = -squat_height  # Move down by squat_height
+            
+            # Publish squat command multiple times to ensure it's received
+            for i in range(3):
+                if not rospy.is_shutdown():
+                    self.pub_cmd_pose.publish(squat_msg)
+                    rospy.sleep(0.1)
+                    SDKLogger.info(f"下蹲命令已发布 ({i+1}/3)")
+            
+            # Wait for squat motion to complete
+            SDKLogger.info("等待下蹲完成...")
+            rospy.sleep(1.0)  # Wait 1 second for squat motion
+            
+            # Then publish stop robot command
+            stop_msg = Bool()
+            stop_msg.data = True
+            
+            # Publish with small delay to ensure subscribers receive it
+            for i in range(3):
+                if not rospy.is_shutdown():
+                    self.pub_stop_robot.publish(stop_msg)
+                    rospy.sleep(0.1)  # 100ms delay between publications
+                    SDKLogger.info(f"停止机器人命令已发布 ({i+1}/3)")
+            SDKLogger.info("\033[92m机器人停止序列完成\033[0m")
+        except Exception as e:
+            SDKLogger.error(f"Error in robot stop sequence: {e}")
+
+    def _pub_head_pose(self) -> None:
+        def normalize_degree_in_180(angle: float) -> float:
+            """Normalize an angle to the range [-180, 180] degrees."""
+            normalized = angle % 360
+            if normalized > 180:
+                normalized -= 360
+            elif normalized < -180:
+                normalized += 360
+            return normalized
+        
+        try:
+            # Get transform from Pelvis to HEAD
+            listener = self.bone_frame_publisher.get_listener()
+            trans, rot = listener.lookupTransform("Pelvis", "HEAD", rospy.Time(0))
+            
+            # Convert quaternion to euler angles
+            rpy = tf.transformations.euler_from_quaternion(rot)
+            rpy_deg = [math.degrees(r) for r in rpy]
+            
+            # Extract and clamp pitch (X-axis) and yaw (Y-axis)
+            pitch = max(-25, min(25, normalize_degree_in_180(round(rpy_deg[1], 2))))
+            yaw = max(-80, min(80, normalize_degree_in_180(round(rpy_deg[2], 2))))
+            
+            # Publish head motion data
+            msg = robotHeadMotionData()
+            msg.joint_data = [yaw, pitch]
+            self.bone_frame_publisher.head_motion_data_pub.publish(msg)
+            
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+            rospy.logerr(f"TF lookup failed for Pelvis->HEAD transform: {e}")
+
+    def _torso_change_callback(self, keys: Set[str], joy: JoySticks) -> None:
+        self.toggle_torso_change_debug.toggle()
 
     def _whole_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
@@ -402,6 +757,7 @@ class KuavoPicoNode:
     def _lower_body_callback(self, keys: Set[str], joy: JoySticks) -> None:
         self.last_pico_running_state = False
         self.pico_info_transformer.set_control_mode("LowerBody")
+    """////////////////////////////////////////////////////////////////////////////////////////////////////"""
 
     def set_robot_model_params(self) -> str:
         """Set robot model parameters."""
@@ -474,7 +830,6 @@ class KuavoPicoNode:
         except Exception as e:
             SDKLogger.error(f"服务 /enable_mm_wbc_arm_trajectory_control 调用失败: {e}")
 
-
     def reset_mm_mpc(self):
         try:
             rospy.wait_for_service('/reset_mm_mpc', timeout=3.0)
@@ -495,7 +850,10 @@ class KuavoPicoNode:
 
     def robot_body_matrices_callback(self, robot_body_matrices_msg: robotBodyMatrices) -> None:
         """Callback for robot body matrices."""
-
+        # 控制遥操解锁/锁定
+        if not self.toggle_teleop_unlock:
+            return
+        
         # process data of hands
         robot_urdf_matrices, current_time = self.robot_matrix_publisher.get_all_matrices_from_message(robot_body_matrices_msg)
         self.pico_info_transformer.publish_local_poses(robot_urdf_matrices, current_time)
@@ -510,11 +868,77 @@ class KuavoPicoNode:
         right_force = item_mass_force['rforce'] + [0,0,0]
         msg.data = left_force + right_force
         self.pub_hand_wrench_cmd.publish(msg)
-    
-    def pico_joy_callback(self, pico_joy_msg: JoySticks) -> None:
-        """Callback for Pico joy."""        
-        # 处理手柄按键逻辑，组合按键会在内部回调
-        self.joy_handler.update(pico_joy_msg)
+
+    def publish_end_effector_control(self, joy: JoySticks, eef_freeze: bool = False) -> None:
+        """Publish end effector control based on grip values.
+        
+        Args:
+            joy: JoySticks message containing left_grip and right_grip values (0~1)
+        """
+        # 将 grip 值从 0~1 映射到 0~100
+        eef_command = {
+            'left': int(max(0, min(100, joy.left_grip * 100))),
+            'right': int(max(0, min(100, joy.right_grip * 100))),
+        }
+        if self.last_eef_command is None:
+            self.last_eef_command = eef_command
+        # 如果eef_freeze为True，则使用上一次的末端执行器命令
+        if not eef_freeze:
+            self.last_eef_command = eef_command
+        else:
+            eef_command = self.last_eef_command
+        try:  
+            if self.eef_type.startswith("qiangnao"):
+                # 创建末端执行器控制消息
+                hand_control_msg = robotHandPosition()
+                hand_control_msg.header.stamp = rospy.Time.now()
+                hand_control_msg.header.frame_id = "pico_vr_control"
+                hand_control_msg.left_hand_position = [eef_command['left']] * 6
+                hand_control_msg.right_hand_position = [eef_command['right']] * 6
+                
+                # 发布末端执行器控制消息
+                self.pub_control_robot_hand_position.publish(hand_control_msg)
+            elif self.eef_type == "lejuclaw":
+                msg = lejuClawCommand()
+                msg.header.stamp = rospy.Time.now()
+                msg.data.name = ['left_claw', 'right_claw']
+                msg.data.position = [eef_command['left'], eef_command['right']]
+                msg.data.velocity = [90, 90] # 速度默认 90%
+                self.pub_leju_claw_cmd.publish(msg)
+        except Exception as e:
+            SDKLogger.error(f"Error publishing end effector control: {e}")
+
+    def handle_joystick_movement(self, joy: JoySticks) -> None:
+        """Handle all joystick movement controls for cmd_vel."""
+        try:
+            # 定义速度限制常量
+            MAX_LINEAR_X_SPEED = 0.4    # 前后方向
+            MAX_LINEAR_Y_SPEED = 0.2    # 左右横移
+            MAX_ANGULAR_Z_SPEED = 0.4   # 旋转速度
+            
+            # 创建 Twist 消息
+            cmd_vel_msg = Twist()
+            
+            # 左侧摇杆控制
+            # joy.left_y 控制 linear.x (前后方向 -0.4~0.4)
+            joy_y = apply_deadzone(joy.left_y, CmdVelConstants.LINEAR_DEADZONE)
+            cmd_vel_msg.linear.x = clamp(joy_y * MAX_LINEAR_X_SPEED, -MAX_LINEAR_X_SPEED, MAX_LINEAR_X_SPEED)
+            
+            # joy.left_x 控制 linear.y (左右横移 -0.2~0.2)
+            joy_x = apply_deadzone(joy.left_x, CmdVelConstants.LINEAR_DEADZONE)
+            cmd_vel_msg.linear.y = clamp(joy_x * MAX_LINEAR_Y_SPEED, -MAX_LINEAR_Y_SPEED, MAX_LINEAR_Y_SPEED)
+            
+            # 右侧摇杆控制
+            # joy.right_x 控制 angular.z (旋转速度 -0.4~0.4)
+            joy_right_x = apply_deadzone(joy.right_x, CmdVelConstants.LINEAR_DEADZONE)
+            cmd_vel_msg.angular.z = clamp(joy_right_x * MAX_ANGULAR_Z_SPEED, -MAX_ANGULAR_Z_SPEED, MAX_ANGULAR_Z_SPEED)
+            
+            # 发布 cmd_vel 消息
+            self.pub_cmd_vel.publish(cmd_vel_msg)
+            
+        except Exception as e:
+            SDKLogger.error(f"Error publishing cmd_vel: {e}")
+        
 
     def pico_hands_poses_callback(self, pico_hands_poses_msg: picoPoseInfoList) -> None:
         """Callback for Pico hands poses."""
@@ -535,6 +959,7 @@ class KuavoPicoNode:
         # eef_pose_msg.use_custom_ik_param = self.use_custom_ik_param
         eef_pose_msg.use_custom_ik_param = False
         eef_pose_msg.frame = 1
+        
         
         # Check for VR errors
         if self.pico_info_transformer.check_if_vr_error():
@@ -603,7 +1028,7 @@ class KuavoPicoNode:
     def set_item_mass_force(self, case_name:str, hand_wrench_config:HandWrenchConfig)->None:
         """Set item mass force."""
         self.hand_wrench_config = hand_wrench_config
-        SDKLogger.info(f"Set item mass force: {case_name} --- {hand_wrench_config}")
+        SDKLogger.info(f"VR App端设置末端力配置: {case_name} --- {hand_wrench_config}")
         
     def set_control_mode_callback(self, control_mode: Int32) -> None:
         """Set control mode."""
@@ -830,6 +1255,13 @@ class KuavoPicoNode:
 
     def pico_hands_poses_callback_choose(self, pico_hands_poses_msg: picoPoseInfoList) -> None:
         """Callback for Pico hands poses."""
+        # 控制头部运动
+        self._pub_head_pose()
+
+        if self.toggle_auto_swing_arm:
+            # LT+Y 手臂在默认位置不控制
+            return 
+        
         if self.control_mode == ControlMode.INCREMENTAL_MODE:
             self.pico_hands_poses_callback_incremental(pico_hands_poses_msg)
         elif self.control_mode == ControlMode.FOLLOW_MODE:
@@ -1004,4 +1436,3 @@ if __name__ == "__main__":
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    
