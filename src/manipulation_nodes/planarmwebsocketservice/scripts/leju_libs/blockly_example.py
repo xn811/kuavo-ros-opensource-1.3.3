@@ -22,6 +22,10 @@ def main():
     robot_control.control_robot_height("down", 0.2, 0.0)
     robot_control.set_arm_control_mode(0)
 
+    # 启动机器人运动
+    robot_control.start()
+    time.sleep(4)
+
     # 开始行走
     robot_control.walk(0.4, 0.0, 0.0)
     time.sleep(1)

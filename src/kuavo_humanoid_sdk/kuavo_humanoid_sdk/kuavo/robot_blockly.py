@@ -34,7 +34,7 @@ import model_utils as model_utils
 
 from enum import IntEnum
 # Global flag for handling Ctrl+C
-running = True
+running = False
 robot_version = int(os.environ.get("ROBOT_VERSION", "45"))
 ocs2_joint_state = JointState()
 ocs2_hand_state = robotHandPosition()
@@ -485,6 +485,9 @@ class RobotControlBlockly:
         angular_z = math.radians(angular_z)
         self.walk(linear_x, linear_y, angular_z)
 
+    def start(self):
+        """Start robot movement and Begin trot."""
+        self.robot.trot()
 
     def stop(self):
         """Stop robot movement and set the running flag to False."""

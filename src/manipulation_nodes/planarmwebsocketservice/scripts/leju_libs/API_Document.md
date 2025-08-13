@@ -13,109 +13,114 @@ robot_control = RobotControlBlockly()
 
 以下为运动控制模块的各个积木块函数说明：
 
-1. **以 X 速度,Y 速度,yaw 旋转速度移动**
+1. **启动机器人运动**
+    - 函数：`robot_control.start()`
+    - 参数类型：无
+    - 描述：令机器人原地踏步
+
+2. **以 X 速度,Y 速度,yaw 旋转速度移动**
     - 函数：`robot_control.walk(x, y, yaw)`
     - 参数类型：float
     - 描述：令机器人以 X，Y，YAW 的速度进行移动
     - 参数范围：x: [-0.4, 0.4]米/秒，y: [-0.2, 0.2]米/秒，yaw: [-0.4, 0.4]弧度/秒
     -
-2. **以 X 速度,Y 速度,yaw 旋转速度移动**
+3. **以 X 速度,Y 速度,yaw 旋转速度移动**
     - 函数：`robot_control.walk_angle(x, y, yaw)`
     - 参数类型：float
     - 描述：令机器人以 X，Y，YAW 的速度进行移动
     - 参数范围：x: [-0.4, 0.4]米/秒，y: [-0.2, 0.2]米/秒，yaw: [-22.92, 22.92]度/秒
 
-3. **停止机器人运动**
+4. **停止机器人运动**
     - 函数：`robot_control.stop()`
     - 参数类型：无
     - 描述：令机器人停止移动
 
-4. **执行机器人动作**
+5. **执行机器人动作**
     - 函数：`robot_control.excute_action_file("roban2")`
     - 参数类型：string
     - 描述：机器人执行默认目录下的目标 .tact 动作
     - 备注：需将目标 .tact 文件下载到 **/home/lab/.config/lejuconfig/action_files** 目录下
 
-5. **执行机器人目标目录下的动作**
+6. **执行机器人目标目录下的动作**
     - 函数：`robot_control.excute_action_file("roban2", proj_name="proj_name")`
     - 参数类型：string, string
     - 描述：机器人执行 proj_name/action_files 目录下的目标 .tact 动作
     - 备注：需将目标 .tact 文件下载到 **upload_files/proj_name/action_files** 目录下
 
-6. **执行机器人动作并同步播放音频**
+7. **执行机器人动作并同步播放音频**
     - 函数：`robot_control.excute_action_file("roban2", music_file="music_name.wav")`
     - 参数类型：string, string
     - 描述：机器人执行默认目录下的目标 .tact 动作并且播放 music_name.wav 音频
     - 备注：需将目标 .tact 文件下载到 **/home/lab/.config/lejuconfig/action_files** 目录下，音频文件下载到 *
       */home/lab/.config/lejuconfig/music** 目录下
 
-7. **执行机器人目标目录下动作并同步播放音频**
+8. **执行机器人目标目录下动作并同步播放音频**
     - 函数：`robot_control.excute_action_file("roban2", proj_name="roban2", music_file="music_name.wav")`
     - 参数类型：string, string, string
     - 描述：机器人执行目标目录下的目标 .tact 动作并且播放 music_name.wav 音频
     - 备注：需将目标 .tact 文件下载到 **upload_files/proj_name/action_files** 目录下，音频文件下载到 *
       */home/lab/.config/lejuconfig/music** 目录下
 
-8. **设置机器人手臂模式**
+9. **设置机器人手臂模式**
     - 函数：`robot_control.set_arm_control_mode(mode)`
     - 参数类型：int
     - 描述：设定机器人的手臂模式
     - 参数说明：mode: 0-固定模式，1-自动摆动模式，2-外部控制模式
 
-9. **机器人恢复初始站立姿态**
+10. **机器人恢复初始站立姿态**
     - 函数：`robot_control.to_stance()`
     - 参数类型：无
     - 描述：恢复机器人的站立姿态到初始状态
 
-10. **机器人躯干上升/下降**
+11. **机器人躯干上升/下降**
     - 函数：`robot_control.control_robot_height(is_up, height)`
     - 参数类型：string, float
     - 描述：令机器人的质心在竖直方向上移动
     - 参数说明：is_up: "down" 表示质心下降，"up" 表示质心上升；height: [-0.3, 0.0]米
 
-11. **移动机器人头部到偏航角和俯仰角**
+12. **移动机器人头部到偏航角和俯仰角**
     - 函数：`robot_control.control_robot_head(yaw, pitch)`
     - 参数类型：float
     - 描述：控制机器人的头同时在 yaw 和 pitch 上进行移动
     - 参数范围：yaw: [-80, 80]度；Roban2 pitch: [0, 25]度；Kuavo pitch: [-25, 25]度
 
-12. **仅移动机器人头部到偏航角**
+13. **仅移动机器人头部到偏航角**
     - 函数：`robot_control.control_robot_head_only_yaw(yaw)`
     - 参数类型：float
     - 描述：仅控制机器人的头在 yaw 方向上移动
     - 参数范围：yaw: [-80, 80]度
 
-13. **仅移动机器人头部到俯仰角**
+14. **仅移动机器人头部到俯仰角**
     - 函数：`robot_control.control_robot_head_only_pitch(pitch)`
     - 参数类型：float
     - 描述：仅控制机器人的头在 pitch 方向上移动
     - 参数范围：Roban2 pitch: [0, 25]度；Kuavo pitch: [-25, 25]度
 
-14. **移动机器手臂到目标姿态**
+15. **移动机器手臂到目标姿态**
     - 函数：`robot_control.control_arm_target_pose(x1, y1, z1, yaw1, pitch1, roll1, x2, y2, z2, yaw2, pitch2, roll2)`
     - 参数类型：float
     - 描述：控制机器人的手臂移动到目标姿态
     - 参数说明：(x1, y1, z1, yaw1, pitch1, roll1) 为左臂目标姿态，(x2, y2, z2, yaw2, pitch2, roll2) 为右臂目标姿态
 
-15. **移动机器人单臂到目标姿态**
+16. **移动机器人单臂到目标姿态**
     - 函数：`robot_control.control_arm_target_pose_by_single(hand_type, x, y, z, yaw, pitch, roll)`
     - 参数类型：string, float
     - 描述：仅控制机器人的单臂进行运动
     - 参数说明：hand_type: "L" 表示左臂运动，"R" 表示右臂运动；(x, y, z, yaw, pitch, roll) 为目标姿态
 
-16. **播放音乐**
+17. **播放音乐**
     - 函数：`robot_control.play_music("music_name.wav")`
     - 参数类型：string
     - 描述：控制机器人播放指定音频
     - 备注：需将目标音频文件下载到 **/home/lab/.config/lejuconfig/music** 目录下  
 
-17. **腰部控制**
+18. **腰部控制**
     - 函数：`robot_control.control_waist_rotation(degree)`
     - 参数类型：float
     - 描述：控制机器人的腰部在 yaw 方向上转动
     - 参数范围：[-120.0, 120.0]度
 
-18. **停止播放音乐**
+19. **停止播放音乐**
     - 函数：`robot_control.stop_music()`
     - 参数类型：string
     - 描述：控制机器人播放指定音频
