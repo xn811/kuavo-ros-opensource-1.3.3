@@ -18,6 +18,7 @@ from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger, TriggerResponse
 from kuavo_msgs.srv import SetLEDMode, SetLEDModeRequest
+from rosnode import get_node_names
 import subprocess
 import time
 import signal
@@ -67,6 +68,9 @@ class AudioStreamPlayerNode:
         self.buffer_status_service = rospy.Service('get_used_audio_buffer_size', Trigger, self.get_used_audio_buffer_size_callback)
         rospy.loginfo("已创建 audio_data 话题的订阅者（流式播放节点）")
 
+        # 检查led_controller_node节点是否启动
+        self.is_led_control = self.check_led_controller_node()
+
         # 初始化 PyAudio 播放
         self.chunk_size = self.CHUNK_SIZE
         self.buffer_queue = queue.Queue(maxsize=self.BUFFER_MAX_SIZE)  # 限制最大缓冲块数
@@ -97,6 +101,26 @@ class AudioStreamPlayerNode:
         self.play_thread.daemon = True
         self.play_thread.start()
 
+    def check_led_controller_node(self, timeout=10):
+        node_name = '/led_controller_node'
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            try:
+                active_nodes = get_node_names()
+                
+                if node_name in active_nodes:
+                    rospy.loginfo(f"节点 {node_name} 检测成功，已启动")
+                    return True
+                    
+                time.sleep(0.5)
+                
+            except Exception as e:
+                rospy.logwarn(f"检查节点时发生错误: {e}")
+                time.sleep(0.5)
+        
+        rospy.logwarn(f"节点 {node_name} 在 {timeout} 秒内未检测到")
+        return False
 
     def check_sound_card(self):
         """
@@ -218,12 +242,12 @@ class AudioStreamPlayerNode:
             try:
                 chunk = self.buffer_queue.get(timeout=self.QUEUE_GET_TIMEOUT)
                 
-                if not self.is_breathing:
+                if not self.is_breathing and self.is_led_control:
                     self.play_breathing(1)
                     self.is_breathing = not self.is_breathing
                 self.stream.write(chunk.tobytes())
             except queue.Empty:
-                if self.is_breathing:
+                if self.is_breathing and self.is_led_control:
                     self.play_breathing(0)
                     self.is_breathing = not self.is_breathing
                 if(self.empty_count > self.EMPTY_COUNT_THRESHOLD):

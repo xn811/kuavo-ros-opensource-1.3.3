@@ -129,6 +129,7 @@ add_message_files(
   FTsensorData.msg
 
   MmDetectionMsg.msg
+  AudioReceiverData.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -18,6 +18,10 @@ from humanoid_plan_arm_trajectory.msg import RobotActionState
 from humanoid_plan_arm_trajectory.srv import ExecuteArmAction, ExecuteArmActionResponse  # Import new service type
 
 
+# 根据机器人型号确定关节数据
+KUAVO = "kuavo"
+ROBAN = "roban"
+
 class ArmTrajectoryBezierDemo:
     INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # START_FRAME_TIME = 0
@@ -32,6 +36,8 @@ class ArmTrajectoryBezierDemo:
         self.current_arm_joint_state = []
         self.running_action = False
         self.arm_flag = False
+        self.robot_version = rospy.get_param('/robot_version', 40)
+        self.robot_class = KUAVO if self.robot_version >= 40 else ROBAN
         # rospy.spin()
 
         # Initialize ROS node
@@ -75,41 +81,60 @@ class ArmTrajectoryBezierDemo:
 
 
     def sensors_data_raw_callback(self, msg):
-        self.current_arm_joint_state = msg.joint_data.joint_q[12:26]
-        self.current_arm_joint_state = [round(pos, 2) for pos in self.current_arm_joint_state]
-        self.current_arm_joint_state.extend([0] * 14)
+        if self.robot_class == KUAVO:
+            self.current_arm_joint_state = msg.joint_data.joint_q[12:26]
+            self.current_arm_joint_state = [round(pos, 2) for pos in self.current_arm_joint_state]
+            self.current_arm_joint_state.extend([0] * 14)
+        elif self.robot_class == ROBAN:
+            self.current_arm_joint_state = msg.joint_data.joint_q[13:21]
+            self.current_arm_joint_state = [round(pos, 2) for pos in self.current_arm_joint_state]
+            self.current_arm_joint_state.extend([0] * 8)
 
     def traj_callback(self, msg):
         if len(msg.points) == 0:
             return
         point = msg.points[0]
-        # print("1111111111",point)
-        self.joint_state.name = [
-            "l_arm_pitch",
-            "l_arm_roll",
-            "l_arm_yaw",
-            "l_forearm_pitch",
-            "l_hand_yaw",
-            "l_hand_pitch",
-            "l_hand_roll",
-            "r_arm_pitch",
-            "r_arm_roll",
-            "r_arm_yaw",
-            "r_forearm_pitch",
-            "r_hand_yaw",
-            "r_hand_pitch",
-            "r_hand_roll",
-        ]
-        self.joint_state.position = [math.degrees(pos) for pos in point.positions[:14]]
-        # print("2222222",self.joint_state.position)
-        self.joint_state.velocity = [math.degrees(vel) for vel in point.velocities[:14]]
-        self.joint_state.effort = [0] * 14
 
-        # 修复 hand 和 head 的数据类型
-        self.hand_state.left_hand_position = [max(0, int(math.degrees(pos))) for pos in point.positions[14:20]]  # 无符号整数
-        self.hand_state.right_hand_position = [max(0, int(math.degrees(pos))) for pos in
-                                               point.positions[20:26]]  # 无符号整数
-        self.head_state.joint_data = [math.degrees(pos) for pos in point.positions[26:]]
+        if self.robot_class == KUAVO:
+            self.joint_state.name = [
+                "l_arm_pitch",
+                "l_arm_roll",
+                "l_arm_yaw",
+                "l_forearm_pitch",
+                "l_hand_yaw",
+                "l_hand_pitch",
+                "l_hand_roll",
+                "r_arm_pitch",
+                "r_arm_roll",
+                "r_arm_yaw",
+                "r_forearm_pitch",
+                "r_hand_yaw",
+                "r_hand_pitch",
+                "r_hand_roll",
+            ]
+            self.joint_state.position = [math.degrees(pos) for pos in point.positions[:14]]
+            self.joint_state.velocity = [math.degrees(vel) for vel in point.velocities[:14]]
+            self.joint_state.effort = [0] * 14
+
+            # 修复 hand 和 head 的数据类型
+            self.hand_state.left_hand_position = [max(0, int(math.degrees(pos))) for pos in point.positions[14:20]]  # 无符号整数
+            self.hand_state.right_hand_position = [max(0, int(math.degrees(pos))) for pos in
+                                                point.positions[20:26]]  # 无符号整数
+            self.head_state.joint_data = [math.degrees(pos) for pos in point.positions[26:]]
+        elif self.robot_class == ROBAN:
+            self.joint_state.name = [
+                "l_arm_pitch",
+                "l_arm_roll",
+                "l_arm_yaw",
+                "l_forearm_pitch",
+                "r_arm_pitch",
+                "r_arm_roll",
+                "r_arm_yaw",
+                "r_forearm_pitch",
+            ]
+            self.joint_state.position = [math.degrees(pos) for pos in point.positions[:8]]
+            self.joint_state.velocity = [math.degrees(vel) for vel in point.velocities[:8]]
+            self.joint_state.effort = [0] * 8
 
     def call_change_arm_ctrl_mode_service(self, arm_ctrl_mode):
         result = True
@@ -157,11 +182,13 @@ class ArmTrajectoryBezierDemo:
             frame0["keyframe"] = 0
             frames.insert(0, frame0)
 
+        end_key = 29 if self.robot_class == KUAVO else 24
+
         for frame in frames:
             servos, keyframe, attribute = frame["servos"], frame["keyframe"], frame["attribute"]
             for index, value in enumerate(servos):
                 key = index + 1
-                if key == 29:
+                if key == end_key:
                     break
                 if key not in action_data:
                     action_data[key] = []
