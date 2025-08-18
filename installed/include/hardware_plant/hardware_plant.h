@@ -85,6 +85,7 @@ class HardwarePlant
     void motor2joint(SensorData_t sensor_data_motor, SensorData_t &sensor_data_joint);
     void GetC2Tcoeff(double *ret_c2t_coeff, size_t size);
     Eigen::VectorXd GetC2Tcoeff(Eigen::VectorXd &ret_c2t_coeff);
+    Eigen::VectorXd GetC2Tcoeff_Torque(Eigen::VectorXd &joint_torque);
     void cmds2Cmdr(const Eigen::VectorXd &cmd_s, uint32_t na_src, Eigen::VectorXd &cmd_r, uint32_t na_r);
     bool readSensor(SensorData_t &sensor_data);
     void setState(SensorData_t &sensor_data_motor, SensorData_t &sensor_data_joint);
