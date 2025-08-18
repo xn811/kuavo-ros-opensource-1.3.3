@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <set>
 #include <unordered_map>
 #include <map>
 #include "kuavo_common/common/robot_state.h"
@@ -160,6 +161,35 @@ public:
     
     // 电机状态管理器
     std::unique_ptr<MotorStatusManager> motor_status_manager_;
+
+    std::mutex disable_motor_mtx_;
+    std::set<int> disableMotor_;
+
+    inline int getDisableMotorId()
+    {
+      std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+      if (disableMotor_.empty())
+      {
+        return -1;
+      }
+      auto first_id = *disableMotor_.begin();
+      disableMotor_.erase(first_id);
+      return first_id;
+    }
+
+          // 禁用电机ID管理接口
+    bool addDisableMotorId(int id) 
+    {
+        std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+        auto result = disableMotor_.insert(id);
+        return result.second; // true: 新插入，false: 已存在
+    }
+
+    size_t getDisableMotorSize() 
+    {
+        std::lock_guard<std::mutex> lk(disable_motor_mtx_);
+        return disableMotor_.size();
+    }
 
 private:
 
