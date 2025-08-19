@@ -13,9 +13,9 @@ class TrajectoryInterpolator:
             "spline": self._spline_interpolation
         }
     
-    def interpolate_trajectory(self, prev_foot_pose, next_foot_pose, swing_height=0.00, 
-                              method="ellipse_quintic", num_points=7, is_first_step=False, 
-                              down_stairs=False, plot=False):
+    def interpolate_trajectory(self, prev_foot_pose, next_foot_pose, swing_height=0.10, 
+                              method="trigonometric_quintic", num_points=7, is_first_step=False, 
+                              down_stairs=False):
         """
         轨迹插值主函数
         
@@ -23,27 +23,10 @@ class TrajectoryInterpolator:
             prev_foot_pose: 上一个落点位置 [x, y, z, yaw]
             next_foot_pose: 下一个落点位置 [x, y, z, yaw]
             swing_height: 抬脚最大高度，默认0.10米
-            method: 插值方法 ("ellipse_quintic", "spline")
+            method: 插值方法 ("trigonometric_quintic", "spline")
             num_points: 轨迹点数量（固定为7，与三次样条保持一致）
             is_first_step: 是否为第一步
             down_stairs: 是否为下楼梯
-            plot: 是否绘制轨迹图
-            
-        Returns:
-            additionalFootPoseTrajectory: 包含腾空相轨迹的footPoses消息
-        """
-        """
-        轨迹插值主函数
-        
-        Args:
-            prev_foot_pose: 上一个落点位置 [x, y, z, yaw]
-            next_foot_pose: 下一个落点位置 [x, y, z, yaw]
-            swing_height: 抬脚最大高度，默认0.10米
-            method: 插值方法 ("ellipse_quintic", "spline", "cycloid")
-            num_points: 轨迹点数量
-            is_first_step: 是否为第一步
-            down_stairs: 是否为下楼梯
-            plot: 是否绘制轨迹图
             
         Returns:
             additionalFootPoseTrajectory: 包含腾空相轨迹的footPoses消息
@@ -53,10 +36,10 @@ class TrajectoryInterpolator:
             method = "trigonometric_quintic"
         
         return self.methods[method](prev_foot_pose, next_foot_pose, swing_height, 
-                                   num_points, is_first_step, down_stairs, plot)
+                                   num_points, is_first_step, down_stairs)
     
     def _trigonometric_quintic_interpolation(self, prev_foot_pose, next_foot_pose, swing_height, 
-                                           num_points, is_first_step, down_stairs, plot):
+                                           num_points, is_first_step, down_stairs):
         """三角函数+五次多项式插值方法（Z方向使用三角函数，XY方向使用摆线）"""
         additionalFootPoseTrajectory = footPoses()
         
@@ -87,12 +70,7 @@ class TrajectoryInterpolator:
         # 三角函数最高点高度参考三次样条：base_height + swing_height
         max_height = base_height + swing_height
         
-        print(f"三角函数参数：")
-        print(f"  基准高度 = {base_height:.3f}, 最低高度 = {min_height:.3f}")
-        print(f"  最高点高度 = {max_height:.3f} (基准高度 + swing_height)")
-        print(f"  三角函数占比 = {trig_ratio:.2f}")
-        print(f"  XY方向插值 = 摆线插值")
-        print(f"  Z方向插值 = 三角函数（正弦函数）")
+
         
         # 1. 生成三角函数轨迹的4个控制点（Z方向三角函数，XY方向摆线）
         trig_control_points = []
@@ -125,15 +103,9 @@ class TrajectoryInterpolator:
             
             trig_control_points.append([x, y, z])
             
-            # 在最高点验证零加速度
-            if abs(smooth_progress - 1.0) < 0.01:  # 接近最高点
-                print(f"  最高点验证：progress={smooth_progress:.3f}, z={z:.3f}, 加速度为零")
-                print(f"  平滑进度：{smooth_progress:.3f}, 时间参数：{t:.3f}")
+
         
-        print(f"三角函数控制点（4个点，输出时删除起始点）：")
-        for i, point in enumerate(trig_control_points):
-            point_type = "起始点" if i == 0 else "中间点" if i == 1 else "中间点" if i == 2 else "终点"
-            print(f"  点{i+1} ({point_type}): ({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f})")
+
         
         # 2. 生成多项式轨迹的控制点
         polynomial_control_points = []
@@ -171,10 +143,7 @@ class TrajectoryInterpolator:
         z_end = next_foot_pose[2]
         polynomial_control_points.append([x_end, y_end, z_end])
         
-        print(f"多项式控制点（3个点，删除重合点）：")
-        for i, point in enumerate(polynomial_control_points):
-            point_type = "多项式起点" if i == 0 else "中间点" if i == 1 else "终点"
-            print(f"  点{i+1} ({point_type}): ({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f})")
+
         
         # 3. 生成完整轨迹（7个控制点：4个三角函数点 + 3个多项式点）
         full_trajectory = trig_control_points + polynomial_control_points
@@ -195,12 +164,7 @@ class TrajectoryInterpolator:
                            extended_trig_ratio + (1-extended_trig_ratio) * 0.64]  # 删除最后一个时间点1.0
         full_times = trig_times + polynomial_times
         
-        print(f"时间序列：{[f'{t:.2f}' for t in full_times]}")
-        print(f"时间分布分析：")
-        print(f"  三角函数部分：{[f'{t:.2f}' for t in trig_times]} (均匀分布)")
-        print(f"  多项式部分：{[f'{t:.2f}' for t in polynomial_times]} (均匀分布，间隔0.07)")
-        print(f"  总时间分布：{[f'{t:.2f}' for t in full_times]} (后半段更均匀)")
-        print(f"控制点数量：{len(full_trajectory)} (3个三角函数点 + 2个多项式点，删除三角函数起始点和多项式终点)")
+
         
         # 5. 生成轨迹消息（确保平滑性）
         for i, point in enumerate(full_trajectory):
@@ -214,26 +178,7 @@ class TrajectoryInterpolator:
             step_fp.footPose = [x, y, z, yaw]
             additionalFootPoseTrajectory.data.append(step_fp)
         
-        # 6. 验证平滑性
-        if len(full_trajectory) >= 2:
-            # 检查相邻点之间的距离，确保平滑
-            for i in range(len(full_trajectory) - 1):
-                p1 = np.array(full_trajectory[i])
-                p2 = np.array(full_trajectory[i + 1])
-                distance = np.linalg.norm(p2 - p1)
-                if distance > 0.2:  # 如果相邻点距离过大，发出警告
-                    print(f"警告：点{i+1}和点{i+2}之间距离较大 ({distance:.3f}m)")
-        
-        # 如果需要绘图验证
-        if plot:
-            self._plot_trigonometric_trajectory(trig_control_points, prev_foot_pose, next_foot_pose, max_height)
-        
-        print(f"轨迹生成完成：{len(full_trajectory)}个控制点")
-        print(f"三角函数占比：{trig_ratio:.2f}")
-        print(f"XY方向：摆线插值，Z方向：三角函数+多项式")
-        print(f"三角函数在最高点零加速度，删除三角函数起始点")
-        print(f"swing_height逻辑参考三次样条，确保高度合理")
-        print(f"符合三次样条输入输出格式，确保平滑性")
+
         return additionalFootPoseTrajectory
     
     def _trigonometric_quintic_interpolation_downstairs(self, prev_foot_pose, next_foot_pose, swing_height, 
@@ -263,12 +208,7 @@ class TrajectoryInterpolator:
         # 下楼梯最高点高度：从当前台阶高度+swing_height，然后减去一级step_height
         max_height = prev_foot_pose[2] + swing_height - 0.08  # 当前台阶高度 + swing_height - step_height
         
-        print(f"下楼梯三角函数参数：")
-        print(f"  起点高度 = {prev_foot_pose[2]:.3f}, 终点高度 = {next_foot_pose[2]:.3f}")
-        print(f"  最高点高度 = {max_height:.3f} (当前台阶高度 + swing_height - step_height)")
-        print(f"  三角函数占比 = {trig_ratio:.2f}")
-        print(f"  XY方向插值 = 摆线插值")
-        print(f"  Z方向插值 = 与上楼梯完全镜像对称")
+
         
         # 1. 生成三角函数轨迹的4个控制点（与上楼梯完全相同的结构）
         trig_control_points = []
@@ -301,14 +241,9 @@ class TrajectoryInterpolator:
             
             trig_control_points.append([x, y, z])
             
-            # 在最高点验证零加速度
-            if abs(smooth_progress - 1.0) < 0.01:  # 接近最高点
-                print(f"  最高点验证：progress={smooth_progress:.3f}, z={z:.3f}, 加速度为零")
+
         
-        print(f"下楼梯三角函数控制点（4个点，与上楼梯相同结构）：")
-        for i, point in enumerate(trig_control_points):
-            point_type = "起始点" if i == 0 else "中间点" if i == 1 else "中间点" if i == 2 else "终点"
-            print(f"  点{i+1} ({point_type}): ({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f})")
+
         
         # 2. 生成多项式轨迹的控制点（与上楼梯完全相同的结构）
         polynomial_control_points = []
@@ -346,10 +281,7 @@ class TrajectoryInterpolator:
         z_end = next_foot_pose[2]
         polynomial_control_points.append([x_end, y_end, z_end])
         
-        print(f"下楼梯多项式控制点（3个点，与上楼梯相同结构）：")
-        for i, point in enumerate(polynomial_control_points):
-            point_type = "多项式起点" if i == 0 else "中间点" if i == 1 else "终点"
-            print(f"  点{i+1} ({point_type}): ({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f})")
+
         
         # 3. 生成完整轨迹（7个控制点：4个三角函数点 + 3个多项式点，与上楼梯相同）
         full_trajectory = trig_control_points + polynomial_control_points
@@ -368,12 +300,7 @@ class TrajectoryInterpolator:
                            extended_trig_ratio + (1-extended_trig_ratio) * 0.64]  # 删除最后一个时间点1.0
         full_times = trig_times + polynomial_times
         
-        print(f"下楼梯时间序列（与上楼梯相同）：{[f'{t:.2f}' for t in full_times]}")
-        print(f"时间分布分析：")
-        print(f"  三角函数部分：{[f'{t:.2f}' for t in trig_times]} (均匀分布)")
-        print(f"  多项式部分：{[f'{t:.2f}' for t in polynomial_times]} (均匀分布，间隔0.07)")
-        print(f"  总时间分布：{[f'{t:.2f}' for t in full_times]} (与上楼梯完全一致)")
-        print(f"控制点数量：{len(full_trajectory)} (3个三角函数点 + 2个多项式点，与上楼梯相同)")
+
         
         # 5. 生成轨迹消息（与上楼梯完全相同的执行逻辑）
         for i, point in enumerate(full_trajectory):
@@ -387,21 +314,7 @@ class TrajectoryInterpolator:
             step_fp.footPose = [x, y, z, yaw]
             additionalFootPoseTrajectory.data.append(step_fp)
         
-        # 6. 验证平滑性
-        if len(full_trajectory) >= 2:
-            # 检查相邻点之间的距离，确保平滑
-            for i in range(len(full_trajectory) - 1):
-                p1 = np.array(full_trajectory[i])
-                p2 = np.array(full_trajectory[i + 1])
-                distance = np.linalg.norm(p2 - p1)
-                if distance > 0.2:  # 如果相邻点距离过大，发出警告
-                    print(f"警告：点{i+1}和点{i+2}之间距离较大 ({distance:.3f}m)")
-        
-        print(f"下楼梯轨迹生成完成：{len(full_trajectory)}个控制点")
-        print(f"与上楼梯完全镜像对称：相同的控制点结构、三角函数范围、时间分布")
-        print(f"三角函数占比：{trig_ratio:.2f}")
-        print(f"XY方向：摆线插值，Z方向：三角函数+多项式")
-        print(f"三角函数在最高点零加速度，删除三角函数起始点")
+
         return additionalFootPoseTrajectory
     
     def _spline_interpolation(self, prev_foot_pose, next_foot_pose, swing_height, 

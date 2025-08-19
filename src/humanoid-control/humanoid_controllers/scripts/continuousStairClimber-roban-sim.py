@@ -10,8 +10,8 @@ from trajectory_interpolator import TrajectoryInterpolator
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Continuous stair climbing')
-    parser.add_argument('--step_height', type=float, default=0.08, help='Step height (default: 0.08m)')
-    parser.add_argument('--step_length', type=float, default=0.28, help='Step length (default: 0.28m)')
+    parser.add_argument('--step_height', type=float, default=0.08, help='Step height (default: 0.8m)')
+    parser.add_argument('--step_length', type=float, default=0.25, help='Step length (default: 0.25m)')
     parser.add_argument('--foot_width', type=float, default=0.108535, help='Foot width (default: 0.108535m)')
     parser.add_argument('--stand_height', type=float, default=0.0, help='Stand height offset (default: 0.0m)')
     parser.add_argument('--trajectory_method', type=str, default='trigonometric_quintic', 
@@ -42,7 +42,7 @@ def set_pitch_limit(enable):
 class ContinuousStairClimber:
     def __init__(self):
         # 时间参数设置
-        self.dt = 1  # 上下楼梯的步态周期
+        self.dt = 1.0  # 上下楼梯的步态周期
         self.ss_time = 0.6  # 上下楼梯的支撑迈步时间（较慢，确保稳定性）
         self.walk_dt = 0.6  # 前进/转弯的步态周期（更快，提高效率）
         self.walk_ss_time = 0.4  # 前进/转弯的支撑迈步时间（更快，提高效率）
@@ -50,9 +50,10 @@ class ContinuousStairClimber:
         # 几何参数设置
         self.foot_width = 0.108535  # 脚宽度
         self.step_height = 0.08  # 台阶高度
-        self.step_length = 0.28  # 上楼梯的台阶长度
-        self.down_step_length = 0.28  # 下楼梯的迈步距离（独立参数）
-        
+        self.step_length = 0.25  # 上楼梯的台阶长度
+        self.down_step_length = 0.25  # 下楼梯的迈步距离（独立参数）
+        self.up_stairs_double_step_offset = 0.00
+        self.down_stairs_double_step_offset = -0.00
         # 状态变量
         self.total_step = 0  # 总步数
         self.is_left_foot = False  # 当前是否为左脚
@@ -170,7 +171,7 @@ class ContinuousStairClimber:
                                     self.prev_right_foot = foot_traj[j].copy()
                                     break
                             else:
-                                self.prev_right_foot = [0.0, -0.108535, 0.0, 0.0]
+                                self.prev_right_foot = [0.0, -self.foot_width, 0.0, 0.0]
                         elif foot_idx_traj[last_swing_idx] == 1:
                             self.prev_right_foot = foot_traj[last_swing_idx].copy()
                             for j in range(last_swing_idx-1, -1, -1):
@@ -178,10 +179,10 @@ class ContinuousStairClimber:
                                     self.prev_left_foot = foot_traj[j].copy()
                                     break
                             else:
-                                self.prev_left_foot = [0.0, 0.108535, 0.0, 0.0]
+                                self.prev_left_foot = [0.0, self.foot_width, 0.0, 0.0]
                         break
 
-    def plan_up_stairs(self, num_steps=5, time_traj=None, foot_idx_traj=None, foot_traj=None, torso_traj=None, swing_trajectories=None):
+    def plan_up_stairs(self, num_steps=5, time_traj=None, foot_idx_traj=None, foot_traj=None, torso_traj=None, swing_trajectories=None, stair_offset=0.0):
         """连续上楼梯规划"""
         if time_traj is None:
             time_traj = []
@@ -212,13 +213,16 @@ class ContinuousStairClimber:
             current_foot_pos = np.array([0.0, 0.0, STAND_HEIGHT])
 
         # 初始位置
-        torso_height_offset = 0.02  # 躯干高度偏移
+        torso_height_offset = -0.02  # 躯干高度偏移
         current_torso_pos[2] += torso_height_offset
-        offset_x = [0.02, 0.03, 0.0, 0.0, 0.0]
+        # 基础offset数组，后续会加上stair_offset
+        base_offset_x = [0.00, self.up_stairs_double_step_offset, self.up_stairs_double_step_offset, self.up_stairs_double_step_offset, 0.0]
+        # 所有offset都加上离楼梯的偏置距离
+        offset_x = [offset + stair_offset for offset in base_offset_x]
         
         # 记录前一次的左右脚位置
-        prev_left_foot = [start_foot_pos_x, 0.1, start_foot_pos_z, torso_yaw]
-        prev_right_foot = [start_foot_pos_x, -0.1, start_foot_pos_z, torso_yaw]
+        prev_left_foot = [start_foot_pos_x, self.foot_width, start_foot_pos_z, torso_yaw]
+        prev_right_foot = [start_foot_pos_x, -self.foot_width, start_foot_pos_z, torso_yaw]
         initial_index = len(foot_traj)
         
         # 为每一步生成落脚点
@@ -235,13 +239,14 @@ class ContinuousStairClimber:
             if step == 0:
                 current_foot_pos[0] = current_torso_pos[0] + self.step_length  # 脚掌相对躯干前移
                 current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
-                current_foot_pos[2] = self.step_height + STAND_HEIGHT  # 脚掌高度
-                current_torso_pos[0] += self.step_length/3
+                current_foot_pos[2] = start_foot_pos_z+ self.step_height + STAND_HEIGHT  # 脚掌高度
+                current_torso_pos[0] += self.step_length/2
+                current_torso_pos[2] += self.step_height/2
                 
             elif step == num_steps - 1: # 最后一步
                 current_torso_pos[0] = current_foot_pos[0] # 最后一步躯干x在双脚上方
                 current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
-                current_torso_pos[2] += self.step_height 
+                current_torso_pos[2] += self.step_height/2 
             else:
                 current_torso_pos[0] += self.step_length  # 向前移动
                 current_torso_pos[2] += self.step_height  # 向上移动
@@ -250,6 +255,7 @@ class ContinuousStairClimber:
                 current_foot_pos[0] = current_torso_pos[0] + self.step_length/2  # 脚掌相对躯干前移
                 current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
                 current_foot_pos[2] += self.step_height
+                
                 
             if step < len(offset_x) and not step == num_steps - 1:    # 脚掌偏移
                 current_foot_pos[0] += offset_x[step]
@@ -348,16 +354,16 @@ class ContinuousStairClimber:
             current_foot_pos = np.array([0.0, 0.0, STAND_HEIGHT])
 
         # 初始位置（下楼梯时从高处开始）
-        torso_height_offset = -0.1  # 躯干高度偏移
+        torso_height_offset = -0.05  # 躯干高度偏移
         current_torso_pos[2] += torso_height_offset
         # 基础offset数组，后续会加上stair_offset
-        base_offset_x = [-0.02, 0.00, -0.02, 0.0, 0.03]
+        base_offset_x = [0.0, self.down_stairs_double_step_offset, self.down_stairs_double_step_offset, self.down_stairs_double_step_offset+0.02, 0.03]
         # 所有offset都加上离楼梯的偏置距离
         offset_x = [offset + stair_offset for offset in base_offset_x]
         
         # 记录前一次的左右脚位置
-        prev_left_foot = [start_foot_pos_x, 0.1, start_foot_pos_z, torso_yaw]
-        prev_right_foot = [start_foot_pos_x, -0.1, start_foot_pos_z, torso_yaw]
+        prev_left_foot = [start_foot_pos_x, self.foot_width, start_foot_pos_z, torso_yaw]
+        prev_right_foot = [start_foot_pos_x, -self.foot_width, start_foot_pos_z, torso_yaw]
         initial_index = len(foot_traj)
         
         # 为每一步生成落脚点（下楼梯逻辑）
@@ -375,15 +381,15 @@ class ContinuousStairClimber:
                 # 第一步：躯干稍微前移，脚掌下到第一个台阶
                 current_foot_pos[0] = current_torso_pos[0] + self.down_step_length  # 脚掌相对躯干前移
                 current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
-                current_foot_pos[2] = start_foot_pos_z - self.step_height  # 脚掌下降到第一个台阶
-                current_torso_pos[0] += self.down_step_length/3
+                current_foot_pos[2] = start_foot_pos_z - self.step_height +STAND_HEIGHT # 脚掌下降到第一个台阶
+                current_torso_pos[0] += self.down_step_length
+                current_torso_pos[2] -= self.step_height*0.5
                 
             elif step == num_steps - 1: # 最后一步
                 # 最后一步：躯干移动到双脚上方，脚掌下到地面（发布时叠加global_height，因此此处设为 -global_height 以得到世界高度0）
                 current_torso_pos[0] = current_foot_pos[0] # 最后一步躯干x在双脚上方
                 current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
-                current_foot_pos[2] = STAND_HEIGHT - self.global_height  # 发布阶段加上global_height后=0
-                current_torso_pos[2] -= self.step_height  # 躯干下降
+                current_torso_pos[2] -= self.step_height*0.5  # 躯干下降
             else:
                 # 中间步骤：躯干前移并下降，脚掌下到下一个台阶
                 current_torso_pos[0] += self.down_step_length  # 向前移动
@@ -403,7 +409,7 @@ class ContinuousStairClimber:
             # 生成腾空相轨迹（下楼梯时使用down_stairs=True）
             if prev_left_foot is not None and prev_right_foot is not None:  # 从第二步开始生成腾空相轨迹
                 prev_foot = prev_left_foot if self.is_left_foot else prev_right_foot
-                swing_traj = self.plan_swing_phase(prev_foot, current_foot, swing_height=0.12, down_stairs=True, is_first_step=(step == 0 or step == num_steps - 1))
+                swing_traj = self.plan_swing_phase(prev_foot, current_foot, swing_height=0.14, down_stairs=True, is_first_step=(step == 0 or step == num_steps - 1))
                 swing_trajectories.append(swing_traj)
             else:
                 swing_trajectories.append(None)
@@ -462,7 +468,7 @@ class ContinuousStairClimber:
                         
         return time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories
     
-    def plan_swing_phase(self, prev_foot_pose, next_foot_pose, swing_height=0.10, plot=False, down_stairs=False, is_first_step = False, use_cycloid=True):
+    def plan_swing_phase(self, prev_foot_pose, next_foot_pose, swing_height=0.10, down_stairs=False, is_first_step = False):
         """使用轨迹插值器规划腾空相的轨迹"""
         # 使用轨迹插值器进行插值
         return self.interpolator.interpolate_trajectory(
@@ -473,7 +479,6 @@ class ContinuousStairClimber:
             num_points=7,
             is_first_step=is_first_step,
             down_stairs=down_stairs,
-            plot=plot
         )
     
     def plan_move_to_4d(self, dx=0.2, dy=0.0, dyaw=0.0, time_traj=None, foot_idx_traj=None, foot_traj=None, torso_traj=None, swing_trajectories=None, max_step_x=0.28, max_step_y=0.15, max_step_yaw=30.0):
@@ -590,7 +595,7 @@ class ContinuousStairClimber:
                 desire_torso_pos = [current_torso_pos[0]+actual_step_x/2, current_torso_pos[1]+actual_step_y/2, current_torso_pos[2]]
                 lf_foot, rf_foot = self.generate_steps_4d(desire_torso_pos, current_torso_yaw, current_height)
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
-            
+                        
             # 记录当前脚的位置（4D格式）
             current_foot = [current_foot_pos[0], current_foot_pos[1], current_foot_pos[2], current_torso_pos[3]]
             
@@ -639,13 +644,14 @@ class ContinuousStairClimber:
         else:
             return f"未知方法: {self.trajectory_method}"
     
-    def execute_up_stairs(self, num_steps=5):
+    def execute_up_stairs(self, num_steps=5, stair_offset=0.0):
         """执行连续上楼梯"""
         try:
             self.last_action = 'up_stairs'
             # 计算并执行连续上楼梯
             time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories = self.plan_up_stairs(
                 num_steps=num_steps,
+                stair_offset=stair_offset,
                 time_traj=[], 
                 foot_idx_traj=[], 
                 foot_traj=[], 
@@ -668,7 +674,7 @@ class ContinuousStairClimber:
             traceback.print_exc()
             return False
     
-    def execute_down_stairs(self, num_steps=5, stair_offset=0.0):
+    def execute_down_stairs(self, num_steps=2, stair_offset=0.0):
         """执行连续下楼梯"""
         try:
             self.last_action = 'down_stairs'
@@ -760,7 +766,6 @@ class ContinuousStairClimber:
             msg.swingHeightTrajectory = []  # 初始化摆动高度轨迹
             
             # 创建完整的4D脚姿态轨迹
-            print(f"当前全局高度: {self.global_height:.3f}m")
             for i in range(len(time_traj)):
                 # 只给脚添加全局高度，躯干保持原高度
                 foot_pose_4d_with_global_height = foot_traj[i].copy()
@@ -774,8 +779,7 @@ class ContinuousStairClimber:
                 foot_pose_msg.torsoPose = torso_pose_4d_with_global_height  # 4D躯干姿态 [x, y, z+global_height, yaw]
                 msg.footPoseTrajectory.append(foot_pose_msg)
                 
-                # 打印发送的消息内容
-                print(f"  消息点{i}: 脚4D={foot_pose_4d_with_global_height}, 躯干4D={torso_pose_4d_with_global_height}")
+                
                 
                 # 处理腾空相轨迹（如果有的话）
                 if swing_trajectories is not None and i < len(swing_trajectories):
@@ -816,14 +820,18 @@ class ContinuousStairClimber:
     
 def get_user_input():
     """获取用户输入"""
-    print("\n=== 连续楼梯控制器 ===")
+    print("\n" + "="*50)
+    print("连续楼梯控制器")
+    print("="*50)
     print("请选择要执行的功能:")
-    print("1. 连续上楼梯 (up_stairs)")
-    print("2. 连续下楼梯 (down_stairs)")
-    print("3. 前进/后退 (forward)")
-    print("4. 转身 (turn)")
-    print("5. 切换轨迹方法 (method)")
-    print("6. 退出 (quit)")
+    print("┌─" + "─"*46 + "─┐")
+    print("│ 1. 连续上楼梯 (up_stairs)                │")
+    print("│ 2. 连续下楼梯 (down_stairs)              │")
+    print("│ 3. 前进/后退 (forward)                   │")
+    print("│ 4. 转身 (turn)                           │")
+    print("│ 5. 切换轨迹方法 (method)                 │")
+    print("│ 6. 退出 (quit)                           │")
+    print("└─" + "─"*46 + "─┘")
     
     while True:
         choice = input("\n请输入选择 (1-6): ").strip()
@@ -847,8 +855,13 @@ def main():
     # 初始化ROS节点
     rospy.init_node('continuous_stair_climber', anonymous=True)
     
+    print("连续楼梯控制器启动")
+    print("正在连接ROS节点...")
+    
     # 创建控制器
     climber = ContinuousStairClimber()
+    
+    print("控制器初始化完成")
     
     while not rospy.is_shutdown():
         try:
@@ -882,32 +895,10 @@ def main():
             elif command == 'up_stairs':
                 print(f"\n执行连续上楼梯")
                 try:
-                    num_steps_input = input("请输入迈步次数 (默认5步): ").strip()
-                    if num_steps_input == "":
-                        num_steps = 5
-                    else:
-                        num_steps = int(num_steps_input)
-                    
-                    if num_steps <= 0:
-                        print("错误: 迈步次数必须为正数")
-                        continue
-                    
-                    success = climber.execute_up_stairs(num_steps=num_steps)
-                        
-                except ValueError:
-                    print("错误: 请输入有效的数字")
-                    continue
-                except Exception as e:
-                    print(f"错误: {e}")
-                    continue
-            
-            elif command == 'down_stairs':
-                print(f"\n执行连续下楼梯")
-                try:
                     # 设置离楼梯的偏置距离
-                    offset_input = input("请输入离楼梯的偏置距离 (默认0.0m): ").strip()
+                    offset_input = input("请输入离楼梯的偏置距离 (默认0.01m): ").strip()
                     if offset_input == "":
-                        stair_offset = 0.0
+                        stair_offset = 0.01
                     else:
                         stair_offset = float(offset_input)
                     
@@ -921,7 +912,44 @@ def main():
                         print("错误: 迈步次数必须为正数")
                         continue
                     
+                    success = climber.execute_up_stairs(num_steps=num_steps, stair_offset=stair_offset)
+                    if success:
+                        print(f"连续上楼梯执行成功")
+                    else:
+                        print("连续上楼梯执行失败")
+                        
+                except ValueError:
+                    print("错误: 请输入有效的数字")
+                    continue
+                except Exception as e:
+                    print(f"错误: {e}")
+                    continue
+            
+            elif command == 'down_stairs':
+                print(f"\n执行连续下楼梯")
+                try:
+                    # 设置离楼梯的偏置距离
+                    offset_input = input("请输入离楼梯的偏置距离 (默认0.01m): ").strip()
+                    if offset_input == "":
+                        stair_offset = 0.01
+                    else:
+                        stair_offset = float(offset_input)
+                    
+                    num_steps_input = input("请输入迈步次数 (默认2步): ").strip()
+                    if num_steps_input == "":
+                        num_steps = 2
+                    else:
+                        num_steps = int(num_steps_input)
+                    
+                    if num_steps <= 0:
+                        print("错误: 迈步次数必须为正数")
+                        continue
+                    
                     success = climber.execute_down_stairs(num_steps=num_steps, stair_offset=stair_offset)
+                    if success:
+                        print(f"连续下楼梯执行成功")
+                    else:
+                        print("连续下楼梯执行失败")
                         
                 except ValueError:
                     print("错误: 请输入有效的数字")
@@ -939,16 +967,15 @@ def main():
                     else:
                         distance = float(distance_input)
                     
-                    # # 允许负距离（后退）
-                    # if distance == 0:
-                    #     print("错误: 距离不能为0")
-                    #     continue
-                    
                     # 显示移动方向
                     direction = "前进" if distance > 0 else "后退"
                     print(f"将执行{direction}，距离: {abs(distance):.2f}m")
                     
                     success = climber.execute_forward_movement(distance=distance)
+                    if success:
+                        print(f"{direction}执行成功")
+                    else:
+                        print(f"{direction}执行失败")
                         
                 except ValueError:
                     print("错误: 请输入有效的数字")
@@ -966,7 +993,21 @@ def main():
                     else:
                         angle = float(angle_input)
                     
+                    # 判断转向方向
+                    if angle > 0:
+                        direction = "向左"
+                    elif angle < 0:
+                        direction = "向右"
+                    else:
+                        direction = "不转向"
+                    
+                    print(f"将执行转身: {abs(angle)}° {direction}")
+                    
                     success = climber.execute_turn_movement(turn_angle=angle)
+                    if success:
+                        print(f"转身执行成功")
+                    else:
+                        print("转身执行失败")
                         
                 except ValueError:
                     print("错误: 请输入有效的数字")
@@ -985,20 +1026,11 @@ def main():
             continue
 
 if __name__ == '__main__':
-    try:
-        args = parse_args()
-        STAND_HEIGHT = args.stand_height
-        
-        # 禁用俯仰角限制
-        set_pitch_limit(False)
-        
-        # 进入主循环
-        main()
-        
-    except rospy.ROSInterruptException:
-        # 确保在发生异常时也重新启用俯仰角限制
-        set_pitch_limit(True)
-        pass
-    except Exception as e:
-        print(f"错误: {e}")
-        set_pitch_limit(True) 
+    args = parse_args()
+    STAND_HEIGHT = args.stand_height
+    
+    # 禁用俯仰角限制
+    set_pitch_limit(False)
+    
+    # 进入主循环
+    main() 
