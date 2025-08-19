@@ -6,16 +6,16 @@ hand_wrench:
     itemMass: 5.0 # kg 物品质量
     lforceX: 0.0  
     lforceY: 15   # N
-    lforceZ: 5.0  # N
+    lforceZ: -5.0  # N
   case2:
     description: "默认配置2"
     itemMass: 1.0 # kg
     lforceX: 0.0  
     lforceY: 15   # N
-    lforceZ: 5.0 
+    lforceZ: -5.0 
   case3:
     description: "默认配置3"
     itemMass: 2.0 # kg
     lforceX: 0.0  
     lforceY: 15   # N
-    lforceZ: 5.0
+    lforceZ: -5.0
