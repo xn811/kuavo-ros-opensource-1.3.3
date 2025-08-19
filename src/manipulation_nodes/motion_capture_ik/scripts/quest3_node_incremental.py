@@ -517,7 +517,7 @@ class Quest3Node:
                     
                     # 重置MPC状态
                     print("\033[94m重置 Mobile Manipulator MPC...\033[0m")
-                    reset_mm_mpc()
+                    # reset_mm_mpc()
                     
                     self.change_mobile_ctrl_mode(IncrementalMpcCtrlMode.ArmOnly.value)
                     # 设置当前VR的末端位姿为锚点
