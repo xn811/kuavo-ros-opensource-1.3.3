@@ -16,7 +16,7 @@ from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory
 from humanoid_plan_arm_trajectory.msg import RobotActionState
 from humanoid_plan_arm_trajectory.srv import ExecuteArmAction, ExecuteArmActionResponse  # Import new service type
-
+from std_srvs.srv  import Trigger, TriggerResponse  # 中断服务依赖 
 
 # 根据机器人型号确定关节数据
 KUAVO = "kuavo"
@@ -36,6 +36,8 @@ class ArmTrajectoryBezierDemo:
         self.current_arm_joint_state = []
         self.running_action = False
         self.arm_flag = False
+        self._timer = None
+        self.interrupt_flag  = False  
         self.robot_version = rospy.get_param('/robot_version', 40)
         self.robot_class = KUAVO if self.robot_version >= 40 else ROBAN
         # rospy.spin()
@@ -65,7 +67,7 @@ class ArmTrajectoryBezierDemo:
 
         # Add service to execute arm actions
         self.execute_service = rospy.Service('/execute_arm_action', ExecuteArmAction, self.handle_execute_action)
-        
+        self._interrupt_service = rospy.Service('/interrupt_arm_traj', Trigger, self.handle_interrupt  )
         self.kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
 
         # Store the file path base directory for actions
@@ -259,16 +261,25 @@ class ArmTrajectoryBezierDemo:
 
     def delayed_publish_action_state(self, delay):
         """
-        延时发布动作完成状态。
+        延时发布动作完成状态。（增加中断检查）
         :param delay: 延迟时间（秒）
         """
         rospy.loginfo(f"Delaying action completion state for {delay} seconds...")
-        rospy.sleep(delay)
+        self._timer = rospy.Timer(rospy.Duration(delay), self._on_timer_trigger, oneshot=True)
+
+    def _on_timer_trigger(self, event):
         self.running_action = False  # 结束 state=1 的发布
         self.publish_action_state(2)
         self.arm_flag = False
+        # 动作播放完成以后将动作模式归位
         if self.arm_restore_flag:
             self.call_change_arm_ctrl_mode_service(1)  # 做完动作之后恢复自然摆臂状态
+        # self.call_change_arm_ctrl_mode_service(1)
+        rospy.loginfo(f"After the action playback is complete, revert the action mode ")
+
+    def stop_action(self):
+        if self._timer:
+            self._timer.shutdown()
 
     def publish_running_action_state(self):
         """持续发布 state=1"""
@@ -318,6 +329,30 @@ class ArmTrajectoryBezierDemo:
             rospy.logerr(f"Service call failed: {e}")
             return False
 
+    def handle_interrupt(self, req):
+        """处理中断请求的服务回调"""
+        rospy.loginfo("[%s]  接收到机械臂中断指令", rospy.get_time())  
+        
+        # 设置中断标志位 
+        self.interrupt_flag  = True 
+        self.arm_flag  = False 
+        self.running_action  = False 
+        
+        # 发布动作完成状态
+        self.publish_action_state(2)   
+        
+        # 恢复默认控制模式 
+        self.call_change_arm_ctrl_mode_service(1)   
+
+        # 停止等待动作的timer
+        self.stop_action()
+        
+        # 返回标准Trigger响应 
+        return TriggerResponse(
+            success=True,
+            message=f"动作于{time.strftime('%Y-%m-%d  %H:%M:%S')}成功中断"
+        )
+
     def handle_execute_action(self, req):
         action_name = req.action_name
         self.call_change_arm_ctrl_mode_service(2)
@@ -354,7 +389,8 @@ class ArmTrajectoryBezierDemo:
         if success:
             rospy.loginfo("Arm trajectory planned successfully")
             threading.Thread(target=self.run).start()
-            threading.Thread(target=self.delayed_publish_action_state, args=(finish_time,)).start()
+            # threading.Thread(target=self.delayed_publish_action_state, args=(finish_time,)).start()
+            self.delayed_publish_action_state(finish_time)
             return ExecuteArmActionResponse(success=True, message="Action executed successfully")
         else:
             rospy.logerr("Failed to plan arm trajectory")
@@ -364,7 +400,7 @@ class ArmTrajectoryBezierDemo:
     def run(self):
         rate = rospy.Rate(100)
         # while not rospy.is_shutdown():
-        while self.arm_flag:
+        while self.arm_flag and not self.interrupt_flag:
             try:
                 if len(self.joint_state.position) == 0:
                     continue
@@ -378,6 +414,8 @@ class ArmTrajectoryBezierDemo:
                 break
             rate.sleep()
 
+        if self.interrupt_flag: 
+            self.interrupt_flag  = False
 
 if __name__ == "__main__":
     demo = ArmTrajectoryBezierDemo()
