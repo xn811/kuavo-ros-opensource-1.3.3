@@ -821,10 +821,10 @@ class KuavoPicoInfoTransformer():
                     self.avg_left_hand_length = sum(self.left_hand_lengths) / len(self.left_hand_lengths)
 
                     radi1 = self.upper_arm_length / self.avg_left_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.upper_arm_length) / (self.avg_left_lower_arm_length + self.avg_left_upper_arm_length)
+                    radi2 = (self.lower_arm_length + self.upper_arm_length) / (self.avg_left_lower_arm_length + self.avg_left_upper_arm_length - self.avg_left_hand_length)
                 else:
                     radi1 = self.upper_arm_length / human_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length)
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length - human_hand_length)
 
             else:
                 self.right_upper_arm_lengths.append(human_upper_arm_length)
@@ -842,10 +842,10 @@ class KuavoPicoInfoTransformer():
                     self.avg_right_hand_length = sum(self.right_hand_lengths) / len(self.right_hand_lengths)
 
                     radi1 = self.upper_arm_length / self.avg_right_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length)
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(self.avg_right_lower_arm_length + self.avg_right_upper_arm_length - self.avg_right_hand_length)
                 else:
                     radi1 = self.upper_arm_length / human_upper_arm_length
-                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length)
+                    radi2 = (self.lower_arm_length + self.upper_arm_length)/(human_lower_arm_length + human_upper_arm_length - human_hand_length)
         else:
             radi1 = self.upper_arm_length / human_upper_arm_length
             radi2 = self.lower_arm_length / human_lower_arm_length
