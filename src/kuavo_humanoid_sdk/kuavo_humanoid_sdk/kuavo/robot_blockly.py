@@ -42,7 +42,7 @@ ocs2_head_state = robotHeadMotionData()
 if robot_version >= 40:
     INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 else:
-    INIT_ARM_POS = [0, 0, 0, 0, 0, 0, 0, 0]
+    INIT_ARM_POS = [22.91831, 0, 0, -45.83662, 22.91831, 0, 0, -45.83662] # task.info: shoudler_center: 0.4rad, elbow_center: -0.8rad
 
 
 

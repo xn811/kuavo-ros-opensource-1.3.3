@@ -5,8 +5,12 @@
 ## 文档相关
 - 新增 Roban 打太极使用文档，[文档链接](./src/demo/csv2body_demo/Roban太极动作启动说明.md)
 - 新增 Roban 上楼梯使用文档，[文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban上楼梯说明.md)
+- 新增 Roban 斜坡使用说明文档 [文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban斜坡交互脚本说明.md)
 
 ## 新增功能
+- TACT 动作文件播放支持中断功能
+- TACT 动作文件播放兼容 kuavo 和 roban 机器人
+- PICO 支持通过手柄按键在WholeBody、UpperBody和LowerBody切换, 按键功能见[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md) 
 - PICO VR遥操支持手柄按键控制，按键功能见[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md)
 - 新增提供给桌面端App 的对准物体的积木接口，[文档链接](./src/manipulation_nodes/planarmwebsocketservice/scripts/leju_libs/API_Document.md)
 - h12 遥控器支持部署RL步态模型控制
@@ -20,6 +24,10 @@
 - 改进 PICO 节点与 VR App 端末端力接口数据定义，本地默认提供数组预设参考值
 
 ## 修复问题
+- 修复硬件下发扭矩指令的分段C2T问题
+- 修复 PICO VR 录制和回放功能录制话题不全和未正确切换状态问题
+- 修复 PICO VR 左摇杆控制左右横移方向反了和右摇杆控制旋转方向反了问题
+- 修复运动学 MPC 策略不更新问题，增加多线程竞争保护
 - 修复100045和100049版本task.info中遗漏的参数
 - 修复运动学MPC未捕获异常导致程序崩溃问题
 - PICO VR 修复手臂模式切换异常的问题，修复运动学和普通 ik 的坐标系不同导致的异常问题

@@ -23,7 +23,6 @@ KUAVO = "kuavo"
 ROBAN = "roban"
 
 class ArmTrajectoryBezierDemo:
-    INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # START_FRAME_TIME = 0
     END_FRAME_TIME = 10000
 
@@ -40,6 +39,12 @@ class ArmTrajectoryBezierDemo:
         self.interrupt_flag  = False  
         self.robot_version = rospy.get_param('/robot_version', 40)
         self.robot_class = KUAVO if self.robot_version >= 40 else ROBAN
+        
+        if self.robot_class == KUAVO:
+            self.INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        elif self.robot_class == ROBAN:
+            self.INIT_ARM_POS = [22.91831, 0, 0, -45.83662, 22.91831, 0, 0, -45.83662] # task.info: shoudler_center: 0.4rad, elbow_center: -0.8rad
+
         # rospy.spin()
 
         # Initialize ROS node
