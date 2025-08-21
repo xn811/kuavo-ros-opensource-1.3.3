@@ -159,6 +159,17 @@ class KuavoPicoServer:
 
     def process_data(self, data_str):
         """Process data."""
+        message = proto.VRData()
+        message.ParseFromString(data_str)
+
+        # 延迟诊断命令
+        if message.HasField('delayed_diagnosis_command'):
+            SDKLogger.info("---------------- receive delayed diagnosis command ------------------")
+            SDKLogger.info(f"delayed diagnosis command: {message.delayed_diagnosis_command}")
+            self.process_delayed_diagnosis_command(message.delayed_diagnosis_command)
+            # 延迟诊断中不处理其他数据
+            return
+        
         if self.system_identification.is_running():
             # 延迟诊断中不处理数据
             return
@@ -166,16 +177,6 @@ class KuavoPicoServer:
         if self.is_play_mode():
             SDKLogger.debug("Skipping all data processing in play mode")
             return
-        
-        message = proto.VRData()
-        message.ParseFromString(data_str)
-
-        # 延迟诊断命令
-        if message.HasField('delayed_diagnosis_command'):
-            self.process_delayed_diagnosis_command(message.delayed_diagnosis_command)
-            # 延迟诊断中不处理其他数据
-            return
-        
         if message.HasField('full_body'):
             self.process_body_tracking_data(data_str)
         
@@ -197,13 +198,15 @@ class KuavoPicoServer:
         """Process delayed diagnosis command."""
         # 停止延迟诊断
         if not command.run:
+            SDKLogger.warning("收到停止延迟诊断命令，停止延迟诊断")
             self.system_identification.stop()
             return
         # 启动延迟诊断
         if not self.system_identification.is_running():
+            SDKLogger.info("收到启动延迟诊断命令，启动延迟诊断")
             self.system_identification.start()
         else:
-            SDKLogger.warning("延迟诊断正在进行中，不会处理其他数据")
+            # SDKLogger.warning("延迟诊断正在进行中，不会处理其他数据")
             return
         
     def process_body_tracking_data(self, data_str):

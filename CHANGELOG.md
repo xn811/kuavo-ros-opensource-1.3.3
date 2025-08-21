@@ -8,6 +8,7 @@
 - 新增 Roban 斜坡使用说明文档 [文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban斜坡交互脚本说明.md)
 
 ## 新增功能
+- PICO VR遥操新增机器人延迟诊断功能(非网络延迟)，[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md)
 - TACT 动作文件播放支持中断功能
 - TACT 动作文件播放兼容 kuavo 和 roban 机器人
 - PICO 支持通过手柄按键在WholeBody、UpperBody和LowerBody切换, 按键功能见[文档链接](./src/manipulation_nodes/pico-body-tracking-server/README.md) 

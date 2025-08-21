@@ -12,7 +12,7 @@ import subprocess
 
 from std_msgs.msg import Float32
 from diagnostic_msgs.msg import DiagnosticStatus,KeyValue
-from std_srvs.srv import Empty, EmptyResponse
+from std_srvs.srv import Empty, EmptyResponse, Trigger
 from kuavo_msgs.srv import (
                        changeArmCtrlMode, changeArmCtrlModeRequest,
                         changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
@@ -31,8 +31,11 @@ class SystemIdentification:
         self.is_timeout = False
         self.is_force_killed = False
         self.OUTPUT_DIR_PREFIX='~/.ros/plots/pico-vr'
-        self.output_dir = None
         self._init_ros()
+        
+        # Initialize teleop lock service client
+        self.teleop_lock_client = None
+        self._init_teleop_lock_client()
 
     def start(self):
         """开启一个线程执行系统辨识命令"""
@@ -42,6 +45,9 @@ class SystemIdentification:
                 return False
              
             self._running = True
+            
+            # 在开始系统辨识前锁定遥操作
+            self._lock_teleop()
             
             # 创建并启动执行线程
             execute_thread = threading.Thread(target=self._system_identification_func, daemon=True)
@@ -63,8 +69,12 @@ class SystemIdentification:
         with self.running_lock:
             if not self._running:
                 print("System identification is not running")
-                self._publish_result(DiagnosticStatus.OK, "延迟诊断工具未执行, 无需停止", {})
+                if self.is_force_killed:
+                    self._publish_result(DiagnosticStatus.WARN, "延迟诊断工具已被强制停止", {}, None)
+                else:
+                    self._publish_result(DiagnosticStatus.WARN, "延迟诊断工具已停止", {}, None)
                 return
+            
         with self.process_lock:
             self.is_force_killed = True
             if self.process and self.process.poll() is None:
@@ -78,28 +88,28 @@ class SystemIdentification:
                 except Exception as e:
                     print(f"Error stopping system identification: {e}")
 
-    def _execute_finished(self, retcode):
+    def _execute_finished(self, output_dir, retcode):
         # 重置手臂
         self._arm_reset()
         
         # 超时
         if self.is_timeout:
-            print(f"process timeout, output dir: {self.output_dir}")
-            self._publish_result(DiagnosticStatus.STALE, "延迟诊断工具执行超时, 耗费时间: " + str(self.timeout/60) + "分钟", {})
+            print(f"process timeout, output dir: {output_dir}")
+            self._publish_result(DiagnosticStatus.STALE, "延迟诊断工具执行超时, 耗费时间: " + str(self.timeout/60) + "分钟", {}, output_dir)
             return
         
         if self.is_force_killed:
-            print(f"process force killed, output dir: {self.output_dir}")
-            self._publish_result(DiagnosticStatus.WARN, "延迟诊断工具被强制停止", {})
+            print(f"process force killed, output dir: {output_dir}")
+            self._publish_result(DiagnosticStatus.WARN, "延迟诊断工具被强制停止", {}, output_dir)
             return
         
         # 诊断进程异常退出
         if retcode != 0:
-            print(f"process return code: {retcode}, output dir: {self.output_dir}")
-            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行过程中出现错误, 错误码: " + str(retcode), {})
+            print(f"process return code: {retcode}, output dir: {output_dir}")
+            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行过程中出现错误, 错误码: " + str(retcode), {}, output_dir)
             return
 
-        print(f"process return code: {retcode}, output dir: {self.output_dir}")
+        print(f"process return code: {retcode}, output dir: {output_dir}")
 
         # 发布完成进度
         if hasattr(self, 'progress_pub'):
@@ -110,13 +120,15 @@ class SystemIdentification:
                 time.sleep(0.1)
 
         # 检查输出目录和结果文件
-        if not self.output_dir:
-            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {})
+        if not output_dir:
+            print("System identification result output directory is not found")
+            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {}, output_dir)
             return
 
-        result_file = os.path.join(self.output_dir, 'system_identification_results.json')
+        result_file = os.path.join(output_dir, 'system_identification_results.json')
         if not os.path.exists(result_file):
-            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {})
+            print("System identification result file is not found")
+            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {}, output_dir)
             return
 
         # 读取并发布结果
@@ -127,25 +139,24 @@ class SystemIdentification:
             print(result)
             if 'success' in result and not result['success']:
                 if 'errmsg' in result:
-                    self._publish_result(DiagnosticStatus.ERROR, result['errmsg'], result)
+                    self._publish_result(DiagnosticStatus.ERROR, result['errmsg'], result, output_dir)
                 else:
-                    self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行失败", result)
+                    self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行失败", result, output_dir)
             else:
-                self._publish_result(DiagnosticStatus.OK, "成功", result)
+                self._publish_result(DiagnosticStatus.OK, "成功", result, output_dir)
         except Exception as e:
             print(f"Error reading result file: {e}")
-            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {})
-    def _cleanup(self):
-        if self.output_dir:
+            self._publish_result(DiagnosticStatus.ERROR, "延迟诊断工具执行成功，但结果输出异常", {}, output_dir)
+    def _cleanup(self, output_dir):
+        if output_dir:
             try:
                 import shutil
-                shutil.rmtree(self.output_dir)
+                shutil.rmtree(output_dir)
             except Exception as e:
-                print(f"Error removing output directory {self.output_dir}: {e}")
-        self.output_dir = None 
+                print(f"Error removing output directory {output_dir}: {e}")
 
-    def _publish_result(self, status, err_msg:str, result:dict):
-        self._cleanup()
+    def _publish_result(self, status, err_msg:str, result:dict, output_dir):
+        self._cleanup(output_dir)
         msg = DiagnosticStatus()
         msg.level = status
         msg.message = err_msg
@@ -160,6 +171,30 @@ class SystemIdentification:
         self.progress_pub = rospy.Publisher("/pico/system_identification/progress", Float32, queue_size=5)
         self.service = rospy.Service("/pico/system_identification/start", Empty, self._system_identification_start_callback)
         self.service = rospy.Service("/pico/system_identification/stop", Empty, self._system_identification_stop_callback)
+    
+    def _init_teleop_lock_client(self):
+        """Initialize teleop lock service client."""
+        try:
+            self.teleop_lock_client = rospy.ServiceProxy('/pico/teleop_lock', Trigger)
+            rospy.loginfo("Teleop lock service client initialized")
+        except Exception as e:
+            rospy.logerr(f"Failed to initialize teleop lock service client: {e}")
+            self.teleop_lock_client = None
+    
+    def _lock_teleop(self):
+        """Lock teleop before system identification."""
+        try:
+            if self.teleop_lock_client:
+                rospy.loginfo("Calling teleop lock service before system identification...")
+                response = self.teleop_lock_client()
+                if response.success:
+                    rospy.loginfo("Teleop locked successfully for system identification")
+                else:
+                    rospy.logwarn(f"Failed to lock teleop: {response.message}")
+            else:
+                rospy.logwarn("Teleop lock service client not available")
+        except Exception as e:
+            rospy.logerr(f"Error calling teleop lock service: {e}")
 
     def _system_identification_start_callback(self, req):
         self.start()
@@ -291,9 +326,9 @@ class SystemIdentification:
             # 构建完整的shell命令
             # 获取当前时间戳生成目录
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-            self.output_dir = os.path.expanduser(f"{self.OUTPUT_DIR_PREFIX}/{timestamp}")
-            os.makedirs(self.output_dir, exist_ok=True)
-            cmd = f"source ~/.bashrc &&source {setup_file} && python3 {script_path} --no-plot --save-data --plots-dir {self.output_dir}"
+            output_dir = os.path.expanduser(f"{self.OUTPUT_DIR_PREFIX}/{timestamp}")
+            os.makedirs(output_dir, exist_ok=True)
+            cmd = f"source ~/.bashrc &&source {setup_file} && python3 {script_path} --no-plot --save-data --plots-dir {output_dir}"
             
             print(f"Executing command: {cmd}")
             
@@ -333,6 +368,7 @@ class SystemIdentification:
                 print("System identification completed successfully")
             else:
                 print(f"System identification failed with return code: {self.process.returncode}")
+            print("-----------------System identification finished ...")
         except Exception as e:
             print(f"Error running system identification: {e}")
         finally:
@@ -342,7 +378,7 @@ class SystemIdentification:
                 returncode = -1
                 if self.process:
                    returncode =  self.process.returncode
-                self._execute_finished(returncode)
+                self._execute_finished(output_dir, returncode)
                 self.process = None
 
 if __name__ == "__main__":

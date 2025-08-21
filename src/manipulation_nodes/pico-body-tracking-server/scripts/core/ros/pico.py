@@ -31,6 +31,7 @@ from kuavo_msgs.msg import (
 from kuavo_msgs.srv import changeArmCtrlMode, changeTorsoCtrlMode, changeTorsoCtrlModeRequest, changeArmCtrlMode, changeArmCtrlModeRequest
 from kuavo_msgs.srv import fkSrv
 from std_msgs.msg import Float32MultiArray, Int32, Bool
+from std_srvs.srv import Trigger, TriggerResponse
 from geometry_msgs.msg import Twist
 from .pico_utils import KuavoPicoInfoTransformer
 from common.logger import SDKLogger
@@ -286,6 +287,14 @@ class KuavoPicoNode:
             self._init_joy_controller()
 
             self.robot_matrix_publisher = RobotMatrixPublisher()
+
+            # Initialize teleop lock service
+            self.teleop_lock_service = rospy.Service('/pico/teleop_lock', Trigger, self._teleop_lock_service_callback)
+            SDKLogger.info("Teleop lock service initialized at /pico/teleop_lock")
+            
+            # Initialize teleop unlock service
+            self.teleop_unlock_service = rospy.Service('/pico/teleop_unlock', Trigger, self._teleop_unlock_service_callback)
+            SDKLogger.info("Teleop unlock service initialized at /pico/teleop_unlock")
 
             self._initialized = True
             self.arm_joint_angles = None
@@ -618,6 +627,34 @@ class KuavoPicoNode:
     def _teleop_lock_callback(self, key_combination: Set[str], joy:JoySticks)->None:
         """Callback for teleoperation lock."""
         self.toggle_teleop_unlock.turn_off() # 锁定遥操作
+
+    def _teleop_lock_service_callback(self, req):
+        """Service callback for locking teleoperation."""
+        try:
+            if hasattr(self, 'toggle_teleop_unlock'):
+                self.toggle_teleop_unlock.turn_off()  # 锁定遥操作
+                SDKLogger.info("Teleoperation locked via service call")
+                return TriggerResponse(success=True, message="Teleoperation locked successfully")
+            else:
+                SDKLogger.error("toggle_teleop_unlock not available")
+                return TriggerResponse(success=False, message="toggle_teleop_unlock not initialized")
+        except Exception as e:
+            SDKLogger.error(f"Error in teleop lock service: {e}")
+            return TriggerResponse(success=False, message=f"Error: {str(e)}")
+
+    def _teleop_unlock_service_callback(self, req):
+        """Service callback for unlocking teleoperation."""
+        try:
+            if hasattr(self, 'toggle_teleop_unlock'):
+                self.toggle_teleop_unlock.turn_on()  # 解锁遥操作
+                SDKLogger.info("Teleoperation unlocked via service call")
+                return TriggerResponse(success=True, message="Teleoperation unlocked successfully")
+            else:
+                SDKLogger.error("toggle_teleop_unlock not available")
+                return TriggerResponse(success=False, message="toggle_teleop_unlock not initialized")
+        except Exception as e:
+            SDKLogger.error(f"Error in teleop unlock service: {e}")
+            return TriggerResponse(success=False, message=f"Error: {str(e)}")
 
     def _record_rosbag_callback(self, key_combination: Set[str], joy:JoySticks)->None:
         """Callback for record rosbag."""

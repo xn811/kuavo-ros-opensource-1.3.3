@@ -7,6 +7,9 @@ from kuavo_msgs.msg import twoArmHandPoseCmd, twoArmHandPose, armHandPose,armTar
 from kuavo_msgs.srv import (
                        changeArmCtrlMode, changeArmCtrlModeRequest,
                         changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
+
+# ROS topic constants
+MOBILE_MANIPULATOR_EEF_POSES_TOPIC = 'mobile_manipulator_eef_poses'
 class MotionController:
     def __init__(self, args, signal_analyzer, visualizer, use_chinese=False):
         self.args = args
@@ -36,7 +39,7 @@ class MotionController:
         self.pub = rospy.Publisher('/mm/two_arm_hand_pose_cmd', twoArmHandPoseCmd, queue_size=10)
         self.kuavo_arm_target_poses = rospy.Publisher('/kuavo_arm_target_poses', armTargetPoses, queue_size=10)
         # Subscriber for receiving robot pose feedback
-        self.sub = rospy.Subscriber('humanoid_eef_poses', Float64MultiArray, self.humanoid_pose_callback)
+        self.sub = rospy.Subscriber(MOBILE_MANIPULATOR_EEF_POSES_TOPIC, Float64MultiArray, self.humanoid_pose_callback)
         rospy.loginfo(self._get_label("MotionController: ROS通讯已初始化", "MotionController: ROS communications initialized."))
         rospy.sleep(0.5) # Wait for publisher/subscriber to connect
 
@@ -47,7 +50,6 @@ class MotionController:
         current_time = rospy.get_time()
         self.output_data.append(z_position)
         self.output_time_data.append(current_time)
-
     def publish_hand_pose(self, x, y_left, y_right, z_left, z_right, quat, elbow_pos_left, elbow_pos_right, joint_angles):
         if self.shutdown_requested or self.pub is None:
             return
@@ -215,7 +217,7 @@ class MotionController:
             self.sub.unregister()
             self.sub = None # Mark as unregistered
         # Minimal callback that does nothing
-        temp_sub = rospy.Subscriber('humanoid_eef_poses', Float64MultiArray, lambda msg: None) 
+        temp_sub = rospy.Subscriber(MOBILE_MANIPULATOR_EEF_POSES_TOPIC, Float64MultiArray, lambda msg: None) 
 
         # Store and clear current data buffers before warmup
         # We don't want warmup movements in our main data buffers
@@ -265,9 +267,9 @@ class MotionController:
         # Restore original subscriber for actual data collection
         if temp_sub: temp_sub.unregister()
         if original_sub is not None : # If there was an original subscriber, re-establish it
-             self.sub = rospy.Subscriber('humanoid_eef_poses', Float64MultiArray, self.humanoid_pose_callback)
+             self.sub = rospy.Subscriber(MOBILE_MANIPULATOR_EEF_POSES_TOPIC, Float64MultiArray, self.humanoid_pose_callback)
         elif self.sub is None: # If it was never initialized or fully cleared, re-init
-             self.sub = rospy.Subscriber('humanoid_eef_poses', Float64MultiArray, self.humanoid_pose_callback)
+             self.sub = rospy.Subscriber(MOBILE_MANIPULATOR_EEF_POSES_TOPIC, Float64MultiArray, self.humanoid_pose_callback)
 
         rospy.loginfo(self._get_label("预热阶段完成", "Warmup phase completed."))
 
@@ -334,7 +336,10 @@ class MotionController:
         rospy.sleep(0.5) # Allow last data points to arrive
 
         in_data, out_data, in_time, out_time = self.get_collected_data()
-
+        rospy.loginfo(f"in_data: {in_data.shape}")
+        rospy.loginfo(f"out_data: {out_data.shape}")
+        rospy.loginfo(f"in_time: {in_time.shape}")
+        rospy.loginfo(f"out_time: {out_time.shape}")
         if len(in_data) < 10 or len(out_data) < 10:
             rospy.logerr(self._get_label("标定数据不足!", "Not enough calibration data!"))
             return False # Indicate failure
