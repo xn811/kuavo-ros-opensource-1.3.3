@@ -429,6 +429,14 @@ def stance_callback(event):
     source = event.kwargs.get("source")
     print_state_transition("stance", source, "stance")
 
+def trot_to_walk_callback(event):
+    source = event.kwargs.get("source")
+    print_state_transition("trot_to_walk", source, "walk")
+
+def walk_to_trot_callback(event):
+    source = event.kwargs.get("source")
+    print_state_transition("walk_to_trot", source, "trot")
+
 def walk_callback(event):
     source = event.kwargs.get("source")
     print_state_transition("walk", source, "walk")
