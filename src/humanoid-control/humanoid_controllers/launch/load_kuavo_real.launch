@@ -140,9 +140,11 @@
     <arg name="cali" default="false" />
     <arg name="cali_arm" default="false" />
     <arg name="cali_leg" default="false" />
-
     <!-- 是否进入到手臂展开的零点校准姿态 -->
     <arg name="cali_set_zero" default="false" />
+    <arg name="joint_protect_enable" default="true" />
+    <arg name="cmd_truncation_enable" default="false" />
+    <arg name="leg_disable_mode" default="true" doc="If true, when any leg joint fails, all leg joints (1-12) will be disabled" />
 
     <param name="real" value="$(arg real)" />
     <param name="log_lcm" value="$(arg log)" />

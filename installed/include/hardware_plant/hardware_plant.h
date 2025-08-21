@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <set>
 #include <unordered_map>
 #include <map>
 #include "kuavo_common/common/robot_state.h"
@@ -203,6 +204,7 @@ class HardwarePlant
         std::lock_guard<std::mutex> lk(disable_motor_mtx_);
         return disableMotor_.size();
     }
+
 
 private:
 
