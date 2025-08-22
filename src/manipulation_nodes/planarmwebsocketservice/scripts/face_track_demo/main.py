@@ -85,8 +85,8 @@ class FaceTrack:
         self.min_face_area = 10000  # 最小人脸面积阈值（像素）
 
         # yaw 左右转动，pitch 上下转动
-        self.yaw_pid = PID(kp=0.04, ki=0.0, kd=0.018, output_limits=(-90, 90))
-        self.pitch_pid = PID(kp=0.0145, ki=0.0, kd=0.0155, output_limits=(-20, 30))
+        self.yaw_pid = PID(kp=0.015, ki=0.00, kd=0.001, output_limits=(-90, 90))
+        self.pitch_pid = PID(kp=0.015, ki=0.00, kd=0.001, output_limits=(-20, 30))
         self.head_yaw = 0.0
         self.head_pitch = 0.0
         self.head_yaw_limit = (-90, 90)
@@ -98,13 +98,16 @@ class FaceTrack:
 
         self.head_state_sub = rospy.Subscriber("/sensors_data_raw", sensorsData, self.update_head_state)
         self.head_motion_pub = rospy.Publisher("/robot_head_motion_data", robotHeadMotionData, queue_size=10)
-    
+
+        self.image_pub = rospy.Publisher("/camera/detected_face", Image, queue_size=30)
+        self.cv_image = None
+
     def image_callback(self, msg):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.cv_image = cv_image
 
-             # 人脸检测
-            results = self.model.predict(source=cv_image, conf=0.3, save=False)
+            results = self.model.predict(source=cv_image, conf=0.3, save=False, verbose=False)
             result = results[0]
 
             if result.boxes and len(result.boxes) > 0:
@@ -114,6 +117,8 @@ class FaceTrack:
             else:
                 # 未检测到人脸
                 self.is_face_detected = False
+
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(self.cv_image, "bgr8"))
         except Exception as e:
             rospy.logerr("图像转换失败: %s", e)
             self.is_face_detected = False
@@ -149,7 +154,12 @@ class FaceTrack:
         # 将当前人脸中心坐标存在类属性中
         self.face_position_x = center_x
         self.face_position_y = center_y
-    
+
+        # 绘制人脸框
+        cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # cv2.putText(cv_image, f"{confidence:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        # rospy.loginfo("人脸框位置: %d, %d", center_x, center_y)
+
     def update_head_state(self, msg):
         # 获取当前头部电机弧度制下的位置，转换为角度制
         # 头部电机为第22、23个关节（索引21、22）
@@ -199,8 +209,8 @@ class FaceTrack:
                     next_yaw += move_size_x
                 else:
                     self.yaw_pid.reset()
-                
-                if self.face_position_y < 180 or self.face_position_y > 540:
+
+                if self.face_position_y < 300 or self.face_position_y > 420:
                     print("人脸在图像中垂直方向上超出中心点，需要转动头部: ", self.face_position_y)
                     cur_error_y = self.face_position_y - self.target_point_y
                     move_size_y = self.pitch_pid(cur_error_y)
