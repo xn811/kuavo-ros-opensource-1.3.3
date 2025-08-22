@@ -50,6 +50,8 @@
         "PA100_18", "PA100", "PA100", "PA100_18", "CK", "CK",
         "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo",
         "PA100", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo", "ruiwo"],
+    "ruiwo_kp": [30, 20, 20, 10, 10, 10, 30, 20, 20, 10, 10, 10, 4, 10],
+    "ruiwo_kd": [2, 4, 4, 2, 2, 2, 2, 4, 4, 2, 2, 2, 3, 3],
     "EndEffectorType": ["qiangnao", "qiangnao"],
     "min_joint_position_limits":[
         -40, -60, -140, -8, -100, -100,
@@ -145,6 +147,7 @@
     "lower_arm_length": 0.36229,
     "shoulder_width": 0.15,
     "eef_z_offset": -0.0,
+    "hand_ref_length": 0.193,
     "base_height_offset": 0.23,
     "base_chest_offset_x": -0.0,
 
@@ -164,8 +167,8 @@
         "PA100":{
             "c2t_cul":[10,20,30,40,50,
                        60,70,80,90,100],
-            "c2t_coeff":[1.23,1.25,1.26,1.27,1.28,
-                         1.3,1.4,1.5,1.6,1.7]
+            "c2t_coeff":[1.2,1.2,1.2,1.2,1.2,
+                         1.2,1.2,1.2,1.2,1.2]
         },
         "PA100_18":{
             "c2t_cul":[10,20,30,40,50,

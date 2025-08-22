@@ -52,6 +52,8 @@
         "ruiwo", "ruiwo", "ruiwo", "ruiwo",
         "ruiwo", "ruiwo", "ruiwo", "ruiwo",
         "ruiwo", "ruiwo"],
+    "ruiwo_kp": [25, 20, 20, 10, 25, 20, 20, 10, 20, 10, 10, 10, 4, 10],
+    "ruiwo_kd": [8, 6, 6, 3, 8, 6, 6, 3, 4, 2, 2, 2, 3, 3],
     "EndEffectorType": ["none", "none"],
     "min_joint_position_limits":[
         -120,
@@ -153,8 +155,9 @@
     "lower_arm_length": 0.17,
     "shoulder_width": 0.16,
     "eef_z_offset": -0.17,
-    "base_height_offset": 0.17,
-    "base_chest_offset_x": -0.04,
+    "hand_ref_length": 0.0,
+    "base_height_offset": 0.18,
+    "base_chest_offset_x": -0.0,
     
     "motor_velocities_factor": 0.005,
     "joint_velocities_limit": {

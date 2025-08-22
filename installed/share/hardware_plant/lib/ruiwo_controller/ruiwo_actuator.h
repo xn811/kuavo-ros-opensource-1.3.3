@@ -49,6 +49,8 @@ private:
     PyObject *pAdjustZeroMethod{nullptr};
     PyObject *pGetZeroPointsMethod{nullptr};
     PyObject *pSetTeachPendantModeMethod{nullptr};
+    PyObject *pSetJointGainsMethod{nullptr};
+    PyObject *pGetJointGainsMethod{nullptr};
     PyObject *pJoint_online_list;
     std::string pymodule_path;
     PyGILState_STATE gstate;
@@ -78,6 +80,8 @@ public:
     std::vector<double> getMotorZeroPoints();
     void set_teach_pendant_mode(int mode_);
     bool check_motor_list_state();
+    void set_joint_gains(const std::vector<int> &joint_indices, const std::vector<double> &kp_pos, const std::vector<double> &kd_pos);
+    std::vector<std::vector<double>> get_joint_gains(const std::vector<int> &joint_indices);
     std::vector<double> get_positions();
     std::vector<double> get_torque();
     std::vector<double> get_velocity();

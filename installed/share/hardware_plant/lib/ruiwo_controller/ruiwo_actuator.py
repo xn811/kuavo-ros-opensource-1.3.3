@@ -722,6 +722,66 @@ class RuiWoActuator():
     def get_motor_zero_points(self):
         return self.zero_position
 
+    # 设置指定关节的kp_pos和kd_pos参数
+    def set_joint_gains(self, joint_indices, kp_pos=None, kd_pos=None):
+        """
+        设置指定关节的kp_pos和kd_pos参数
+        
+        Args:
+            joint_indices: 关节索引列表 (0-based)
+            kp_pos: kp_pos值列表，如果为None则不修改
+            kd_pos: kd_pos值列表，如果为None则不修改
+        """
+        if not isinstance(joint_indices, list):
+            joint_indices = [joint_indices]
+            
+        if kp_pos is not None and not isinstance(kp_pos, list):
+            kp_pos = [kp_pos]
+            
+        if kd_pos is not None and not isinstance(kd_pos, list):
+            kd_pos = [kd_pos]
+            
+        for i, joint_idx in enumerate(joint_indices):
+            if joint_idx < 0 or joint_idx >= len(self.target_pos_kp):
+                print(f"[RUIWO motor]: Warning: joint index {joint_idx} out of range")
+                continue
+                
+            if kp_pos is not None and i < len(kp_pos):
+                self.target_pos_kp[joint_idx] = kp_pos[i]
+                print(f"[RUIWO motor]: Set joint {joint_idx} kp_pos to {kp_pos[i]}")
+                
+            if kd_pos is not None and i < len(kd_pos):
+                self.target_pos_kd[joint_idx] = kd_pos[i]
+                print(f"[RUIWO motor]: Set joint {joint_idx} kd_pos to {kd_pos[i]}")
+
+    # 获取指定关节的kp_pos和kd_pos参数
+    def get_joint_gains(self, joint_indices=None):
+        """
+        获取指定关节的kp_pos和kd_pos参数
+        
+        Args:
+            joint_indices: 关节索引列表，如果为None则返回所有关节
+            
+        Returns:
+            dict: {'kp_pos': [values], 'kd_pos': [values]}
+        """
+        if joint_indices is None:
+            joint_indices = list(range(len(self.target_pos_kp)))
+        elif not isinstance(joint_indices, list):
+            joint_indices = [joint_indices]
+            
+        kp_values = []
+        kd_values = []
+        
+        for joint_idx in joint_indices:
+            if joint_idx < 0 or joint_idx >= len(self.target_pos_kp):
+                print(f"[RUIWO motor]: Warning: joint index {joint_idx} out of range")
+                continue
+            kp_values.append(self.target_pos_kp[joint_idx])
+            kd_values.append(self.target_pos_kd[joint_idx])
+            
+        return {'kp_pos': kp_values, 'kd_pos': kd_values}
+
     # 保存当前的零点位置到文件中
     def save_zero_position(self):
         config_path = self.get_zero_path()
