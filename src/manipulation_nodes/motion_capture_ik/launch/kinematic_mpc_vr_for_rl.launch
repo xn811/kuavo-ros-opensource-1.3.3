@@ -31,5 +31,7 @@
       <node name="visulize_traj_node" pkg="motion_capture_ik" type="visulize_traj.py" output="screen"  args="--ee_type $(arg ee_type)"/>
   </group>
 
+  <include file="$(find motion_capture_ik)/launch/ik_node.launch"/>
+
   <node name="quest3_fsm_node" pkg="motion_capture_ik" type="quest3_fsm_node_for_rl.py" output="screen"/>
 </launch>
