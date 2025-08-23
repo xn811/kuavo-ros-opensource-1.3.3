@@ -941,7 +941,7 @@ class RobotControlBlockly:
         dt: float = 0.6,
         ss_time: float = 0.5,
     ) -> bool:
-        """Set stair climbing parameters.
+        """Set stair climbing parameters with version-specific defaults.
 
         Args:
             step_height (float): Step height in meters. Defaults to 0.13.
@@ -955,6 +955,22 @@ class RobotControlBlockly:
             bool: True if parameters were set successfully, False otherwise.
         """
         try:
+            # Set default parameters based on robot version
+            if robot_version >= 40:
+                step_height = step_height or 0.13
+                step_length = step_length or 0.28
+                foot_width = foot_width or 0.10
+                stand_height = stand_height or 0.0
+                dt = dt or 0.6
+                ss_time = ss_time or 0.5
+            else:
+                step_height = step_height or 0.08
+                step_length = step_length or 0.25
+                foot_width = foot_width or 0.10
+                stand_height = stand_height or -0.02
+                dt = dt or 1.0
+                ss_time = ss_time or 0.6
+            
             return self.climb_stair.set_stair_parameters(
                 step_height=step_height,
                 step_length=step_length,
@@ -967,17 +983,17 @@ class RobotControlBlockly:
             print(f"Set stair parameters failed: {str(e)}")
             return False
 
-    def climb_up_stairs(self, num_steps: int = 5) -> bool:
+    def climb_up_stairs(self, num_steps: int = 4, stair_offset: float = 0.03) -> bool:
         """Plan and add up stairs trajectory to accumulated trajectory.
 
         Args:
-            num_steps (int): Number of steps to climb up. Defaults to 5.
+            num_steps (int): Number of steps to climb up. Defaults to 4.
 
         Returns:
             bool: True if planning was successful, False otherwise.
         """
         try:
-            return self.climb_stair.climb_up_stairs(num_steps)
+            return self.climb_stair.climb_up_stairs(num_steps, stair_offset)
         except Exception as e:
             print(f"Climb up stairs failed: {str(e)}")
             return False

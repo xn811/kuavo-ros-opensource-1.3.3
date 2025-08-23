@@ -235,10 +235,12 @@ from kuavo_humanoid_sdk import RobotControlBlockly
    - 返回值：bool，成功返回True，失败返回False
 
 2. **爬上楼梯**
-   - 函数：`robot_control.climb_up_stairs(num_steps=5)`
-   - 参数类型：int
+   - 函数：`robot_control.climb_up_stairs(num_steps=4, stair_offset=0.03)`
+   - 参数类型：int, float
    - 描述：规划并添加上楼梯轨迹到累积轨迹中
-   - 参数说明：num_steps: 要爬升的台阶数，默认5
+   - 参数说明：
+     - num_steps: 要爬升的台阶数，默认4
+     - stair_offset: 台阶偏移量（米），默认0.03
    - 返回值：bool，成功返回True，失败返回False
 
 3. **爬下楼梯**

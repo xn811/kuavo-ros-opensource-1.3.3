@@ -37,18 +37,16 @@
       <include file="$(find gazebo_sim)/launch/load_stairs.launch">
       </include>
     </group>
-    
-
-    <!-- 加载斜坡模型 -->
-    <include file="$(find gazebo_sim)/launch/load_slope.launch">
-
-    </include>
-  </group>
-<group unless="$(arg use_kuavo)">
+    <group unless="$(arg use_kuavo)">
       <!-- 加载楼梯模型 -->
       <include file="$(find gazebo_sim)/launch/load_stairs_roban.launch">
       </include>
+        <!-- 加载斜坡模型 -->
+    <include file="$(find gazebo_sim)/launch/load_slope_roban.launch">
+    </include>
     </group>
+  </group>
+
   <!-- Load URDF or XACRO file based on robot version -->
   <group if="$(arg use_xacro)">
     <!-- For versions 40, 41, 42, 43, 45 -->

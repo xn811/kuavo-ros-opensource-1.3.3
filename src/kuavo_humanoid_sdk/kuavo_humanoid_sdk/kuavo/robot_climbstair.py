@@ -4,25 +4,25 @@ import rospy
 import numpy as np
 from typing import List, Tuple, Optional, Union
 from scipy.interpolate import PchipInterpolator
-from kuavo_msgs.msg import footPose, footPoseTargetTrajectories
+from kuavo_msgs.msg import footPose, footPoseTargetTrajectories, footPoses
 from std_srvs.srv import SetBool, SetBoolRequest
 
 
 # Constants for magic numbers
 class StairClimbingConstants:
-    DEFAULT_DT = 0.6  # Default gait cycle time
-    DEFAULT_SS_TIME = 0.5  # Default single support time
-    DEFAULT_FOOT_WIDTH = 0.10  # Default foot width
-    DEFAULT_STEP_HEIGHT = 0.13  # Default step height
-    DEFAULT_STEP_LENGTH = 0.28  # Default step length
+    DEFAULT_DT = 1.0  # 上下楼梯的步态周期 (aligned with continuousStairClimber-roban.py)
+    DEFAULT_SS_TIME = 0.6  # 上下楼梯的支撑迈步时间 (aligned with continuousStairClimber-roban.py)
+    DEFAULT_FOOT_WIDTH = 0.108535  # 脚宽度 (aligned with continuousStairClimber-roban.py)
+    DEFAULT_STEP_HEIGHT = 0.08  # 台阶高度 (aligned with continuousStairClimber-roban.py)
+    DEFAULT_STEP_LENGTH = 0.25  # 上楼梯的台阶长度 (aligned with continuousStairClimber-roban.py)
     DEFAULT_MAX_STEP_X = 0.28  # Default max step in X direction
     DEFAULT_MAX_STEP_Y = 0.15  # Default max step in Y direction
     DEFAULT_MAX_STEP_YAW = 30.0  # Default max yaw step (degrees)
     DEFAULT_SWING_HEIGHT = 0.10  # Default swing phase height
     DEFAULT_SWING_POINTS = 7  # Default swing trajectory points
-    TORSO_HEIGHT_OFFSET = -0.02  # Torso height offset
-    WALK_DT = 0.4  # Walking gait cycle time
-    WALK_SS_TIME = 0.5  # Walking single support time
+    TORSO_HEIGHT_OFFSET = -0.02  # 躯干高度偏移 (aligned with continuousStairClimber-roban.py)
+    WALK_DT = 0.6  # 前进/转弯的步态周期 (aligned with continuousStairClimber-roban.py)
+    WALK_SS_TIME = 0.4  # 前进/转弯的支撑迈步时间 (aligned with continuousStairClimber-roban.py)
     DOWN_STAIRS_SS_TIME = 0.35  # Down stairs single support time
 
 
@@ -136,14 +136,14 @@ def publish_foot_pose_traj(
                 )
 
     if verbose:
-        rospy.loginfo(
-            f"[ClimbStair] Publishing to /humanoid_mpc_foot_pose_target_trajectories"
-        )
+                    rospy.loginfo(
+                "[ClimbStair] Publishing to /humanoid_mpc_foot_pose_target_trajectories"
+            )
 
     pub.publish(msg)
 
     if verbose:
-        rospy.loginfo(f"[ClimbStair] Trajectory published successfully")
+        rospy.loginfo("[ClimbStair] Trajectory published successfully")
 
     rospy.sleep(1.0)  # Reduced sleep time
 
@@ -164,14 +164,20 @@ class KuavoRobotClimbStair:
             verbose_logging: Whether to enable verbose logging
         """
 
-        # Use constants for parameters
+        # Use constants for parameters (aligned with continuousStairClimber-roban.py)
         self.dt = StairClimbingConstants.DEFAULT_DT
         self.ss_time = StairClimbingConstants.DEFAULT_SS_TIME
         self.foot_width = StairClimbingConstants.DEFAULT_FOOT_WIDTH
         self.step_height = StairClimbingConstants.DEFAULT_STEP_HEIGHT
         self.step_length = StairClimbingConstants.DEFAULT_STEP_LENGTH
+        self.down_step_length = 0.25  # 下楼梯的迈步距离（独立参数）
+        self.up_stairs_double_step_offset = 0.00
+        self.down_stairs_double_step_offset = -0.00
+        self.temp_x_offset = 0.002  # 临时x方向偏置，每步叠加
+        self.walk_dt = StairClimbingConstants.WALK_DT  # 前进/转弯的步态周期
+        self.walk_ss_time = StairClimbingConstants.WALK_SS_TIME  # 前进/转弯的支撑迈步时间
         self.total_step = 0
-        self.is_left_foot = True
+        self.is_left_foot = False  # 当前是否为左脚 (aligned with continuousStairClimber-roban.py)
 
         # Global variables from original script
         self.PLOT = False
@@ -334,6 +340,12 @@ class KuavoRobotClimbStair:
             "stand_height": self.STAND_HEIGHT,
             "dt": self.dt,
             "ss_time": self.ss_time,
+            "down_step_length": self.down_step_length,
+            "up_stairs_double_step_offset": self.up_stairs_double_step_offset,
+            "down_stairs_double_step_offset": self.down_stairs_double_step_offset,
+            "temp_x_offset": self.temp_x_offset,
+            "walk_dt": self.walk_dt,
+            "walk_ss_time": self.walk_ss_time,
         }
 
     def _clear_trajectory_data(self) -> None:
@@ -483,15 +495,20 @@ class KuavoRobotClimbStair:
         # Calculate actual step size
         actual_step_x = dx / num_steps
         actual_step_y = dy / num_steps
-        actual_step_yaw = dyaw / num_steps
+        
+        # Record initial yaw angle for target calculation (aligned with roban script)
+        initial_yaw = current_torso_pos[3]
+        target_yaw = initial_yaw + np.radians(dyaw)
+        
         # is_left_foot = ((self.total_step - 1) % 2 == 0 or dyaw > 0)
         if dyaw > 0:
             self.is_left_foot = True
         # Record starting trajectory length (for debugging)
         # start_traj_len = len(foot_traj)  # Currently unused
         num_steps += 1  # First and last steps are half steps
-        walk_dt = 0.4
-        walk_ss_time = 0.5
+        # 使用类变量中的时间参数 (aligned with continuousStairClimber-roban.py)
+        walk_dt = self.walk_dt if hasattr(self, 'walk_dt') else StairClimbingConstants.WALK_DT
+        walk_ss_time = self.walk_ss_time if hasattr(self, 'walk_ss_time') else StairClimbingConstants.WALK_SS_TIME
 
         for i in range(num_steps):
             self.total_step += 1
@@ -500,49 +517,56 @@ class KuavoRobotClimbStair:
             # Alternate left and right feet
             self.is_left_foot = not self.is_left_foot
             foot_idx_traj.append(0 if self.is_left_foot else 1)
+            
+            # Calculate current step target yaw angle (linear interpolation, aligned with roban script)
+            if abs(dyaw) > 0.1:  # Only update yaw angle when significant turning is needed
+                progress = (i + 1) / num_steps
+                current_torso_yaw = initial_yaw + progress * np.radians(dyaw)
+            else:
+                current_torso_yaw = initial_yaw  # Keep yaw angle unchanged for straight walking
+            
             # Update torso position
             if i == 0:
                 current_torso_pos[0] += actual_step_x / 2
                 current_torso_pos[1] += actual_step_y / 2
-                current_torso_pos[3] += np.radians(actual_step_yaw)
+                current_torso_pos[3] = current_torso_yaw
                 # Calculate foot placement offset based on current yaw angle
-                current_yaw = current_torso_pos[3]
                 desire_torso_pos = [
                     current_torso_pos[0] + actual_step_x / 2,
                     current_torso_pos[1] + actual_step_y / 2,
                     current_torso_pos[2],
                 ]
                 lf_foot, rf_foot = self.generate_steps(
-                    desire_torso_pos, current_yaw, current_height
+                    desire_torso_pos, current_torso_yaw, current_height
                 )
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
             # elif i == num_steps - 1 or (abs(dyaw)>0 and i == num_steps - 2):
             elif i == num_steps - 1:
                 current_torso_pos[0] += actual_step_x / 2
                 current_torso_pos[1] += actual_step_y / 2
-                # current_torso_pos[3] += np.radians(actual_step_yaw) if not (abs(dyaw)>0 and i == num_steps - 1) else 0
-                current_torso_pos[3] += 0
+                current_torso_pos[3] = target_yaw  # Last step ensures reaching target yaw angle
                 # Calculate foot placement offset based on current yaw angle
-                current_yaw = current_torso_pos[3]
                 lf_foot, rf_foot = self.generate_steps(
-                    current_torso_pos[:3], current_yaw, current_height
+                    current_torso_pos[:3], current_torso_pos[3], current_height
                 )
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
             else:
                 current_torso_pos[0] += actual_step_x
                 current_torso_pos[1] += actual_step_y
-                current_torso_pos[3] += np.radians(actual_step_yaw)
+                current_torso_pos[3] = current_torso_yaw
                 # Calculate foot placement offset based on current yaw angle
-                current_yaw = current_torso_pos[3]
                 desire_torso_pos = [
                     current_torso_pos[0] + actual_step_x / 2,
                     current_torso_pos[1] + actual_step_y / 2,
                     current_torso_pos[2],
                 ]
                 lf_foot, rf_foot = self.generate_steps(
-                    desire_torso_pos, current_yaw, current_height
+                    desire_torso_pos, current_torso_yaw, current_height
                 )
                 current_foot_pos = lf_foot if self.is_left_foot else rf_foot
+
+            # 叠加临时x方向偏置（每步都叠加，参考continuousStairClimber-roban.py）
+            current_torso_pos[0] += self.temp_x_offset * (i + 1)
 
             # Add trajectory point
             foot_traj.append(
@@ -572,6 +596,7 @@ class KuavoRobotClimbStair:
         foot_traj=None,
         torso_traj=None,
         swing_trajectories=None,
+        stair_offset=0.0,
     ):
         """Plan up stairs trajectory implementation"""
         if time_traj is None:
@@ -600,15 +625,16 @@ class KuavoRobotClimbStair:
             current_foot_pos = np.array([0.0, 0.0, self.STAND_HEIGHT])
 
         # Initial position
-        torso_height_offset = -0.02  # Torso height offset
+        torso_height_offset = -0.02  # 躯干高度偏移 (aligned with continuousStairClimber-roban.py)
         current_torso_pos[2] += torso_height_offset
-        # current_foot_pos = np.array([0.0, 0.0, 0.0])
-        offset_x = [0.0, 0.0, 0.0, 0.0, 0.0]
-        # first_step_offset = 0.35  # Currently unused
+        # 基础offset数组，后续会加上stair_offset (aligned with continuousStairClimber-roban.py)
+        base_offset_x = [0.00, self.up_stairs_double_step_offset, self.up_stairs_double_step_offset, self.up_stairs_double_step_offset, 0.0]
+        # 所有offset都加上离楼梯的偏置距离
+        offset_x = [offset + stair_offset for offset in base_offset_x]
 
         # Record previous left and right foot positions
-        prev_left_foot = [start_foot_pos_x, 0.1, start_foot_pos_z, torso_yaw]
-        prev_right_foot = [start_foot_pos_x, -0.1, start_foot_pos_z, torso_yaw]
+        prev_left_foot = [start_foot_pos_x, self.foot_width, start_foot_pos_z, torso_yaw]
+        prev_right_foot = [start_foot_pos_x, -self.foot_width, start_foot_pos_z, torso_yaw]
         initial_index = len(foot_traj)
         # Generate footsteps for each step
         for step in range(num_steps):
@@ -620,50 +646,31 @@ class KuavoRobotClimbStair:
             self.is_left_foot = not self.is_left_foot
             foot_idx_traj.append(0 if self.is_left_foot else 1)
 
-            # Calculate torso position
+            # Calculate torso position (aligned with continuousStairClimber-roban.py)
             if step == 0:
-                current_foot_pos[0] = (
-                    current_torso_pos[0] + self.step_length
-                )  # Foot moves forward relative to torso
-                current_foot_pos[1] = (
-                    current_torso_pos[1] + self.foot_width
-                    if self.is_left_foot
-                    else -self.foot_width
-                )  # Left/right offset
-                current_foot_pos[2] = (
-                    self.step_height + self.STAND_HEIGHT
-                )  # Foot height
-                current_torso_pos[0] += self.step_length / 3
-
-            elif step == num_steps - 1:  # Last step
-                # current_torso_pos[0] += self.step_length/2  # 向前移动
-                # current_torso_pos[2] += self.step_height/2  # 向上移动
-                # current_foot_pos[0] = current_torso_pos[0] # 最后一步x不动
-                current_torso_pos[0] = current_foot_pos[
-                    0
-                ]  # Last step: torso x above both feet
-                current_foot_pos[1] = (
-                    current_torso_pos[1] + self.foot_width
-                    if self.is_left_foot
-                    else -self.foot_width
-                )  # Left/right offset
-                current_torso_pos[2] += self.step_height
+                current_foot_pos[0] = current_torso_pos[0] + self.step_length  # 脚掌相对躯干前移
+                current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
+                current_foot_pos[2] = start_foot_pos_z + self.step_height + self.STAND_HEIGHT  # 脚掌高度
+                current_torso_pos[0] += self.step_length/2
+                current_torso_pos[2] += self.step_height/2
+                
+            elif step == num_steps - 1: # 最后一步
+                current_torso_pos[0] = current_foot_pos[0] # 最后一步躯干x在双脚上方
+                current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
+                current_torso_pos[2] += self.step_height/2 
             else:
-                current_torso_pos[0] += self.step_length  # Move forward
-                current_torso_pos[2] += self.step_height  # Move upward
-
-                # Calculate foot placement position
-                current_foot_pos[0] = (
-                    current_torso_pos[0] + self.step_length / 2
-                )  # 脚掌相对躯干前移
-                current_foot_pos[1] = (
-                    current_torso_pos[1] + self.foot_width
-                    if self.is_left_foot
-                    else -self.foot_width
-                )  # Left/right offset
+                current_torso_pos[0] += self.step_length  # 向前移动
+                current_torso_pos[2] += self.step_height  # 向上移动
+            
+                # 计算落脚点位置
+                current_foot_pos[0] = current_torso_pos[0] + self.step_length/2  # 脚掌相对躯干前移
+                current_foot_pos[1] = current_torso_pos[1] + self.foot_width if self.is_left_foot else -self.foot_width  # 左右偏移
                 current_foot_pos[2] += self.step_height
 
-            if step < len(offset_x) and not step == num_steps - 1:  # Foot offset
+            # 叠加临时x方向偏置（每步都叠加，参考continuousStairClimber-roban.py）
+            current_torso_pos[0] += self.temp_x_offset * (step + 1)
+                
+            if step < len(offset_x) and not step == num_steps - 1:  # 脚掌偏移
                 current_foot_pos[0] += offset_x[step]
 
             # Record current foot position
@@ -696,16 +703,16 @@ class KuavoRobotClimbStair:
 
             last_torso_pose = torso_traj[-1].copy()
             last_foot_pose = foot_traj[-1].copy()
-            # add SS
+            # 添加支撑相 (aligned with continuousStairClimber-roban.py)
             if step != num_steps - 1:
                 pass
                 time_traj.append(time_traj[-1] + self.ss_time)
                 foot_idx_traj.append(2)
                 foot_traj.append(foot_traj[-1].copy())
-                last_torso_pose[0] = last_foot_pose[0] - self.step_length * 0.0
+                last_torso_pose[0] = last_foot_pose[0] - self.step_length*0.0
                 torso_traj.append(last_torso_pose)
                 swing_trajectories.append(footPoses())
-            else:  # Last step: standing recovery to straight position
+            else: # 最后一步站立恢复站直
                 time_traj.append(time_traj[-1] + self.ss_time)
                 foot_idx_traj.append(2)
                 foot_traj.append(foot_traj[-1].copy())
@@ -975,133 +982,282 @@ class KuavoRobotClimbStair:
         is_first_step=False,
     ):
         """
-        Plan swing phase trajectory using shape-preserving cubic spline interpolation
+        使用三角函数+五次多项式插值规划腾空相的轨迹
         """
+        return self._trigonometric_quintic_interpolation(
+            prev_foot_pose=prev_foot_pose,
+            next_foot_pose=next_foot_pose,
+            swing_height=swing_height,
+            num_points=7,
+            is_first_step=is_first_step,
+            down_stairs=down_stairs,
+        )
+    
+
+    
+    def _trigonometric_quintic_interpolation(self, prev_foot_pose, next_foot_pose, swing_height, 
+                                           num_points, is_first_step, down_stairs):
+        """三角函数+五次多项式插值方法（Z方向使用三角函数，XY方向使用摆线）"""
         additionalFootPoseTrajectory = footPoses()
-        num_points = 7  # Number of trajectory points
-
-        # Create time series
-        t = np.linspace(0, 1, num_points)
-
-        # Calculate movement distance in x and y directions
+        
+        # 计算移动距离
         x_distance = next_foot_pose[0] - prev_foot_pose[0]
         y_distance = next_foot_pose[1] - prev_foot_pose[1]
-
-        # Calculate reference height (take the higher of the two landing points)
+        z_distance = next_foot_pose[2] - prev_foot_pose[2]
+        
+        # 下楼梯时使用反向规划（先多项式再三角函数）
+        if down_stairs:
+            return self._trigonometric_quintic_interpolation_downstairs(prev_foot_pose, next_foot_pose, swing_height, 
+                                                                      num_points, is_first_step)
+        
+        # 三角函数参数设置（上楼梯）
+        if is_first_step:
+            # 第一步：更保守的参数
+            trig_ratio = 0.6  # 三角函数部分占比
+            max_height_ratio = 1.0  # 最高点相对于总高度的比例
+        else:
+            # 后续步骤：优化参数
+            trig_ratio = 0.6  # 三角函数部分占比
+            max_height_ratio = 0.9  # 最高点相对于总高度的比例
+        
+        # 计算基准高度（取两个落点中较高的点）
         base_height = max(prev_foot_pose[2], next_foot_pose[2])
         min_height = min(prev_foot_pose[2], next_foot_pose[2])
-
-        # Create control points
-        control_points = None
-        if not down_stairs:
-            control_points = {
-                "t": [0, 0.2, 0.6, 1.0],
-                "x": [
-                    prev_foot_pose[0],  # Start point
-                    prev_foot_pose[0] + x_distance * 0.05,  # 前10%
-                    prev_foot_pose[0] + x_distance * 0.6,  # 前50%
-                    next_foot_pose[0],  # End point
-                ],
-                "y": [
-                    prev_foot_pose[1],  # 起点
-                    prev_foot_pose[1] + y_distance * 0.05,  # 前10%
-                    prev_foot_pose[1] + y_distance * 0.6,  # 前50%
-                    next_foot_pose[1],  # 终点
-                ],
-                "z": [
-                    prev_foot_pose[2],  # 起点
-                    (base_height + swing_height * 0.6)
-                    if is_first_step
-                    else (
-                        prev_foot_pose[2] + (base_height - min_height) * 0.5
-                    ),  # 最高点（基于较高的落点）
-                    base_height + swing_height,  # 保持最高点
-                    next_foot_pose[2],  # 终点
-                ],
-            }
-        else:  # Down stairs
-            if not is_first_step:  # 非第一步或者最后一步
-                control_points = {
-                    "t": [0, 0.3, 0.5, 0.6, 1.0],
-                    "x": [
-                        prev_foot_pose[0],  # Start point
-                        prev_foot_pose[0] + x_distance * 0.4,  # 前50%
-                        prev_foot_pose[0] + x_distance * 0.7,  # 前50%
-                        prev_foot_pose[0] + x_distance * 0.9,  # 前10%
-                        next_foot_pose[0],  # End point
-                    ],
-                    "y": [
-                        prev_foot_pose[1],  # 起点
-                        prev_foot_pose[1] + y_distance * 0.4,  # 前50%
-                        prev_foot_pose[1] + y_distance * 0.7,  # 前50%
-                        prev_foot_pose[1] + y_distance * 0.9,  # 前10%
-                        next_foot_pose[1],  # 终点
-                    ],
-                    "z": [
-                        prev_foot_pose[2],  # 起点
-                        base_height + swing_height,  # 保持最高点
-                        (next_foot_pose[2] + (base_height - min_height) * 0.9),
-                        (
-                            next_foot_pose[2] + (base_height - min_height) * 0.7
-                        ),  # 最高点（基于较高的落点）
-                        # prev_foot_pose[2],           # 最高点（基于较高的落点）
-                        next_foot_pose[2],  # 终点
-                    ],
-                }
-            else:
-                control_points = {
-                    "t": [0, 0.5, 0.6, 1.0],
-                    "x": [
-                        prev_foot_pose[0],  # Start point
-                        prev_foot_pose[0] + x_distance * 0.60,  # 前50%
-                        prev_foot_pose[0] + x_distance * 0.95,  # 前10%
-                        next_foot_pose[0],  # End point
-                    ],
-                    "y": [
-                        prev_foot_pose[1],  # 起点
-                        prev_foot_pose[1] + y_distance * 0.6,  # 前50%
-                        prev_foot_pose[1] + y_distance * 0.95,  # 前10%
-                        next_foot_pose[1],  # 终点
-                    ],
-                    "z": [
-                        prev_foot_pose[2],  # 起点
-                        base_height + swing_height,  # 保持最高点
-                        base_height + swing_height * 0.2,  # 最高点（基于较高的落点）
-                        # prev_foot_pose[2],           # 最高点（基于较高的落点）
-                        next_foot_pose[2],  # 终点
-                    ],
-                }
-
-        # Create shape-preserving cubic spline interpolation for x, y, and z
-        x_spline = PchipInterpolator(control_points["t"], control_points["x"])
-        y_spline = PchipInterpolator(control_points["t"], control_points["y"])
-        z_spline = PchipInterpolator(control_points["t"], control_points["z"])
-
-        # Use shape-preserving cubic spline for yaw angle
-        yaw_spline = PchipInterpolator([0, 1], [prev_foot_pose[3], next_foot_pose[3]])
-
-        # Generate trajectory points
-        trajectory_points = []
-        for i in range(num_points):
+        
+        # 三角函数最高点高度参考三次样条：base_height + swing_height
+        max_height = base_height + swing_height
+        
+        # 1. 生成三角函数轨迹的4个控制点（Z方向三角函数，XY方向摆线）
+        trig_control_points = []
+        
+        # 使用三角函数生成控制点（确保在最高点零加速度）
+        trig_progress = [0.0, 0.33, 0.67, 1.0]  # 三角函数内部进度
+        
+        for i, progress in enumerate(trig_progress):
+            # 计算平滑进度（使用三次多项式确保在t=1时导数为0）
+            t = progress
+            smooth_progress = 3 * t**2 - 2 * t**3  # 三次多项式，在t=1时导数为0
+            
+            # 三角函数方程（Z方向）- 使用正弦函数从起点到最高点
+            # z = start_z + (max_height - start_z) * sin(π/2 * smooth_progress)
+            start_z = prev_foot_pose[2]
+            z = start_z + (max_height - start_z) * np.sin(np.pi/2 * smooth_progress)
+            
+            # XY方向使用摆线插值
+            # 摆线参数：t从0到1
+            t_cycloid = progress * trig_ratio  # 归一化到三角函数部分的时间
+            
+            # 摆线方程：x = t - sin(t), y = 1 - cos(t)
+            # 映射到实际坐标
+            cycloid_x = t_cycloid - np.sin(2 * np.pi * t_cycloid) / (2 * np.pi)
+            cycloid_y = (1 - np.cos(2 * np.pi * t_cycloid)) / 2
+            
+            # 映射到实际XY坐标
+            x = prev_foot_pose[0] + x_distance * cycloid_x
+            y = prev_foot_pose[1] + y_distance * cycloid_y
+            
+            trig_control_points.append([x, y, z])
+        
+        # 2. 生成多项式轨迹的控制点
+        polynomial_control_points = []
+        
+        # 控制点1：多项式起点（后移，避免与三角函数末端重合）
+        t_poly_start = trig_ratio + (1 - trig_ratio) * 0.32  # 三角函数占比后32%位置
+        
+        # XY方向使用摆线规划
+        cycloid_x_poly_start = t_poly_start - np.sin(2 * np.pi * t_poly_start) / (2 * np.pi)
+        cycloid_y_poly_start = (1 - np.cos(2 * np.pi * t_poly_start)) / 2
+        
+        x_poly_start = prev_foot_pose[0] + x_distance * cycloid_x_poly_start
+        y_poly_start = prev_foot_pose[1] + y_distance * cycloid_y_poly_start
+        
+        # Z方向平滑下降（从三角函数终点高度开始）
+        z_trig_end = trig_control_points[-1][2]  # 三角函数终点高度
+        z_poly_start = z_trig_end + (next_foot_pose[2] - z_trig_end) * 0.15  # 下降15%
+        polynomial_control_points.append([x_poly_start, y_poly_start, z_poly_start])
+        
+        # 控制点2：中间点（使用摆线插值）
+        t_mid = trig_ratio + (1 - trig_ratio) * 0.64  # 多项式部分64%位置
+        
+        # 摆线插值
+        cycloid_x_mid = t_mid - np.sin(2 * np.pi * t_mid) / (2 * np.pi)
+        cycloid_y_mid = (1 - np.cos(2 * np.pi * t_mid)) / 2
+        
+        x_mid = prev_foot_pose[0] + x_distance * cycloid_x_mid
+        y_mid = prev_foot_pose[1] + y_distance * cycloid_y_mid
+        z_mid = next_foot_pose[2] + (z_poly_start - next_foot_pose[2]) * 0.5  # 平滑下降
+        polynomial_control_points.append([x_mid, y_mid, z_mid])
+        
+        # 控制点3：目标位置
+        x_end = next_foot_pose[0]
+        y_end = next_foot_pose[1]
+        z_end = next_foot_pose[2]
+        polynomial_control_points.append([x_end, y_end, z_end])
+        
+        # 3. 生成完整轨迹（7个控制点：4个三角函数点 + 3个多项式点）
+        full_trajectory = trig_control_points + polynomial_control_points
+        
+        # 删除第一个点（三角函数起始点）和最后一个点（多项式终点）
+        full_trajectory = full_trajectory[1:-1]
+        
+        # 4. 生成时间序列（调整时间分布，让后半段更均匀）
+        # 时间分配：三角函数部分占trig_ratio，多项式部分占(1-trig_ratio)
+        # 延长三角函数部分时间，让抬腿更慢
+        extended_trig_ratio = trig_ratio * 1.3  # 延长30%
+        trig_times = [extended_trig_ratio * 0.17, extended_trig_ratio * 0.5, extended_trig_ratio]  # 去掉起始点0.0
+        
+        # 调整多项式部分时间分布，让后半段更均匀
+        polynomial_times = [extended_trig_ratio + (1-extended_trig_ratio) * 0.32, 
+                           extended_trig_ratio + (1-extended_trig_ratio) * 0.64]  # 删除最后一个时间点1.0
+        full_times = trig_times + polynomial_times
+        
+        # 5. 生成轨迹消息（确保平滑性）
+        for i, point in enumerate(full_trajectory):
             step_fp = footPose()
-            x = float(x_spline(t[i]))
-            y = float(y_spline(t[i]))
-            z = float(z_spline(t[i]))
-            yaw = float(yaw_spline(t[i]))
-
+            x, y, z = point[0], point[1], point[2]
+            
+            # Yaw角度使用平滑插值
+            progress = full_times[i]
+            yaw = prev_foot_pose[3] + (next_foot_pose[3] - prev_foot_pose[3]) * progress
+            
             step_fp.footPose = [x, y, z, yaw]
             additionalFootPoseTrajectory.data.append(step_fp)
-            trajectory_points.append([x, y, z])
-
+        
+        return additionalFootPoseTrajectory
+    
+    def _trigonometric_quintic_interpolation_downstairs(self, prev_foot_pose, next_foot_pose, swing_height, 
+                                                      num_points, is_first_step):
+        """下楼梯专用：与上楼梯完全镜像对称，使用相同的控制点结构和三角函数范围"""
+        additionalFootPoseTrajectory = footPoses()
+        
+        # 计算移动距离
+        x_distance = next_foot_pose[0] - prev_foot_pose[0]
+        y_distance = next_foot_pose[1] - prev_foot_pose[1]
+        z_distance = next_foot_pose[2] - prev_foot_pose[2]
+        
+        # 下楼梯参数设置（与上楼梯完全一致）
+        if is_first_step:
+            # 第一步：更保守的参数
+            trig_ratio = 0.6  # 三角函数部分占比
+            max_height_ratio = 1.0  # 最高点相对于总高度的比例
+        else:
+            # 后续步骤：优化参数
+            trig_ratio = 0.6  # 三角函数部分占比
+            max_height_ratio = 0.9  # 最高点相对于总高度的比例
+        
+        # 计算基准高度（取两个落点中较高的点）
+        base_height = max(prev_foot_pose[2], next_foot_pose[2])
+        min_height = min(prev_foot_pose[2], next_foot_pose[2])
+        
+        # 下楼梯最高点高度：从当前台阶高度+swing_height，然后减去一级step_height
+        max_height = prev_foot_pose[2] + swing_height - 0.08  # 当前台阶高度 + swing_height - step_height
+        
+        # 1. 生成三角函数轨迹的4个控制点（与上楼梯完全相同的结构）
+        trig_control_points = []
+        
+        # 使用三角函数生成控制点（确保在最高点零加速度）
+        trig_progress = [0.0, 0.33, 0.67, 1.0]  # 三角函数内部进度（与上楼梯相同）
+        
+        for i, progress in enumerate(trig_progress):
+            # 计算平滑进度（使用三次多项式确保在t=1时导数为0）
+            t = progress
+            smooth_progress = 3 * t**2 - 2 * t**3  # 三次多项式，在t=1时导数为0
+            
+            # 三角函数方程（Z方向）- 下楼梯：从起点上升到最高点（与上楼梯相同）
+            # z = start_z + (max_height - start_z) * sin(π/2 * smooth_progress)
+            start_z = prev_foot_pose[2]
+            z = start_z + (max_height - start_z) * np.sin(np.pi/2 * smooth_progress)
+            
+            # XY方向使用摆线插值（与上楼梯相同）
+            # 摆线参数：t从0到1
+            t_cycloid = progress * trig_ratio  # 归一化到三角函数部分的时间
+            
+            # 摆线方程：x = t - sin(t), y = 1 - cos(t)
+            # 映射到实际坐标
+            cycloid_x = t_cycloid - np.sin(2 * np.pi * t_cycloid) / (2 * np.pi)
+            cycloid_y = (1 - np.cos(2 * np.pi * t_cycloid)) / 2
+            
+            # 映射到实际XY坐标
+            x = prev_foot_pose[0] + x_distance * cycloid_x
+            y = prev_foot_pose[1] + y_distance * cycloid_y
+            
+            trig_control_points.append([x, y, z])
+        
+        # 2. 生成多项式轨迹的控制点（与上楼梯完全相同的结构）
+        polynomial_control_points = []
+        
+        # 控制点1：多项式起点（后移，避免与三角函数末端重合）
+        t_poly_start = trig_ratio + (1 - trig_ratio) * 0.32  # 三角函数占比后32%位置
+        
+        # XY方向使用摆线规划
+        cycloid_x_poly_start = t_poly_start - np.sin(2 * np.pi * t_poly_start) / (2 * np.pi)
+        cycloid_y_poly_start = (1 - np.cos(2 * np.pi * t_poly_start)) / 2
+        
+        x_poly_start = prev_foot_pose[0] + x_distance * cycloid_x_poly_start
+        y_poly_start = prev_foot_pose[1] + y_distance * cycloid_y_poly_start
+        
+        # Z方向平滑下降（从三角函数终点高度开始）
+        z_trig_end = trig_control_points[-1][2]  # 三角函数终点高度
+        z_poly_start = z_trig_end + (next_foot_pose[2] - z_trig_end) * 0.15  # 下降15%
+        polynomial_control_points.append([x_poly_start, y_poly_start, z_poly_start])
+        
+        # 控制点2：中间点（使用摆线插值）
+        t_mid = trig_ratio + (1 - trig_ratio) * 0.64  # 多项式部分64%位置
+        
+        # 摆线插值
+        cycloid_x_mid = t_mid - np.sin(2 * np.pi * t_mid) / (2 * np.pi)
+        cycloid_y_mid = (1 - np.cos(2 * np.pi * t_mid)) / 2
+        
+        x_mid = prev_foot_pose[0] + x_distance * cycloid_x_mid
+        y_mid = prev_foot_pose[1] + y_distance * cycloid_y_mid
+        z_mid = next_foot_pose[2] + (z_poly_start - next_foot_pose[2]) * 0.5  # 平滑下降
+        polynomial_control_points.append([x_mid, y_mid, z_mid])
+        
+        # 控制点3：目标位置
+        x_end = next_foot_pose[0]
+        y_end = next_foot_pose[1]
+        z_end = next_foot_pose[2]
+        polynomial_control_points.append([x_end, y_end, z_end])
+        
+        # 3. 生成完整轨迹（7个控制点：4个三角函数点 + 3个多项式点，与上楼梯相同）
+        full_trajectory = trig_control_points + polynomial_control_points
+        
+        # 删除第一个点（三角函数起始点）和最后一个点（多项式终点）
+        full_trajectory = full_trajectory[1:-1]
+        
+        # 4. 生成时间序列（与上楼梯完全相同的时间分布）
+        # 时间分配：三角函数部分占trig_ratio，多项式部分占(1-trig_ratio)
+        # 延长三角函数部分时间，让抬腿更慢
+        extended_trig_ratio = trig_ratio * 1.3  # 延长30%
+        trig_times = [extended_trig_ratio * 0.17, extended_trig_ratio * 0.5, extended_trig_ratio]  # 去掉起始点0.0
+        
+        # 调整多项式部分时间分布，让后半段更均匀
+        polynomial_times = [extended_trig_ratio + (1-extended_trig_ratio) * 0.32, 
+                           extended_trig_ratio + (1-extended_trig_ratio) * 0.64]  # 删除最后一个时间点1.0
+        full_times = trig_times + polynomial_times
+        
+        # 5. 生成轨迹消息（与上楼梯完全相同的执行逻辑）
+        for i, point in enumerate(full_trajectory):
+            step_fp = footPose()
+            x, y, z = point[0], point[1], point[2]
+            
+            # Yaw角度使用平滑插值
+            progress = full_times[i]
+            yaw = prev_foot_pose[3] + (next_foot_pose[3] - prev_foot_pose[3]) * progress
+            
+            step_fp.footPose = [x, y, z, yaw]
+            additionalFootPoseTrajectory.data.append(step_fp)
+        
         return additionalFootPoseTrajectory
 
     # SDK-style interface methods
-    def climb_up_stairs(self, num_steps: int = 5) -> bool:
+    def climb_up_stairs(self, num_steps: int = 5, stair_offset: float = 0.0) -> bool:
         """
         Plan up stairs trajectory and add to accumulated trajectory.
 
         Args:
             num_steps: Number of steps to climb stairs, must be > 0 and <= 20
+            stair_offset: Offset distance from stairs (m), default 0.0
 
         Returns:
             bool: Whether planning was successful
@@ -1132,6 +1288,7 @@ class KuavoRobotClimbStair:
                     self.foot_traj.copy(),
                     self.torso_traj.copy(),
                     self.swing_trajectories.copy(),
+                    stair_offset,
                 )
             )
 
@@ -1348,3 +1505,103 @@ class KuavoRobotClimbStair:
             if self.time_traj
             else (0, 0),
         }
+
+
+def parse_args():
+    """Parse command line arguments (aligned with continuousStairClimber-roban.py)"""
+    import argparse
+    parser = argparse.ArgumentParser(description='Kuavo Robot Stair Climbing SDK')
+    parser.add_argument('--plot', action='store_true', help='Enable trajectory plotting (not implemented in SDK)')
+    parser.add_argument('--initH', type=float, default=0.0, help='Stand height offset (default: 0.0)')
+    parser.add_argument('--steps', type=int, default=5, help='Number of stairs to climb (default: 5)')
+    parser.add_argument('--move_x', type=float, default=0.15, help='Forward movement after stairs (default: 0.15m)')
+    parser.add_argument('--stair_offset', type=float, default=0.03, help='Offset distance from stairs (default: 0.03m)')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose logging')
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    try:
+        rospy.init_node("climb_stair_node")
+        args = parse_args()
+        
+        # Set parameters based on command line arguments
+        stand_height = args.initH
+        verbose_logging = args.verbose
+        num_stairs = args.steps
+        move_distance = args.move_x
+        stair_offset = args.stair_offset
+        
+        if args.plot:
+            rospy.logwarn("[ClimbStair] Plot functionality is not implemented in SDK version")
+        
+        # Disable pitch limit (aligned with roban script)
+        rospy.loginfo("[ClimbStair] Disabling pitch limit...")
+        set_pitch_limit(False)
+        
+        # Initialize the SDK robot
+        robot = KuavoRobotClimbStair(
+            stand_height=stand_height,
+            verbose_logging=verbose_logging
+        )
+        
+        rospy.loginfo(f"[ClimbStair] Initialized robot with stand_height={stand_height:.3f}")
+        
+        # Execute stair climbing sequence (aligned with continuousStairClimber-roban.py)
+        rospy.loginfo(f"[ClimbStair] Planning up stairs with {num_stairs} steps, stair_offset={stair_offset:.3f}m...")
+        success = robot.climb_up_stairs(num_stairs, stair_offset=stair_offset)
+        if success:
+            rospy.loginfo("[ClimbStair] Up stairs planning completed successfully")
+        else:
+            rospy.logerr("[ClimbStair] Up stairs planning failed")
+            exit(1)
+        
+        # Print trajectory details
+        stats = robot.get_trajectory_statistics()
+        rospy.loginfo(f"[ClimbStair] Trajectory statistics: {stats}")
+        
+        # Add forward movement after stairs (aligned with roban script)
+        rospy.loginfo(f"[ClimbStair] Planning forward movement: {move_distance:.3f}m...")
+        success = robot.move_to_position(dx=move_distance, dy=0.0, dyaw=0.0)
+        if success:
+            rospy.loginfo("[ClimbStair] Move planning completed successfully")
+        else:
+            rospy.logerr("[ClimbStair] Move planning failed")
+            exit(1)
+        
+        # Print final trajectory details
+        final_stats = robot.get_trajectory_statistics()
+        rospy.loginfo(f"[ClimbStair] Final trajectory statistics: {final_stats}")
+        
+        # Print detailed trajectory (similar to roban script)
+        if verbose_logging and robot.time_traj:
+            rospy.loginfo("[ClimbStair] Detailed trajectory:")
+            for i, t in enumerate(robot.time_traj):
+                rospy.loginfo(
+                    f"  {i:2}: t={t:5.2f} foot_idx={robot.foot_idx_traj[i]} "
+                    f"foot=[{robot.foot_traj[i][0]:6.3f}, {robot.foot_traj[i][1]:6.3f}, "
+                    f"{robot.foot_traj[i][2]:6.3f}, {robot.foot_traj[i][3]:6.3f}] "
+                    f"torso=[{robot.torso_traj[i][0]:6.3f}, {robot.torso_traj[i][1]:6.3f}, "
+                    f"{robot.torso_traj[i][2]:6.3f}, {robot.torso_traj[i][3]:6.3f}]"
+                )
+        
+        # Execute the complete trajectory
+        rospy.loginfo("[ClimbStair] Executing complete trajectory...")
+        success = robot.execute_trajectory()
+        if success:
+            rospy.loginfo("[ClimbStair] Trajectory execution completed successfully")
+        else:
+            rospy.logerr("[ClimbStair] Trajectory execution failed")
+            exit(1)
+            
+        rospy.loginfo("[ClimbStair] All operations completed successfully!")
+        
+    except rospy.ROSInterruptException:
+        rospy.loginfo("[ClimbStair] Interrupted by user")
+        # Ensure pitch limit is re-enabled on interruption (aligned with roban script)
+        set_pitch_limit(True)
+    except Exception as e:
+        rospy.logerr(f"[ClimbStair] Unexpected error: {e}")
+        # Ensure pitch limit is re-enabled on error
+        set_pitch_limit(True)
+        exit(1)
