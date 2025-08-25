@@ -148,7 +148,9 @@ class Quest3ArmInfoTransformer:
         self.joint_state_puber = rospy.Publisher('/joint_states', JointState, queue_size=10)
         self.shoulder_angle_puber = rospy.Publisher('/quest3_debug/shoulder_angle', Float32MultiArray, queue_size=10)
         self.chest_axis_puber = rospy.Publisher('/quest3_debug/chest_axis', Float32MultiArray, queue_size=10)
-        self.head_body_pose_puber = rospy.Publisher('/cmd_pose', Twist, queue_size=10)    
+        self.head_body_pose_puber = rospy.Publisher('/kuavo_head_body_orientation_data', headBodyPose, queue_size=10)
+        self.head_body_pose_control_puber = rospy.Publisher('/kuavo_head_body_orientation', headBodyPose, queue_size=10)    
+
 
         self.left_joystick = None
         self.right_joystick = None
@@ -1054,15 +1056,16 @@ class Quest3ArmInfoTransformer:
         self.joint_state_puber.publish(msg)
 
     def pub_head_body_pose_msg(self, head_body_pose: HeadBodyPose):
-        """Publish head body pose message."""
-        msg = Twist()
-        msg.angular.y = head_body_pose.body_pitch
-        msg.angular.x = 0.0 
-        msg.angular.z = 0.0
+        msg = headBodyPose()
+        msg.head_pitch = head_body_pose.head_pitch
+        msg.head_yaw = head_body_pose.head_yaw
+        msg.body_yaw = head_body_pose.body_yaw
         pitch_ratio = 0.8
-        msg.angular.y = max(3*np.pi/180.0, min(pitch_ratio*head_body_pose.body_pitch, 40*np.pi/180.0))
-        msg.linear.x = 0.0
-        msg.linear.y = 0.0
-        msg.linear.z = max(-0.4, min(head_body_pose.body_height + 0.3, 0.2))
+        msg.body_pitch = max(3*np.pi/180.0, min(pitch_ratio*head_body_pose.body_pitch, 40*np.pi/180.0))
+
+        msg.body_x = 0.0
+        msg.body_y = 0.0
+        msg.body_height = max(-0.4, min(head_body_pose.body_height + 0.3, 0.2))
+        self.head_body_pose_puber.publish(msg)
         if self.control_torso:
-            self.head_body_pose_puber.publish(msg)
+            self.head_body_pose_control_puber.publish(msg)
