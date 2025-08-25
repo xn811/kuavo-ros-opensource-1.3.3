@@ -1,6 +1,8 @@
 #pragma once
 
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
+#include "mobile_manipulator_controllers/mobileManipulatorIkTarget.h"
 #include <ocs2_core/misc/Benchmark.h>
 #include <ocs2_mpc/MPC_MRT_Interface.h>
 #include <ocs2_mpc/SystemObservation.h>
@@ -34,16 +36,26 @@ namespace mobile_manipulator_controller
     SQP
   };
 
+  enum class ControlType
+  {
+    None = 0,
+    ArmOnly,
+    BaseOnly,
+    BaseArm, // 通过base_pose_cmd强制控制base位置
+  };
+
+  std::string controlTypeToString(ControlType controlType);
+
   class MobileManipulatorControllerBase
   {
   public:
     MobileManipulatorControllerBase(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true);
+      ControlType control_type=ControlType::BaseArm, bool dummySimArm=true, bool visualizeMm=true);
     ~MobileManipulatorControllerBase();
     int update(const vector_t& externalState, vector_t& nextState);
     int update(const vector_t& externalState, vector_t& nextState, vector_t& optimizedInput);
-    void stop() { updateRunning_ = false; observationPublishing_ = false; }
-    void start() { updateRunning_ = true; }
+    void stop() { updateRunning_ = false; observationPublishing_ = false; ikTargetManager_->stop(); mpcRunning_ = false; }
+    void start() { updateRunning_ = true; mpcRunning_ = true; }
     bool isObservationPublishing() const { return observationPublishing_; }
     /**
      * @brief Reset the controller to the given external state
@@ -77,6 +89,10 @@ namespace mobile_manipulator_controller
     int getOptimizedStateAndInput(const SystemObservation& currentObservation, vector_t& optimizedStateMrt, vector_t& optimizedInputMrt);
     int anomaly_check(const SystemObservation& currentObservation, const PrimalSolution& policy, const CommandData& command, const PerformanceIndex& performanceIndices);
     /**
+     * @brief 检查MPC线程是否已经完全暂停
+     * @return true如果线程已暂停，false如果线程仍在运行
+     */
+    bool isMpcThreadPaused() const;        /**
      * Creates MPC Policy message.
      *
      * @param [in] primalSolution: The policy data of the MPC.
@@ -159,17 +175,24 @@ namespace mobile_manipulator_controller
     DetectionResult detectEefAnomaliesNew(const std::vector<EefPoseError>& poseErrors, const std::vector<scalar_t>& velocityMagnitudes);
     void publishDetectionResult(const DetectionResult& result);
   protected:
+    ControlType controlType_ = ControlType::None;
+    ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
+    std::mutex control_type_mutex_;
     std::thread mpcThread_;
 
     std::atomic_bool controllerRunning_{}, mpcRunning_{}, updateRunning_{};
     
     // Thread synchronization for reset operations
-    std::mutex mpcThreadMutex_;
+    mutable std::mutex mpcThreadMutex_;
     std::condition_variable mpcThreadCondition_;
     std::atomic_bool mpcThreadPaused_{false};
     
     // Flag to track if observations are being published
     std::atomic_bool observationPublishing_{false};
+    
+    // Thread synchronization configuration
+    int maxThreadWaitTimeMs_{1000};  // 最大线程等待时间(毫秒)
+    int threadCheckIntervalMs_{2};   // 线程检查间隔(毫秒)
     
     benchmark::RepeatedTimer mpcTimer_;
 
@@ -195,6 +218,9 @@ namespace mobile_manipulator_controller
     const std::string robotName_ = "mobile_manipulator";
     std::unique_ptr<humanoid::TopicLogger> ros_logger_;
     MpcType mpcType_;
+    unsigned int updateCount_{0};
+
+    std::unique_ptr<MobileManipulatorIkTarget> ikTargetManager_;
   };
 
 } // namespace mobile_manipulator_controller

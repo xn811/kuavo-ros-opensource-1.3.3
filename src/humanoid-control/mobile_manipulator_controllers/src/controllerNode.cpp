@@ -24,10 +24,10 @@ int main(int argc, char **argv)
   bool visualizeMm = true;
   int mpcTypeInt = 0;
   while (!nodeHandle.hasParam("/mm/taskFile") || !nodeHandle.hasParam("/mm/libFolder") || !nodeHandle.hasParam("/mm/urdfFile")
-  || !nodeHandle.hasParam("/mm/mpcType") || !nodeHandle.hasParam("/dummy_sim") || !nodeHandle.hasParam("/dummy_sim_arm")
+  || !nodeHandle.hasParam("/mm/mpcType") || !nodeHandle.hasParam("/dummy_sim_arm")
   || !nodeHandle.hasParam("/visualize_mm"))
   {
-    ROS_WARN("Waiting for required parameters: /mm/taskFile, /mm/libFolder, /mm/urdfFile, /mm/mpcType, /dummy_sim, /dummy_sim_arm, /visualize_mm");
+    ROS_WARN("Waiting for required parameters: /mm/taskFile, /mm/libFolder, /mm/urdfFile, /mm/mpcType, /dummy_sim_arm, /visualize_mm");
     ros::Duration(1.0).sleep();
     if (!ros::ok()) return 1;
   }
@@ -35,7 +35,6 @@ int main(int argc, char **argv)
   nodeHandle.getParam("/mm/taskFile", taskFile);
   nodeHandle.getParam("/mm/libFolder", libFolder);
   nodeHandle.getParam("/mm/urdfFile", urdfFile);
-  nodeHandle.getParam("/dummy_sim", dummySimBase);
   nodeHandle.getParam("/dummy_sim_arm", dummySimArm);
   nodeHandle.getParam("/visualize_mm", visualizeMm);
   nodeHandle.getParam("/mm/mpcType", mpcTypeInt);
@@ -47,13 +46,13 @@ int main(int argc, char **argv)
   ROS_INFO("libFolder: %s", libFolder.c_str());
   ROS_INFO("urdfFile: %s", urdfFile.c_str());
   ROS_INFO("mpcType: %d", mpcTypeInt);
-  ROS_INFO("dummySimBase: %d", dummySimBase);
   ROS_INFO("dummySimArm: %d", dummySimArm);
   ROS_INFO("visualizeMm: %d", visualizeMm);
 
   int frequency = 100;
   // Initialize controller
-  MobileManipulatorController controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, frequency, dummySimBase, dummySimArm, visualizeMm);
+  ControlType control_type = ControlType::None;
+  MobileManipulatorController controller(nodeHandle, taskFile, libFolder, urdfFile, mpcType, frequency, control_type, dummySimArm, visualizeMm);
   controller.init(nodeHandle);
 
   // 创建独立线程处理ROS消息

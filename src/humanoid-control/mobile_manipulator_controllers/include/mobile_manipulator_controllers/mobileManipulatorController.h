@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
@@ -15,6 +16,7 @@
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Int8.h>
+#include <mutex>
 
 #include <ocs2_mobile_manipulator/MobileManipulatorInterface.h>
 #include <mobile_manipulator_controllers/mobileManipulatorControllerBase.h>
@@ -29,21 +31,11 @@ namespace mobile_manipulator_controller
   using namespace ocs2::mobile_manipulator;
   typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
-  enum class ControlType
-  {
-    None = 0,
-    ArmOnly,
-    BaseOnly,
-    BaseArm, // 通过base_pose_cmd强制控制base位置
-  };
-
-  std::string controlTypeToString(ControlType controlType);
-
   class MobileManipulatorController : public MobileManipulatorControllerBase
   {
   public:
     MobileManipulatorController(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true, bool anomalyStopMpc=false);
+      ControlType control_type=ControlType::BaseArm, bool dummySimArm=true, bool visualizeMm=true, bool anomalyStopMpc=false);
     ~MobileManipulatorController();
     bool init(ros::NodeHandle &nh);
     void update();
@@ -59,7 +51,6 @@ namespace mobile_manipulator_controller
     void humanoidObservationCallback(const ocs2_msgs::mpc_observation::ConstPtr& msg);
     void limitHumanoidTargetState(vector_t& humanoidTargetState);
     TargetTrajectories generateTargetTrajectories(const vector_t& currentState, const vector_t& desiredState, const SystemObservation& currentHumanoidObservation);
-    void controlBase(const vector_t& mmState, const vector_t& mmInput);
     void controlBasePos(const vector_t& mmState, const vector_t& mmInput);
     bool controlService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res);
     bool getKinematicMpcControlModeService(kuavo_msgs::changeTorsoCtrlMode::Request& req, kuavo_msgs::changeTorsoCtrlMode::Response& res);
@@ -86,6 +77,7 @@ namespace mobile_manipulator_controller
 
     // Humanoid specific state management
     SystemObservation humanoidObservation_, mmObservation_;
+    std::mutex mmObservationMutex_; // 保护 mmObservation_ 的互斥锁
     double comHeight_;
     double terrain_height_{0};
     size_t humanoidStateDim_{38};//12+12+14
@@ -93,8 +85,8 @@ namespace mobile_manipulator_controller
     bool recievedObservation_ = false;
     
     // Control configuration
-    ControlType controlType_ = ControlType::None;
-    ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
+    // ControlType controlType_ = ControlType::None;
+    // ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
 
     bool mpcInitialized_ = false;
 
@@ -108,6 +100,7 @@ namespace mobile_manipulator_controller
     // play back mode
     bool is_play_back_mode_ = false;
     ros::Subscriber mmControlTypeSubscriber_;
+    uint32_t observation_count_ = 0;
   };
 
 } // namespace mobile_manipulator_controller

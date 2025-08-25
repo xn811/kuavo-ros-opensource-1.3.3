@@ -1,3 +1,4 @@
+#include <pinocchio/fwd.hpp>
 #include <ros/ros.h>
 #include <ocs2_mpc/SystemObservation.h>
 #include <ocs2_ros_interfaces/command/TargetTrajectoriesRosPublisher.h>
@@ -9,19 +10,11 @@
 using namespace ocs2;
 namespace mobile_manipulator_controller
 {
-  enum class ControlType
-  {
-    None = 0,
-    ArmOnly,
-    BaseOnly,
-    BaseArm, // 通过base_pose_cmd强制控制base位置
-  };
-  std::string controlTypeToString(ControlType controlType);
   class MobileManipulatorControllerGeneral : public MobileManipulatorControllerBase
   {
     public:
       MobileManipulatorControllerGeneral(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-              bool dummySimBase=false, bool dummySimArm=true, bool visualizeMm=true);
+        ControlType control_type=ControlType::BaseArm, bool dummySimArm=true, bool visualizeMm=true);
       bool init(double comHeight);
       void update();
     
@@ -33,8 +26,8 @@ namespace mobile_manipulator_controller
       void controlBasePos(const vector_t& mmState);
 
       double comHeight_{0};
-      ControlType controlType_ = ControlType::None;
-      ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
+      // ControlType controlType_ = ControlType::None;
+      // ControlType lastControlType_ = ControlType::ArmOnly; // 初始化为ArmOnly，在第一次启动时，可以打印出MPC的初始状态
 
       // ros
       ros::NodeHandle nh_;

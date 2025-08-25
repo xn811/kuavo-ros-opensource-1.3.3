@@ -27,8 +27,8 @@ model_information {
   ; end-effector frame of the robot (from URDF)
   eeFrame
   {
-    [0]   "zarm_l7_link"
-    [1]   "zarm_r7_link"
+    [0]   "zarm_l7_end_effector"
+    [1]   "zarm_r7_end_effector"
   }
 }
 
@@ -310,14 +310,14 @@ inputCost
 
       fullyActuatedFloatingArmManipulator
       {
-        scaling 1e-2
+        scaling 1e-1
 
-        (0,0)  5000  ; position x
-        (1,1)  5000  ; position y
-        (2,2)  1.00  ; position z
-        (3,3)  5000  ; euler angle z
-        (4,4)  5.00  ; euler angle y
-        (5,5)  5000  ; euler angle x
+        (0,0)  9e9  ; position x
+        (1,1)  9e9  ; position y
+        (2,2)  50.  ; position z
+        (3,3)  9e9  ; euler angle z
+        (4,4)  50.  ; euler angle y
+        (5,5)  9e9  ; euler angle x
       }
 
       wheelBasedMobileManipulator
@@ -351,7 +351,7 @@ inputCost
     ; input costs for the arm DOFs
     arm
     {
-      scaling 1e-2
+      scaling 1e-1
 
       (0,0)  1.0  ; z_arm_l1 velocity
       (1,1)  1.0  ; z_arm_l2 velocity
@@ -474,7 +474,7 @@ basePositionLimits
       (0,0)  -100  ; position x
       (1,0)  -100  ; position y
       (2,0)  -0.4  ; position z
-      (3,0)  -100  ; euler angle position z
+      (3,0)  -1e9  ; euler angle position z
       (4,0)  -0.0  ; euler angle position y
       (5,0)  -0.1  ; euler angle position x
     }
@@ -526,8 +526,8 @@ basePositionLimits
       (0,0)  100  ; position x
       (1,0)  100  ; position y
       (2,0)  0.0  ; position z
-      (3,0)  100  ; euler angle position z
-      (4,0)  0.5  ; euler angle position y
+      (3,0)  1e9  ; euler angle position z
+      (4,0)  0.4  ; euler angle position y
       (5,0)  0.1  ; euler angle position x
     }
 
@@ -582,12 +582,12 @@ jointVelocityLimits
 
       fullyActuatedFloatingArmManipulator
       {
-        (0,0)  -0.1  ; linear velocity x
-        (1,0)  -0.1  ; linear velocity y
-        (2,0)  -5.0  ; linear velocity z
-        (3,0)  -0.3  ; euler angle velocity z
-        (4,0)  -5.0  ; euler angle velocity y
-        (5,0)  -0.3  ; euler angle velocity x
+        (0,0)  -0.01  ; linear velocity x
+        (1,0)  -0.01  ; linear velocity y
+        (2,0)  -0.50  ; linear velocity z
+        (3,0)  -0.01  ; euler angle velocity z
+        (4,0)  -0.30  ; euler angle velocity y
+        (5,0)  -0.01  ; euler angle velocity x
       }
 
       wheelBasedMobileManipulator
@@ -647,12 +647,12 @@ jointVelocityLimits
 
       fullyActuatedFloatingArmManipulator
       {
-        (0,0)  0.1  ; linear velocity x
-        (1,0)  0.1  ; linear velocity y
-        (2,0)  5.0  ; linear velocity z
-        (3,0)  0.3  ; euler angle velocity z
-        (4,0)  5.0  ; euler angle velocity y
-        (5,0)  0.3  ; euler angle velocity x
+        (0,0)  0.01  ; linear velocity x
+        (1,0)  0.01  ; linear velocity y
+        (2,0)  0.50  ; linear velocity z
+        (3,0)  0.01  ; euler angle velocity z
+        (4,0)  0.30  ; euler angle velocity y
+        (5,0)  0.01  ; euler angle velocity x
       }
 
       wheelBasedMobileManipulator

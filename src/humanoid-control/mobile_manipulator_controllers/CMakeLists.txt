@@ -50,6 +50,17 @@ link_directories(
   ${pinocchio_LIBRARY_DIRS}
 )
 
+## Declare IK Target library
+add_library(${PROJECT_NAME}_ik_target_lib
+  src/mobileManipulatorIkTarget.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_ik_target_lib
+  ${catkin_LIBRARIES}
+  ${pinocchio_LIBRARIES}
+  yaml-cpp
+)
+
 ## Declare a cpp library
 add_library(${PROJECT_NAME}_base
   src/mobileManipulatorControllerBase.cpp
@@ -58,6 +69,7 @@ add_library(${PROJECT_NAME}_base
 )
 
 target_link_libraries(${PROJECT_NAME}_base
+  ${PROJECT_NAME}_ik_target_lib
   ${catkin_LIBRARIES}
   ${pinocchio_LIBRARIES}
   yaml-cpp
@@ -114,20 +126,6 @@ target_link_libraries(${PROJECT_NAME}_node_general
   ${catkin_LIBRARIES}
   )
 target_compile_options(${PROJECT_NAME}_node_general PRIVATE ${OCS2_CXX_FLAGS})
-
-# IK cmd trans node
-add_executable(${PROJECT_NAME}_ik_target
-  src/mobileManipulatorIkTarget.cpp
-  )
-add_dependencies(${PROJECT_NAME}_ik_target
-  ${PROJECT_NAME}
-  ${catkin_EXPORTED_TARGETS}
-  )
-target_link_libraries(${PROJECT_NAME}_ik_target
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  )
-target_compile_options(${PROJECT_NAME}_ik_target PRIVATE ${OCS2_CXX_FLAGS})
 
 add_subdirectory(test)
 

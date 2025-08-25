@@ -17,13 +17,25 @@
 
 namespace mobile_manipulator_controller
 {
+  std::string controlTypeToString(ControlType controlType)
+  {
+    switch (controlType)
+    {
+      case ControlType::None: return "None";
+      case ControlType::ArmOnly: return "ArmOnly";
+      case ControlType::BaseOnly: return "BaseOnly";
+      case ControlType::BaseArm: return "BaseArm";
+      default: return "Unknown";
+    }
+  }
+
   MobileManipulatorControllerBase::MobileManipulatorControllerBase(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, 
     const std::string& urdfFile, MpcType mpcType, int freq, 
-    bool dummySimBase, bool dummySimArm, bool visualizeMm)
+    ControlType control_type, bool dummySimArm, bool visualizeMm)
   : controllerNh_(nh)
   , mpcType_(mpcType)
   , freq_(freq)
-  , dummySim_(dummySimBase)
+  , controlType_(control_type)
   , dummySimArm_(dummySimArm)
   , visualizeMm_(visualizeMm)
   {
@@ -37,6 +49,7 @@ namespace mobile_manipulator_controller
     setupMrt();
     starting();
     ROS_INFO("MobileManipulatorControllerBase initialized.");
+    ikTargetManager_ = std::make_unique<MobileManipulatorIkTarget>(controllerNh_, robotName_);
   }
 
   MobileManipulatorControllerBase::~MobileManipulatorControllerBase()
@@ -103,7 +116,7 @@ namespace mobile_manipulator_controller
   void MobileManipulatorControllerBase::setupMrt()
   {
     mpcMrtInterface_ = std::make_shared<MPC_MRT_Interface>(*mpc_);
-    // mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
+    mpcMrtInterface_->initRollout(&mobileManipulatorInterface_->getRollout());
     mpcTimer_.reset();
 
     controllerRunning_ = true;
@@ -184,8 +197,8 @@ namespace mobile_manipulator_controller
       ros::WallRate(mobileManipulatorInterface_->mpcSettings().mrtDesiredFrequency_).sleep();
     }
     ROS_INFO_STREAM("Initial policy received.");
-    mpcRunning_ = true;
-    updateRunning_ = true;
+    // mpcRunning_ = true;
+    // updateRunning_ = true;
   }
 
   int MobileManipulatorControllerBase::update(const vector_t& externalState, vector_t& nextState)
@@ -196,6 +209,9 @@ namespace mobile_manipulator_controller
 
   int MobileManipulatorControllerBase::update(const vector_t& externalState, vector_t& nextState, vector_t& optimizedInput)
   {
+    TargetTrajectories target_trajectories;
+    if(ikTargetManager_->getTargetTrajectories(target_trajectories))
+      mpcMrtInterface_->getReferenceManager().setTargetTrajectories(target_trajectories);
     if(externalState.size() != info_.stateDim || nextState.size() != info_.stateDim)
     {
       ROS_ERROR_STREAM("externalState.size() != info_.stateDim");
@@ -208,9 +224,21 @@ namespace mobile_manipulator_controller
     SystemObservation obs = mmObservationDummy_;
     obs.time = mmObservationDummy_.time;
     obs.state = externalState;
-    obs.input.setZero();
-    if(dummySim_)
-      obs.state.head(baseDim) = mmObservationDummy_.state.head(baseDim);
+    obs.input.setZero();//TODO: 验证给mpc的input是否需要清零
+    switch(controlType_){
+      case ControlType::None:
+      case ControlType::ArmOnly:
+        break;
+      case ControlType::BaseOnly:
+      case ControlType::BaseArm:
+        // 被控维度使用dummy state
+        obs.state(2) = mmObservationDummy_.state(2); // z
+        obs.state(4) = mmObservationDummy_.state(4); // pitch
+        break;
+      default:
+        ROS_ERROR("[MobileManipulatorControllerBase] Invalid control type");
+        break;
+    }
     if(dummySimArm_)
       obs.state.tail(info_.armDim) = mmObservationDummy_.state.tail(info_.armDim);
 
@@ -238,6 +266,24 @@ namespace mobile_manipulator_controller
       mmPlanedTrajQueue_.pop_front();
     // visualize
     mmPlanedTrajPublisher_.publish(getVisualizeTrajectoryMsg(mmPlanedTrajQueue_, {0.1, 0.9, 0.1, 1.0}));
+    // filter abnormal state
+    double base_err_norm = (nextState - externalState).head(info_.stateDim - info_.armDim).norm();
+    double arm_err_norm = (nextState - externalState).tail(info_.armDim).norm();
+    ros_logger_->publishValue("/mm/base_err_norm", base_err_norm);
+    ros_logger_->publishValue("/mm/arm_err_norm", arm_err_norm);
+    
+    bool reset_by_count = (updateCount_ < 10);
+    bool reset_by_count_and_error = ((updateCount_ < 30) && (arm_err_norm > 0.2 || base_err_norm > 0.2));
+    if(reset_by_count || reset_by_count_and_error)
+    {
+      mmObservationDummy_.state = externalState;
+      mmObservationDummy_.input.setZero();
+      nextState = externalState;
+      optimizedInput = vector_t::Zero(info_.inputDim);
+    }
+    ++updateCount_;
+    ros_logger_->publishVector("/mm/dummy_state", mmObservationDummy_.state);
+    ros_logger_->publishValue("/mm/update_count", updateCount_);
     return 0;
   }
 
@@ -253,7 +299,7 @@ namespace mobile_manipulator_controller
 
       ocs2_msgs::mpc_flattened_controller mpcPolicyMsg =
           createMpcPolicyMsg(policy, command, performance_indices);
-      int result = anomaly_check(currentObservation, policy, command, performance_indices);
+      anomaly_check(currentObservation, policy, command, performance_indices);
       // if(result != 0)
       //   return result;
       // publish the message
@@ -530,8 +576,15 @@ namespace mobile_manipulator_controller
     mmEefPosesPublisher_.publish(eefPosesMsg);
   }
 
+  bool MobileManipulatorControllerBase::isMpcThreadPaused() const {
+    std::lock_guard<std::mutex> lock(mpcThreadMutex_);
+    // 线程暂停的条件：控制器运行但MPC不运行，且暂停标志为true
+    return controllerRunning_ && !mpcRunning_ && mpcThreadPaused_;
+  }
+
   int MobileManipulatorControllerBase::reset(const vector_t& externalState)
   {
+    updateCount_ = 0;
     if(externalState.size() != info_.stateDim)
     {
       ROS_ERROR_STREAM("externalState.size() != info_.stateDim");
@@ -558,23 +611,75 @@ namespace mobile_manipulator_controller
       ROS_INFO("MPC thread paused successfully");
     }
     
-    // 强制重置MRT_BASE状态
+    // 动态等待线程暂停，基于实际线程状态和配置参数
+    auto start_wait = std::chrono::steady_clock::now();
+    const auto max_wait_time = std::chrono::milliseconds(maxThreadWaitTimeMs_);
+    const auto check_interval = std::chrono::milliseconds(threadCheckIntervalMs_);
+    
+    bool thread_paused = false;
+    int check_count = 0;
+    
+    while (!thread_paused && std::chrono::steady_clock::now() - start_wait < max_wait_time) {
+      thread_paused = isMpcThreadPaused();
+      check_count++;
+      
+      if (!thread_paused) {
+        std::this_thread::sleep_for(check_interval);
+      }
+    }
+    
+    if (!thread_paused) {
+      ROS_WARN("Thread pause timeout after %d checks, proceeding with reset anyway", check_count);
+    } else {
+      auto wait_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - start_wait);
+      ROS_INFO("Thread paused after %ld ms (%d checks)", wait_duration.count(), check_count);
+    }
+    
+    // 安全的重置序列 - 避免内存损坏
     try
     {
+      // 第一步：清理所有缓冲区，避免内存冲突
+      ROS_INFO("Step 1: Cleaning buffers...");
+      mmPlanedTrajQueue_.clear();
+      
+      // 第二步：重置MRT_BASE，清理所有智能指针
+      ROS_INFO("Step 2: Resetting MRT_BASE...");
       mpcMrtInterface_->reset();
       ROS_INFO("MRT_BASE reset completed");
+      
+      // 第三步：等待一小段时间确保内存清理完成
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      
+      // // 第四步：重置MPC，确保内存清理
+      // ROS_INFO("Step 3: Resetting MPC...");
+      // mpc_->reset();
+      // ROS_INFO("MPC reset completed");
+      
+      // // 第五步：再次等待确保重置完成
+      // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      
     }
     catch(const std::exception& e)
     {
-      ROS_ERROR_STREAM("Failed to reset MRT_BASE: " << e.what());
+      ROS_ERROR_STREAM("Failed to reset MRT_BASE/MPC: " << e.what());
       return -2;
     }
 
+    // 准备新的观测值
     SystemObservation resetObservation;
     resetObservation.time = mmObservationDummy_.time; // 使用当前时间,避免时间跳变
     resetObservation.state = externalState;
     resetObservation.input.setZero(info_.inputDim);
-    resetMpcToGivenState(resetObservation);
+    
+    // 安全地重置MPC到给定状态
+    try {
+      resetMpcToGivenState(resetObservation);
+    }
+    catch(const std::exception& e) {
+      ROS_ERROR_STREAM("Failed to reset MPC to given state: " << e.what());
+      return -3;
+    }
 
     // 重新启动MPC线程
     {
@@ -585,9 +690,10 @@ namespace mobile_manipulator_controller
       mpcThreadCondition_.notify_all();
     }
     
-    // 清理轨迹队列
-    mmPlanedTrajQueue_.clear();
-
+    // 给MPC求解器一些时间进行初始化
+    // 这可以减少后续调用getPerformanceIndices时的竞争条件
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
     // 重置observation，保证update函数使用重置后的observation
     mmObservationDummy_ = resetObservation;
     
@@ -598,34 +704,107 @@ namespace mobile_manipulator_controller
   // reset observation
   void MobileManipulatorControllerBase::resetMpcToGivenState(const SystemObservation& resetObservation)
   {
-    mpcMrtInterface_->setCurrentObservation(resetObservation);
-    // reset mpc
-    const ocs2::vector_t externalTarget = getTargetFromState(resetObservation.state);
-    const TargetTrajectories target_trajectories({resetObservation.time, resetObservation.time+1.0}, {externalTarget, externalTarget}, {resetObservation.input, resetObservation.input});
-    ROS_INFO_STREAM("Resetting MPC to state: " << resetObservation.state.transpose());
-    ROS_INFO_STREAM("Target trajectories after reset: " << externalTarget.transpose());
-    mpcMrtInterface_->resetMpcNode(target_trajectories);
-
-    std::cout << "Waiting for the initial policy after reset ..." << std::endl;
-    auto start_time = std::chrono::steady_clock::now();
-    while (!mpcMrtInterface_->initialPolicyReceived() && ros::ok())
-    {
-      if(std::chrono::steady_clock::now() - start_time > std::chrono::seconds(5)) {
-        ROS_ERROR("Timeout while waiting for initial policy after reset.");
-        break;
-      }
-      // 确保使用重置后的观测值
+    try {
+      ROS_INFO("Step 4: Setting current observation...");
+      // 确保观测值已设置
       mpcMrtInterface_->setCurrentObservation(resetObservation);
-      mpcMrtInterface_->advanceMpc();
-      ros::WallRate(mobileManipulatorInterface_->mpcSettings().mrtDesiredFrequency_).sleep();
+      
+      // 验证观测值设置是否成功
+      if (resetObservation.state.size() != info_.stateDim) {
+        throw std::runtime_error("Invalid state dimension in reset observation");
+      }
+      
+      ROS_INFO("Step 5: Preparing target trajectories...");
+      // reset mpc
+      const ocs2::vector_t externalTarget = getTargetFromState(resetObservation.state);
+      
+      // 验证目标轨迹的有效性
+      if (externalTarget.size() == 0) {
+        throw std::runtime_error("Invalid target trajectory generated");
+      }
+      
+      const TargetTrajectories target_trajectories({resetObservation.time, resetObservation.time+1.0}, {externalTarget, externalTarget}, {resetObservation.input, resetObservation.input});
+      ROS_INFO_STREAM("Resetting MPC to state: " << resetObservation.state.transpose());
+      ROS_INFO_STREAM("Target trajectories after reset: " << externalTarget.transpose());
+      
+      // 重置MPC节点 - 使用更安全的方式
+      ROS_INFO("Step 6: Resetting MPC node...");
+      try {
+        mpcMrtInterface_->resetMpcNode(target_trajectories);
+        ROS_INFO("MPC node reset completed");
+      }
+      catch(const std::exception& e) {
+        ROS_ERROR_STREAM("Failed to reset MPC node: " << e.what());
+        throw;
+      }
+
+      // 等待初始策略 - 使用更保守的方法
+      std::cout << "Waiting for the initial policy after reset ..." << std::endl;
+      auto start_time = std::chrono::steady_clock::now();
+      int max_iterations = 50; // 减少最大迭代次数
+      int iteration_count = 0;
+      bool policy_received = false;
+      
+      while (!policy_received && ros::ok() && iteration_count < max_iterations)
+      {
+        if(std::chrono::steady_clock::now() - start_time > std::chrono::seconds(3)) {
+          ROS_ERROR("Timeout while waiting for initial policy after reset.");
+          break;
+        }
+        
+        try {
+          // 确保使用重置后的观测值
+          mpcMrtInterface_->setCurrentObservation(resetObservation);
+          mpcMrtInterface_->advanceMpc();
+          
+          // 检查策略是否已接收
+          policy_received = mpcMrtInterface_->initialPolicyReceived();
+          
+          if (policy_received) {
+            ROS_INFO("Initial policy received successfully");
+            break;
+          }
+          
+          // 使用更长的睡眠时间，减少CPU使用
+          ros::WallRate(mobileManipulatorInterface_->mpcSettings().mrtDesiredFrequency_).sleep();
+          iteration_count++;
+        }
+        catch(const std::exception& e) {
+          ROS_ERROR_STREAM("Error during policy waiting: " << e.what());
+          break;
+        }
+      }
+      
+      if (!policy_received) {
+        ROS_WARN("Initial policy not received within timeout, continuing anyway");
+      }
+      
+      std::cout << "Policy waiting completed after " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count() << " milliseconds" << std::endl;    
+      
+      // 更新策略 - 使用更安全的方式
+      ROS_INFO("Step 7: Updating policy...");
+      try {
+        if(mpcMrtInterface_->updatePolicy())
+        {
+          std::cout << "Policy updated successfully" << std::endl;
+        
+          auto policy = mpcMrtInterface_->getPolicy();
+          std::cout << "Initial policy after reset start at: " << policy.timeTrajectory_[0] << " and end at: " << policy.timeTrajectory_.back() << std::endl;
+        }
+        else {
+          ROS_WARN("Failed to update policy after reset");
+        }
+      }
+      catch(const std::exception& e) {
+        ROS_ERROR_STREAM("Error updating policy: " << e.what());
+        // 不抛出异常，允许继续执行
+      }
+      
+      ROS_INFO("MPC state reset completed successfully");
     }
-    std::cout << "Initial policy received after " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count() << " milliseconds" << std::endl;    
-    if(mpcMrtInterface_->updatePolicy())
-    {
-      std::cout << "Policy updated successfully" << std::endl;
-    
-      auto policy = mpcMrtInterface_->getPolicy();
-      std::cout << "Initial policy after reset start at: " << policy.timeTrajectory_[0] << " and end at: " << policy.timeTrajectory_.back() << std::endl;
+    catch(const std::exception& e) {
+      ROS_ERROR_STREAM("Exception in resetMpcToGivenState: " << e.what());
+      throw; // 重新抛出异常，让上层处理
     }
   };
 

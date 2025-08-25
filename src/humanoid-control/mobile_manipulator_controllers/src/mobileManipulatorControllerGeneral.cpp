@@ -2,23 +2,12 @@
 
 namespace mobile_manipulator_controller
 {
-  std::string controlTypeToString(ControlType controlType)
-  {
-    switch (controlType)
-    {
-      case ControlType::None: return "None";
-      case ControlType::ArmOnly: return "ArmOnly";
-      case ControlType::BaseOnly: return "BaseOnly";
-      case ControlType::BaseArm: return "BaseArm";
-      default: return "Unknown";
-    }
-  }
-
   MobileManipulatorControllerGeneral::MobileManipulatorControllerGeneral(ros::NodeHandle &nh, const std::string& taskFile, const std::string& libFolder, const std::string& urdfFile, MpcType mpcType, int freq, 
-            bool dummySimBase, bool dummySimArm, bool visualizeMm)
-    : MobileManipulatorControllerBase(nh, taskFile, libFolder, urdfFile, mpcType, freq, dummySimBase, dummySimArm, visualizeMm)
+    ControlType control_type, bool dummySimArm, bool visualizeMm)
+    : MobileManipulatorControllerBase(nh, taskFile, libFolder, urdfFile, mpcType, freq, control_type, dummySimArm, visualizeMm)
     , nh_(nh)
   {
+    ikTargetManager_->setEnableHumanoidObservationCallback(false);
   }
 
   bool MobileManipulatorControllerGeneral::init(double comHeight)
@@ -73,6 +62,7 @@ namespace mobile_manipulator_controller
       recievedObservation_ = true;
       ROS_INFO("Recieved first humanoid state");
     }
+    ikTargetManager_->setHumanoidObservationByMmState(humanoidState_);
   }
 
   void MobileManipulatorControllerGeneral::update()
@@ -83,7 +73,7 @@ namespace mobile_manipulator_controller
         stop();
         ROS_INFO("MPC is stopped, if you want to resume, please set control_mode to ArmOnly or BaseArm.");
       }
-      else{
+      else if(lastControlType_ == ControlType::None){
         reset(humanoidState_);
         ROS_INFO("MPC is reseted, now you can control the humanoid.");
       }
