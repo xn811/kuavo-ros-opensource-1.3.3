@@ -8,6 +8,34 @@
 #include <signal.h>
 #include <thread>
 
+// 灵巧手关节名称定义
+static const std::vector<std::string> DEXHAND_JOINT_NAMES = {
+    // 左灵巧手关节控制
+    "l_thumbCMC",
+    "l_thumbMCP", 
+    "l_indexMCP",
+    "l_indexPIP",
+    "l_middleMCP",
+    "l_middlePIP",
+    "l_ringMCP",
+    "l_ringPIP",
+    "l_littleMCP",
+    "l_littlePIP",
+
+    // 右灵巧手关节控制
+    "r_thumbCMC",
+    "r_thumbMCP",
+    "r_indexMCP", 
+    "r_indexPIP",
+    "r_middleMCP",
+    "r_middlePIP",
+    "r_ringMCP",
+    "r_ringPIP",
+    "r_littleMCP",
+    "r_littlePIP"
+};
+static bool flag_has_dexhand = false;
+
 namespace gazebo
 {
 
@@ -324,6 +352,17 @@ void GazeboShmInterface::setInitialState()
         model_->SetJointPositions(joint_pos_map);
     }
     
+    // 初始化dexhand关节位置和力
+    if(flag_has_dexhand) {
+        for (const auto& joint_name : DEXHAND_JOINT_NAMES) {
+            auto joint = model_->GetJoint(joint_name);
+            if (joint) {
+                model_->SetJointPosition(joint_name, 0.0);
+                std::cout << "[GazeboShmInterface] Initialized dexhand joint " << joint_name << " position to 0.0" << std::endl;
+            }
+        }
+    }
+    
     // 自动恢复
     if (!was_paused) {
         world->SetPaused(false);
@@ -453,6 +492,18 @@ void GazeboShmInterface::OnUpdate(const common::UpdateInfo& _info)
             joints_[i]->SetForce(0, effort);
         }
     }
+
+    //控制灵巧手
+    if(flag_has_dexhand) {
+        for (const auto& joint_name : DEXHAND_JOINT_NAMES) {
+        auto joint = model_->GetJoint(joint_name);
+        if (joint) {
+            // TODO: 在这里添加灵巧手的控制
+            joint->SetPosition(0, 0.0);
+            }
+        }
+    }
+
     while (!sim_start_ && ros::ok()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << "[GazeboShmInterface] Waiting for simulation to start..." << std::endl;
@@ -502,11 +553,17 @@ bool GazeboShmInterface::ParseJoints(const sdf::ElementPtr& _sdf)
         gzerr << "No joints configuration found" << std::endl;
         return false;
     }
-
+    
     auto joints_elem = _sdf->GetElement("joints");
     for (auto joint_elem = joints_elem->GetElement("joint"); joint_elem;
          joint_elem = joint_elem->GetNextElement("joint")) {
         std::string joint_name = joint_elem->Get<std::string>("name");
+        std::cout << "joint_name: " << joint_name << std::endl;
+        // dexhand 灵巧手的的关节不在常规的 joints_ 中控制（只有腿+手臂+头关节）
+        if (std::find(DEXHAND_JOINT_NAMES.begin(), DEXHAND_JOINT_NAMES.end(), joint_name) != DEXHAND_JOINT_NAMES.end()) {
+            flag_has_dexhand = true;
+            continue;
+        }
         auto joint = model_->GetJoint(joint_name);
         if (!joint) {
             gzerr << "Joint '" << joint_name << "' not found" << std::endl;
@@ -514,7 +571,6 @@ bool GazeboShmInterface::ParseJoints(const sdf::ElementPtr& _sdf)
         }
         joints_.push_back(joint);
         joint_names_.push_back(joint_name);
-        // std::cout << "joint_name: " << joint_name << std::endl;
     }
 
     return true;
