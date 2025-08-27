@@ -222,16 +222,16 @@ from kuavo_humanoid_sdk import RobotControlBlockly
 以下为爬楼梯模块的各个积木块函数说明：
 
 1. **设置爬楼梯参数**
-   - 函数：`robot_control.set_stair_parameters(step_height=0.13, step_length=0.28, foot_width=0.10, stand_height=0.0, dt=0.6, ss_time=0.5)`
+   - 函数：`robot_control.set_stair_parameters(step_height=0.08, step_length=0.28, foot_width=0.108535, stand_height=0.0, dt=1.0, ss_time=0.6)`
    - 参数类型：float
    - 描述：设置爬楼梯的基本参数，包括台阶高度、长度、脚宽等
    - 参数说明：
-     - step_height: 台阶高度（米），默认0.13
+     - step_height: 台阶高度（米），默认0.08
      - step_length: 台阶长度（米），默认0.28
-     - foot_width: 脚宽（米），默认0.10
+     - foot_width: 脚宽（米），默认0.108535
      - stand_height: 站立高度偏移（米），默认0.0
-     - dt: 步态周期时间（秒），默认0.6
-     - ss_time: 单支撑时间比例，默认0.5
+     - dt: 步态周期时间（秒），默认1.0
+     - ss_time: 单支撑时间比例，默认0.6
    - 返回值：bool，成功返回True，失败返回False
 
 2. **爬上楼梯**
