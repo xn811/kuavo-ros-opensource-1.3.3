@@ -9,23 +9,17 @@ import threading
 import argparse
 import signal
 import time
-import json
 from enum import Enum
 import numpy as np
 import tf
 from core.ros.pico import (
     KuavoPicoNodeManager,
     KuavoPicoNode,
-    RobotMatrixPublisher,
-    ControlMode
+    RobotMatrixPublisher
 )
 from core.ros.pico_utils import RobotInfoBroadcaster
 from core.ros.robot_data import RobotDataServer
-from core.ros.system_identification import SystemIdentification
 from common.logger import SDKLogger
-from .ros import body_tracking_extended_pb2 as proto
-from .ros import hand_wrench_srv_pb2
-from .config.pico_vr_config import HandWrenchConfig
 
 def signal_handler(self):
     """Handle signal for graceful exit."""
@@ -108,12 +102,9 @@ class KuavoPicoServer:
         self.broadcast_thread = threading.Thread(target=self.broadcaster.broadcast, daemon=True)
         self.broadcast_thread.start()
 
-        # 上传机器人手臂/手指电流, 接收下发控制指令
         self.robot_data_server = RobotDataServer(self.broadcaster.eef_type)
         self.robot_data_server_thread = threading.Thread(target=self.robot_data_server.start, daemon=True)
         self.robot_data_server_thread.start()
-
-        self.system_identification = SystemIdentification()
         
     def get_head_motion_range(self):
         """Get head motion range from configuration."""
@@ -141,7 +132,6 @@ class KuavoPicoServer:
         """Cleanup when the object is destroyed."""
         if self.socket:
             self.socket.close()
-        self.broadcaster.quit()    
         SDKLogger.info("Stopped UDP server")
 
     def handle_error(self, error, error_state):
@@ -159,63 +149,7 @@ class KuavoPicoServer:
 
     def process_data(self, data_str):
         """Process data."""
-        message = proto.VRData()
-        message.ParseFromString(data_str)
-
-        # 延迟诊断命令
-        if message.HasField('delayed_diagnosis_command'):
-            SDKLogger.info("---------------- receive delayed diagnosis command ------------------")
-            SDKLogger.info(f"delayed diagnosis command: {message.delayed_diagnosis_command}")
-            self.process_delayed_diagnosis_command(message.delayed_diagnosis_command)
-            # 延迟诊断中不处理其他数据
-            return
-        
-        if self.system_identification.is_running():
-            # 延迟诊断中不处理数据
-            return
-        
-        if self.is_play_mode():
-            SDKLogger.debug("Skipping all data processing in play mode")
-            return
-        if message.HasField('full_body'):
-            self.process_body_tracking_data(data_str)
-        
-        if message.HasField('upper_body'):
-            # TODO 处理半身模式
-            pass
-        
-        if message.HasField('controller'):
-            self.process_pico_joy_data(message.controller)
-        
-        if message.HasField('vr_command'):
-            self.process_vr_command(message.vr_command)
-
-    def is_play_mode(self):
-        """Check if the system is in play mode."""
-        return hasattr(self.pico_node, '_play_mode') and self.pico_node._play_mode
-
-    def process_delayed_diagnosis_command(self, command):
-        """Process delayed diagnosis command."""
-        # 停止延迟诊断
-        if not command.run:
-            SDKLogger.warning("收到停止延迟诊断命令，停止延迟诊断")
-            self.system_identification.stop()
-            return
-        # 启动延迟诊断
-        if not self.system_identification.is_running():
-            SDKLogger.info("收到启动延迟诊断命令，启动延迟诊断")
-            self.system_identification.start()
-        else:
-            # SDKLogger.warning("延迟诊断正在进行中，不会处理其他数据")
-            return
-        
-    def process_body_tracking_data(self, data_str):
-        """Process data."""
-        # 控制遥操解锁/锁定
-        if not self.pico_node.toggle_teleop_unlock:
-            return
-
-        robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix_from_proto(data_str)
+        robot_urdf_matrices, current_time = self.pico_node.pico_info_transformer.get_robot_urdf_matrix(data_str)
         self.robot_matrix_publisher.publish_matrices(robot_urdf_matrices, current_time)
 
         # Publish TF transforms
@@ -238,64 +172,26 @@ class KuavoPicoServer:
         elif self.pico_node.pico_info_transformer.control_mode == 'LowerBody':
             # Process foot pose for stepping using parallel detection
             self.pico_node.pico_info_transformer.process_foot_poses_parallel(robot_urdf_matrices)
+            # self.pico_node.pico_info_transformer.publish_foot_pose(robot_urdf_matrices)
 
             # Process body pose for stepping (Another option of lower body control)
             # self.pico_node.pico_info_transformer.process_body_pose_for_stepping(robot_urdf_matrices)
+
+        # # Control torso (TODO: fix this)
+        # if self.pico_node.pico_info_transformer.is_running and self.pico_node.pico_info_transformer.control_torso_mode:
+        #     self.pico_node.pico_info_transformer.compute_head_body_pose(robot_urdf_matrices)
+        #     self.pico_node.pico_info_transformer.pub_head_body_pose_msg(self.pico_node.pico_info_transformer.head_body_pose)
     
-    def process_pico_joy_data(self, controller_data):
+    def process_pico_joy_data(self, data_str):
         """Process pico joy data and print to console."""
         try:
-            self.pico_node.pico_info_transformer.publish_pico_joys(controller_data)
+            joy_data = self.pico_node.pico_info_transformer.parse_joy_data(data_str)
+            if not joy_data:
+                SDKLogger.warn("no pico joy data")
+                return
+            self.pico_node.pico_info_transformer.publish_pico_joys(joy_data)
         except Exception as e:
             SDKLogger.error(f"Error processing pico joy data: {e}")
-
-    def _process_item_mass_force_request(self, req: hand_wrench_srv_pb2.ItemMassForceRequest):
-        """Process item mass force."""
-        if req.operation == hand_wrench_srv_pb2.ItemMassForceOperation.GET:
-            # 返回末端力
-            self.robot_data_server.push_item_mass_force_config()
-            print("get item mass force config")
-        elif req.operation == hand_wrench_srv_pb2.ItemMassForceOperation.SET:
-            # 设置末端力
-            hand_wrench_config = HandWrenchConfig(  
-                default=False,
-                description=req.data.description,
-                itemMass=req.data.item_mass,
-                lforceX=req.data.lforce_x,
-                lforceY=req.data.lforce_y,
-                lforceZ=req.data.lforce_z
-            )
-            self.pico_node.set_item_mass_force(req.data.case_name, hand_wrench_config)
-            res = hand_wrench_srv_pb2.ItemMassForceResponse()
-            res.operation = req.operation
-            res.description = "success"
-            res.status = hand_wrench_srv_pb2.ItemMassForceResponse.OperationStatus.SUCCESS
-            self.robot_data_server.add_item_mass_force_response(res)
-        else:
-            SDKLogger.error(f"Invalid operation: {req.operation}")
-
-    def process_vr_command(self, vr_command: proto.VrCommandData):
-        """Process VR command from RobotData protobuf message."""
-        try:
-            if vr_command.HasField('item_mass_force_request'):
-                req = vr_command.item_mass_force_request
-                self._process_item_mass_force_request(req)
-            if vr_command.HasField('control_mode'):
-                control_mode = vr_command.control_mode.control_mode
-                if control_mode == "mobile_mpc":
-                    self.pico_node.pico_info_transformer.is_mobile_mpc = True
-                    self.pico_node._set_control_mode(ControlMode.MOBILE_MPC_MODE.value)
-                elif control_mode == "follow":
-                    self.pico_node.pico_info_transformer.is_mobile_mpc = False
-                    self.pico_node.pico_info_transformer.control_torso_mode = False
-                    self.pico_node._set_control_mode(ControlMode.FOLLOW_MODE.value)
-                elif control_mode == "incremental":
-                    self.pico_node.pico_info_transformer.is_mobile_mpc = False
-                    self.pico_node.pico_info_transformer.control_torso_mode = False
-                    self.pico_node._set_control_mode(ControlMode.INCREMENTAL_MODE.value)
-                self.robot_data_server.control_mode = control_mode
-        except Exception as e:
-            SDKLogger.error(f"Error processing VR command from protobuf: {e}")
 
     def process_data_thread(self):
         """Thread function for processing data."""
@@ -304,6 +200,7 @@ class KuavoPicoServer:
             try:
                 data_str = self.data_queue.get(timeout=0.1)
                 self.process_data(data_str)
+                self.process_pico_joy_data(data_str) # 处理pico手柄数据
             except queue.Empty:
                 continue
             except Exception as e:
@@ -321,6 +218,14 @@ class KuavoPicoServer:
         if not self.send_initial_message():
             SDKLogger.error("Failed to establish initial connection")
             return
+        
+        # while not KuavoPicoNodeManager.get_ros_is_shutdown():
+        #     actions = self.pico_node.pico_info_transformer.get_available_test_actions()
+        #     # self.pico_node.pico_info_transformer.test_predefined_action(actions[0])
+        #     for action in actions:
+        #         self.pico_node.pico_info_transformer.test_predefined_action(action)
+        #         time.sleep(10)
+        #     # break
 
         SDKLogger.info("Waiting for data...")
         while not KuavoPicoNodeManager.get_ros_is_shutdown():
@@ -330,11 +235,11 @@ class KuavoPicoServer:
                     SDKLogger.debug(f"get new client: {addr}")
                     self.robot_data_server.target_client_addr = addr
                 try:
-                    self.data_queue.put(data, block=False)
+                    self.data_queue.put(data.decode('utf-8'), block=False)
                 except queue.Full:
                     try:
                         self.data_queue.get_nowait()
-                        self.data_queue.put_nowait(data)
+                        self.data_queue.put_nowait(data.decode('utf-8'))
                     except queue.Empty:
                         pass
             except socket.timeout:

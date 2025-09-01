@@ -60,29 +60,10 @@ def create_simple_6d_trajectory():
     Returns:
         footPose6DTargetTrajectories消息
     """
-    time_traj = [0.5, 1.0, 1.5, 2.0]
-    foot_idx_traj = [0, 2, 1, 2]  # 默认左脚开始
-    foot_poses_6d = [[0.3, 0.1, 0.0, 0.0, 0.0, 0.0], [0.3, 0.1, 0.0, 0.0, 0.0, 0.0], [0.3, -0.1, 0.0, 0.0, 0.0, 0.0], [0.3, -0.1, 0.0, 0.0, 0.0, 0.0]]
-    torso_poses_6d = [[0.15, 0.0, 0.0, 0.0, 0.1, 0.0], [0.15, 0.0, 0.0, 0.0, 0.1, 0.0], [0.3, 0.0, 0.0, 0.0, 0.0, 0.0], [0.3, 0.0, 0.0, 0.0, 0.0, 0.0]]
-    
-    return get_foot_pose_6d_traj_msg(time_traj, foot_idx_traj, foot_poses_6d, torso_poses_6d)
-
-def create_simple_6d_trajectory2():
-    """
-    创建简单的6D轨迹消息
-    
-    Args:
-        foot_poses_6d: 足部6D姿态列表，每个元素为[x, y, z, yaw, pitch, roll]
-        torso_poses_6d: 躯干6D姿态列表，每个元素为[x, y, z, yaw, pitch, roll]
-        time_interval: 时间间隔
-    
-    Returns:
-        footPose6DTargetTrajectories消息
-    """
-    time_traj = [0.5, 1.0, 1.5, 2.0]
-    foot_idx_traj = [0, 2, 1, 2]  # 默认左脚开始
-    foot_poses_6d = [[0.6, 0.1, 0.0, 0.0, 0.0, 0.0], [0.6, 0.1, 0.0, 0.0, 0.0, 0.0], [0.6, -0.1, 0.0, 0.0, 0.0, 0.0], [0.6, -0.1, 0.0, 0.0, 0.0, 0.0]]
-    torso_poses_6d = [[0.45, 0.0, 0.0, 0.0, 0.1, 0.0], [0.45, 0.0, 0.0, 0.0, 0.1, 0.0], [0.6, 0.0, 0.0, 0.0, 0.0, 0.0], [0.6, 0.0, 0.0, 0.0, 0.0, 0.0]]
+    time_traj = [0.5]
+    foot_idx_traj = [0]  # 默认左脚
+    foot_poses_6d = [[0.3, 0.1, 0.0, 0.0, -0.5, 0.0]]
+    torso_poses_6d = [[0.15, 0.0, 0.0, 0.0, 0.1, 0.0]]
     
     return get_foot_pose_6d_traj_msg(time_traj, foot_idx_traj, foot_poses_6d, torso_poses_6d)
 
@@ -100,18 +81,11 @@ if __name__ == '__main__':
     # 格式：[x(m), y(m), z(m), yaw(rad), pitch(rad), roll(rad)]
     
     # 测试1：单个6D姿态点
-    print("=== 测试1：世界系6D姿态点 ===")
+    print("=== 测试1：单个世界系6D姿态点 ===")
     
     msg_6d_single = create_simple_6d_trajectory()
     pub_6d.publish(msg_6d_single)
-    print("世界系6D姿态点已发布")
+    print("单个世界系6D姿态点已发布")
     
-    rospy.sleep(5)
-
-    print("=== 测试2：世界系6D姿态点 ===")
-    
-    msg_6d_single2 = create_simple_6d_trajectory2()
-    pub_6d.publish(msg_6d_single2)
-    print("世界系6D姿态点已发布")
     rospy.sleep(2)
     

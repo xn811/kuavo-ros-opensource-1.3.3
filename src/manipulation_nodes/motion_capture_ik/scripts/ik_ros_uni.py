@@ -235,9 +235,9 @@ class IkRos:
 
 
         if self.use_arm_collision:
-            self.pub = rospy.Publisher("/arm_collision/kuavo_arm_traj", JointState, queue_size=2)
+            self.pub = rospy.Publisher("/arm_collision/kuavo_arm_traj", JointState, queue_size=10)
         else:
-            self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=2)
+            self.pub = rospy.Publisher("/kuavo_arm_traj", JointState, queue_size=10)
         self.pub_origin_joint = rospy.Publisher("/kuavo_arm_traj_origin", Float32MultiArray, queue_size=10)
         self.pub_filtered_joint = rospy.Publisher("/kuavo_arm_traj_filtered", Float32MultiArray, queue_size=10)
         self.pub_real_arm_hand_pose = rospy.Publisher("/drake_ik/real_arm_hand_pose", twoArmHandPose, queue_size=10)
@@ -993,6 +993,7 @@ class IkRos:
                     self.__freeze_finger = not self.__freeze_finger
                 self.__button_y_last = joyStick_data.left_second_button_pressed
                 if self.__freeze_finger is True:
+                    # print(f"\033[91mFinger is frozen.\033[0m")
                     # Use frozen values
                     self.pub_leju_claw_command(self.__frozen_claw_pos)
                 else:

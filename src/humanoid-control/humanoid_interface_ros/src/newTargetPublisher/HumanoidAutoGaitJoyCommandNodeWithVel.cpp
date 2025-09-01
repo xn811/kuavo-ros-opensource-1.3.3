@@ -286,7 +286,6 @@ namespace ocs2
       stop_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/stop_robot", 10);
       re_start_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/re_start_robot", 10);
       head_motion_pub_ = nodeHandle_.advertise<kuavo_msgs::robotHeadMotionData>("/robot_head_motion_data", 10);
-      waist_motion_pub_ = nodeHandle_.advertise<std_msgs::Float64MultiArray>("/robot_waist_motion_data", 10);
       slope_planning_pub_ = nodeHandle_.advertise<std_msgs::Bool>("/humanoid/mpc/enable_slope_planning", 10);
 
       // 加载命令配置
@@ -732,23 +731,11 @@ namespace ocs2
         {
           executeCommand("stairclimb");
         }
-        else
-        {
-           // 组合键控制腰部
-          double waist_yaw = joy_msg->axes[joyAxisMap["AXIS_RIGHT_STICK_YAW"]];
-          waist_yaw = 120.0 * waist_yaw;   // +- 120deg
-          // std::cout << "waist_yaw: " << waist_yaw << std::endl;
-          controlWaist(waist_yaw);
-
-        }
         old_joy_msg_ = *joy_msg;
         return;
       }
 
 
-      // 非辅助模式下才可控行走
-      if(joy_msg->axes[joyAxisMap["AXIS_RIGHT_RT"]] > -0.5 && joy_msg->axes[joyAxisMap["AXIS_LEFT_LT"]] > -0.5)
-        joystickOriginAxisTemp_.head(4) << joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_X"]], joy_msg->axes[joyAxisMap["AXIS_LEFT_STICK_Y"]], joy_msg->axes[joyAxisMap["AXIS_RIGHT_STICK_Z"]], joy_msg->axes[joyAxisMap["AXIS_RIGHT_STICK_YAW"]];
       joystickOriginAxisFilter_ = joystickOriginAxisTemp_;
       // for(int i=0;i<4;i++)
       // {
@@ -1022,14 +1009,6 @@ namespace ocs2
       head_motion_pub_.publish(msg);
     }
 
-    void controlWaist(double waist_yaw)
-    {
-      std_msgs::Float64MultiArray msg;
-      msg.data.resize(1);
-      msg.data[0] = -waist_yaw;
-      waist_motion_pub_.publish(msg);
-    }
-
 
     bool enableGrabBoxDemo(bool enable)
     {
@@ -1119,7 +1098,6 @@ namespace ocs2
     ros::Publisher stop_pub_;
     ros::Publisher re_start_pub_;
     ros::Publisher head_motion_pub_;
-    ros::Publisher waist_motion_pub_;
     ros::Publisher slope_planning_pub_;
     float total_mode_scale_{1.0};
     bool button_start_released_{true};

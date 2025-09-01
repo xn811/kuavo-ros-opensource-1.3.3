@@ -264,10 +264,10 @@
 
 | 字段            | 类型              | 描述                 |
 | ------------- | --------------- | ------------------ |
-| joint_q       | float64[]       | 关节位置, 单位(radian)   |
-| joint_v       | float64[]       | 关节速度, 单位(radian/s) |
+| joint_q       | float64[]       | 关节位置, 单位(degree)   |
+| joint_v       | float64[]       | 关节速度, 单位(degree/s) |
 | tau           | float64[]       | 关节扭矩,单位(N·m)       |
-| tau_max       | float64[]       | 最大关节扭矩,单位(N·m)   |
+| tau_max       | float64[]       | 最大关节扭矩,单位(degree)  |
 | tau_ratio     | float64[]       | 扭矩系数               |
 | joint_kp      | float64[]       | kp 参数              |
 | joint_kd      | float64[]       | kd 参数              |

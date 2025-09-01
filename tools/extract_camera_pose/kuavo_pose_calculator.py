@@ -66,12 +66,11 @@ class KuavoPoseCalculator:
         )
         return camera_pose_in_base
     
-    def get_l_hand_camera_or_eef_pose(self, target_link_name:str, larm_q:list):
+    def get_l_hand_camera_pose(self, larm_q:list):
         """
-        计算左臂相机或末端执行器在基座坐标系中的位姿。
+        计算左臂相机在基座坐标系中的位姿。
         
         Args:
-            target_link_name (str): 目标链接名称, 可以是 "l_hand_camera" 或 "zarm_l7_end_effector".
             larm_q (list): 左臂关节角度列表, 长度为7, 分别对应左臂的7个关节角度, 单位为弧度.
             
         Returns:
@@ -92,17 +91,16 @@ class KuavoPoseCalculator:
         q[12:19] = larm_q # 左臂关节索引为 12-18 下标从 0 开始
         self.plant.SetPositions(self.context, q)
         # fk
-        camera_pose_in_base = self.plant.GetFrameByName(target_link_name).CalcPose(
+        camera_pose_in_base = self.plant.GetFrameByName("l_hand_camera").CalcPose(
             self.context, self.base_link_frame
         )
         return camera_pose_in_base
     
-    def get_r_hand_camera_or_eef_pose(self, target_link_name:str, rarm_q:list):
+    def get_r_hand_camera_pose(self, rarm_q:list):
         """
-        计算右臂相机或末端执行器在基座坐标系中的位姿。
+        计算右臂相机在基座坐标系中的位姿。
         
         Args:
-            target_link_name (str): 目标链接名称, 可以是 "r_hand_camera" 或 "zarm_r7_end_effector".
             rarm_q (list): 右臂关节角度列表, 长度为7, 分别对应右臂的7个关节角度, 单位为弧度.
             
         Returns:
@@ -123,7 +121,7 @@ class KuavoPoseCalculator:
         q[19:26] = rarm_q # 右臂关节索引为 19-25 下标从 0 开始
         self.plant.SetPositions(self.context, q)
         # fk
-        camera_pose_in_base = self.plant.GetFrameByName(target_link_name).CalcPose(
+        camera_pose_in_base = self.plant.GetFrameByName("r_hand_camera").CalcPose(
             self.context, self.base_link_frame
         )
         return camera_pose_in_base
@@ -188,13 +186,13 @@ if __name__ == "__main__":
     head_camera_pose = kuavo_camera_pose_calculator.get_camera_pose([0.0, 0.0])
     print("head_camera pose:", head_camera_pose)
     
-    l_hand_camera_pose = kuavo_camera_pose_calculator.get_l_hand_camera_or_eef_pose("l_hand_camera", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    l_hand_camera_pose = kuavo_camera_pose_calculator.get_l_hand_camera_pose([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     print("lhand_camera pose:", l_hand_camera_pose)
     
     pose = kuavo_camera_pose_calculator.get_r_hand_tripod_to_camera_pose()
     print("r_hand_tripod_to_camera_pose:", pose)
     
-    r_hand_camera_pose = kuavo_camera_pose_calculator.get_r_hand_camera_or_eef_pose("r_hand_camera", [0.25, -1.0, -1.0, -1.208, 0.156, 0.658, 0.13])
+    r_hand_camera_pose = kuavo_camera_pose_calculator.get_r_hand_camera_pose([0.25, -1.0, -1.0, -1.208, 0.156, 0.658, 0.13])
     print("rhand_camera pose: ", r_hand_camera_pose)
 
     pose1 = kuavo_camera_pose_calculator.get_r_hand_tripod_to_camera_pose()

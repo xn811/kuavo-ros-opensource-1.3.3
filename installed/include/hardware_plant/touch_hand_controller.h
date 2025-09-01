@@ -19,6 +19,11 @@ using UnsignedDualHandsArray = std::array<UnsignedFingerArray, 2>;
 using FingerStatusPtrArray = std::array<FingerStatusPtr, 2>;
 using FingerTouchStatusPtrArray = std::array<FingerTouchStatusPtr, 2>;
 
+// open dual hand positions
+const UnsignedDualHandsArray kDualHandOpenPositions = {kOpenFingerPositions, kOpenFingerPositions};
+// close dual hand positions
+const UnsignedDualHandsArray kDualHandClosePositions = {kCloseFingerPositions, kCloseFingerPositions};     
+
 /**
  * @brief 触觉灵巧手控制器
  * 
@@ -180,16 +185,6 @@ private:
 
     bool init_touch_dexhand();
     bool init_normal_dexhand();
-
-    /**
-     * @brief 解析手势配置文件
-     * 
-     * @param gesture_file_path 手势配置文件路径
-     * @param gesture_infos 输出的手势信息列表
-     * @return true 解析成功
-     * @return false 解析失败
-     */
-    bool ParseActionSequenceFile(const std::string & gesture_file_path, std::vector<GestureInfoPtr> &gesture_infos);
 
     void control_thread_func();
     void gesture_thread_func();

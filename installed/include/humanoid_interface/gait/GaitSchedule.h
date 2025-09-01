@@ -241,11 +241,6 @@ namespace ocs2
      
       inline void setAutoGaitEnabled(bool enabled) { autoGaitEnabled_ = enabled; }
       inline bool isAutoGaitEnabled() const { return autoGaitEnabled_; }
-
-      inline void addGait(scalar_t startTime, const std::string &name)
-      {
-        gaitManager_.add(startTime, name);
-      }
       /**
        * Gets the mode sequence template.
        */
@@ -268,7 +263,7 @@ namespace ocs2
        * 拓展足端位姿序列, 并更新模式位姿序列.
        */
       ModeSchedule modifyModePoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories());
-      ModeSchedule modifyModeWorldPoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories(), scalar_t insert_time = -1);
+      ModeSchedule modifyModeWorldPoseSchedules(scalar_t currentTime, const Eigen::Vector4d &currentTorsoPose, const FootPoseSchedule& footPoseSchedule, const feet_array_t<vector3_t> &foot_pos, scalar_t startInsertTime = -1, const TargetTrajectories &targetTrajectories=TargetTrajectories());
 
       inline scalar_t getCustomGaitEndTime() const
       {
