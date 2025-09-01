@@ -48,6 +48,13 @@ def parse_args():
                       help='Enable debug output')
     parser.add_argument('--use_real_foot_data', type=int, default=1,
                       help='Use real foot data for complete action detection (0: disabled, 1: enabled, default: 0)')
+    # Add play mode argument
+    parser.add_argument('--play_mode', type=int, default=0,
+                      help='Enable play mode (0: disabled, 1: enabled, default: 0)')
+    parser.add_argument('--max_step_length_x', type=float, default=0.3,
+                      help='Maximum step length in x direction (default: 0.3)')
+    parser.add_argument('--max_step_length_y', type=float, default=0.15,
+                      help='Maximum step length in y direction (default: 0.15)')
     return parser.parse_args()
 
 def print_status(pico: KuavoRobotPico):
@@ -90,18 +97,20 @@ def configure_detection_system(pico: KuavoRobotPico, args):
         'complete_action': {
             'lift_threshold': 0.03,     # 3cm 抬起阈值
             'ground_threshold': 0.01,   # 1cm 地面阈值
-            'min_action_duration': 0.3, # 0.3秒
-            'max_action_duration': 10.0, # 10秒
+            'min_action_duration': 0.0, # 0.0秒
+            'max_action_duration': 2.0, # 2秒
             'action_buffer_size': 50,   # 缓冲区大小
             'min_horizontal_movement': 0.05,  # 5cm
             # 自适应阈值相关
             'adaptive_threshold_enabled': True,
             'calibration_samples': 50,
-            'adaptive_lift_offset': 0.02,
+            'adaptive_lift_offset': 0.01,
             'adaptive_ground_offset': 0.005,
             'use_real_foot_data': bool(args.use_real_foot_data),
         },
-        'parallel_detection': parallel_config
+        'parallel_detection': parallel_config,
+        'max_step_length_x': args.max_step_length_x,
+        'max_step_length_y': args.max_step_length_y,
     }
 
     # 兼容命令行参数覆盖部分默认值
@@ -182,6 +191,10 @@ def main():
     try:
         # Create Pico robot instance
         pico = KuavoRobotPico()
+
+        # Set play mode if supported
+        if hasattr(pico, 'set_play_mode'):
+            pico.set_play_mode(bool(args.play_mode))
 
         # Connect to Pico device
         if not pico.connect(args.host, args.port):

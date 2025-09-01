@@ -461,7 +461,7 @@ class StairClimbingPlanner:
                         
         return time_traj, foot_idx_traj, foot_traj, torso_traj, swing_trajectories
 
-    def plan_up_stairs_world(self, num_steps=5, time_traj=None, foot_idx_traj=None, foot_traj=None, torso_traj=None, swing_trajectories=None, points=None, last_points=None):
+    def plan_up_stairs_world(self, num_steps=5, time_traj=None, foot_idx_traj=None, foot_traj=None, torso_traj=None, swing_trajectories=None, points=None, last_points=None, last_foot_traj=None, last_swing_trajectories=None):
         if time_traj is None:
             time_traj = []
         if foot_idx_traj is None:
@@ -498,17 +498,27 @@ class StairClimbingPlanner:
         prev_left_foot = [start_foot_pos_x, 0.1, start_foot_pos_z, torso_yaw]
         prev_right_foot = [start_foot_pos_x, -0.1, start_foot_pos_z, torso_yaw]
         if len(foot_traj) == 0:
-            last2_foot_pos_x = points[0][0] - (points[1][0] - points[0][0])*2 if len(points) > 1 else points[0][0] - self.step_length*2
-            last2_foot_pos_z = points[0][2] - (points[1][2] - points[0][2])*2 if len(points) > 1 else points[0][2] - self.step_height*2
-            last_foot_pos_x = points[0][0] - (points[1][0] - points[0][0]) if len(points) > 1 else points[0][0] - self.step_length
-            last_foot_pos_z = points[0][2] - (points[1][2] - points[0][2]) if len(points) > 1 else points[0][2] - self.step_height
-            for i in range(len(last_points)):
-                if abs(last_points[i][0] - points[0][0]) < 0.1 or abs(last_points[i][2] - points[0][2]) < 0.05:
-                    if i >= 2:
-                        last2_foot_pos_x = last_points[i-2][0]
-                        last2_foot_pos_z = last_points[i-2][2]
-                        last_foot_pos_x = last_points[i-1][0]
-                        last_foot_pos_z = last_points[i-1][2]
+            last2_foot_pos_x = points[0][0] - self.step_length*2
+            last2_foot_pos_z = points[0][2] - self.step_height*2
+            last_foot_pos_x = points[0][0] - self.step_length
+            last_foot_pos_z = points[0][2] - self.step_height
+            for i in range(len(last_foot_traj)):
+                if abs(last_foot_traj[i][0] - points[0][0]) < 0.1 and abs(last_foot_traj[i][2] - points[0][2]) < 0.05:
+                    if i >= 4:
+                        last2_foot_pos_x = last_foot_traj[i-4][0]
+                        last2_foot_pos_z = last_foot_traj[i-4][2]
+                        last_foot_pos_x = last_foot_traj[i-2][0]
+                        last_foot_pos_z = last_foot_traj[i-2][2]
+                    else:
+                        last2_foot_pos_x = last_swing_trajectories[i].data[0].footPose6D[0]
+                        last2_foot_pos_z = last_swing_trajectories[i].data[0].footPose6D[2]
+                        if i >= 2:
+                            last_foot_pos_x = last_foot_traj[i-2][0]
+                            last_foot_pos_z = last_foot_traj[i-2][2]
+                        elif i+2 < len(last_swing_trajectories):
+                            last_foot_pos_x = last_swing_trajectories[i+2].data[0].footPose6D[0]
+                            last_foot_pos_z = last_swing_trajectories[i+2].data[0].footPose6D[2]
+                    break
 
             if not self.is_left_foot:
                 prev_left_foot = [last2_foot_pos_x, 0.1, last2_foot_pos_z, torso_yaw]
@@ -585,7 +595,8 @@ class StairClimbingPlanner:
                 time_traj.append(time_traj[-1] + self.ss_time)
                 foot_idx_traj.append(2)
                 foot_traj.append(foot_traj[-1].copy())
-                last_torso_pose[0] = last_foot_pose[0] - self.step_length*0.0
+                # last_torso_pose[0] = last_foot_pose[0] - self.step_length*0.0
+                last_torso_pose[0] = (last_foot_pose[0] + last_torso_pose[0])/2
                 torso_traj.append(last_torso_pose)
                 swing_trajectories.append(footPoses6D())
             else: # 最后一步站立恢复站直

@@ -93,7 +93,7 @@ const UnsignedFingerArray kOpenFingerPositions = {
 };
 /* close finger positions */
 const UnsignedFingerArray kCloseFingerPositions = {
-    50, 90, 90, 90, 90, 90
+    50, 50, 50, 50, 50, 50
 };
 
 struct DeviceInfo_t {

@@ -27,10 +27,15 @@ def euler_to_rotation_matrix(yaw, pitch, roll):
     return R
 
 def get_test_traj_msg():
-    foot_traj = [[0.2, 0.1, -0.1, 0], [0.2, 0.1, -0.1, 0], [0.2, 0.1, -0.1, 0], [0.4, -0.1, -0.2, 0], [0.4, -0.1, -0.2, 0], [0.4, -0.1, -0.2, 0]]
-    torso_traj = [[0.1, 0.0, -0.1, 0], [0.1, 0.0, -0.1, 0], [0.1, 0.0, -0.1, 0], [0.2, 0.0, -0.2, 0], [0.2, 0.0, -0.2, 0], [0.2, 0.0, -0.2, 0]]
-    time_traj = [0.1, 0.5, 0.6, 0.7, 1.2, 1.3]# 时间序列，递增
-    foot_idx_traj = [3, 0, 3, 5, 1, 5]
+    foot_traj = [[0.2, 0.1, 0, 0], [0.2, 0.1, 0, 0], [0.2, -0.1, 0, 0], [0.2, -0.1, 0, 0]]
+    torso_traj = [[0.1, 0.0, 0, 0], [0.1, 0.0, 0, 0], [0.2, 0.0, 0, 0], [0.2, 0.0, 0, 0]]
+    time_traj = [0.5, 1.0, 1.5, 2]# 时间序列，递增
+    foot_idx_traj = [0, 2, 1, 2]
+
+    # foot_traj = [[0.2, 0.1, 0, 0.2], [0.2, 0.1, 0, 0.2]]
+    # torso_traj = [[0.1, 0.0, 0, 0.1], [0.1, 0.0, 0.0, 0.1]]
+    # time_traj = [0.5, 1.0]# 时间序列，递增
+    # foot_idx_traj = [0, 2]
     
     # foot_traj = [[0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0]]
     # torso_traj = [[0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0]]
@@ -43,7 +48,42 @@ def get_test_traj_msg():
     msg.footPoseTrajectory = []  # 初始化脚姿态轨迹
     num = len(foot_traj)
 
-    for i in range(3):
+    for i in range(num):
+        # 创建脚姿态信息
+        msg.timeTrajectory.append(time_traj[i])
+        msg.footIndexTrajectory.append(foot_idx_traj[i])
+        foot_pose_msg = footPose()
+        foot_pose_msg.footPose = foot_traj[i]      # 设置脚姿态
+        foot_pose_msg.torsoPose = torso_traj[i]    # 设置躯干姿态
+
+        # 将脚姿态添加到消息中
+        msg.footPoseTrajectory.append(foot_pose_msg)
+    print(msg)
+    return msg
+
+def get_test_traj_msg2():
+    foot_traj = [[0.4, 0.1, 0, 0], [0.4, 0.1, 0, 0], [0.4, -0.1, 0, 0], [0.4, -0.1, 0, 0]]
+    torso_traj = [[0.3, 0.0, 0, 0], [0.3, 0.0, 0, 0], [0.4, 0.0, 0, 0], [0.4, 0.0, 0, 0]]
+    time_traj = [0.5, 1.0, 1.5, 2]# 时间序列，递增
+    foot_idx_traj = [0, 2, 1, 2]
+    
+    # foot_traj = [[0.0, 0.1, 0, 0.0], [0.0, 0.1, 0, 0.0]]
+    # torso_traj = [[0.1, 0.0, 0.0, 0.1], [0.0, 0.0, 0.0, 0.0]]
+    # time_traj = [0.5, 1.0]# 时间序列，递增
+    # foot_idx_traj = [0, 2]
+    
+    # foot_traj = [[0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0], [0.2, -0.1, -0.2, 0]]
+    # torso_traj = [[0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0], [0.1, 0.0, -0.2, 0]]
+    # time_traj = [0.1, 0.5, 0.6]# 时间序列，递增
+    # foot_idx_traj = [5, 1, 5]
+    # 创建消息实例
+    msg = footPoseTargetTrajectories()
+    msg.timeTrajectory = []  # 设置时间轨迹
+    msg.footIndexTrajectory = []         # 设置脚索引
+    msg.footPoseTrajectory = []  # 初始化脚姿态轨迹
+    num = len(foot_traj)
+
+    for i in range(num):
         # 创建脚姿态信息
         msg.timeTrajectory.append(time_traj[i])
         msg.footIndexTrajectory.append(foot_idx_traj[i])
@@ -187,7 +227,15 @@ if __name__ == '__main__':
         # [0.4, 0.0, 0, -30],
         # [0.5, 0.0, 0, 0],
     ]
-    msg = get_multiple_steps_msg(body_poses, dt, is_left_first_default, collision_check)
+    # msg = get_multiple_steps_msg(body_poses, dt, is_left_first_default, collision_check)
+    print("=== 测试1：世界系4D姿态点 ===")
     msg = get_test_traj_msg()
-
     pub.publish(msg)
+    print("世界系4D姿态点已发布")
+    rospy.sleep(5)
+
+    print("=== 测试2：世界系4D姿态点 ===")
+    msg2 = get_test_traj_msg2()
+    pub.publish(msg2)
+    print("世界系4D姿态点已发布")
+    rospy.sleep(1)

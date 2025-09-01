@@ -29,6 +29,7 @@ from kuavo_humanoid_sdk.kuavo.core.ros.control import KuavoRobotControl
 from kuavo_humanoid_sdk.kuavo.core.ros.state import KuavoRobotStateCore
 from kuavo_humanoid_sdk.kuavo.core.ros.param import make_robot_param
 from kuavo_humanoid_sdk.common.logger import SDKLogger
+from kuavo_humanoid_sdk.kuavo.logger_client import get_logger
 # Define robot states
 ROBOT_STATES = [
     State(name='stance', on_enter=['_on_enter_stance']),
@@ -59,6 +60,7 @@ class KuavoRobotCore:
     
     def __init__(self):
         if not hasattr(self, '_initialized'):
+            self.logger = get_logger()  # ✅ 初始化日志客户端（全局唯一）
             self.machine = Machine(
                 model=self,
                 states=ROBOT_STATES,
@@ -377,7 +379,18 @@ class KuavoRobotCore:
         # e.g., limit ranges for safety
         self.to_command_pose_world()
         return self._control.control_command_pose_world(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
-    
+
+    def control_robot_arm_target_poses(self, times: list, joint_q: list) -> bool:
+        if self.state != 'stance':
+            raise RuntimeError("[Core] control_robot_arm_target_poses failed: robot must be in stance state")
+
+        if self._arm_ctrl_mode != KuavoArmCtrlMode.ExternalControl:
+            SDKLogger.debug("[Core] control_robot_arm_target_poses, current arm mode != ExternalControl, change it.")
+            if not self.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl):
+                SDKLogger.warn("[Core] control_robot_arm_target_poses failed, change robot arm ctrl mode failed!")
+                return False
+
+        return self._control.control_robot_arm_target_poses(times, joint_q)
     def execute_gesture(self, gestures:list)->bool:
         return self._control.execute_gesture(gestures)
     
@@ -576,6 +589,14 @@ class KuavoRobotCore:
                params: KuavoIKParams=None) -> list:
         return self._control.arm_ik(l_eef_pose, r_eef_pose, l_elbow_pos_xyz, r_elbow_pos_xyz, arm_q0, params)
     
+    def arm_ik_free(self, 
+                    l_eef_pose: KuavoPose, 
+                    r_eef_pose: KuavoPose, 
+                    l_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
+                    r_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
+                    arm_q0: list = None,
+                    params: KuavoIKParams=None) -> list:
+        return self._control.arm_ik_free(l_eef_pose, r_eef_pose, l_elbow_pos_xyz, r_elbow_pos_xyz, arm_q0, params)
 
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         return self._control.arm_fk(q)

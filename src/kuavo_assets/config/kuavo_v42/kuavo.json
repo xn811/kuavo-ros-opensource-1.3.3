@@ -14,10 +14,13 @@
     "arm_ankle_motor_offset_degree": [-0.85, -0.85, -0.85, -0.85],
     "NUM_ARM_JOINT" : 14,
     "NUM_HEAD_JOINT" : 2,
+    "NUM_WAIST_JOINT" : 0,
     "NUM_JOINT" : 28,
+    "ROBOT_MODULE": "KUAVO",
     "ankle_solver_type": 1,
 
     "torsoP": 3.0,
+    "torsoP_squat": 3.0,
     "StepH": 0.06,
     "com_z": 0.86,
     "squat_z": 0.673,
@@ -47,6 +50,8 @@
         "PA100_18", "PA100", "PA100", "PA100_18", "CK", "CK",
         "PA100", "ruiwoPA72", "ruiwoPA60", "ruiwoPA60", "ruiwoPA43", "ruiwoPA43", "ruiwoPA43",
         "PA100", "ruiwoPA72", "ruiwoPA60", "ruiwoPA60", "ruiwoPA43", "ruiwoPA43", "ruiwoPA43", "ruiwo", "ruiwo"],
+    "ruiwo_kp": [30, 20, 20, 10, 10, 10, 30, 20, 20, 10, 10, 10, 4, 10],
+    "ruiwo_kd": [2, 4, 4, 2, 2, 2, 2, 4, 4, 2, 2, 2, 3, 3],
     "EndEffectorType": ["qiangnao", "qiangnao"],
     "min_joint_position_limits":[
         -40, -60, -140, -8, -100, -100,
@@ -142,6 +147,7 @@
     "lower_arm_length": 0.36229,
     "shoulder_width": 0.15,
     "eef_z_offset": -0.0,
+    "hand_ref_length": 0.193,
     "base_height_offset": 0.23,
     "base_chest_offset_x": -0.0,
     
@@ -155,6 +161,34 @@
             -3,
             3
         ]
+    },
+    
+    "MOTOR_C2T":
+    {
+        "PA100":{
+            "c2t_cul":[10,20,30,40,50,
+                       60,70,80,90,100],
+            "c2t_coeff":[1.2,1.2,1.2,1.2,1.2,
+                         1.2,1.2,1.2,1.2,1.2]
+        },
+        "PA100_18":{
+            "c2t_cul":[10,20,30,40,50,
+                       60,70,80,90,100],
+            "c2t_coeff":[2,2,2,2,2,
+                         2,2,2,2,2]
+        },
+        "CK":{
+            "c2t_cul":[10,20,30,40,50,
+                       60,70,80,90,100],
+            "c2t_coeff":[2.1,2.1,2.1,2.1,2.1,
+                         2.1,2.1,2.1,2.1,2.1]
+        },
+        "ruiwo":{
+            "c2t_cul":[10,20,30,40,50,
+                       60,70,80,90,100],
+            "c2t_coeff":[2.1,2.1,2.1,2.1,2.1,
+                         2.1,2.1,2.1,2.1,2.1]
+        }
     },
 
     "pos_kp": [1.0, 0.15, 1.0],
