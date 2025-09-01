@@ -37,8 +37,8 @@ echo "export PYTHONPATH=\"/opt/drake/lib/python\$(python3 -c 'import sys; print(
 kuavo_camera_pose_calculator = KuavoPoseCalculator("../../src/kuavo_assets/models/biped_s45/urdf/biped_s45.urdf")
 
 def get_camera_pose(self, head_q:list)
-def get_l_hand_camera_pose(self, rarm_q:list):
-def get_r_hand_camera_pose(self, rarm_q:list):
+def get_l_hand_camera_or_eef_pose(self, target_link_name:str, larm_q:list):
+def get_r_hand_camera_or_eef_pose(self, target_link_name:str, rarm_q:list):
 ```
 
-**使用示例:** example_camera_pose_from_bag.py
+**使用示例:** example_camera_pose_from_bag.py 和 endeffector_pose_from_bag.py

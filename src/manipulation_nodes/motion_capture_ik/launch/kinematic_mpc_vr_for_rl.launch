@@ -13,7 +13,7 @@
   <arg name="ip_address"         default="192.168.3.17" /> <!-- ip address of quest3 -->
   <arg name="use_quest3_utils"   default="true"/>
   <arg name="rl"                 default="1"/>
-  <arg name="predict_time"       default="0.1"/>
+  <arg name="predict_time"       default="0.0"/>
   <param name="use_quest3_utils" type="bool" value="$(arg use_quest3_utils)"/>
   <!-- sim launch -->
 
@@ -30,4 +30,8 @@
   <group if="$(arg visualize)">    
       <node name="visulize_traj_node" pkg="motion_capture_ik" type="visulize_traj.py" output="screen"  args="--ee_type $(arg ee_type)"/>
   </group>
+
+  <include file="$(find motion_capture_ik)/launch/ik_node.launch"/>
+
+  <node name="quest3_fsm_node" pkg="motion_capture_ik" type="quest3_fsm_node_for_rl.py" output="screen"/>
 </launch>

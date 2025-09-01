@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_runtime
   geometry_msgs
   std_msgs
+  nav_msgs
   trajectory_msgs
 )
 
@@ -79,6 +80,8 @@ add_message_files(
   Metadata.msg
   switchGaitByName.msg
   lejuClawCommand.msg
+  AudioReceiverData.msg  
+  TaskPoint.msg
   dexhandCommand.msg
   touchSensorStatus.msg
   dexhandTouchState.msg
@@ -89,6 +92,7 @@ add_message_files(
   motorParam.msg
   footPoseWithVision.msg
   footPoseWithVisionArray.msg
+  kuavoModeSchedule.msg
 
   # motion_capture_ik
   robotArmQVVD.msg
@@ -98,7 +102,10 @@ add_message_files(
   twoArmHandPose.msg
   headBodyPose.msg
   ikSolveParam.msg
+  twoArmHandPoseFree.msg
   twoArmHandPoseCmd.msg
+  twoArmHandPoseCmdFree.msg
+  armHandPoseFree.msg
   robotHandPosition.msg
   headBodyPose.msg
   bezierCurveCubicPoint.msg
@@ -119,6 +126,7 @@ add_message_files(
 
   # kuavo_arm_collision_check
   armCollisionCheckInfo.msg
+  FTsensorData.msg
 
   MmDetectionMsg.msg
   AudioReceiverData.msg
@@ -140,6 +148,16 @@ add_service_files(
   setTagId.srv
   footPoseTargetTrajectoriesSrv.srv
   footPose6DTargetTrajectoriesSrv.srv
+  adjustZeroPoint.srv
+  getMotorZeroPoints.srv
+  CreatePath.srv
+  GetAllMaps.srv
+  GetCurrentMap.srv
+  LoadMap.srv
+  NavigateToTaskPoint.srv
+  TaskPointOperation.srv
+  SetInitialPose.srv
+  InitialPoseWithTaskPoint.srv
   getCurrentGaitName.srv
   handForceLevel.srv
   enableHandTouchSensor.srv
@@ -150,6 +168,7 @@ add_service_files(
   # motion_capture_ik
   changeArmCtrlMode.srv
   twoArmHandPoseCmdSrv.srv
+  twoArmHandPoseCmdFreeSrv.srv
   changeArmCtrlModeKuavo.srv
   fkSrv.srv
 
@@ -161,7 +180,7 @@ add_service_files(
   planArmTrajectoryCubicSpline.srv
   SetJoyTopic.srv
   SetLEDMode.srv
-
+  SetLEDMode_free.srv
   # kuavo_tf2_web_republisher
   RepublishTFs.srv
 
@@ -180,6 +199,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs  # Or other packages containing msgs
   geometry_msgs
+  nav_msgs
   trajectory_msgs
 )
 

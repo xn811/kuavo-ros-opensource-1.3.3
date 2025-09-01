@@ -70,6 +70,7 @@ class VisionBasedStairClimbingPlanner:
         self.planning_done = False
         self.filtered_yaw=0
         self.vision_received = False  # 添加标志位，用于跟踪是否收到视觉数据
+        self.is_valid_number_stairs = False  # 添加标志位，用于跟踪是否检测到有效楼梯
         
         # 等待服务
         rospy.wait_for_service('/humanoid/mpc/enable_base_pitch_limit')
@@ -152,22 +153,28 @@ class VisionBasedStairClimbingPlanner:
         
         if self.is_planning or self.planning_done:
             return
-            
-        # 检查是否有楼梯信息
-        if len(msg.foot_poses) == 0:
-            rospy.logwarn("No stair information received")
+
+        # 检查检测到的楼梯数量是否为4    
+        if len(msg.foot_poses) != 4:
+            rospy.logwarn("The number of detected stairs is not 4, received: {}".format(len(msg.foot_poses)))
             return
             
         # 获取楼梯信息
         points = []
+        last_foot_height = 0
         for foot_pose in msg.foot_poses:
-            if abs(foot_pose.footPose[2]) > 0.03:  # 只处理高度差大于3cm的台阶
+            if abs(foot_pose.footPose[2]) > 0.03 and abs(foot_pose.footPose[2] - last_foot_height) > 0.08 and abs(foot_pose.footPose[2] - last_foot_height) < 0.18:  # 只处理高度差大于3cm且两级高度差在限定范围内的台阶
                 points.append(np.array(foot_pose.footPose))
-                
-        if len(points) == 0:
-            rospy.logwarn("No valid stair steps found")
+                last_foot_height = foot_pose.footPose[2]
+
+        # 检查有效楼梯的数量    
+        if len(points) !=4:
+            rospy.logwarn("The number of valid stairs detected is not 4, received: {}".format(len(points)))  
             return
             
+        self.is_valid_number_stairs = True  # 标记为有效楼梯
+        rospy.loginfo("Stair dected successfully, number of stairs: {}".format(len(points)))
+
         self.stair_info = points
         rospy.loginfo(f"Received stair information: {len(self.stair_info)} steps")
         
@@ -329,6 +336,10 @@ class VisionBasedStairClimbingPlanner:
         if not self.vision_received:
             rospy.logwarn("No vision data received within the timeout period")
             rospy.signal_shutdown("No vision data received within the timeout period")
+        else:
+            if not self.is_valid_number_stairs:
+                rospy.logwarn("No valid number of stairs detected within the timeout period")
+                rospy.signal_shutdown("No valid number of stairs detected within the timeout period")
 
 planner = None  # 全局变量，供信号处理函数访问
 

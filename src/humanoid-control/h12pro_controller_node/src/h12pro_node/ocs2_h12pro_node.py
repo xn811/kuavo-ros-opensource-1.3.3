@@ -23,11 +23,12 @@ from trajectory_msgs.msg import JointTrajectory
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import numpy as np
+from std_msgs.msg import Bool
 
 rospack = rospkg.RosPack()
 pkg_path = rospack.get_path('h12pro_controller_node')
 h12pro_remote_controller_path = os.path.join(pkg_path, "src", "h12pro_node", "h12pro_remote_controller.json")
-
+kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
 
 class Config:
     # Controller ranges
@@ -38,10 +39,11 @@ class Config:
     H12_AXIS_MID_VALUE = (H12_AXIS_RANGE_MAX + H12_AXIS_RANGE_MIN) // 2
     
     # State configurations
-    VALID_STATES = {"ready_stance", "stance", "walk", "trot"}
+    VALID_STATES = {"ready_stance", "rl_control", "stance", "walk", "trot"}
     TRIGGER_CHANNEL_MAP = {
         "stop": 8,
         # "ready_stance": 5,
+        "rl_control": 8,
         "stance": 9,
         "walk": 6,
         "trot": 7
@@ -142,22 +144,40 @@ class H12ToJoyControllerNode:
     @staticmethod
     def _create_channel_mapping() -> Dict[int, ChannelMapping]:
         """Create channel mapping configuration."""
-        return {
-            1: ChannelMapping(1, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_YAW'], reverse=True),
-            2: ChannelMapping(2, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_Z'], reverse=True, scale=Config.SCALE_RIGHT_STICK_Z),
-            3: ChannelMapping(3, axis_index=Config.AXIS_MAPPING['LEFT_STICK_X']),
-            4: ChannelMapping(4, axis_index=Config.AXIS_MAPPING['LEFT_STICK_Y'], reverse=True, scale=Config.SCALE_LEFT_STICK_Y),
-            6: ChannelMapping(6, button_index=Config.BUTTON_MAPPING['START'], 
-                            is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
-            7: ChannelMapping(7, button_index=Config.BUTTON_MAPPING['Y'], 
-                            is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
-            8: ChannelMapping(8, button_index=Config.BUTTON_MAPPING['B'], 
-                            is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
-            9: ChannelMapping(9, button_index=Config.BUTTON_MAPPING['BACK'], 
-                            is_button=True, trigger_value=-Config.H12_AXIS_RANGE_MAX),
-            10: ChannelMapping(10, button_index=Config.BUTTON_MAPPING['A'], 
-                             is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
-        }
+        if kuavo_control_scheme == "rl":
+            return {
+                1: ChannelMapping(1, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_YAW'], reverse=True),
+                2: ChannelMapping(2, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_Z'], reverse=True, scale=Config.SCALE_RIGHT_STICK_Z),
+                3: ChannelMapping(3, axis_index=Config.AXIS_MAPPING['LEFT_STICK_X']),
+                4: ChannelMapping(4, axis_index=Config.AXIS_MAPPING['LEFT_STICK_Y'], reverse=True, scale=Config.SCALE_LEFT_STICK_Y),
+                6: ChannelMapping(6, button_index=Config.BUTTON_MAPPING['START'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                7: ChannelMapping(7, button_index=Config.BUTTON_MAPPING['LB'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                8: ChannelMapping(8, button_index=Config.BUTTON_MAPPING['B'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                9: ChannelMapping(9, button_index=Config.BUTTON_MAPPING['X'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                10: ChannelMapping(10, button_index=Config.BUTTON_MAPPING['A'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+            }
+        elif kuavo_control_scheme == "ocs2":
+            return {
+                1: ChannelMapping(1, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_YAW'], reverse=True),
+                2: ChannelMapping(2, axis_index=Config.AXIS_MAPPING['RIGHT_STICK_Z'], reverse=True, scale=Config.SCALE_RIGHT_STICK_Z),
+                3: ChannelMapping(3, axis_index=Config.AXIS_MAPPING['LEFT_STICK_X']),
+                4: ChannelMapping(4, axis_index=Config.AXIS_MAPPING['LEFT_STICK_Y'], reverse=True, scale=Config.SCALE_LEFT_STICK_Y),
+                6: ChannelMapping(6, button_index=Config.BUTTON_MAPPING['START'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                7: ChannelMapping(7, button_index=Config.BUTTON_MAPPING['Y'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                8: ChannelMapping(8, button_index=Config.BUTTON_MAPPING['B'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+                9: ChannelMapping(9, button_index=Config.BUTTON_MAPPING['BACK'], 
+                                is_button=True, trigger_value=-Config.H12_AXIS_RANGE_MAX),
+                10: ChannelMapping(10, button_index=Config.BUTTON_MAPPING['A'], 
+                                is_button=True, trigger_value=Config.H12_AXIS_RANGE_MAX),
+            }
 
     def update_channels_msg(self, msg: h12proRemoteControllerChannel) -> None:
         """Update channel message data."""
@@ -244,6 +264,8 @@ class H12PROControllerNode:
         self.max_pitch = 23.0          # ±25度
         #zsh
 
+        self.is_navigation_mode = False # 导航状态变量
+
         # 添加线程池
         self.executor = ThreadPoolExecutor(max_workers=2)
         self._state_transition_lock = threading.Lock()
@@ -317,9 +339,26 @@ class H12PROControllerNode:
             self._update_h12_customize_config_callback,
             queue_size=1
         )
+
+        # 导航状态订阅者
+        self.navigation_state_sub = rospy.Subscriber(
+            "/navigation_control",
+            Bool,
+            self._navigation_state_callback,
+            queue_size=1
+        )
     
     def _update_h12_customize_config_callback(self, msg):
         self.robot_state_machine.update_customize_config()
+        
+    def _navigation_state_callback(self, msg):
+        # msg: std_msgs.msg.Bool - 导航状态消息 (false: H12 控制, true: 导航控制)
+        # 在导航中 joy 数据不参与控制
+        try:
+            self.is_navigation_mode = msg.data
+            rospy.loginfo(f"[NavigationState] Navigation mode {'enabled' if msg.data else 'disabled'}")
+        except Exception as e:
+            rospy.logerr(f"[NavigationState] Error processing navigation state: {e}")
         
     def publish_arm_joint_state(self):
         if self.plan_arm_is_finished is False and len(self.should_pub_arm_joint_state.position) > 0:
@@ -381,10 +420,18 @@ class H12PROControllerNode:
         """
         try:
             config = read_json_file(h12pro_remote_controller_path)
+            
+            # Determine which state transition configuration to use based on control scheme
+            kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
+            if kuavo_control_scheme == "rl":
+                state_transition_key = "rl_robot_state_transition_keycombination"
+            else:
+                state_transition_key = "ocs2_robot_state_transition_keycombination"
+            
             required_fields = [
                 "channel_to_key_name",
                 "channel_to_key_state",
-                "ocs2_robot_state_transition_keycombination",
+                state_transition_key,
                 "emergency_stop_key_combination"
             ]
             
@@ -393,10 +440,12 @@ class H12PROControllerNode:
                 if field not in config:
                     raise ConfigError(f"Missing required field: {field}")
             
+            rospy.loginfo(f"Loading configuration for control scheme: {kuavo_control_scheme}")
+            
             return {
                 "channel_to_key_name": config["channel_to_key_name"],
                 "channel_to_key_state": config["channel_to_key_state"],
-                "state_transitions": config["ocs2_robot_state_transition_keycombination"],
+                "state_transitions": config[state_transition_key],
                 "emergency_stop_keys": set(config["emergency_stop_key_combination"])
             }
             
@@ -571,10 +620,12 @@ class H12PROControllerNode:
             msg: Channel message for response.
         """
         try:
-            if current_state in ["stance", "walk", "trot"]:
-                self.h12_to_joy_node.is_stopping = True
-                self._gradually_move_right_stick_down()
-                self.h12_to_joy_node.is_stopping = False
+            # rl 暂不支持缓慢下降
+            if kuavo_control_scheme == "ocs2":
+                if current_state in ["stance", "walk", "trot"]:
+                    self.h12_to_joy_node.is_stopping = True
+                    self._gradually_move_right_stick_down()
+                    self.h12_to_joy_node.is_stopping = False
                 
             getattr(self.robot_state_machine, "stop")(source=current_state)
             stop_msg = h12proRemoteControllerChannel()
@@ -632,7 +683,7 @@ class H12PROControllerNode:
             except Exception as e:
                 rospy.logerr(f"Error during state transition: {e}")
 
-        if current_state != "vr_remote_control" and not self.head_control_mode:
+        if current_state != "vr_remote_control" and not self.head_control_mode and not self.is_navigation_mode:
             self._handle_joystick_input(msg)
 
 
@@ -683,7 +734,7 @@ class H12PROControllerNode:
     def _handle_joystick_input(self, msg: h12proRemoteControllerChannel) -> None:
         """Handle joystick input when no state transition occurs."""
         # 如果当前状态是stance，且头部控制模式开启，则处理摇杆输入
-        rospy.loginfo(f"[JoystickInput] head_control_mode={self.head_control_mode}")#日志打印测试是否进入head
+        # rospy.loginfo(f"[JoystickInput] head_control_mode={self.head_control_mode}")#日志打印测试是否进入head
 
         # stick_channels = Config.get_default_channels()
         # stick_channels[:4] = msg.channels[:4]
@@ -800,7 +851,8 @@ def main():
         rospy.loginfo("H12PRO Controller Node started successfully")
         
         while not rospy.is_shutdown():
-            node.h12_to_joy_node.process_channels()
+            if kuavo_control_scheme == "ocs2":
+                node.h12_to_joy_node.process_channels()
             node.publish_arm_joint_state()
             rate.sleep()
             

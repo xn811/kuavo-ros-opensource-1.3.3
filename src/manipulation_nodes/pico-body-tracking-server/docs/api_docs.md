@@ -1,23 +1,15 @@
 # 数据格式约定文档
 
-## Socket 数据格式
+## PICO VR 下发的数据格式
 
-### 手柄数据
+PICO VR 中的应用会下发如下几种消息，解析时需要根据消息中的`dataType`字段的值进行解析:
+- `bodyTracking`: 全身骨骼数据，详情参考[bodyTracking.json](../assets/data/bodyTracking.json)
+- `upperBody`:  仅包含上半身骨骼数据,详情参考[upperBody.json](../assets/data/upperBody.json) 
+- `controller`: 手柄数据, 详情参考[controller.json](../assets/data/controller.json)
+- `vrCommand`: VR 命令, 详情参考[vrCommand.json](../assets/data/vrCommand.json)
 
-- `controllers.left.primaryButton`: 主按钮 (X)
-- `controllers.left.secondaryButton`: 副按钮 (Y)
-- `controllers.left.gripButton`: 握把按钮
-- `controllers.left.triggerButton`: 扳机按钮
-- `controllers.left.gripValue`: 握把值 (0.0 到 1.0)
-- `controllers.left.triggerValue`: 扳机值 (0.0 到 1.0)
-- `controllers.left.thumbstick`: 摇杆位置 [x, y] (-1.0 到 1.0)
-- `controllers.right.primaryButton`: 主按钮 (A)
-- `controllers.right.secondaryButton`: 副按钮 (B)
-- `controllers.right.gripButton`: 握把按钮
-- `controllers.right.triggerButton`: 扳机按钮
-- `controllers.right.gripValue`: 握把值 (0.0 到 1.0)
-- `controllers.right.triggerValue`: 扳机值 (0.0 到 1.0)
-- `controllers.right.thumbstick`: 摇杆位置 [x, y] (-1.0 到 1.0)
+## 机器人端上传 PICO VR 数据格式
+- 上传机器人信息数据，包含手臂，手指扭矩等数据，详情参考[uploadrobotData.json](../assets/data/uploadRobotData.json)
 
 ## ROS 数据格式
 
