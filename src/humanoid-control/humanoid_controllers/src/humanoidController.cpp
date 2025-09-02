@@ -1718,25 +1718,7 @@ namespace humanoid_controller
       
     }
     currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
-    if (use_ros_arm_joint_trajectory_)
-    {
-      // TODO: feedback in planner
-      // auto arm_pos = currentObservation_.state.tail(armNum_); 
-      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
-      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
-      if (only_half_up_body_) 
-      {
-          optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
-          optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
-      }
-      else if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL){// 只有外部控制模式才直接使用关节target
-          // 位置、速度
-          optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.pos;
-          // optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.vel;//TODO: 临时去除
-          // std::cout << "target_arm_joint_pos: " << arm_joint_trajectory_.pos.transpose() << std::endl;
-      }
-      // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
-    }
+
     if(use_mm_arm_joint_trajectory_)
     {
       // TODO: feedback in planner
@@ -1753,11 +1735,59 @@ namespace humanoid_controller
           optimizedState2WBC_mrt_.tail(armNumReal_) = mm_arm_joint_trajectory_.pos;
       }
     }
+    if (use_ros_arm_joint_trajectory_)
+    {
+      if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL)
+      {
+        vector_t filtered_pos = arm_joint_pos_filter_.update(arm_joint_trajectory_.pos);
+        optimizedState2WBC_mrt_.tail(armNumReal_) = filtered_pos;
+        // 2. 如果外部轨迹没有提供速度，使用滤波后的位置计算速度
+        static vector_t prev_filtered_pos = filtered_pos;
+        vector_t computed_vel = (filtered_pos - prev_filtered_pos) / dt_;
+        
+        // 3. 对计算出的速度再次滤波
+        optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(computed_vel);
 
+        //ros_logger_->publishVector("/humanoid_controller/arm_joint_computed_vel", computed_vel);
+        prev_filtered_pos = filtered_pos;
+      }
+      else if(only_half_up_body_)
+      {
+        optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
+        optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
+        optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
+        optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
+      }
+      else
+      {
+        // use filter output
+        optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
+        optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
+      }
 
-    // // use filter output
-    optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
-    optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
+      // TODO: feedback in planner
+      // auto arm_pos = currentObservation_.state.tail(armNum_); 
+      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
+      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
+      // if (only_half_up_body_) 
+      // {
+      //     optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
+      //     optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
+      // }
+      // else if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL){// 只有外部控制模式才直接使用关节target
+      //     // 位置、速度
+      //     optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.pos;
+      //     // optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.vel;//TODO: 临时去除
+      //     // std::cout << "target_arm_joint_pos: " << arm_joint_trajectory_.pos.transpose() << std::endl;
+      // }
+      // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
+    }
+    else
+    {
+      // // use filter output
+      optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
+      optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
+    }
     // optimizedInput2WBC_mrt_.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_) = mrt_joint_vel_filter_.update(optimizedInput_mrt.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_));
     // ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_filtered", optimizedInput2WBC_mrt_);
     
