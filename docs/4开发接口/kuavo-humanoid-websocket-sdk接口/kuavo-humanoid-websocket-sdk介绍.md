@@ -1,8 +1,8 @@
-# KUAVO Humanoid SDK
+# KUAVO Humanoid WebSocket SDK
 
 [![Version](https://img.shields.io/pypi/v/kuavo-humanoid-sdk.svg)](https://pypi.org/project/kuavo-humanoid-sdk/) [![License](https://img.shields.io/pypi/l/kuavo-humanoid-sdk.svg)](#) [![Supported Python Versions](https://img.shields.io/pypi/pyversions/kuavo-humanoid-sdk.svg)](https://pypi.python.org/pypi/kuavo-humanoid-sdk)
 
-KUAVO Humanoid SDK是一个用于控制KUAVO人形机器人的综合Python SDK。该SDK提供了机器人状态管理、手臂和头部控制以及末端执行器操作的接口。它可以通过局域网传输数据以控制机器人，只要安装相应Python包即可。
+KUAVO Humanoid WebSocket SDK是一个用于控制KUAVO人形机器人的综合Python SDK。该SDK提供了机器人状态管理、手臂和头部控制以及末端执行器操作的接口。它可以通过局域网传输数据以控制机器人，只要安装相应Python包即可。
 该SDK旨在简化机器人控制的复杂性，使开发者能够快速实现各种机器人应用。
 
 > **注意**: 该SDK目前仅支持ROS1，暂不支持ROS2。
@@ -110,12 +110,13 @@ KUAVO Humanoid SDK是一个用于控制KUAVO人形机器人的综合Python SDK�
 
 升级前，您可以使用以下命令检查当前已安装的版本：
 ```bash
-pip show kuavo-humanoid-sdk
+# 需要注意home目录和根目录的版本是否一致，两者都可以运行，以运行目录sdk版本为准
+pip show kuavo-humanoid-sdk-ws
 ```
 
 **输出示例**：
 ```plaintext
-Name: kuavo-humanoid-sdk  
+Name: kuavo-humanoid-sdk-ws  
 Version: 1.1.6  
 ...
 ```
