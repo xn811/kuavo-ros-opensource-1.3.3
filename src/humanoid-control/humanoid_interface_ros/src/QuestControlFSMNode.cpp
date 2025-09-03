@@ -55,6 +55,7 @@ namespace ocs2
             targetPoseCommand_(nodeHandle, robotName),
             torso_control_enabled_(false),
             torso_yaw_zero_(0.0),
+            body_height_zero_(0.0),
             torso_control_start_time_(ros::Time(0))
         {
             cmdVel_.linear.x = 0;
@@ -127,7 +128,7 @@ namespace ocs2
             // 腰部控制相关的订阅者和发布者
             head_body_pose_sub_ = nodeHandle_.subscribe("/kuavo_head_body_orientation_data", 1, &QuestControlFSM::headBodyPoseCallback, this);
             waist_motion_pub_ = nodeHandle_.advertise<std_msgs::Float64MultiArray>("/robot_waist_motion_data", 1);
-            
+            cmd_pose_pub_ = nodeHandle_.advertise<geometry_msgs::Twist>("/cmd_pose", 1);
             command_height_ = 0.0;
             command_add_height_pre_ = 0.0;
 
@@ -285,17 +286,38 @@ namespace ocs2
         void headBodyPoseCallback(const kuavo_msgs::headBodyPose::ConstPtr& msg)
         {
             current_head_body_pose_ = *msg;
-            
-            // 在腰部控制模式下，发布腰部控制指令
-            if (torso_control_enabled_ && waist_dof_ > 0)
+            current_head_body_pose_.body_pitch = std::max(3*M_PI/180.0, std::min(current_head_body_pose_.body_pitch, 15*M_PI/180.0));
+
+            // 在腰部控制模式下且没有XY按键摇杆控制时，发布VR腰部控制指令
+            if (torso_control_enabled_)
             {
-                // 计算相对于零点的腰部位置
-                double current_yaw = current_head_body_pose_.body_yaw;
-                double relative_yaw = current_yaw - torso_yaw_zero_;
+                // 腰部yaw控制（如果支持腰部自由度）
+                if (waist_dof_ > 0)
+                {
+                    // 计算相对于零点的腰部位置
+                    double current_yaw = current_head_body_pose_.body_yaw;
+                    double relative_yaw = current_yaw - torso_yaw_zero_;
+                    
+                    // 发布腰部控制指令
+                    controlWaist(relative_yaw * 180.0 / M_PI); // 转换为角度
+                }
                 
-                // 发布腰部控制指令
-                
-                controlWaist(relative_yaw * 180.0 / M_PI); // 转换为角度
+                // 高度控制
+                // 根据msg中的pose高度发布高度指令（使用相对高度）
+                double current_height = current_head_body_pose_.body_height;
+                double relative_height = current_height - body_height_zero_;  // 计算相对于零点的高度
+                //std::cout << "相对高度: " << relative_height << std::endl;
+                //限制相对高度在[-0.4,0.1]之间
+                relative_height = std::max(-0.35, std::min(relative_height, 0.1));
+                geometry_msgs::Twist cmd_pose;
+                cmd_pose.linear.x = 0.0;  // 基于当前位置的 x 方向值 (m)
+                cmd_pose.linear.y = 0.0;  // 基于当前位置的 y 方向值 (m)
+                cmd_pose.linear.z = relative_height;  // 相对高度
+                cmd_pose.angular.z = 0.0;  // # 基于当前位置旋转（偏航）的角度，单位为弧度 (radian)
+                cmd_pose.angular.y = current_head_body_pose_.body_pitch;  // pitch
+
+                cmd_pose_pub_.publish(cmd_pose);
+                // 根据msg的pose值设置base的高度参考，通过/cmd_pose发布
             }
         }
 
@@ -367,23 +389,28 @@ namespace ocs2
             
             
             // 腰部控制逻辑
-            if (!joystick_data_prev_.left_second_button_pressed && joystick_data_.left_second_button_pressed) // 左边第二个按钮按下，切换腰部控制模式
+            if (joystick_data_.left_trigger > 0.5)
             {
-                if (!torso_control_enabled_)
+                if (!joystick_data_prev_.left_second_button_pressed && joystick_data_.left_second_button_pressed) // 左边第二个按钮按下，切换腰部控制模式
                 {
-                    // 启用腰部控制模式
-                    torso_control_enabled_ = true;
-                    torso_yaw_zero_ = current_head_body_pose_.body_yaw; // 记录当前腰部位置作为零点
-                    torso_control_start_time_ = ros::Time::now();
-                    std::cout << "腰部控制模式已启用，零点位置: " << torso_yaw_zero_ << std::endl;
+                    if (!torso_control_enabled_)
+                    {
+                        // 启用腰部控制模式
+                        torso_control_enabled_ = true;
+                        torso_yaw_zero_ = current_head_body_pose_.body_yaw; // 记录当前腰部位置作为零点
+                        body_height_zero_ = current_head_body_pose_.body_height; // 记录当前高度作为零点
+                        torso_control_start_time_ = ros::Time::now();
+                        std::cout << "腰部控制模式已启用，腰部零点: " << torso_yaw_zero_ 
+                                << "，高度零点: " << body_height_zero_ << std::endl;
+                    }
+                    else
+                    {
+                        // 关闭腰部控制模式
+                        torso_control_enabled_ = false;
+                        std::cout << "腰部控制模式已关闭" << std::endl;
+                    }
+                    return;
                 }
-                else
-                {
-                    // 关闭腰部控制模式
-                    torso_control_enabled_ = false;
-                    std::cout << "腰部控制模式已关闭" << std::endl;
-                }
-                return;
             }
             
             // 接触时实时腰部控制：当手只放在左边第二个按钮时，右边摇杆变为腰部控制指令
@@ -865,6 +892,7 @@ namespace ocs2
         // 腰部控制相关的订阅者和发布者
         ros::Subscriber head_body_pose_sub_;
         ros::Publisher waist_motion_pub_;
+        ros::Publisher cmd_pose_pub_;  // 用于发布高度和位置控制指令
 
         int current_arm_mode_{2};
 
@@ -899,6 +927,7 @@ namespace ocs2
         bool torso_control_enabled_;
         int waist_dof_{0};
         double torso_yaw_zero_;
+        double body_height_zero_;  // 记录进入控制模式时的高度零点
         ros::Time torso_control_start_time_;
 
         kuavo_msgs::headBodyPose current_head_body_pose_;
