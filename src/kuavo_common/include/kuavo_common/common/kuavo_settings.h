@@ -131,7 +131,7 @@ namespace HighlyDynamic
         double peak_timeWin;
         double speed_timeWin;
         double lock_rotor_timeWin;
-        uint8_t num_waist_joints;
+        uint8_t num_waist_joints = 0;
         std::string robot_module;
         Eigen::VectorXd imu_in_torso;
         std::vector<std::string> motors_type;
