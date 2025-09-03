@@ -3,11 +3,14 @@
 ## Breaking Changes
 
 ## 文档相关
+- PICO VR 更新数据格式约定文档，添加 Protobuf 数据结构及服务接口说明，[文档链接](./src/manipulation_nodes/pico-body-tracking-server/docs/api_docs.md)
+- 新增 5 代轮臂 VR 遥操作相关文档, [文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - 新增 Roban 打太极使用文档，[文档链接](./src/demo/csv2body_demo/Roban太极动作启动说明.md)
 - 新增 Roban 上楼梯使用文档，[文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban上楼梯说明.md)
 - 新增 Roban 斜坡使用说明文档 [文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban斜坡交互脚本说明.md)
 
 ## 新增功能
+- 桌面端软件新增启动、站立、停止机器人等 WebSocket API
 - Roban 机器人走斜坡功能添加自动步态行走，楼梯积木块参数更新
 - PICO VR 更新预设搬运箱子的末端力参数配置
 - 增加 h12 遥控器控制RL实现trot踏步功能，并取消stance->stance状态机转换
@@ -29,6 +32,8 @@
 - 改进 PICO 节点与 VR App 端末端力接口数据定义，本地默认提供数组预设参考值
 
 ## 修复问题
+- 修改手臂外部控制直接到wbc层的关节逻辑,差分获取速度对齐再下发
+- 修复调整关节零点位置、获取关节零点位置和硬件就绪等接口丢失问题
 - 修复 Roban机器人 Quest VR 手臂跟随问题并支持腰部控制
 - 修复大幅度动手是机器人抖动问题
 - Quest VR 在RL模式下，切换手臂控制模式时进行插值避免手臂初始位置瞬间对齐人手问题
@@ -60,6 +65,7 @@
 - 修复 Quest3 打开`control_torso`控制躯干模式时躯干会下蹲到最低问题
 
 ## 其他改进
+- 新增工具: 将电机正反转、零偏和限位等数据打包成约定的json文件，[工具文档链接](./tools/get_joint_data/README.md)
 - 增加大小臂长度以及大小臂的比例分析工具，用于分析quest3设备机器人手臂表现不同的问题，[工具文档链接](./tools/vr_test_tool/README.md)
 - 转换工具支持将 bag 中 sensors_data_raw 数据转换成末端执行器位姿数据，[工具文档链接](./tools/extract_camera_pose/howto-kuavo-pose-calculator.md)
 - 优化Quest IK 遥操控制，提高IK迭代次数并默认关闭运动学MPC防止过度资源消耗 
