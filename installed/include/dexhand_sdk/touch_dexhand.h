@@ -26,9 +26,9 @@ public:
     /**
      * @brief Get the Touch Status object
      * 
-     * @return FingerTouchStatusPtr 
+     * @return TouchSensorStatusArray 
      */
-    FingerTouchStatusPtr getTouchStatus();
+    TouchSensorStatusArray getTouchStatus();
 
     /**
      * @brief 重置触觉传感器采集通道

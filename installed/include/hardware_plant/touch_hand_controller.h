@@ -16,8 +16,8 @@ namespace eef_controller {
 using namespace dexhand;
 using DualHandsArray = std::array<FingerArray, 2>;
 using UnsignedDualHandsArray = std::array<UnsignedFingerArray, 2>;
-using FingerStatusPtrArray = std::array<FingerStatusPtr, 2>;
-using FingerTouchStatusPtrArray = std::array<FingerTouchStatusPtr, 2>;
+using FingerStatusArray = std::array<dexhand::FingerStatus, 2>;
+using FingerTouchStatusArray = std::array<dexhand::TouchSensorStatusArray, 2>;
 
 /**
  * @brief 触觉灵巧手控制器
@@ -121,16 +121,16 @@ public:
     /**
      * @brief Get the finger status of both hands
      * 
-     * @return FingerStatusPtrArray array[2] containing status for left and right hands
+     * @return FingerStatusArray array[2] containing status for left and right hands
      */
-    FingerStatusPtrArray get_finger_status();
+    FingerStatusArray get_finger_status();
 
     /**
      * @brief Get the touch sensor status of both hands
      * 
-     * @return FingerTouchStatusPtrArray array[2] containing touch status for left and right hands
+     * @return FingerTouchStatusArray array[2] containing touch status for left and right hands
      */
-    FingerTouchStatusPtrArray get_touch_status();
+    FingerTouchStatusArray get_touch_status();
 
     /**
      * @brief Enable the touch sensor for left hand
@@ -207,8 +207,12 @@ private:
     FingerArray right_speed_;
     FingerArray left_speed_;
 
-    FingerStatusPtrArray finger_status_;
-    FingerTouchStatusPtrArray finger_touch_status_;
+    FingerStatusArray finger_status_;
+    FingerTouchStatusArray finger_touch_status_;
+    
+    // 线程安全保护
+    mutable std::mutex finger_status_mutex_;
+    mutable std::mutex touch_status_mutex_;
 
     std::unique_ptr<dexhand::DexHandBase> left_dexhand_ = nullptr;
     std::unique_ptr<dexhand::DexHandBase> right_dexhand_ = nullptr;

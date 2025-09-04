@@ -16,8 +16,8 @@ namespace eef_controller {
 using namespace dexhand;
 using DualHandsArray = std::array<FingerArray, 2>;
 using UnsignedDualHandsArray = std::array<UnsignedFingerArray, 2>;
-using FingerStatusPtrArray = std::array<FingerStatusPtr, 2>;
-using FingerTouchStatusPtrArray = std::array<FingerTouchStatusPtr, 2>;
+using FingerStatusArray = std::array<dexhand::FingerStatus, 2>;
+using FingerTouchStatusArray = std::array<TouchSensorStatusArray, 2>;
 
 
 /**
@@ -122,16 +122,16 @@ public:
     /**
      * @brief 获取双手手指状态
      * 
-     * @return FingerStatusPtrArray array[2]，分别为左手和右手的状态
+     * @return FingerStatusArray array[2]，分别为左手和右手的状态
      */
-    FingerStatusPtrArray get_finger_status();
+    FingerStatusArray get_finger_status();
 
     /**
      * @brief 获取双手触摸传感器状态
      * 
-     * @return FingerTouchStatusPtrArray array[2]，分别为左手和右手的触摸状态
+     * @return FingerTouchStatusArray array[2]，分别为左手和右手的触摸状态
      */
-    FingerTouchStatusPtrArray get_touch_status();
+    FingerTouchStatusArray get_touch_status();
 
     /**
      * @brief 使能左手触摸传感器
@@ -212,8 +212,11 @@ private:
     FingerArray right_speed_;
     FingerArray left_speed_;
 
-    FingerStatusPtrArray finger_status_;
-    FingerTouchStatusPtrArray finger_touch_status_;
+    FingerStatusArray finger_status_;
+    FingerTouchStatusArray finger_touch_status_;
+    
+    // 线程安全保护
+    mutable std::mutex finger_status_mutex_;
 
     std::unique_ptr<dexhand::DexHandBase> left_dexhand_ = nullptr;
     std::unique_ptr<dexhand::DexHandBase> right_dexhand_ = nullptr;

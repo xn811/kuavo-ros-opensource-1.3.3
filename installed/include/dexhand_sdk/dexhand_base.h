@@ -69,7 +69,6 @@ struct TurboConfig_t {
 using FingerArray = std::array<int16_t, 6>;
 using UnsignedFingerArray = std::array<uint16_t, 6>;
 using TouchSensorStatusArray = std::array<TouchSensorStatus_t, 5>;
-using FingerTouchStatusPtr = std::shared_ptr<TouchSensorStatusArray>;
 
 struct ActionSeqDataType {
     uint16_t duration_ms; // ms
@@ -184,9 +183,9 @@ public:
     /**
      * @brief Get the Finger Status object
      * 
-     * @return FingerStatusPtr 
+     * @return FingerStatus 
      */
-    virtual FingerStatusPtr getFingerStatus() = 0;
+    virtual FingerStatus getFingerStatus() = 0;
 
     /**
      * @brief Set the Force Level object
@@ -201,13 +200,6 @@ public:
      * @return GripForce 
      */
     virtual GripForce  getGripForce() = 0;
-
-    // /**
-    //  * @brief Get the Touch Status object
-    //  * 
-    //  * @return FingerTouchStatusPtr 
-    //  */
-    // FingerTouchStatusPtr getTouchStatus();
 
     /**
      * @brief Set the Turbo Mode Enabled object
