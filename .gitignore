@@ -23,4 +23,4 @@ src/kuavo_humanoid_sdk/kuavo_humanoid_sdk/kuavo_strategy_v2/pick_place_box/logs/
 src/legged_control
 src/legged_perceptive
 src/Livox-SDK2
-bag
+bag/*

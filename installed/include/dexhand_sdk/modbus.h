@@ -31,7 +31,7 @@ public:
     void setFingerSpeeds(const FingerArray &speeds) override;
 
     // See DexHandBase::getFingerStatus for details
-    FingerStatusPtr getFingerStatus() override;
+    FingerStatus getFingerStatus() override;
 
     // See DexHandBase::setGripForce for details
     void setGripForce(GripForce level) override;

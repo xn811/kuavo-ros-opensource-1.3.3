@@ -153,7 +153,7 @@ class HardwarePlant
 
     void setHardwareParam(const HardwareParam& param) { hardware_param_ = param; }
     HardwareParam& getHardwareParam() { return hardware_param_; }
-    eef_controller::FingerStatusPtrArray getHandControllerStatus();
+    eef_controller::FingerStatusArray getHandControllerStatus();
 
     bool th_running_ = false;
     bool hardware_ready_ = false;

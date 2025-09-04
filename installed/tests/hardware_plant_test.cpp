@@ -130,18 +130,18 @@ public:
             std::cout << "位置：" << end_effector_cmd[1].position.transpose() << std::endl;
         };
 
-        auto output_close_finger_status = [](eef_controller::FingerStatusPtrArray& status){
+        auto output_close_finger_status = [](eef_controller::FingerStatusArray& status){
             std::cout << "夹爪状态：" << std::endl;
             std::cout << "左手状态：" << std::endl;
             std::cout << "位置：" ;
             for (int i = 0; i < 6; i++) {
-                std::cout << static_cast<int>(status[0]->positions[i]) << " ";
+                std::cout << static_cast<int>(status[0].positions[i]) << " ";
             }
             std::cout << std::endl;
             std::cout << "右手状态：" << std::endl;
             std::cout << "位置：" ;
             for (int i = 0; i < 6; i++) {
-                std::cout << static_cast<int>(status[1]->positions[i]) << " ";
+                std::cout << static_cast<int>(status[1].positions[i]) << " ";
             }
             std::cout << std::endl;
         };
@@ -191,18 +191,18 @@ public:
             std::cout << "位置：" << end_effector_cmd[1].position.transpose() << std::endl;
         };
 
-        auto output_close_finger_status = [](eef_controller::FingerStatusPtrArray& status){
+        auto output_close_finger_status = [](eef_controller::FingerStatusArray& status){
             std::cout << "夹爪状态：" << std::endl;
             std::cout << "左手状态：" << std::endl;
             std::cout << "位置：" ;
             for (int i = 0; i < 6; i++) {
-                std::cout << static_cast<int>(status[0]->positions[i]) << " ";
+                std::cout << static_cast<int>(status[0].positions[i]) << " ";
             }
             std::cout << std::endl;
             std::cout << "右手状态：" << std::endl;
             std::cout << "位置：" ;
             for (int i = 0; i < 6; i++) {
-                std::cout << static_cast<int>(status[1]->positions[i]) << " ";
+                std::cout << static_cast<int>(status[1].positions[i]) << " ";
             }
             std::cout << std::endl;
         };
