@@ -72,11 +72,11 @@ def convert_fields_to_snake_case(file_path):
         elif 'kuavo_msgs/Time' in line:
             line = line.replace('kuavo_msgs/Time', 'builtin_interfaces/Time')
             modified = True
-        elif 'Header' in line and not 'std_msgs/Header' in line:
-            line = line.replace('Header', 'std_msgs/Header')
+        elif re.search(r'\bHeader\b', line) and 'std_msgs/Header' not in line:
+            line = re.sub(r'\bHeader\b', 'std_msgs/Header', line)
             modified = True
-        elif 'Time' in line and not 'builtin_interfaces/Time' in line and not line.strip().startswith('#'):
-            line = line.replace('Time', 'builtin_interfaces/Time')
+        elif re.search(r'\bTime\b', line) and 'builtin_interfaces/Time' not in line and not line.strip().startswith('#'):
+            line = re.sub(r'\bTime\b', 'builtin_interfaces/Time', line)
             modified = True
         elif re.search(r'\btime\b', line, re.IGNORECASE) and not 'builtin_interfaces/Time' in line and not line.strip().startswith('#'):
             line = re.sub(r'\btime\b', 'builtin_interfaces/Time', line, flags=re.IGNORECASE)
