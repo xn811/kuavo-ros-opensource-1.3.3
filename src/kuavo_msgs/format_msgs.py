@@ -127,18 +127,41 @@ def convert_fields_to_snake_case(file_path):
             f.write('\n'.join(new_lines) + '\n')
         print(f"Modified fields in: {file_path}")
 
+def underscore_to_camel_case(name):
+    """将包含下划线的文件名转换为 PascalCase，符合 ROS2 命名约定"""
+    # 分离文件名和扩展名
+    if '.' in name:
+        base_name, extension = name.rsplit('.', 1)
+        extension = '.' + extension
+    else:
+        base_name = name
+        extension = ''
+    
+    # 按下划线分割并将每个部分的首字母大写，保持其他字母的原始大小写
+    parts = base_name.split('_')
+    camel_case = ''.join(word[0].upper() + word[1:] if word else '' for word in parts)
+    
+    return camel_case + extension
+
 def capitalize_first_letter(directory):
     """处理目录中的所有消息文件"""
     if not os.path.exists(directory):
         print(f"Directory {directory} does not exist")
-        return
+        return []
+    
+    renames = []
     
     for filename in os.listdir(directory):
         if not (filename.endswith('.msg') or filename.endswith('.srv')):
             continue
             
-        # 只将第一个字母大写
-        new_filename = filename[0].upper() + filename[1:]
+        # 处理下划线命名并确保首字母大写
+        if '_' in filename:
+            # 如果包含下划线，转换为 PascalCase
+            new_filename = underscore_to_camel_case(filename)
+        else:
+            # 只将第一个字母大写
+            new_filename = filename[0].upper() + filename[1:]
         
         file_path = os.path.join(directory, filename)
         new_path = os.path.join(directory, new_filename)
@@ -151,20 +174,28 @@ def capitalize_first_letter(directory):
             try:
                 os.rename(file_path, new_path)
                 print(f"Renamed: {filename} -> {new_filename}")
+                renames.append((filename, new_filename))
             except Exception as e:
                 print(f"Error renaming {filename}: {str(e)}")
+        
+    return renames
+
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
+    all_renames = []
     
     msg_dir = os.path.join(script_dir, 'msg')
     print("\nProcessing msg directory...")
-    capitalize_first_letter(msg_dir)
+    msg_renames = capitalize_first_letter(msg_dir)
+    all_renames.extend(msg_renames)
     
     srv_dir = os.path.join(script_dir, 'srv')
     print("\nProcessing srv directory...")
-    capitalize_first_letter(srv_dir)
+    srv_renames = capitalize_first_letter(srv_dir)
+    all_renames.extend(srv_renames)
+    
 
 if __name__ == "__main__":
     main()
