@@ -2,24 +2,18 @@
 
 ## 安装
 
-1. 克隆仓库
-
-   ```shell
-   # 此仓库需要依赖 ocs2_msgs 和 kuavo_ros_interfaces, 请此仓库克隆到在 kuavo-ros-control 或者 kuavo_ros1_workspace 工作空间中
-   git clone https://www.lejuhub.com/highlydynamic/planarmwebsocketservice.git
-   ```
-2. 编译功能包
+1. 编译功能包
 
    ```shell
    catkin build humanoid_controllers humanoid_plan_arm_trajectory planarmwebsocketservice
    ```
-3. 安装依赖
+2. 安装依赖
 
    ```shell
-   cd planarmwebsocketservice
+   cd src/manipulation_nodes/planarmwebsocketservice
    pip install -r requirements.txt
    ```
-4. 运行
+3. 运行
 
    ```shell
    cd <catkin_workspace>
@@ -45,10 +39,48 @@
    - `plan_arm_action_websocket_server.py` 中的 `ROBOT_ACTION_FILE_FOLDER`
    - `websocket_client_demo.py` 中的 `message`
 
+## 部署开机自启动
+
+### websocket_deploy_script.sh
+
+**主要功能：**
+- 停止并禁用现有的websocket_start服务
+- 更新服务配置文件中的机器人名称和版本
+- 设置配置文件权限
+- 安装Python依赖和SDK环境
+- 重新编译相关ROS包
+- 安装sshpass工具
+- 启动并启用websocket_start服务
+
+**使用方法：**
+
+1. 运行部署脚本：添加 websocket_start.service 开机自启动系统服务
+
+    ```shell
+    cd <catkin_workspace>
+    bash ./src/manipulation_nodes/planarmwebsocketservice/service/websocket_deploy_script.sh
+    ```
+
+2. 查看日志：websocket 连接和接口调用情况
+
+    ```shell
+    journalctl -u websocket_start.service -f
+    ```
+
+3. 服务使用
+
+    ```shell
+    # 服务为开启状态时修改代码，需要重启服务
+    systemctl restart websocket_start.service
+
+    # 手动开启，需要关闭服务以防冲突
+    systemctl stop websocket_start.service
+    ```
+
 
 ## 机器人状态
 
-### 启动机器人（缩腿)
+### 启动机器人（缩腿）
 
 request:
 
@@ -75,7 +107,7 @@ response:
 |  code  |  int  | 错误码 0: 获取成功,1:获取失败 |
 | message | string | 启动结果描述                  |
 
-### 站立机器人（伸直腿)
+### 站立机器人（伸直腿）
 
 request:
 

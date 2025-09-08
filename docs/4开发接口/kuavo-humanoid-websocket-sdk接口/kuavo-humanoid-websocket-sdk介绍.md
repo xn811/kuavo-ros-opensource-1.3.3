@@ -84,58 +84,57 @@ KUAVO Humanoid WebSocket SDK是一个用于控制KUAVO人形机器人的综合Py
 
 ## Installation 安装
 
-注意：目前该 SDK 有两个版本，稳定版和测试版。它们的区别是：
-- **稳定版本**：对应于 kuavo-ros-opensource 的 master 分支所提供的功能。
-- **测试版本**：比正式版本更激进，同时提供了更丰富的功能，对应于 kuavo-ros-opensource 的 beta 分支所提供的功能。
+**提示：对于本 SDK 目前存在两个版本，正式发布版与beta内测版, 他们的区别是：**
+- 正式发布版：稳定版，对应[kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/)的`master` 分支提供的功能，
+- beta内测版：该版本较正式版会激进一些，同时也会提供更丰富的功能，对应[kuavo-ros-opensource](https://gitee.com/leju-robot/kuavo-ros-opensource/)的`beta` 分支提供的功能。
 
-> **友好的提醒**：请明确您需要安装的版本。如果您的 SDK 版本与 kuavo-ros-opensource 不匹配，某些功能可能不可用。
+**温馨提示：请务必明确您需要安装的版本，如果您的SDK版本与`kuavo-ros-opensource`未匹配，可能会出现某些功能不可用的错误。**
 
-### 安装命令
-- 安装最新稳定版本：
-    ```bash
-    pip install kuavo-humanoid-sdk-ws
-    ```
-- 安装最新测试版本：
-    ```bash
-    pip install --pre kuavo-humanoid-sdk-ws
-    ```
-- 本地开发安装（可编辑模式）：
-    ```bash
-    cd src/kuavo_humanoid_websocket_sdk  
-    chmod +x install.sh  
-    ./install.sh  
-    ```
+安装最新的**正式版** Kuavo Humanoid SDK，可以使用 pip：
+```bash
+pip install kuavo-humanoid-sdk-ws
+```
+
+安装最新的**beta版** Kuavo Humanoid SDK，可以使用 pip：
+```bash
+pip install --pre kuavo-humanoid-sdk-ws
+
+```
+对于本地开发安装（可编辑模式），请使用：
+```bash
+cd src/kuavo_humanoid_sdk_ws
+chmod +x install.sh
+./install.sh
+```
 
 ## Upgrade Instructions 升级说明
 
-升级前，您可以使用以下命令检查当前已安装的版本：
+在升级更新之前，您可以先执行以下命令来查看当前安装的版本：
 ```bash
 # 需要注意home目录和根目录的版本是否一致，两者都可以运行，以运行目录sdk版本为准
 pip show kuavo-humanoid-sdk-ws
-```
-
-**输出示例**：
-```plaintext
-Name: kuavo-humanoid-sdk-ws  
-Version: 1.1.6  
+# Output:
+Name: kuavo-humanoid-sdk-ws
+Version: 0.1.2
 ...
 ```
+**提示：如果您的版本号中包含字母`b`，则表示该版本为测试版, 比如`Version: 0.1.2b113`**
 
-> **注意**：如果版本号包含字母 `b`，则表示是测试版，例如 `版本：0.1.2b113`。
+**当前为正式版**，升级到最新正式版:
+```bash
+pip install --upgrade kuavo-humanoid-sdk-ws
+```
+**当前为beta版**，升级到最新正式版:
+```bash
+pip install --upgrade --force-reinstall kuavo-humanoid-sdk-ws
+# 或者
+pip uninstall kuavo-humanoid-sdk-ws && pip install kuavo-humanoid-sdk-ws
+```
+**当前为正式版/beta版**，升级到最新beta版:
+```bash
+pip install --upgrade --pre kuavo-humanoid-sdk-ws
+```
 
-### 升级场景
-1. 从稳定版本升级到最新稳定版本：
-     ```bash
-     pip install --upgrade kuavo-humanoid-sdk-ws
-     ```
-2. 从测试版升级到最新稳定版：
-     ```bash
-     pip install --upgrade --force-reinstall kuavo-humanoid-sdk-ws
-     ```
-3. 从稳定版/测试版升级到最新测试版：
-     ```bash
-     pip install --upgrade --pre kuavo-humanoid-sdk-ws
-     ```
 
 ## Quick Start 快速入门
 
