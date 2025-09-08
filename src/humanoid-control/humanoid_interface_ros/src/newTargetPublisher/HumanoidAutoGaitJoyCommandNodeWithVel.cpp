@@ -701,6 +701,17 @@ namespace ocs2
           ROS_INFO("Reset grab box demo");
           resetGrabBoxDemo(true);
         }
+        if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_WALK"]] && joy_msg->buttons[joyButtonMap["BUTTON_WALK"]])
+        {
+          if (stair_detection_enabled_)
+          {
+            executeCommand("stop_stair_detect");
+          }
+          else{
+            executeCommand("start_stair_detect");
+          }
+        }
+        return;
 
       }
       else
@@ -717,16 +728,6 @@ namespace ocs2
         else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_WALK"]] && joy_msg->buttons[joyButtonMap["BUTTON_WALK"]])
         {
           pubSlopePlanning(true);
-        }
-        else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_JUMP"]] && joy_msg->buttons[joyButtonMap["BUTTON_JUMP"]])
-        {
-          if (stair_detection_enabled_)
-          {
-            executeCommand("stop_stair_detect");
-          }
-          else{
-            executeCommand("start_stair_detect");
-          }
         }
         else if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_TROT"]] && joy_msg->buttons[joyButtonMap["BUTTON_TROT"]])
         {
