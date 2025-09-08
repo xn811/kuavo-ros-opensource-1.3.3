@@ -487,9 +487,25 @@ def ruiwo_zero():
     subprocess.run(command, shell=True)
 
 def ruiwo_negtive():
+    while True:
+        print("请选择机器人类型：")
+        print("1. 4Pro型")
+        print("2. Roban2型")
+        
+        choice = input("请输入选择 (1 或 2): ").strip()
+        
+        if choice == "1":
+            robot_type = "4pro"
+            break
+        elif choice == "2":
+            robot_type = "roban2"
+            break
+        else:
+            print(bcolors.FAIL + "无效选择，请重新选择！" + bcolors.ENDC)
+            continue
 
-    # 定义要运行的命令
-    command = "bash "+ folder_path +"/ruiwo_negtive_set.sh" 
+    # 定义要运行的命令，传递机器人类型参数
+    command = "bash " + folder_path + "/ruiwo_negtive_set.sh " + robot_type
 
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)

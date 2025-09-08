@@ -1,6 +1,6 @@
 export LD_LIBRARY_PATH=../python-can-3.3.4/can/interfaces/bmcan:$LD_LIBRARY_PATH
 export PYTHONPATH=.:../python-can-3.3.4:$PYTHONPATH
-python3 Negtive.py
+python3 Negtive_Roban2.py
 exit_code=$?
 # 打印退出状态
 echo "Exit code: $exit_code"
