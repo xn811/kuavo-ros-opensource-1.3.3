@@ -658,7 +658,11 @@ namespace humanoid_controller
 
     
     // 设置CPU内核隔离
-    setupCpuIsolation();
+    if (!setupCpuIsolation())
+    {
+      std::cerr << "Failed to setup CPU isolation" << std::endl;
+      exit(1);
+    }
     
     return true;
   }
@@ -2936,7 +2940,7 @@ namespace humanoid_controller
     }
   }
 
-  void humanoidController::setupCpuIsolation()
+  bool humanoidController::setupCpuIsolation()
   {
     // 从ROS参数获取隔离的CPU核心索引
     std::vector<int> isolated_cpus;
@@ -2981,7 +2985,7 @@ namespace humanoid_controller
       }
     } else {
       std::cout << "未设置 /isolated_cpus 参数，跳过CPU亲和性设置" << std::endl;
-      return;
+      return false;
     }
     
     // 检查是否有隔离的核心
@@ -2993,7 +2997,7 @@ namespace humanoid_controller
       for (size_t i = 0; i < isolated_cpus.size(); ++i) {
         if (isolated_cpus[i] < 0 || isolated_cpus[i] >= max_cpu) {
           std::cerr << "警告: CPU核心 " << isolated_cpus[i] << " 超出有效范围 [0, " << max_cpu-1 << "]" << std::endl;
-          return;
+          return false;
         }
       }
       
@@ -3063,7 +3067,7 @@ namespace humanoid_controller
       }
     } else {
       std::cout << "隔离的核心列表为空，跳过CPU亲和性设置" << std::endl;
-      return;
+      return false;
     }
 
     // 只有在有真正隔离的CPU时才设置亲和性
@@ -3088,11 +3092,14 @@ namespace humanoid_controller
       int result = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
       if (result != 0) {
         std::cerr << "警告: 设置线程CPU亲和性失败，错误码: " << result << " (" << strerror(result) << ")" << std::endl;
+        return false;
       } else {
         std::cout << "成功设置CPU亲和性到隔离核心" << std::endl;
+        return true;
       }
     } else {
       std::cout << "没有真正隔离的CPU核心，跳过CPU亲和性设置" << std::endl;
+      return false;
     }
   }
 
