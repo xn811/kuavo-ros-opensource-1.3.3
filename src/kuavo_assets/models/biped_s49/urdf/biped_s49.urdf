@@ -1718,7 +1718,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/l_hand_tripod.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/l_hand_tripod.STL" />
       </geometry>
       <material
         name="">
@@ -1732,7 +1732,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/l_hand_tripod.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/l_hand_tripod.STL" />
       </geometry>
     </collision>
   </link>
@@ -1772,7 +1772,7 @@
         rpy="0 -1.57 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/l_hand_camera.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/l_hand_camera.STL" />
       </geometry>
       <material
         name="">
@@ -1786,7 +1786,7 @@
         rpy="0 -1.57 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/l_hand_camera.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/l_hand_camera.STL" />
       </geometry>
     </collision>
   </link>
@@ -1826,7 +1826,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/r_hand_tripod.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/r_hand_tripod.STL" />
       </geometry>
       <material
         name="">
@@ -1840,7 +1840,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/r_hand_tripod.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/r_hand_tripod.STL" />
       </geometry>
     </collision>
   </link>
@@ -1880,7 +1880,7 @@
         rpy="0 -1.57 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/r_hand_camera.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/r_hand_camera.STL" />
       </geometry>
       <material
         name="">
@@ -1894,7 +1894,7 @@
         rpy="0 -1.57 0" />
       <geometry>
         <mesh
-          filename="package://kuavo_assets/models/biped_s45/meshes/r_hand_camera.STL" />
+          filename="package://kuavo_assets/models/biped_s49/meshes/r_hand_camera.STL" />
       </geometry>
     </collision>
   </link>
