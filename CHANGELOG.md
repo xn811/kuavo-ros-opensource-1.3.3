@@ -3,6 +3,7 @@
 ## Breaking Changes
 
 ## 文档相关
+- 补充桌面端节点服务开机自启动使用说明，[文档链接](./src/manipulation_nodes/planarmwebsocketservice/README.md)
 - PICO VR 更新数据格式约定文档，添加 Protobuf 数据结构及服务接口说明，[文档链接](./src/manipulation_nodes/pico-body-tracking-server/docs/api_docs.md)
 - 新增 5 代轮臂 VR 遥操作相关文档, [文档链接](./src/manipulation_nodes/motion_capture_ik/README_VR_MPC.md)
 - 新增 Roban 打太极使用文档，[文档链接](./src/demo/csv2body_demo/Roban太极动作启动说明.md)
@@ -10,6 +11,9 @@
 - 新增 Roban 斜坡使用说明文档 [文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban斜坡交互脚本说明.md)
 
 ## 新增功能
+- 新增 Roban2.1 机器人模型，机器人版本号`ROBOT_VERSION=14`
+- 新增实物机器人未设置 CPU 隔核参数或系统配置时，程序立即退出并警告提示
+- 新增支持将程序日志输出重定向到h12接收机串口，[文档链接](./src/humanoid-control/h12pro_controller_node/H12_LOG_Instruction.md)
 - 桌面端软件新增启动、站立、停止机器人等 WebSocket API
 - Roban 机器人走斜坡功能添加自动步态行走，楼梯积木块参数更新
 - PICO VR 更新预设搬运箱子的末端力参数配置
@@ -32,6 +36,9 @@
 - 改进 PICO 节点与 VR App 端末端力接口数据定义，本地默认提供数组预设参考值
 
 ## 修复问题
+- 修复48/49版本带灵巧手版本的mujoco仿真灵巧手大拇指关节顺序错误和手臂控制错误问题
+- 修复 VR 遥操作控制夹爪可能会卡死问题
+- 修复灵巧手获取状态线程潜在的程序崩溃问题
 - 修改手臂外部控制直接到wbc层的关节逻辑,差分获取速度对齐再下发
 - 修复调整关节零点位置、获取关节零点位置和硬件就绪等接口丢失问题
 - 修复 Roban机器人 Quest VR 手臂跟随问题并支持腰部控制
