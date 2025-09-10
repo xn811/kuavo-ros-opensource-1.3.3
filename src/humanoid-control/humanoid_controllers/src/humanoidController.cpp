@@ -658,12 +658,22 @@ namespace humanoid_controller
 
     
     // 设置CPU内核隔离
-    if (!setupCpuIsolation())
+    if (is_real_)
     {
-      std::cerr << "Failed to setup CPU isolation" << std::endl;
-      exit(1);
+      if (!setupCpuIsolation())
+      {
+        // 提示用户配置CPU内核隔离
+        std::cerr << "\033[1;31m"
+                  << "==============================\n"
+                  << "  错误：未检测到 CPU 内核隔离！\n"
+                  << "  请先配置 CPU 内核隔离且配置内核隔离参数 isolated_cpus\n"
+                  << "  建议使用脚本 isolate_cores.sh 进行设置。\n"
+                  << "  示例：sudo bash ./tools/check_tool/isolate_cores.sh\n"
+                  << "=============================="
+                  << "\033[0m" << std::endl;
+        exit(1);
+      }
     }
-    
     return true;
   }
   void humanoidController::headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg)
