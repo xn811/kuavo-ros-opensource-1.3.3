@@ -658,12 +658,22 @@ namespace humanoid_controller
 
     
     // 设置CPU内核隔离
-    if (!setupCpuIsolation())
+    if (is_real_)
     {
-      std::cerr << "Failed to setup CPU isolation" << std::endl;
-      exit(1);
+      if (!setupCpuIsolation())
+      {
+        // 提示用户配置CPU内核隔离
+        std::cerr << "\033[1;31m"
+                  << "==============================\n"
+                  << "  错误：未检测到 CPU 内核隔离！\n"
+                  << "  请先配置 CPU 内核隔离且配置内核隔离参数 isolated_cpus\n"
+                  << "  建议使用脚本 isolate_cores.sh 进行设置。\n"
+                  << "  示例：sudo bash ./tools/check_tool/isolate_cores.sh\n"
+                  << "=============================="
+                  << "\033[0m" << std::endl;
+        exit(1);
+      }
     }
-    
     return true;
   }
   void humanoidController::headCmdCallback(const kuavo_msgs::robotHeadMotionData::ConstPtr &msg)
@@ -1722,6 +1732,8 @@ namespace humanoid_controller
       
     }
     currentObservation_.input = optimizedInput_mrt;// 传什么值都一样, MPC不使用obs.input
+    
+    // *************************** arm joint trajectory **********************************
 
     if(use_mm_arm_joint_trajectory_)
     {
@@ -1734,7 +1746,7 @@ namespace humanoid_controller
           optimizedState2WBC_mrt_.segment<7>(24) = mm_arm_joint_trajectory_.pos.segment<7>(0);
           optimizedState2WBC_mrt_.segment<7>(24+7) = mm_arm_joint_trajectory_.pos.segment<7>(7);
       }
-      else {
+      else if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL){// 只有外部控制模式才直接使用关节target
           // 位置、速度
           optimizedState2WBC_mrt_.tail(armNumReal_) = mm_arm_joint_trajectory_.pos;
       }
@@ -1769,22 +1781,6 @@ namespace humanoid_controller
         optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
       }
 
-      // TODO: feedback in planner
-      // auto arm_pos = currentObservation_.state.tail(armNum_); 
-      // optimizedInput2WBC_mrt_.tail(armNum_) = 0.05 * (arm_joint_trajectory_.pos - arm_pos)/dt_;
-      // optimizedState2WBC_mrt_.tail(armNum_) = arm_pos + optimizedInput2WBC_mrt_.tail(armNum_) * dt_;
-      // if (only_half_up_body_) 
-      // {
-      //     optimizedState2WBC_mrt_.segment<7>(24) = arm_joint_trajectory_.pos.segment<7>(0);
-      //     optimizedState2WBC_mrt_.segment<7>(24+7) = arm_joint_trajectory_.pos.segment<7>(7);
-      // }
-      // else if (mpcArmControlMode_desired_ == ArmControlMode::EXTERN_CONTROL && mpcArmControlMode_ == ArmControlMode::EXTERN_CONTROL){// 只有外部控制模式才直接使用关节target
-      //     // 位置、速度
-      //     optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.pos;
-      //     // optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_trajectory_.vel;//TODO: 临时去除
-      //     // std::cout << "target_arm_joint_pos: " << arm_joint_trajectory_.pos.transpose() << std::endl;
-      // }
-      // std::cout << "target_arm_joint_pos[0]: " << arm_joint_trajectory_.pos[0] << std::endl;
     }
     else
     {
@@ -1792,6 +1788,9 @@ namespace humanoid_controller
       optimizedState2WBC_mrt_.tail(armNumReal_) = arm_joint_pos_filter_.update(optimizedState2WBC_mrt_.tail(armNumReal_));
       optimizedInput2WBC_mrt_.tail(armNumReal_) = arm_joint_vel_filter_.update(optimizedInput2WBC_mrt_.tail(armNumReal_));
     }
+
+    // *************************** arm joint trajectory **********************************
+
     // optimizedInput2WBC_mrt_.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_) = mrt_joint_vel_filter_.update(optimizedInput_mrt.segment(optimizedInput_mrt.size() - info.actuatedDofNum, jointNum_));
     // ros_logger_->publishVector("/humanoid_controller/optimizedInput_mrt_filtered", optimizedInput2WBC_mrt_);
     

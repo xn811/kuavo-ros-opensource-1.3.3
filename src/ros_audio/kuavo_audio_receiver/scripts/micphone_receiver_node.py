@@ -78,38 +78,48 @@ class AudioReceiver:
         """
         Finds the specified microphone and sets up its audio parameters.
         """
-        rospy.loginfo("--- Available Audio Input Devices ---")
-        with suppress_alsa_error():
-            info = self.audio.get_host_api_info_by_index(0)
-            num_devices = info.get('deviceCount')
+        # rospy.loginfo("--- Available Audio Input Devices ---")
 
-            input_devices = []
-            for i in range(0, num_devices):
-                device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
-                if device_info.get('maxInputChannels') > 0:
-                    input_devices.append(device_info)
-        
-        for device in input_devices:
-            rospy.loginfo(f"Device Index: {device['index']}, Name: {device['name']}, "
-                            f"Input Channels: {device['maxInputChannels']}, Default Sample Rate: {device['defaultSampleRate']}")
+        attempt_count = 0
+        while not rospy.is_shutdown():
+            with suppress_alsa_error():
+                info = self.audio.get_host_api_info_by_index(0)
+                num_devices = info.get('deviceCount')
 
-        if not input_devices:
-            rospy.logerr("Error: No audio input devices found. Please check microphone connection or drivers.")
-            rospy.signal_shutdown("No audio input devices.")
-            return
+                input_devices = []
+                for i in range(0, num_devices):
+                    device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
+                    if device_info.get('maxInputChannels') > 0:
+                        input_devices.append(device_info)
+            
+            # 显示所有可用设备
+            # for device in input_devices:
+            #     rospy.loginfo(f"Device Index: {device['index']}, Name: {device['name']}, "
+            #                     f"Input Channels: {device['maxInputChannels']}, Default Sample Rate: {device['defaultSampleRate']}")
 
-        selected_device_info = None
-        for device in input_devices:
-            if any(keyword in device['name'] for keyword in self.target_mic_keywords):
-                self.input_device_index = device['index']
-                selected_device_info = device
-                rospy.loginfo(f"\n--- Successfully selected device: {device['name']} (Index: {device['index']}) ---")
+            if not input_devices:
+                rospy.logerr("Error: No audio input devices found. Please check microphone connection or drivers.")
+                rospy.signal_shutdown("No audio input devices.")
+                return
+
+            selected_device_info = None
+            for device in input_devices:
+                if any(keyword in device['name'] for keyword in self.target_mic_keywords):
+                    self.input_device_index = device['index']
+                    selected_device_info = device
+                    rospy.loginfo(f"\n--- Successfully selected device: {device['name']} (Index: {device['index']}) ---")
+                    break
+
+            if self.input_device_index is None:
+                attempt_count += 1
+                if attempt_count >= 3:
+                    rospy.logwarn(f"未找到音频输入设备，已尝试3次，退出节点。")
+                    rospy.signal_shutdown("Target microphone not found after 3 attempts.")
+                    return
+                # rospy.logwarn(f"未找到与关键词 {self.target_mic_keywords} 匹配的设备，等待设备连接...")
+                rospy.sleep(3.0)  # 等待3秒后重新检测
+            else:
                 break
-
-        if self.input_device_index is None:
-            rospy.logerr(f"未找到与关键词 {self.target_mic_keywords} 匹配的设备，节点将退出。")
-            rospy.signal_shutdown("未找到指定的麦克风设备。")
-            return
 
         if selected_device_info:
             self.mic_rate = int(selected_device_info['defaultSampleRate'])
@@ -140,7 +150,6 @@ class AudioReceiver:
         开始连续监听麦克风并发布数据。
         """
         if self.stream is None:
-            rospy.logerr("音频流未初始化。无法开始监听。")
             return
 
         rospy.loginfo(f"开始音频流并发布数据 (原始采样率: {self.mic_rate}Hz, 目标采样率: {self.target_sample_rate}Hz)...")
