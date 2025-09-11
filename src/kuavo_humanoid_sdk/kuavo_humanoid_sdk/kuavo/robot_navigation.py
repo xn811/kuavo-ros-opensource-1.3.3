@@ -7,27 +7,27 @@ import rospy
 import time
 
 class RobotNavigation:
-    """Interface class for robot navigation."""
+    """机器人导航接口类。"""
 
     def __init__(self):
-        """Initialize RobotNavigation object."""
+        """初始化 RobotNavigation 对象。"""
         self.robot_navigation = KuavoRobotNavigationCore()
 
     def navigate_to_goal(
         self, x: float, y: float, z: float, roll: float, pitch: float, yaw: float
     ) -> bool:
-        """Navigate to the specified goal.
+        """导航到指定目标位置。
 
         Args:
-            x (float): x coordinate of the goal.
-            y (float): y coordinate of the goal.
-            z (float): z coordinate of the goal.
-            roll (float): roll of the goal.
-            pitch (float): pitch of the goal.
-            yaw (float): yaw of the goal.
+            x (float): 目标点的x坐标。
+            y (float): 目标点的y坐标。
+            z (float): 目标点的z坐标。
+            roll (float): 目标点的横滚角。
+            pitch (float): 目标点的俯仰角。
+            yaw (float): 目标点的偏航角。
 
         Returns:
-            bool: Whether navigation succeeded.
+            bool: 导航是否成功。
         """
         orientation = tf.transformations.quaternion_from_euler(yaw, pitch, roll)
         goal = Pose(position=Point(x=x, y=y, z=z), orientation=Quaternion(x=orientation[0], y=orientation[1], z=orientation[2], w=orientation[3]))
@@ -41,13 +41,13 @@ class RobotNavigation:
         return True
 
     def navigate_to_task_point(self, task_point_name: str) -> bool:
-        """Navigate to the specified task point.
+        """导航到指定的任务点。
 
         Args:
-            task_point_name (str): Name of the task point.
+            task_point_name (str): 任务点的名称。
 
         Returns:
-            bool: Whether navigation succeeded.
+            bool: 导航是否成功。
         """
         self.robot_navigation.navigate_to_task_point(task_point_name)
         while self.get_current_status() is not NavigationStatus.ACTIVE:
@@ -59,36 +59,36 @@ class RobotNavigation:
         return True
 
     def stop_navigation(self) -> bool:
-        """Stop navigation.
+        """停止导航。
 
         Returns:
-            bool: Whether stopping navigation succeeded.
+            bool: 停止导航是否成功。
         """
         return self.robot_navigation.stop_navigation()
 
     def get_current_status(self) -> str:
-        """Get the current navigation status.
+        """获取当前导航状态。
 
         Returns:
-            str: Current navigation status.
+            str: 当前导航状态。
         """
         return self.robot_navigation.get_current_status()
 
     def init_localization_by_pose(
         self, x: float, y: float, z: float, roll: float, pitch: float, yaw: float
     ) -> bool:
-        """Initialize localization by pose.
+        """通过位姿初始化定位。
 
         Args:
-            x (float): x coordinate of the pose.
-            y (float): y coordinate of the pose.
-            z (float): z coordinate of the pose.
-            roll (float): roll of the pose.
-            pitch (float): pitch of the pose.
-            yaw (float): yaw of the pose.
+            x (float): 位姿的x坐标。
+            y (float): 位姿的y坐标。
+            z (float): 位姿的z坐标。
+            roll (float): 位姿的横滚角。
+            pitch (float): 位姿的俯仰角。
+            yaw (float): 位姿的偏航角。
 
         Returns:
-            bool: Whether localization initialization succeeded.
+            bool: 定位初始化是否成功。
         """
         orientation = tf.transformations.quaternion_from_euler(yaw, pitch, roll)
         pose = Pose(position=Point(x=x, y=y, z=z), orientation=Quaternion(x=orientation[0], y=orientation[1], z=orientation[2], w=orientation[3]))
@@ -97,39 +97,39 @@ class RobotNavigation:
     def init_localization_by_task_point(
         self, task_point_name: str
     ) -> bool:
-        """Initialize localization by task point.
+        """通过任务点初始化定位。
 
         Args:
-            task_point_name (str): Name of the task point.
+            task_point_name (str): 任务点的名称。
 
         Returns:
-            bool: Whether localization initialization succeeded.
+            bool: 定位初始化是否成功。
         """
         return self.robot_navigation.init_localization_by_task_point(task_point_name)
 
     def load_map(self, map_name: str) -> bool:
-        """Load a map.
+        """加载地图。
 
         Args:
-            map_name (str): Name of the map.
+            map_name (str): 地图名称。
 
         Returns:
-            bool: Whether loading the map succeeded.
+            bool: 加载地图是否成功。
         """
         return self.robot_navigation.load_map(map_name)
 
     def get_all_maps(self) -> list:
-        """Get all map names.
+        """获取所有地图名称。
 
         Returns:
-            list: List of map names.
+            list: 地图名称列表。
         """
         return self.robot_navigation.get_all_maps()
 
     def get_current_map(self) -> str:
-        """Get the current map name.
+        """获取当前地图名称。
 
         Returns:
-            str: Current map name.
+            str: 当前地图名称。
         """
         return self.robot_navigation.get_current_map()

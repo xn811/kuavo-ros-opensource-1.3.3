@@ -18,13 +18,14 @@ class KuavoRobotHead:
             
         
     def control_head(self, yaw: float, pitch: float) -> bool:
-        """
-        Control the head of the robot.
+        """控制机器人的头部关节运动。
+        
         Args:
-            yaw (float): The yaw angle of the head in radians, range [-1.396, 1.396] (-80 to 80 degrees).
-            pitch (float): The pitch angle of the head in radians, range [-0.436, 0.436] (-25 to 25 degrees).
+            yaw (float): 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
+            pitch (float): 头部的俯仰角,单位弧度,范围[-0.436, 0.436](-25到25度)。
+            
         Returns:
-            bool: True if the head is controlled successfully, False otherwise.
+            bool: 如果头部控制成功返回True,否则返回False。
         """
         # 发送开始控制头部的日志
         self._send_log(f"开始控制头部运动: yaw={yaw:.3f}, pitch={pitch:.3f}")
