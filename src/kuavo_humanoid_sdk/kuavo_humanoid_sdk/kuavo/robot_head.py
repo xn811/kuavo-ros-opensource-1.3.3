@@ -4,21 +4,32 @@ import math
 import asyncio
 import threading
 from kuavo_humanoid_sdk.kuavo.core.core import KuavoRobotCore
+from kuavo_humanoid_sdk.kuavo.core.sdk_deprecated import sdk_deprecated
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 import json
 
+@sdk_deprecated(reason="接口废弃", version="1.2.2", replacement="KuavoRobot", remove_date="2026-06-30")
 class KuavoRobotHead:
-    """机器人头部控制类"""
+    """机器人头部控制类
+    
+    .. warning:: 
+        此类已过期废弃，将在 2026-06-30 移除。
+        请使用 KuavoRobot 类替代。
+    """
     def __init__(self):
         self._kuavo_core = KuavoRobotCore()
 
     def _send_log(self, message: str):
         """发送日志到8889端口的辅助方法"""
         self._kuavo_core.logger.send_log(message)
-            
-        
+    
+    @sdk_deprecated(reason="接口废弃", version="1.2.2", replacement="KuavoRobot.control_head", remove_date="2026-06-30")
     def control_head(self, yaw: float, pitch: float) -> bool:
         """控制机器人的头部关节运动。
+        
+        .. warning:: 
+            此接口已过期废弃，将在 2026-06-30 移除。
+            请使用 KuavoRobot.control_head() 替代。
         
         Args:
             yaw (float): 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
@@ -53,8 +64,13 @@ class KuavoRobotHead:
         self._send_log(f"头部控制完成: yaw={limited_yaw:.3f}, pitch={limited_pitch:.3f}, 结果={'成功' if result else '失败'}")
         
         return result
+    @sdk_deprecated(reason="接口废弃", version="1.2.2", replacement="KuavoRobot.enable_head_tracking", remove_date="2026-06-30")
     def enable_head_tracking(self, target_id: int)->bool:
         """启用头部跟踪功能，在机器人运动过程中，头部将始终追踪指定的 Apriltag ID
+
+        .. warning:: 
+            此接口已过期废弃，将在 2026-06-30 移除。
+            请使用 KuavoRobot.enable_head_tracking() 替代。
 
         Args:
             target_id (int): 目标ID。
@@ -64,8 +80,13 @@ class KuavoRobotHead:
         """
         return self._kuavo_core.enable_head_tracking(target_id)
     
+    @sdk_deprecated(reason="接口废弃", version="1.2.2", replacement="KuavoRobot.disable_head_tracking", remove_date="2026-06-30")
     def disable_head_tracking(self)->bool:
         """禁用头部跟踪功能。
+
+        .. warning:: 
+            此接口已过期废弃，将在 2026-06-30 移除。
+            请使用 KuavoRobot.disable_head_tracking() 替代。
 
         Returns:
             bool: 如果禁用成功返回True，否则返回False。
