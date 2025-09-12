@@ -33,18 +33,20 @@ class KuavoRobotArm:
         return self._kuavo_core.robot_manipulation_mpc_reset()
 
     def control_arm_target_poses(self, times: list, q_frames: list) -> bool:
-        """
-            Control the target poses of the robot arm.
-            Args:
-                times (list): List of time intervals in seconds
-                joint_q (list): List of joint positions in radians
-            Raises:
-                ValueError: If the times list is not of the correct length.
-                ValueError: If the joint position list is not of the correct length.
-                ValueError: If the joint position is outside the range of [-π, π].
-                RuntimeError: If the robot is not in stance state when trying to control the arm.
-            Returns:
-                bool: True if the control was successful, False otherwise.
+        """控制机器人手臂目标姿态（已废弃）。
+        
+        .. deprecated:: 
+            请使用 :meth:`control_arm_joint_trajectory` 替代此函数。
+        
+        Args:
+            times (list): 时间间隔列表，单位秒
+            q_frames (list): 关节位置列表，单位弧度
+            
+        Returns:
+            bool: 控制成功返回True，否则返回False
+            
+        Note:
+            此函数已废弃，请使用 :meth:`control_arm_joint_trajectory` 函数。
         """
         if len(times) != len(q_frames):
             raise ValueError("Invalid input. times and joint_q must have thesame length.")

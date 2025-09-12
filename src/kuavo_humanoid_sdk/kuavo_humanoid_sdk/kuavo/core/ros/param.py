@@ -62,6 +62,12 @@ class RosParameter:
             rospy.logerr("initial_state parameter not found")
             return None
         return rospy.get_param('/initial_state')
+    def init_stand_height(self)->float:
+        if not rospy.has_param('/com_height'):
+            rospy.logerr("com_height parameter not found")
+            # KUAVO-4PRO
+            return 0.8328437523948975
+        return rospy.get_param('/com_height')
 
 kuavo_ros_param = RosParameter()
 
@@ -179,6 +185,7 @@ def make_robot_param()->dict:
         'end_effector_type': kuavo_ros_param.end_effector_type(),
         'joint_names': joint_names(),
         'end_frames_names': end_frames_names(),
+        'init_stand_height': kuavo_ros_param.init_stand_height()
     }
 
     for key, value in kuavo_ros_info.items():

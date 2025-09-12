@@ -123,8 +123,8 @@ class KuavoRobotCore:
             raise RuntimeError(f"[Core] initialize failed: \n"
                              f"{e}, please check the robot is launched, "
                              f"e.g. `roslaunch humanoid_controllers load_kuavo_real.launch`")
-        rb_info = make_robot_param()
-        success, err_msg = self._control.initialize(eef_type=rb_info["end_effector_type"], debug=debug)
+        self._rb_info = make_robot_param()
+        success, err_msg = self._control.initialize(eef_type=self._rb_info["end_effector_type"], debug=debug)
         if not success:
             raise RuntimeError(f"[Core] initialize failed: \n{err_msg}, please check the robot is launched, "
                              f"e.g. `roslaunch humanoid_controllers load_kuavo_real.launch`")
@@ -228,6 +228,14 @@ class KuavoRobotCore:
         if abs(pitch) > MAX_PITCH:
             SDKLogger.warn(f"[Core] pitch {pitch} exceeds limit [{MIN_PITCH}, {MAX_PITCH}], will be limited")
 
+        # 结合当前高度做过滤
+        target_height = self._rb_info['init_stand_height'] + limited_height
+        # 躯干上升运动变化不宜过大, 目标高度减去实时躯干高度大于阈值
+        HEIGHT_CHANGE_THRESHOLD = 0.25
+        if (self._rb_state.com_height < target_height) and (target_height - self._rb_state.com_height) >= HEIGHT_CHANGE_THRESHOLD:
+            limited_height = (self._rb_state.com_height + HEIGHT_CHANGE_THRESHOLD) - self._rb_info['init_stand_height']
+            print(f"\033[33mWarning! Height change too large, limiting to safe range,reset height to {limited_height}\033[0m")
+
         return self._control.control_torso_height(limited_height, limited_pitch)
 
     def step_control(self, target_pose:list, dt:float=0.4, is_left_first_default:bool=True, collision_check:bool=True)->bool:
@@ -255,17 +263,21 @@ class KuavoRobotCore:
         com_height = self._rb_state.com_height
         # print(f"[Core] Current COM height: {com_height:.2f}m")
         # Check height limits based on current COM height
-        MIN_COM_HEIGHT = 0.66  # Minimum allowed COM height in meters
-        MAX_COM_HEIGHT = 0.86  # Maximum allowed COM height in meters
+        MIN_COM_HEIGHT = self._rb_info['init_stand_height'] - 0.15  # Minimum allowed COM height in meters
+        MAX_COM_HEIGHT = self._rb_info['init_stand_height'] + 0.02 # Maximum allowed COM height in meters
 
+        if com_height < MIN_COM_HEIGHT:
+            print(f"\033[31m[Core] Torso height too low, control failed: current COM height {com_height:.2f}m is below the minimum allowed height {MIN_COM_HEIGHT}m\033[0m")
+            return  False
+            
         # Validate COM height constraints
         if target_pose[2] < 0 and com_height < MIN_COM_HEIGHT:
-            SDKLogger.warn(f"[Core] Cannot squat lower: COM height {com_height:.2f}m below minimum {MIN_COM_HEIGHT}m")
-            return None
+            print(f"\033[33mWarning! Cannot squat lower: COM height {com_height:.2f}m below minimum {MIN_COM_HEIGHT}m\033[0m")
+            return False
         
         if target_pose[2] > 0 and com_height > MAX_COM_HEIGHT:
-            SDKLogger.warn(f"[Core] Cannot stand higher: COM height {com_height:.2f}m above maximum {MAX_COM_HEIGHT}m")
-            return None
+            print(f"\033[33mWarning! Cannot stand higher: COM height {com_height:.2f}m above maximum {MAX_COM_HEIGHT}m\033[0m")
+            return False
 
         # Ensure target height is within allowed range if height change requested
         if target_pose[2] != 0:
@@ -277,8 +289,7 @@ class KuavoRobotCore:
                 SDKLogger.warn(f"[Core] Target height {target_height:.2f}m above maximum {MAX_COM_HEIGHT}m, limiting") 
                 target_pose[2] = MAX_COM_HEIGHT - com_height
         
-        # TODO(kuavo): 根据实物测试来调整....
-        if com_height > 0.82:
+        if com_height > (self._rb_info['init_stand_height']-0.03):
             max_x_step = 0.20
             max_y_step = 0.20
             max_yaw_step = 90

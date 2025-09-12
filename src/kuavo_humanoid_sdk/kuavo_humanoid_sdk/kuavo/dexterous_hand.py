@@ -202,23 +202,23 @@ class TouchDexterousHand(DexterousHand):
         return self._rb_state.eef_state.state
 
     def get_dexhand_gesture_state(self)->bool:
-        """Get the current state of the robot's dexterous hand gesture.
+        """获取机器人灵巧手势的当前状态。
 
         Returns:
-            bool: True if the robot's dexterous hand gesture is executing, False otherwise.
+            bool: 如果机器人灵巧手势正在执行返回True，否则返回False。
         """
         return self._rb_state._srv_get_dexhand_gesture_state()
 
     def make_gesture_sync(self, l_gesture_name: str, r_gesture_name: str, timeout:float=5.0)->bool:
-        """Make predefined gestures for both hands.
+        """为双手做预定义的手势（同步等待完成）。
 
         Args:
-            l_gesture_name (str): Name of gesture for left hand. None to skip left hand.
-            r_gesture_name (str): Name of gesture for right hand. None to skip right hand.
-            timeout (float, optional): Timeout for the gesture. Defaults to 5.0.
+            l_gesture_name (str): 左手手势的名称。None表示跳过左手。
+            r_gesture_name (str): 右手手势的名称。None表示跳过右手。
+            timeout (float, optional): 手势超时时间。默认为5.0秒。
 
         Returns:
-            bool: True if gesture command sent successfully, False otherwise.
+            bool: 如果手势执行成功返回True，否则返回False。
         """
         gesture = []
         if l_gesture_name is not None:

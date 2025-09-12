@@ -158,11 +158,15 @@ class KuavoRobot(RobotBase):
         """控制机器人的蹲姿高度和俯仰角。
 
         Args:
-                height (float): 相对于正常站立高度的高度偏移量,单位米,范围[-0.35, 0.0],负值表示下蹲。
-                pitch (float): 机器人躯干的俯仰角,单位弧度,范围[-0.4, 0.4]。
+            height (float): 相对于正常站立高度的高度偏移量,单位米,范围[-0.35, 0.0],负值表示下蹲。
+                            正常站立高度参考 :attr:`KuavoRobotInfo.init_stand_height`
+            pitch (float): 机器人躯干的俯仰角,单位弧度,范围[-0.4, 0.4]。
             
         Returns:
             bool: 如果蹲姿控制成功返回True,否则返回False。
+            
+        Note:
+            下蹲和起立不要变化过快，一次变化最大不要超过0.2米。
         """
         # Limit height range
         MAX_HEIGHT = 0.0
@@ -174,13 +178,13 @@ class KuavoRobot(RobotBase):
         
         # Check if height exceeds limits
         if height > MAX_HEIGHT or height < MIN_HEIGHT:
-            SDKLogger.warn(f"[Robot] height {height} exceeds limit [{MIN_HEIGHT}, {MAX_HEIGHT}], will be limited")
+            print(f"\033[33m[Robot] height {height} exceeds limit [{MIN_HEIGHT}, {MAX_HEIGHT}], will be limited\033[0m")
         # Limit pitch range
         limited_pitch = min(MAX_PITCH, max(MIN_PITCH, pitch))
         
         # Check if pitch exceeds limits
         if abs(pitch) > MAX_PITCH:
-            SDKLogger.warn(f"[Robot] pitch {pitch} exceeds limit [{MIN_PITCH}, {MAX_PITCH}], will be limited")
+            print(f"\033[33m[Robot] pitch {pitch} exceeds limit [{MIN_PITCH}, {MAX_PITCH}], will be limited\033[0m")
         
         return self._kuavo_core.squat(limited_height, limited_pitch)
      
@@ -203,6 +207,10 @@ class KuavoRobot(RobotBase):
         Note:
             你可以调用 :meth:`KuavoRobotState.wait_for_step_control` 来等待机器人进入step-control模式。
             你可以调用 :meth:`KuavoRobotState.wait_for_stance` 来等待step-control完成。
+
+        Warning:
+            如果当前机器人的躯干高度过低(相对于正常站立高度低于-0.15m)，调用该函数会返回失败。
+            正常站立高度参考 :attr:`KuavoRobotInfo.init_stand_height`
 
         tips:
             坐标系: base_link坐标系
@@ -262,7 +270,7 @@ class KuavoRobot(RobotBase):
         return self._kuavo_core.control_command_pose_world(target_pose_x, target_pose_y, target_pose_z, target_pose_yaw)
     
     def control_head(self, yaw: float, pitch: float)->bool:
-        """控制机器人的头部。
+        """控制机器人的头部关节运动。
         
         Args:
             yaw (float): 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
@@ -355,24 +363,20 @@ class KuavoRobot(RobotBase):
         return self._robot_arm.control_arm_joint_trajectory(times, q_frames)
 
     def control_arm_target_poses(self, times: list, q_frames: list) -> bool:
-        """Control the target poses of the robot arm.
-
+        """控制机器人手臂目标姿态（已废弃）。
+        
+        .. deprecated:: 
+            请使用 :meth:`control_arm_joint_trajectory` 替代此函数。
+        
         Args:
-            times (list): List of time intervals in seconds.
-            q_frames (list): List of joint positions in radians.
-
+            times (list): 时间间隔列表，单位秒
+            q_frames (list): 关节位置列表，单位弧度
+            
         Returns:
-            bool: True if the control was successful, False otherwise.
-
-        Raises:
-            ValueError: If the times list is not of the correct length.
-            ValueError: If the joint position list is not of the correct length.
-            ValueError: If the joint position is outside the range of [-π, π].
-            RuntimeError: If the robot is not in stance state when trying to control the arm.
-
+            bool: 控制成功返回True，否则返回False
+            
         Note:
-            This is an asynchronous interface. The function returns immediately after sending the command.
-            Users need to wait for the motion to complete on their own.
+            此函数已废弃，请使用 :meth:`control_arm_joint_trajectory` 函数。
         """
         return self._robot_arm.control_arm_target_poses(times, q_frames)
     def set_fixed_arm_mode(self) -> bool:

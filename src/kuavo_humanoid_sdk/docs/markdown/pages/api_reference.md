@@ -89,6 +89,10 @@ Bases: `RobotBase`
 #### WARNING
 此函数需要在初始化SDK时设置 [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK) 选项。
 
+#### arm_ik_free(left_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
+
+Inverse kinematics for the robot arm.
+
 #### arm_reset() → bool
 
 手臂归位
@@ -147,6 +151,24 @@ Bases: `RobotBase`
 #### WARNING
 异步接口，函数在发送命令后立即返回，用户需要自行等待运动完成。
 
+#### control_arm_target_poses(times: list, q_frames: list) → bool
+
+控制机器人手臂目标姿态（已废弃）。
+
+#### Deprecated
+Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_humanoid_sdk.KuavoRobot.control_arm_joint_trajectory) 替代此函数。
+
+* **Parameters:**
+  * **times** (*list*) – 时间间隔列表，单位秒
+  * **q_frames** (*list*) – 关节位置列表，单位弧度
+* **Returns:**
+  控制成功返回True，否则返回False
+* **Return type:**
+  bool
+
+#### NOTE
+此函数已废弃，请使用 [`control_arm_joint_trajectory()`](#kuavo_humanoid_sdk.KuavoRobot.control_arm_joint_trajectory) 函数。
+
 #### control_command_pose(target_pose_x: float, target_pose_y: float, target_pose_z: float, target_pose_yaw: float) → bool
 
 在base_link坐标系下控制机器人姿态。
@@ -165,6 +187,10 @@ Bases: `RobotBase`
 
 #### NOTE
 此命令会将机器人状态改变为’command_pose’。
+
+tips:
+: 坐标系: base_link坐标系
+  执行误差： 0.05~0.1m, 0.2~5°
 
 #### control_command_pose_world(target_pose_x: float, target_pose_y: float, target_pose_z: float, target_pose_yaw: float) → bool
 
@@ -185,6 +211,10 @@ Bases: `RobotBase`
 #### NOTE
 此命令会将机器人状态改变为’command_pose_world’。
 
+tips:
+: 坐标系: odom坐标系
+  执行误差： 0.03~0.1m, 0.5~5°
+
 #### control_hand_wrench(left_wrench: list, right_wrench: list) → bool
 
 控制机器人末端力/力矩
@@ -202,7 +232,7 @@ Bases: `RobotBase`
 
 #### control_head(yaw: float, pitch: float) → bool
 
-控制机器人的头部。
+控制机器人的头部关节运动。
 
 * **Parameters:**
   * **yaw** (*float*) – 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
@@ -252,6 +282,15 @@ Bases: `RobotBase`
 * **Return type:**
   Tuple[bool, list]
 
+#### is_arm_collision() → bool
+
+判断当前是否发生碰撞
+
+* **Returns:**
+  发生碰撞返回True,否则返回False
+* **Return type:**
+  bool
+
 #### jump()
 
 使机器人跳跃。
@@ -267,6 +306,14 @@ Bases: `RobotBase`
   如果手臂重置成功返回True,否则返回False。
 * **Return type:**
   bool
+
+#### release_arm_collision_mode()
+
+释放碰撞模式
+
+#### set_arm_collision_mode(enable: bool)
+
+设置碰撞模式
 
 #### set_auto_swing_arm_mode() → bool
 
@@ -319,11 +366,15 @@ Bases: `RobotBase`
 
 * **Parameters:**
   * **height** (*float*) – 相对于正常站立高度的高度偏移量,单位米,范围[-0.35, 0.0],负值表示下蹲。
+    正常站立高度参考 [`KuavoRobotInfo.init_stand_height`](#kuavo_humanoid_sdk.KuavoRobotInfo.init_stand_height)
   * **pitch** (*float*) – 机器人躯干的俯仰角,单位弧度,范围[-0.4, 0.4]。
 * **Returns:**
   如果蹲姿控制成功返回True,否则返回False。
 * **Return type:**
   bool
+
+#### NOTE
+下蹲和起立不要变化过快，一次变化最大不要超过0.2米。
 
 #### stance() → bool
 
@@ -358,6 +409,14 @@ Bases: `RobotBase`
 你可以调用 [`KuavoRobotState.wait_for_step_control()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_step_control) 来等待机器人进入step-control模式。
 你可以调用 [`KuavoRobotState.wait_for_stance()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_stance) 来等待step-control完成。
 
+#### WARNING
+如果当前机器人的躯干高度过低(相对于正常站立高度低于-0.15m)，调用该函数会返回失败。
+正常站立高度参考 [`KuavoRobotInfo.init_stand_height`](#kuavo_humanoid_sdk.KuavoRobotInfo.init_stand_height)
+
+tips:
+: 坐标系: base_link坐标系
+  执行误差： 0.005~0.05m, 0.05°以下
+
 #### trot() → bool
 
 使机器人进入’trot’踏步模式。
@@ -369,6 +428,10 @@ Bases: `RobotBase`
 
 #### NOTE
 你可以调用 [`KuavoRobotState.wait_for_walk()`](#kuavo_humanoid_sdk.KuavoRobotState.wait_for_walk) 来等待机器人进入踏步模式。
+
+#### wait_arm_collision_complete()
+
+等待碰撞完成
 
 #### walk(linear_x: float, linear_y: float, angular_z: float) → bool
 
@@ -452,6 +515,15 @@ Bases: `RobotInfoBase`
 * **Return type:**
   list
 
+#### *property* init_stand_height *: float*
+
+返回 Kuavo 机器人初始化站立时的质心高度。
+
+* **Returns:**
+  初始化站立时的质心高度
+* **Return type:**
+  float
+
 #### *property* joint_dof *: int*
 
 返回 Kuavo 机器人的总关节数。
@@ -526,12 +598,15 @@ Bases: `object`
 
 #### *property* com_height *: float*
 
-获取机器人质心高度。
+获取机器人实时的质心高度。
 
 * **Returns:**
   机器人质心高度，单位为米。
 * **Return type:**
   float
+
+#### NOTE
+如果需要获取机器人初始化站立时的质心高度，请使用 [`KuavoRobotInfo.init_stand_height`](#kuavo_humanoid_sdk.KuavoRobotInfo.init_stand_height) 属性。
 
 #### eef_state() → Tuple[[EndEffectorState](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState), [EndEffectorState](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.EndEffectorState)]
 
@@ -808,6 +883,8 @@ Kuavo机器人手臂控制类。
 #### WARNING
 此函数需要在初始化SDK时设置 [`KuavoSDK.Options.WithIK`](#kuavo_humanoid_sdk.KuavoSDK.Options.WithIK) 选项。
 
+#### arm_ik_free(left_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
+
 #### arm_reset() → bool
 
 重置机器人手臂。
@@ -849,6 +926,24 @@ Kuavo机器人手臂控制类。
 * **Return type:**
   bool
 
+#### control_arm_target_poses(times: list, q_frames: list) → bool
+
+控制机器人手臂目标姿态（已废弃）。
+
+#### Deprecated
+Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_humanoid_sdk.KuavoRobotArm.control_arm_joint_trajectory) 替代此函数。
+
+* **Parameters:**
+  * **times** (*list*) – 时间间隔列表，单位秒
+  * **q_frames** (*list*) – 关节位置列表，单位弧度
+* **Returns:**
+  控制成功返回True，否则返回False
+* **Return type:**
+  bool
+
+#### NOTE
+此函数已废弃，请使用 [`control_arm_joint_trajectory()`](#kuavo_humanoid_sdk.KuavoRobotArm.control_arm_joint_trajectory) 函数。
+
 #### control_hand_wrench(left_wrench: list, right_wrench: list) → bool
 
 控制机器人末端力/力矩
@@ -877,6 +972,15 @@ Kuavo机器人手臂控制类。
 * **Return type:**
   bool
 
+#### is_arm_collision() → bool
+
+判断当前是否发生碰撞
+
+* **Returns:**
+  发生碰撞返回True,否则返回False
+* **Return type:**
+  bool
+
 #### manipulation_mpc_reset() → bool
 
 重置机器人 Manipulation MPC 控制器。
@@ -885,6 +989,14 @@ Kuavo机器人手臂控制类。
   重置成功返回True,否则返回False。
 * **Return type:**
   bool
+
+#### release_arm_collision_mode()
+
+释放碰撞模式
+
+#### set_arm_collision_mode(enable: bool)
+
+设置碰撞模式
 
 #### set_auto_swing_arm_mode() → bool
 
@@ -940,6 +1052,10 @@ Kuavo机器人手臂控制类。
 * **Return type:**
   bool
 
+#### wait_arm_collision_complete()
+
+等待碰撞完成
+
 ### *class* kuavo_humanoid_sdk.KuavoRobotHead
 
 Bases: `object`
@@ -948,13 +1064,13 @@ Bases: `object`
 
 #### control_head(yaw: float, pitch: float) → bool
 
-控制机器人头部。
+控制机器人的头部关节运动。
 
 * **Parameters:**
-  * **yaw** (*float*) – 头部偏航角，单位为弧度，范围 [-1.396, 1.396] (-80度 到 80度)。
-  * **pitch** (*float*) – 头部俯仰角，单位为弧度，范围 [-0.436, 0.436] (-25度 到 25度)。
+  * **yaw** (*float*) – 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
+  * **pitch** (*float*) – 头部的俯仰角,单位弧度,范围[-0.436, 0.436](-25到25度)。
 * **Returns:**
-  如果控制成功返回True，否则返回False。
+  如果头部控制成功返回True,否则返回False。
 * **Return type:**
   bool
 
@@ -1315,6 +1431,15 @@ Bases: [`DexterousHand`](#kuavo_humanoid_sdk.DexterousHand)
 
 触觉灵巧手控制类，继承自普通灵巧手控制类，可调用普通灵巧手控制类中的所有方法
 
+#### get_dexhand_gesture_state() → bool
+
+获取机器人灵巧手势的当前状态。
+
+* **Returns:**
+  如果机器人灵巧手势正在执行返回True，否则返回False。
+* **Return type:**
+  bool
+
 #### get_touch_state() → Tuple[[KuavoDexHandTouchState](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState), [KuavoDexHandTouchState](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoDexHandTouchState)]
 
 获取灵巧手的触觉状态。
@@ -1324,6 +1449,19 @@ Bases: [`DexterousHand`](#kuavo_humanoid_sdk.DexterousHand)
 
 * **Returns:**
   Tuple[KuavoDexHandTouchState, KuavoDexHandTouchState]
+
+#### make_gesture_sync(l_gesture_name: str, r_gesture_name: str, timeout: float = 5.0) → bool
+
+为双手做预定义的手势（同步等待完成）。
+
+* **Parameters:**
+  * **l_gesture_name** (*str*) – 左手手势的名称。None表示跳过左手。
+  * **r_gesture_name** (*str*) – 右手手势的名称。None表示跳过右手。
+  * **timeout** (*float* *,* *optional*) – 手势超时时间。默认为5.0秒。
+* **Returns:**
+  如果手势执行成功返回True，否则返回False。
+* **Return type:**
+  bool
 
 ### *class* kuavo_humanoid_sdk.LejuClaw
 
@@ -1542,3 +1680,110 @@ Bases: `object`
   包含所有机器人关节的位置、速度和力矩命令的对象。
 * **Return type:**
   [KuavoJointCommand](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoJointCommand)
+
+### *class* kuavo_humanoid_sdk.RobotNavigation
+
+Bases: `object`
+
+机器人导航接口类。
+
+#### get_all_maps() → list
+
+获取所有地图名称。
+
+* **Returns:**
+  地图名称列表。
+* **Return type:**
+  list
+
+#### get_current_map() → str
+
+获取当前地图名称。
+
+* **Returns:**
+  当前地图名称。
+* **Return type:**
+  str
+
+#### get_current_status() → str
+
+获取当前导航状态。
+
+* **Returns:**
+  当前导航状态。
+* **Return type:**
+  str
+
+#### init_localization_by_pose(x: float, y: float, z: float, roll: float, pitch: float, yaw: float) → bool
+
+通过位姿初始化定位。
+
+* **Parameters:**
+  * **x** (*float*) – 位姿的x坐标。
+  * **y** (*float*) – 位姿的y坐标。
+  * **z** (*float*) – 位姿的z坐标。
+  * **roll** (*float*) – 位姿的横滚角。
+  * **pitch** (*float*) – 位姿的俯仰角。
+  * **yaw** (*float*) – 位姿的偏航角。
+* **Returns:**
+  定位初始化是否成功。
+* **Return type:**
+  bool
+
+#### init_localization_by_task_point(task_point_name: str) → bool
+
+通过任务点初始化定位。
+
+* **Parameters:**
+  **task_point_name** (*str*) – 任务点的名称。
+* **Returns:**
+  定位初始化是否成功。
+* **Return type:**
+  bool
+
+#### load_map(map_name: str) → bool
+
+加载地图。
+
+* **Parameters:**
+  **map_name** (*str*) – 地图名称。
+* **Returns:**
+  加载地图是否成功。
+* **Return type:**
+  bool
+
+#### navigate_to_goal(x: float, y: float, z: float, roll: float, pitch: float, yaw: float) → bool
+
+导航到指定目标位置。
+
+* **Parameters:**
+  * **x** (*float*) – 目标点的x坐标。
+  * **y** (*float*) – 目标点的y坐标。
+  * **z** (*float*) – 目标点的z坐标。
+  * **roll** (*float*) – 目标点的横滚角。
+  * **pitch** (*float*) – 目标点的俯仰角。
+  * **yaw** (*float*) – 目标点的偏航角。
+* **Returns:**
+  导航是否成功。
+* **Return type:**
+  bool
+
+#### navigate_to_task_point(task_point_name: str) → bool
+
+导航到指定的任务点。
+
+* **Parameters:**
+  **task_point_name** (*str*) – 任务点的名称。
+* **Returns:**
+  导航是否成功。
+* **Return type:**
+  bool
+
+#### stop_navigation() → bool
+
+停止导航。
+
+* **Returns:**
+  停止导航是否成功。
+* **Return type:**
+  bool
