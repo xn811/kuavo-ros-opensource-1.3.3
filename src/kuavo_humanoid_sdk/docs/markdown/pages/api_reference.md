@@ -832,7 +832,7 @@ Bases: `object`
 * **Return type:**
   bool
 
-### *class* kuavo_humanoid_sdk.KuavoRobotArm
+### *class* kuavo_humanoid_sdk.KuavoRobotArm(\*args, \*\*kwargs)
 
 Bases: `object`
 
@@ -840,9 +840,17 @@ Kuavo机器人手臂控制类。
 
 提供了控制机器人手臂的各种接口,包括关节位置控制、轨迹控制、末端执行器姿态控制等。
 
+#### WARNING
+此类已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot 类替代。
+
 #### arm_fk(q: list) → Tuple[[KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)]
 
 机器人手臂正向运动学求解
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.arm_fk() 替代。
 
 * **Parameters:**
   **q** (*list*) – 关节位置列表,单位为弧度
@@ -858,6 +866,10 @@ Kuavo机器人手臂控制类。
 #### arm_ik(left_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
 
 机器人手臂逆向运动学求解
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.arm_ik() 替代。
 
 * **Parameters:**
   * **left_pose** ([*KuavoPose*](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – 左手臂目标姿态,包含xyz位置和四元数方向
@@ -885,9 +897,19 @@ Kuavo机器人手臂控制类。
 
 #### arm_ik_free(left_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), right_pose: [KuavoPose](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose), left_elbow_pos_xyz: list = [0.0, 0.0, 0.0], right_elbow_pos_xyz: list = [0.0, 0.0, 0.0], arm_q0: list | None = None, params: [KuavoIKParams](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoIKParams) | None = None) → list
 
+机器人手臂自由空间逆向运动学求解（重复定义）
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.arm_ik_free() 替代。
+
 #### arm_reset() → bool
 
 重置机器人手臂。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.arm_reset() 替代。
 
 * **Returns:**
   重置成功返回True,否则返回False。
@@ -897,6 +919,10 @@ Kuavo机器人手臂控制类。
 #### control_arm_joint_positions(joint_position: list) → bool
 
 控制机器人手臂关节位置。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_arm_joint_positions() 替代。
 
 * **Parameters:**
   **joint_position** (*list*) – 关节位置列表,单位为弧度
@@ -912,6 +938,10 @@ Kuavo机器人手臂控制类。
 #### control_arm_joint_trajectory(times: list, joint_q: list) → bool
 
 控制机器人手臂关节轨迹。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_arm_joint_trajectory() 替代。
 
 * **Parameters:**
   * **times** (*list*) – 时间间隔列表,单位为秒
@@ -930,8 +960,9 @@ Kuavo机器人手臂控制类。
 
 控制机器人手臂目标姿态（已废弃）。
 
-#### Deprecated
-Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_humanoid_sdk.KuavoRobotArm.control_arm_joint_trajectory) 替代此函数。
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_arm_joint_trajectory() 替代。
 
 * **Parameters:**
   * **times** (*list*) – 时间间隔列表，单位秒
@@ -948,6 +979,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 控制机器人末端力/力矩
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_hand_wrench() 替代。
+
 * **Parameters:**
   * **left_wrench** (*list*) – 左手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
   * **right_wrench** (*list*) – 右手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
@@ -963,6 +998,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 控制机器人末端执行器姿态。
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_robot_end_effector_pose() 替代。
+
 * **Parameters:**
   * **left_pose** ([*KuavoPose*](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – 左手臂姿态,包含xyz位置和四元数方向
   * **right_pose** ([*KuavoPose*](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoPose)) – 右手臂姿态,包含xyz位置和四元数方向
@@ -976,6 +1015,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 判断当前是否发生碰撞
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.is_arm_collision() 替代。
+
 * **Returns:**
   发生碰撞返回True,否则返回False
 * **Return type:**
@@ -984,6 +1027,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 #### manipulation_mpc_reset() → bool
 
 重置机器人 Manipulation MPC 控制器。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.manipulation_mpc_reset() 替代。
 
 * **Returns:**
   重置成功返回True,否则返回False。
@@ -994,13 +1041,25 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 释放碰撞模式
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.release_arm_collision_mode() 替代。
+
 #### set_arm_collision_mode(enable: bool)
 
 设置碰撞模式
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_arm_collision_mode() 替代。
+
 #### set_auto_swing_arm_mode() → bool
 
 设置手臂自动摆动模式。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_auto_swing_arm_mode() 替代。
 
 * **Returns:**
   设置成功返回True,否则返回False
@@ -1011,6 +1070,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 设置手臂外部控制模式。
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_external_control_arm_mode() 替代。
+
 * **Returns:**
   设置成功返回True,否则返回False
 * **Return type:**
@@ -1019,6 +1082,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 #### set_fixed_arm_mode() → bool
 
 固定/冻结机器人手臂。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_fixed_arm_mode() 替代。
 
 * **Returns:**
   固定/冻结成功返回True,否则返回False
@@ -1029,6 +1096,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 设置 Manipulation MPC 控制流。
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_manipulation_mpc_control_flow() 替代。
+
 * **Returns:**
   设置成功返回True,否则返回False
 * **Return type:**
@@ -1037,6 +1108,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 #### set_manipulation_mpc_frame(frame: [KuavoManipulationMpcFrame](data_types.md#kuavo_humanoid_sdk.interfaces.data_types.KuavoManipulationMpcFrame)) → bool
 
 设置 Manipulation MPC 坐标系。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_manipulation_mpc_frame() 替代。
 
 * **Returns:**
   设置成功返回True,否则返回False
@@ -1047,6 +1122,10 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 设置 Manipulation MPC 控制模式。
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.set_manipulation_mpc_mode() 替代。
+
 * **Returns:**
   设置成功返回True,否则返回False
 * **Return type:**
@@ -1056,15 +1135,27 @@ Deprecated since version 请使用: [`control_arm_joint_trajectory()`](#kuavo_hu
 
 等待碰撞完成
 
-### *class* kuavo_humanoid_sdk.KuavoRobotHead
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.wait_arm_collision_complete() 替代。
+
+### *class* kuavo_humanoid_sdk.KuavoRobotHead(\*args, \*\*kwargs)
 
 Bases: `object`
 
 机器人头部控制类
 
+#### WARNING
+此类已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot 类替代。
+
 #### control_head(yaw: float, pitch: float) → bool
 
 控制机器人的头部关节运动。
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.control_head() 替代。
 
 * **Parameters:**
   * **yaw** (*float*) – 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
@@ -1078,6 +1169,10 @@ Bases: `object`
 
 禁用头部跟踪功能。
 
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.disable_head_tracking() 替代。
+
 * **Returns:**
   如果禁用成功返回True，否则返回False。
 * **Return type:**
@@ -1086,6 +1181,10 @@ Bases: `object`
 #### enable_head_tracking(target_id: int) → bool
 
 启用头部跟踪功能，在机器人运动过程中，头部将始终追踪指定的 Apriltag ID
+
+#### WARNING
+此接口已过期废弃，将在 2026-06-30 移除。
+请使用 KuavoRobot.enable_head_tracking() 替代。
 
 * **Parameters:**
   **target_id** (*int*) – 目标ID。

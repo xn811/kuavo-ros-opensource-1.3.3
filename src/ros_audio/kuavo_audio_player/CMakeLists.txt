@@ -60,6 +60,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   playmusic.srv
+  audio_status.srv
 )
 
 ## Generate actions in the 'action' folder

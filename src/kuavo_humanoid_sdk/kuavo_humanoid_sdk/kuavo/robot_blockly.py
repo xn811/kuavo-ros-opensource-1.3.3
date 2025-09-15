@@ -28,9 +28,8 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 from std_msgs.msg import Float64MultiArray
 
 import inspect
-from model_utils import *
-import model_utils as model_utils
-
+from kuavo_humanoid_sdk.kuavo.core.model_utils.model_utils import *
+from kuavo_humanoid_sdk.kuavo.core.model_utils import model_utils as model_utils
 
 from enum import IntEnum
 # Global flag for handling Ctrl+C
@@ -43,24 +42,6 @@ if robot_version >= 40:
     INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 else:
     INIT_ARM_POS = [22.91831, 0, 0, -45.83662, 22.91831, 0, 0, -45.83662] # task.info: shoudler_center: 0.4rad, elbow_center: -0.8rad
-
-
-
-global ACTION_FILE_FOLDER, package_path, THRESHOLD_HEAD_CONTROL_COUNT, FLOAT_MAX
-THRESHOLD_HEAD_CONTROL_COUNT = 30
-FLOAT_MAX = float('inf')
-
-package_name = 'planarmwebsocketservice'
-package_path = rospkg.RosPack().get_path(package_name)
-sudo_user = os.environ.get("SUDO_USER")
-if sudo_user:
-    user_info = pwd.getpwnam(sudo_user)
-    home_path = user_info.pw_dir
-else:
-    home_path = os.path.expanduser("~")
-ACTION_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'action_files')
-plan_arm_state_progress = 0
-plan_arm_state_status = False
 
 
 def signal_handler(sig, frame):
@@ -287,7 +268,21 @@ class RobotControlBlockly:
         g_robot_type = "ocs2"
         self.loop = None
         self.init_ros_publishers()
+        self.THRESHOLD_HEAD_CONTROL_COUNT = 30
+        self.FLOAT_MAX = float('inf')
         self.to_stance()
+
+        package_name = 'planarmwebsocketservice'
+        self.package_path = rospkg.RosPack().get_path(package_name)
+        sudo_user = os.environ.get("SUDO_USER")
+        if sudo_user:
+            user_info = pwd.getpwnam(sudo_user)
+            home_path = user_info.pw_dir
+        else:
+            home_path = os.path.expanduser("~")
+        self.ACTION_FILE_FOLDER = os.path.join(home_path, '.config', 'lejuconfig', 'action_files')
+        self.plan_arm_state_progress = 0
+        self.plan_arm_state_status = False
 
     def set_action_file_path(self, proj_name: str):
         """Set the action file path for a specific project.
@@ -295,8 +290,7 @@ class RobotControlBlockly:
         Args:
             proj_name (str): Project name.
         """
-        global ACTION_FILE_FOLDER
-        ACTION_FILE_FOLDER = package_path + "/upload_files/" + proj_name + "/action_files"
+        self.ACTION_FILE_FOLDER = self.package_path + "/upload_files/" + proj_name + "/action_files"
 
     def init_ros_publishers(self):
         """Initialize ROS publishers and subscribers for arm, hand, head control topics, sensor data, and trajectory state."""
@@ -318,7 +312,7 @@ class RobotControlBlockly:
         Only publishes when robot type is 'ocs2' and trajectory is not finished.
         """
         global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, g_robot_type
-        if g_robot_type == "ocs2" and len(ocs2_joint_state.position) > 0 and plan_arm_state_status is False:
+        if g_robot_type == "ocs2" and len(ocs2_joint_state.position) > 0 and self.plan_arm_state_status is False:
             kuavo_arm_traj_pub.publish(ocs2_joint_state)
             control_hand_pub.publish(ocs2_hand_state)
             # control_head_pub.publish(ocs2_head_state)
@@ -349,9 +343,8 @@ class RobotControlBlockly:
         Args:
             msg (planArmState): Arm trajectory state message.
         """
-        global plan_arm_state_progress, plan_arm_state_status
-        plan_arm_state_progress = msg.progress
-        plan_arm_state_status = msg.is_finished
+        self.plan_arm_state_progress = msg.progress
+        self.plan_arm_state_status = msg.is_finished
 
     def traj_callback(self, msg):
         """Callback for trajectory messages, parses trajectory points and updates global arm, hand, and head state variables.
@@ -597,14 +590,13 @@ class RobotControlBlockly:
         """
         global g_robot_type
         g_robot_type = "ocs2"
-        global plan_arm_state_status
-        plan_arm_state_status = False
+        self.plan_arm_state_status = False
 
         action_filename = action_file + ".tact"
         if proj_name is None:
-            action_file_path = os.path.expanduser(f"{ACTION_FILE_FOLDER}/{action_filename}")
+            action_file_path = os.path.expanduser(f"{self.ACTION_FILE_FOLDER}/{action_filename}")
         else:
-            action_file_path = package_path + "/upload_files/" + proj_name + "/action_files/" + action_filename
+            action_file_path = self.package_path + "/upload_files/" + proj_name + "/action_files/" + action_filename
         if not os.path.exists(action_file_path):
             print(f"Action file not found: {action_file_path}")
             return
@@ -623,7 +615,7 @@ class RobotControlBlockly:
             self.play_music(music_file)
         self.plan_arm_trajectory_bezier_curve_client(req)
         time.sleep(0.5)
-        while plan_arm_state_status is False:
+        while self.plan_arm_state_status is False:
             time.sleep(0.01)
         print("action file executed")
 
@@ -635,13 +627,12 @@ class RobotControlBlockly:
             pitch (float): Pitch angle in degrees.
         """
         try:
-            global THRESHOLD_HEAD_CONTROL_COUNT, FLOAT_MAX
             self.robot.stance()
             yaw = math.radians(yaw)
             pitch = math.radians(pitch)
             self.robot.control_head(yaw, pitch)
-            diff_yaw_min = FLOAT_MAX
-            diff_pitch_min = FLOAT_MAX
+            diff_yaw_min = self.FLOAT_MAX
+            diff_pitch_min = self.FLOAT_MAX
             times_count = 0
             while True:
                 time.sleep(0.01)
@@ -657,7 +648,7 @@ class RobotControlBlockly:
                     diff_pitch_min = diff_pitch
                     continue
                 times_count += 1
-                if times_count > THRESHOLD_HEAD_CONTROL_COUNT:
+                if times_count > self.THRESHOLD_HEAD_CONTROL_COUNT:
                     break
 
         except Exception as e:
@@ -670,12 +661,11 @@ class RobotControlBlockly:
             yaw (float): Yaw angle in degrees.
         """
         try:
-            global THRESHOLD_HEAD_CONTROL_COUNT, FLOAT_MAX
             self.robot.stance()
             yaw = math.radians(yaw)
             self.robot.control_head(yaw, current_head_joint_state[1])
             times_count = 0
-            diff_yaw_min = FLOAT_MAX
+            diff_yaw_min = self.FLOAT_MAX
             while True:
                 time.sleep(0.01)
                 diff_yaw = abs(current_head_joint_state[0] - yaw)
@@ -684,7 +674,7 @@ class RobotControlBlockly:
                     diff_yaw_min = diff_yaw
                     continue
                 times_count += 1
-                if times_count > THRESHOLD_HEAD_CONTROL_COUNT:
+                if times_count > self.THRESHOLD_HEAD_CONTROL_COUNT:
                     break
         except Exception as e:
             print(f"Robot head control failed: {str(e)}")
@@ -696,12 +686,11 @@ class RobotControlBlockly:
             pitch (float): Pitch angle in degrees.
         """
         try:
-            global THRESHOLD_HEAD_CONTROL_COUNT, FLOAT_MAX
             self.robot.stance()
             pitch = math.radians(pitch)
             self.robot.control_head(current_head_joint_state[0], pitch)
             times_count = 0
-            diff_pitch_min = FLOAT_MAX
+            diff_pitch_min = self.FLOAT_MAX
             while True:
                 time.sleep(0.01)
                 diff_pitch = abs(current_head_joint_state[1] - pitch)
@@ -710,7 +699,7 @@ class RobotControlBlockly:
                     diff_pitch_min = diff_pitch
                     continue
                 times_count += 1
-                if times_count > THRESHOLD_HEAD_CONTROL_COUNT:
+                if times_count > self.THRESHOLD_HEAD_CONTROL_COUNT:
                     break
         except Exception as e:
             print(f"Robot head control failed: {str(e)}")
@@ -1086,14 +1075,18 @@ class RobotControlBlockly:
             if  not is_yolo_init:
                 yolo_detection = YOLO_detection()
                 yolo_detection.init_ros_node()
-                caller_file_path = inspect.stack()[1].filename
+                caller_file_path = self.package_path + "/upload_files/"
+                print(f"caller_file_path: {caller_file_path}")
                 model_path = os.path.join(os.path.dirname(caller_file_path), 'best.pt')
                 # print(f"函数被文件调用: {model_path}")
                 model = yolo_detection.load_model(model_path)
+                result = yolo_detection.camera_interface.get_camera_image("head")
+                if result is None:
+                    print("No head camera image...")
+                    return
 
-
-            IMAGE_CENTER_X = yolo_detection.cv_image_shape[1] / 2.0
-            IMAGE_CENTER_Y = yolo_detection.cv_image_shape[0] / 2.0
+            IMAGE_CENTER_X = yolo_detection.camera_interface.cv_image_shape[1] / 2.0
+            IMAGE_CENTER_Y = yolo_detection.camera_interface.cv_image_shape[0] / 2.0
             # rospy.loginfo(f"IMAGE_CENTER_X: {IMAGE_CENTER_X}")
             # rospy.loginfo(f"IMAGE_CENTER_Y: {IMAGE_CENTER_Y}")
             MOVE_SPEED_Y = 0.05  # Y方向移动速度
@@ -1102,7 +1095,6 @@ class RobotControlBlockly:
             while not rospy.is_shutdown():
 
                 results = yolo_detection.get_detections("head", model)
-
                 if not results:
                     continue
 
