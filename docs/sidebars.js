@@ -69,7 +69,7 @@ const sidebars = {
         'basic_usage/kuavo-ros-control/docs/4开发接口/接口使用文档',
         {
           type: 'category',
-          label: 'KUAVO Humanoid SDK接口',
+          label: 'KUAVO Humanoid WebSocket SDK接口',
           items: [
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-websocket-sdk接口/kuavo-humanoid-websocket-sdk介绍',
             'basic_usage/kuavo-ros-control/docs/4开发接口/kuavo-humanoid-websocket-sdk接口/Websockts通信',

@@ -75,7 +75,7 @@
    - 该案例所使用的语音，文字转换模型为讯飞的模型： https://www.xfyun.cn/
       - 讯飞实时语音转写（RTASR）模型 
         - https://console.xfyun.cn/app/myapp创建RTASR应用，获取app_id和api_key
-        - 将程序`<kuavo_ros_application>/src/kuavo_large_model/kuavo_deepseek_model/rtasr_python3_demo.py`第220，221行的app_id和api_key替换成获取到的即可
+        - 将程序`<kuavo_ros_application>/src/kuavo_large_model/kuavo_deepseek_model/rtasr_python3_demo.py`第298，299行的app_id和api_key替换成获取到的即可
       
       - 讯飞语音合成（TTS）模型
         - https://console.xfyun.cn/app/myapp创建TTS应用，获取APPID，APISecret，APIKey
@@ -85,7 +85,7 @@
      - 获取DeepSeek API Key：
        - https://platform.deepseek.com/usage
        - 充值，获取API Key    
-       - 将程序`<kuavo_ros_application>/src/kuavo_large_model/kuavo_deepseek_model/rtasr_python3_demo.py`第101行的api-key替换成获取到的即可
+       - 将程序`<kuavo_ros_application>/src/kuavo_large_model/kuavo_deepseek_model/rtasr_python3_demo.py`第177行的api-key替换成获取到的即可
 
 ## 执行
   ⚠️ **注意: 请保证上下位机ROS主从通信正常工作**
