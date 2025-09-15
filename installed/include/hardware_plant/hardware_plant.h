@@ -139,7 +139,7 @@ class HardwarePlant
         std::vector<double> getMotorZeroPoints();
 
     // 电机状态管理器接口
-    void setMotorStatusPositionLimits();  // 设置位置限制到电机状态管理器
+    void setMotorStatusHardwareSettings();  // 设置硬件配置到电机状态管理器
     
     // 电机状态管理器接口 - 仅更新状态记录，不控制硬件
     void markJointAsDisabled(int joint_id, const std::string& reason = "");
