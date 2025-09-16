@@ -74,7 +74,8 @@ class SwingTrajectoryPlanner {
     bool enable_interrupt_with_est_mode = false; // 是否允许根据实际状态终止规划
     bool enable_slope_planner = false; // 使能斜面规划
     double slope_planning_threshold = 5.0;
-    bool enable_dynamic_qr = false; // 使能动态QR
+    bool enable_dynamic_q = false; // 使能动态QR
+    bool enable_dynamic_r = false; // 使能动态QR
 
   };
 
