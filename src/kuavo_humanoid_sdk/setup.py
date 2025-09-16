@@ -58,7 +58,8 @@ setup(
         "scikit-learn",
         "funasr",
         "torchaudio",
-        "websockets"
+        "websockets",
+        "ultralytics"
     ],
     python_requires=">=3.8",
     classifiers=[
