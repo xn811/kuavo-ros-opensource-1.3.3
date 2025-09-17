@@ -894,9 +894,14 @@ class AprilTagRecognitionInterface:
             dy = gy - float(self.endpoint_y)
             dist = (dx * dx + dy * dy) ** 0.5
 
-            rospy.loginfo(
-                f"[Gazebo终点评估] 模型({model_name}) 实际(x={gx:.3f}, y={gy:.3f}) vs 期望(x={self.endpoint_x:.3f}, y={self.endpoint_y:.3f}), "
-                f"误差={dist:.3f} m, 阈值={self.max_position_error:.3f} m")
+            if dist > self.max_position_error:
+                rospy.logerr(
+                    f"[Gazebo终点评估] 模型({model_name}) 实际(x={gx:.3f}, y={gy:.3f}) vs 期望(x={self.endpoint_x:.3f}, y={self.endpoint_y:.3f}), "
+                    f"误差={dist:.3f} m, 阈值={self.max_position_error:.3f} m")
+            else:
+                rospy.loginfo(
+                    f"[Gazebo终点评估] 模型({model_name}) 实际(x={gx:.3f}, y={gy:.3f}) vs 期望(x={self.endpoint_x:.3f}, y={self.endpoint_y:.3f}), "
+                    f"误差={dist:.3f} m, 阈值={self.max_position_error:.3f} m")
 
             return dist <= self.max_position_error
 

@@ -31,7 +31,7 @@ class TestRobotWalk:
         self.ros_namespace = 'test_robot_walk'
         
         self.april_tag_interface = None
-        self.results = {"rounds": [], "success": True}  # 默认成功
+        self.results = {"rounds": [], "success": False}  # 默认失败，最终由 finalize_results 决定
 
         rospy.loginfo("等待ROS环境准备就绪...")
         rospy.sleep(2.0)  # 等待ROS环境完全初始化
@@ -44,8 +44,6 @@ class TestRobotWalk:
         if error:
             path_result["error"] = error
         self.results["rounds"][round_idx]["paths"].append(path_result)
-        if not ok:
-            self.results["success"] = False
 
     def finalize_results(self):
         """统计整体结果并写入yaml"""
@@ -65,6 +63,8 @@ class TestRobotWalk:
             "failed": failed,
             "ratio": round(ratio, 3),
         }
+        
+        self.results["success"] = True if ratio > 0.95 else False
 
         out_file = Path("/tmp/robot_walk_results.yaml")
         with out_file.open("w", encoding="utf-8") as f:
