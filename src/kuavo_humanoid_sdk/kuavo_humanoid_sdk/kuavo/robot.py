@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # coding: utf-8
+import math
 from kuavo_humanoid_sdk.kuavo.core.ros_env import KuavoROSEnv
 from kuavo_humanoid_sdk.interfaces.robot import RobotBase
 from kuavo_humanoid_sdk.common.logger import SDKLogger, disable_sdk_logging
-from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow
+from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, KuavoIKParams, KuavoManipulationMpcFrame, KuavoManipulationMpcCtrlMode, KuavoManipulationMpcControlFlow, KuavoArmCtrlMode
 from kuavo_humanoid_sdk.kuavo.core.core import KuavoRobotCore
+from kuavo_humanoid_sdk.kuavo.core.sdk_deprecated import sdk_deprecated
 
 from typing import Tuple
 from kuavo_humanoid_sdk.kuavo.robot_info import KuavoRobotInfo
-from kuavo_humanoid_sdk.kuavo.robot_arm import KuavoRobotArm 
-from kuavo_humanoid_sdk.kuavo.robot_head import KuavoRobotHead
 
 """
 Kuavo SDK - Kuavo机器人控制的Python接口
@@ -93,8 +93,6 @@ class KuavoRobot(RobotBase):
         super().__init__(robot_type="kuavo")
         
         self._robot_info = KuavoRobotInfo()
-        self._robot_arm  = KuavoRobotArm()
-        self._robot_head = KuavoRobotHead()
         self._kuavo_core = KuavoRobotCore()
     def stance(self)->bool:
         """使机器人进入'stance'站立模式。
@@ -271,161 +269,228 @@ class KuavoRobot(RobotBase):
     
     def control_head(self, yaw: float, pitch: float)->bool:
         """控制机器人的头部关节运动。
-        
+
         Args:
             yaw (float): 头部的偏航角,单位弧度,范围[-1.396, 1.396](-80到80度)。
             pitch (float): 头部的俯仰角,单位弧度,范围[-0.436, 0.436](-25到25度)。
-            
+
         Returns:
             bool: 如果头部控制成功返回True,否则返回False。
         """
-        return self._robot_head.control_head(yaw=yaw, pitch=pitch)
+        # 发送开始控制头部的日志
+        self._kuavo_core.logger.send_log(f"开始控制头部运动: yaw={yaw:.3f}, pitch={pitch:.3f}")
+
+        limited_yaw = yaw
+        limited_pitch = pitch
+
+        # 原有的代码逻辑保持不变
+        # Check yaw limits (-80 to 80 degrees)
+        if yaw < -math.pi*4/9 or yaw > math.pi*4/9:  # -80 to 80 degrees in radians
+            SDKLogger.warn(f"[Robot] yaw {yaw} exceeds limit [-{math.pi*4/9:.3f}, {math.pi*4/9:.3f}] radians (-80 to 80 degrees), will be limited")
+            limited_yaw = min(math.pi*4/9, max(-math.pi*4/9, yaw))
+            self._kuavo_core.logger.send_log(f"yaw值超限，已限制为: {limited_yaw:.3f}")
+
+        # Check pitch limits (-25 to 25 degrees)
+        if pitch < -math.pi/7.2 - 0.001 or pitch > math.pi/7.2 + 0.001:  # -25 to 25 degrees in radians
+            SDKLogger.warn(f"[Robot] pitch {pitch} exceeds limit [-{math.pi/7.2:.3f}, {math.pi/7.2:.3f}] radians (-25 to 25 degrees), will be limited")
+            limited_pitch = min(math.pi/7.2, max(-math.pi/7.2, pitch))
+            self._kuavo_core.logger.send_log(f"pitch值超限，已限制为: {limited_pitch:.3f}")
+
+        # 执行头部控制
+        result = self._kuavo_core.control_robot_head(yaw=limited_yaw, pitch=limited_pitch)
+
+        # 发送执行结果日志
+        self._kuavo_core.logger.send_log(f"头部控制完成: yaw={limited_yaw:.3f}, pitch={limited_pitch:.3f}, 结果={'成功' if result else '失败'}")
+
+        return result
     
     def enable_head_tracking(self, target_id: int)->bool:
-        """启用头部跟踪 April Tag"""
-        return self._robot_head.enable_head_tracking(target_id)
+        """启用头部跟踪功能，在机器人运动过程中，头部将始终追踪指定的 Apriltag ID
+
+        Args:
+            target_id (int): 目标ID。
+
+        Returns:
+            bool: 如果启用成功返回True，否则返回False。
+        """
+        return self._kuavo_core.enable_head_tracking(target_id)
     
     def disable_head_tracking(self)->bool:
-        """禁用头部跟踪。"""
-        return self._robot_head.disable_head_tracking()
+        """禁用头部跟踪功能。
+
+        Returns:
+            bool: 如果禁用成功返回True，否则返回False。
+        """
+        return self._kuavo_core.disable_head_tracking()
     
     """ Robot Arm Control """
     def control_hand_wrench(self, left_wrench: list, right_wrench: list) -> bool:
         """控制机器人末端力/力矩
-        
+
         Args:
             left_wrench (list): 左手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
             right_wrench (list): 右手臂6维力控指令 [Fx, Fy, Fz, Tx, Ty, Tz]
                 单位:
                 Fx,Fy,Fz: 牛顿(N)
                 Tx,Ty,Tz: 牛·米(N·m)
-        
+
         Returns:
             bool: 控制成功返回True, 否则返回False
         """
-        return self._robot_arm.control_hand_wrench(left_wrench, right_wrench)
+        return self._kuavo_core.control_hand_wrench(left_wrench, right_wrench)
 
     def arm_reset(self)->bool:
         """手臂归位
-        
+
         Returns:
             bool: 如果手臂归位成功返回True,否则返回False。
         """
-        return self._robot_arm.arm_reset()
+        return self._kuavo_core.robot_arm_reset()
     
     def manipulation_mpc_reset(self)->bool:
         """重置机器人手臂。
-        
+
         Returns:
             bool: 如果手臂重置成功返回True,否则返回False。
         """
-        return self._robot_arm.manipulation_mpc_reset()
+        return self._kuavo_core.robot_manipulation_mpc_reset()
     
     def control_arm_joint_positions(self, joint_positions:list)->bool:
         """通过关节位置角度控制手臂
-        
+
         Args:
             joint_positions (list): 手臂的目标关节位置,单位弧度。
-            
+
         Returns:
             bool: 如果手臂控制成功返回True,否则返回False。
-            
+
         Raises:
             ValueError: 如果关节位置列表长度不正确。
             ValueError: 如果关节位置超出[-π, π]范围。
             RuntimeError: 如果在尝试控制手臂时机器人不在stance状态。
         """
         if len(joint_positions) != self._robot_info.arm_joint_dof:
-            print("The length of the position list must be equal to the number of DOFs of the arm.")
-            return False
-        
-        return self._robot_arm.control_arm_joint_positions(joint_positions)
+            raise ValueError("Invalid position length. Expected {}, got {}".format(self._robot_info.arm_joint_dof, len(joint_positions)))
+
+        # Check if joint positions are within ±180 degrees (±π radians)
+        for pos in joint_positions:
+            if abs(pos) > math.pi:
+                raise ValueError(f"Joint position {pos} rad exceeds ±π rad (±180 deg) limit")
+
+        return self._kuavo_core.control_robot_arm_joint_positions(joint_data=joint_positions)
     
     def control_arm_joint_trajectory(self, times:list, q_frames:list)->bool:
         """控制机器人手臂的目标轨迹。
-        
+
         Args:
             times (list): 时间间隔列表,单位秒。
             q_frames (list): 关节位置列表,单位弧度。
-            
+
         Returns:
             bool: 如果控制成功返回True,否则返回False。
-            
+
         Raises:
             ValueError: 如果times列表长度不正确。
             ValueError: 如果关节位置列表长度不正确。
             ValueError: 如果关节位置超出[-π, π]范围。
             RuntimeError: 如果在尝试控制手臂时机器人不在stance状态。
-            
+
         Warning:
             异步接口，函数在发送命令后立即返回，用户需要自行等待运动完成。
         """
-        return self._robot_arm.control_arm_joint_trajectory(times, q_frames)
+        if len(times) != len(q_frames):
+            raise ValueError("Invalid input. times and joint_q must have thesame length.")
 
+        # Check if joint positions are within ±180 degrees (±π radians)
+        q_degs = []
+        for q in q_frames:
+            if any(abs(pos) > math.pi for pos in q):
+                raise ValueError("Joint positions must be within ±π rad (±180 deg)")
+            if len(q) != self._robot_info.arm_joint_dof:
+                raise ValueError("Invalid position length. Expected {}, got {}".format(self._robot_info.arm_joint_dof, len(q)))
+            # Convert joint positions from radians to degrees
+            q_degs.append([(p * 180.0 / math.pi) for p in q])
+
+        return self._kuavo_core.control_robot_arm_joint_trajectory(times=times, joint_q=q_degs)
+
+    @sdk_deprecated(reason="接口重复", version="1.2.2", replacement="KuavoRobot.control_arm_joint_trajectory", remove_date="2026-06-30")
     def control_arm_target_poses(self, times: list, q_frames: list) -> bool:
         """控制机器人手臂目标姿态（已废弃）。
-        
-        .. deprecated:: 
+
+        .. deprecated::
             请使用 :meth:`control_arm_joint_trajectory` 替代此函数。
-        
+
         Args:
             times (list): 时间间隔列表，单位秒
             q_frames (list): 关节位置列表，单位弧度
-            
+
         Returns:
             bool: 控制成功返回True，否则返回False
-            
+
         Note:
             此函数已废弃，请使用 :meth:`control_arm_joint_trajectory` 函数。
         """
-        return self._robot_arm.control_arm_target_poses(times, q_frames)
+        if len(times) != len(q_frames):
+            raise ValueError("Invalid input. times and joint_q must have thesame length.")
+
+        # Check if joint positions are within ±180 degrees (±π radians)
+        q_degs = []
+        for q in q_frames:
+            if any(abs(pos) > math.pi for pos in q):
+                raise ValueError("Joint positions must be within ±π rad (±180 deg)")
+            if len(q) != self._robot_info.arm_joint_dof:
+                raise ValueError("Invalid position length. Expected {}, got {}".format(self._robot_info.arm_joint_dof, len(q)))
+            # Convert joint positions from radians to degrees
+            q_degs.append([(p * 180.0 / math.pi) for p in q])
+
+        return self._kuavo_core.control_robot_arm_target_poses(times=times, joint_q=q_degs)
     def set_fixed_arm_mode(self) -> bool:
         """固定/冻结机器人手臂。
-        
+
         Returns:
             bool: 如果手臂固定/冻结成功返回True,否则返回False。
         """
-        return self._robot_arm.set_fixed_arm_mode()
+        return self._kuavo_core.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ArmFixed)
 
     def set_auto_swing_arm_mode(self) -> bool:
         """机器人手臂自动摆动。
-        
+
         Returns:
             bool: 如果切换手臂自动摆动模式成功返回True,否则返回False。
         """
-        return self._robot_arm.set_auto_swing_arm_mode()
+        return self._kuavo_core.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.AutoSwing)
     
     def set_external_control_arm_mode(self) -> bool:
         """切换手臂控制模式到外部控制模式。
-        
+
         Returns:
             bool: 如果切换手臂控制模式到外部控制模式成功返回True,否则返回False。
         """
-        return self._robot_arm.set_external_control_arm_mode()
+        return self._kuavo_core.change_robot_arm_ctrl_mode(KuavoArmCtrlMode.ExternalControl)
     
     def set_manipulation_mpc_mode(self, ctrl_mode: KuavoManipulationMpcCtrlMode) -> bool:
-        """
-        设置 Manipulation MPC 模式。
+        """设置 Manipulation MPC 模式。
+
         Returns:
             bool: 如果 Manipulation MPC 模式设置成功返回True,否则返回False。
         """
-        return self._robot_arm.set_manipulation_mpc_mode(ctrl_mode)
+        return self._kuavo_core.change_manipulation_mpc_ctrl_mode(ctrl_mode)
     
     def set_manipulation_mpc_control_flow(self, control_flow: KuavoManipulationMpcControlFlow) -> bool:
-        """
-        设置 Manipulation MPC 控制流。
+        """设置 Manipulation MPC 控制流。
+
         Returns:
             bool: 如果 Manipulation MPC 控制流设置成功返回True,否则返回False。
-        """ 
-        return self._robot_arm.set_manipulation_mpc_control_flow(control_flow)
+        """
+        return self._kuavo_core.change_manipulation_mpc_control_flow(control_flow)
 
     def set_manipulation_mpc_frame(self, frame: KuavoManipulationMpcFrame) -> bool:
-        """
-        设置 Manipulation MPC 坐标系。
+        """设置 Manipulation MPC 坐标系。
+
         Returns:
             bool: 如果 Manipulation MPC 坐标系设置成功返回True,否则返回False。
         """
-        return self._robot_arm.set_manipulation_mpc_frame(frame)
+        return self._kuavo_core.change_manipulation_mpc_frame(frame)
     
     """ Arm Forward kinematics && Arm Inverse kinematics """
     def arm_ik(self, 
@@ -458,45 +523,65 @@ class KuavoRobot(RobotBase):
         Warning:
             此函数需要在初始化SDK时设置 :attr:`KuavoSDK.Options.WithIK` 选项。
         """
-        return self._robot_arm.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
-    def arm_ik_free(self, 
-                    left_pose: KuavoPose, 
-                    right_pose: KuavoPose, 
+        return self._kuavo_core.arm_ik(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
+    def arm_ik_free(self,
+                    left_pose: KuavoPose,
+                    right_pose: KuavoPose,
                     left_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
                     right_elbow_pos_xyz: list = [0.0, 0.0, 0.0],
                     arm_q0: list = None,
                     params: KuavoIKParams=None) -> list:
-        """Inverse kinematics for the robot arm.
+        """机器人手臂自由空间逆向运动学求解
+
+        Args:
+            left_pose (KuavoPose): 左手臂目标姿态,包含xyz位置和四元数方向
+            right_pose (KuavoPose): 右手臂目标姿态,包含xyz位置和四元数方向
+            left_elbow_pos_xyz (list): 左肘部位置。如果为[0.0, 0.0, 0.0],则忽略
+            right_elbow_pos_xyz (list): 右肘部位置。如果为[0.0, 0.0, 0.0],则忽略
+            arm_q0 (list, optional): 初始关节位置,单位为弧度。如果为None,则忽略
+            params (KuavoIKParams, optional): 逆向运动学参数。如果为None,则忽略
+
+        Returns:
+            list: 关节位置列表,单位为弧度。如果计算失败返回None
+
+        Warning:
+            此函数需要在初始化SDK时设置 :attr:`KuavoSDK.Options.WithIK` 选项。
         """
-        return self._robot_arm.arm_ik_free(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
+        return self._kuavo_core.arm_ik_free(left_pose, right_pose, left_elbow_pos_xyz, right_elbow_pos_xyz, arm_q0, params)
     
     def arm_fk(self, q: list) -> Tuple[KuavoPose, KuavoPose]:
         """机器人手臂的正运动学求解
-        
+
         Args:
             q (list): 关节位置列表,单位弧度。
-            
+
         Returns:
             Tuple[KuavoPose, KuavoPose]: 左手臂和右手臂的位姿元组,
                 如果正运动学失败则返回(None, None)。
 
         Warning:
-            此函数需要使用 :attr:`KuavoSDK.Options.WithIK` 选项初始化SDK。        
+            此函数需要使用 :attr:`KuavoSDK.Options.WithIK` 选项初始化SDK。
         """
-        return self._robot_arm.arm_fk(q)
+        if len(q) != self._robot_info.arm_joint_dof:
+            raise ValueError("Invalid position length. Expected {}, got {}".format(self._robot_info.arm_joint_dof, len(q)))
+
+        result = self._kuavo_core.arm_fk(q)
+        if result is None:
+            return None, None
+        return result
 
     def control_robot_end_effector_pose(self, left_pose: KuavoPose, right_pose: KuavoPose, frame: KuavoManipulationMpcFrame)->bool:
         """通过手臂末端执行器的位姿控制机器人手臂
-        
+
         Args:
             left_pose (KuavoPose): 左手臂的位姿,包含xyz和四元数。
             right_pose (KuavoPose): 右手臂的位姿,包含xyz和四元数。
             frame (KuavoManipulationMpcFrame): 手臂的坐标系。
-            
+
         Returns:
             bool: 如果控制成功返回True,否则返回False。
         """
-        return self._robot_arm.control_robot_end_effector_pose(left_pose, right_pose, frame)
+        return self._kuavo_core.control_robot_end_effector_pose(left_pose, right_pose, frame)
 
     def change_motor_param(self, motor_param:list)->Tuple[bool, str]:
         """更改电机参数
@@ -532,26 +617,26 @@ class KuavoRobot(RobotBase):
     
     def is_arm_collision(self)->bool:
         """判断当前是否发生碰撞
-        
+
         Returns:
             bool: 发生碰撞返回True,否则返回False
         """
-        return self._robot_arm.is_arm_collision()
+        return self._kuavo_core.is_arm_collision()
     
     def wait_arm_collision_complete(self):
         """等待碰撞完成
         """
-        self._robot_arm.wait_arm_collision_complete()
+        self._kuavo_core.wait_arm_collision_complete()
 
     def release_arm_collision_mode(self):
         """释放碰撞模式
         """
-        self._robot_arm.release_arm_collision_mode()
+        self._kuavo_core.release_arm_collision_mode()
 
     def set_arm_collision_mode(self, enable: bool):
         """设置碰撞模式
         """
-        self._robot_arm.set_arm_collision_mode(enable)
+        self._kuavo_core.set_arm_collision_mode(enable)
 
 if __name__ == "__main__":
     robot = KuavoRobot()
