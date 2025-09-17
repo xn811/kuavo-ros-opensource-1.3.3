@@ -103,7 +103,7 @@ private:
     static constexpr float VR_STUCK_POSITION_THRESHOLD = 0.01f;    // VR模式下卡死位置阈值，连续VR_STUCK_DETECTION_CYCLES个周期内，位置变化都小于该弧度，认为夹爪卡死，单位 rad
     static constexpr float VR_TARGET_POSITION_THRESHOLD = 0.5f;    // VR模式下目标位置差值阈值，当目标位置与当前位置差值大于此值时才进行卡死检测，单位 rad
     // 刹车参数
-    static constexpr float BRAKE_RANGE_PERCENT = 30.0f;             // 刹车范围百分比，在行程两端刹车范围内减速，单位 %
+    static constexpr float BRAKE_RANGE_PERCENT = 35.0f;             // 刹车范围百分比，在行程两端刹车范围内减速，单位 %
     static constexpr float BRAKE_MIN_SPEED_FACTOR = 0.01f;          // 刹车最小速度系数，在限位处速度降至最小值，单位 %
     static constexpr float BRAKE_CURVE_EXPONENT = 30.0f;            // 刹车曲线指数，控制减速曲线形状
     

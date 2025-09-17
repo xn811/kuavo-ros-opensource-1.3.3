@@ -159,6 +159,8 @@ for msg_pkg in "${MSG_ARRAY[@]}"; do
     fi
 done
 
+sudo apt update
+sudo apt install -y python3-pyaudio
 # pip install
 pushd $SCRIPT_DIR
 # Install the package editably
