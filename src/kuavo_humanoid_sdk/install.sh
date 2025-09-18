@@ -159,8 +159,14 @@ for msg_pkg in "${MSG_ARRAY[@]}"; do
     fi
 done
 
-sudo apt update
-sudo apt install -y python3-pyaudio
+# 检查是否已安装 python3-pyaudio
+if ! dpkg -s python3-pyaudio >/dev/null 2>&1; then
+  echo "🔧 python3-pyaudio 未安装，正在安装..."
+  sudo apt update
+  sudo apt install -y python3-pyaudio
+else
+  echo "✅ python3-pyaudio 已安装，跳过安装"
+fi
 # pip install
 pushd $SCRIPT_DIR
 # Install the package editably
