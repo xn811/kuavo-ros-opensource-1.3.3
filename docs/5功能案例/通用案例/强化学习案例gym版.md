@@ -1,10 +1,13 @@
-# 强化学习案例
+# 强化学习案例gym版
 
-- [强化学习案例](#强化学习案例)
+- [强化学习案例gym版](#强化学习案例gym版)
   - [概述](#概述)
   - [效果展示](#效果展示)
   - [部署](#部署)
     - [代码拉取和编译](#代码拉取和编译)
+    - [检查相关配置](#检查相关配置)
+      - [**检查 `launch` 文件，文件位置为`/home/lab/kuavo-rl-opensource/kuavo-robot-deploy/src/humanoid-control/humanoid_controllers/launch`。**](#检查-launch-文件文件位置为homelabkuavo-rl-opensourcekuavo-robot-deploysrchumanoid-controlhumanoid_controllerslaunch)
+      - [**检查 `skw_rl_param.info` 文件，文件位置为`/home/lab/kuavo-rl-opensource/kuavo-robot-deploy/src/humanoid-control/humanoid_controllers/config/kuavo_v42/rl`**:](#检查-skw_rl_paraminfo-文件文件位置为homelabkuavo-rl-opensourcekuavo-robot-deploysrchumanoid-controlhumanoid_controllersconfigkuavo_v42rl)
     - [H12遥控器控制说明](#h12遥控器控制说明)
     - [程序启动](#程序启动)
     - [电机控制话题说明](#电机控制话题说明)
@@ -62,9 +65,33 @@ git clone -b beta https://gitee.com/leju-robot/kuavo-rl-opensource.git
 
 cd kuavo-rl-opensource/kuavo-robot-deploy/
 sudo su
+export ROBOT_VERSION=42
 source installed/setup.bash
 catkin build humanoid_controllers
 ```
+
+### 检查相关配置
+####  **检查 `launch` 文件，文件位置为`/home/lab/kuavo-rl-opensource/kuavo-robot-deploy/src/humanoid-control/humanoid_controllers/launch`。**
+- 如果是将模型部署至仿真环境，则对`load_kuavo_mujoco_sim.launch`进行修改；
+如果是将模型部署至真实机器人，则对`load_kuavo_real.launch`进行修改:
+
+```bash
+# 确保程序使用的是skw_rl_param.info
+<arg name="rl_param"  default="$(find humanoid_controllers)/config/kuavo_v$(arg robot_version)/rl/skw_rl_param.info"/>
+```
+
+#### **检查 `skw_rl_param.info` 文件，文件位置为`/home/lab/kuavo-rl-opensource/kuavo-robot-deploy/src/humanoid-control/humanoid_controllers/config/kuavo_v42/rl`**:
+  *   将其中引用的原始 `.onnx` 模型更改为新生成的模型。
+  
+```bash
+# 原有代码为：
+networkModelFile          /42_model_skw_0115_p120.onnx;
+# 将其修改为：
+# 确保程序使用的模型是您训练生成的：
+networkModelFile          /your_new_model.onnx;
+```
+
+  *   我们的代码仓库里提供了一个基于该案例训练好的模型`42_model_skw_0115_p120.onnx`可以直接使用
 
 ### H12遥控器控制说明
 
@@ -85,6 +112,7 @@ catkin build humanoid_controllers
 #新开终端
 cd kuavo-rl-opensource/kuavo-robot-deploy
 sudo su
+export ROBOT_VERSION=42
 source devel/setup.bash
 # 仿真
 roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch joystick_type:=h12 # 启动rl控制器、wbc、仿真器。
