@@ -148,6 +148,8 @@ namespace ocs2
 #define JOYSTICK_BEITONG_MAP_JSON "bt2pro"
 #define JOYSTICK_BEITONG_BUTTON_NUM 16
 #define JOYSTICK_AXIS_NUM 8
+#define ROBAN_EXECUTE_ACTION_BUTTON_M1 14
+#define ROBAN_EXECUTE_ACTION_BUTTON_M2 13
 
   class JoyControl
   {
@@ -657,6 +659,13 @@ namespace ocs2
         return;
       }
 
+      if ((joy_msg->buttons.size() != JOYSTICK_BEITONG_BUTTON_NUM && joy_msg->buttons.size() != JOYSTICK_XBOX_BUTTON_NUM)
+          || joy_msg->axes.size() != JOYSTICK_AXIS_NUM) {
+            std::cerr << "[Error] Invalid joy msg. Buttons: " << joy_msg->buttons.size() 
+                      << ", Axes: " << joy_msg->axes.size() << std::endl;
+        return;
+      }
+
       if (old_joy_msg_.buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_XBOX_BUTTON_NUM)
       {
         nodeHandle_.setParam("joystick_type", JOYSTICK_XBOX_MAP_JSON);
@@ -672,6 +681,11 @@ namespace ocs2
         nodeHandle_.setParam("channel_map_path", channel_map_path);
         ROS_WARN("[JoyController]: Joystick data mapping has changed from X-Box to BEITONG");
         reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_BEITONG_BUTTON_NUM);
+      }
+
+      if(joy_msg->buttons[ROBAN_EXECUTE_ACTION_BUTTON_M1] || joy_msg->buttons[ROBAN_EXECUTE_ACTION_BUTTON_M2])
+      {
+        return;
       }
 
       if(joy_msg->axes[joyAxisMap["AXIS_RIGHT_RT"]] < -0.5)

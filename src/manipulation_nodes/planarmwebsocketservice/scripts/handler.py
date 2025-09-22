@@ -17,7 +17,7 @@ import subprocess
 import base64
 from pathlib import Path
 import yaml
-from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2
+from utils import calculate_file_md5, frames_to_custom_action_data, get_start_end_frame_time, frames_to_custom_action_data_ocs2, verify_robot_version
 import shutil
 import rosnode
 from kuavo_ros_interfaces.srv import planArmTrajectoryBezierCurve, stopPlanArmTrajectory, planArmTrajectoryBezierCurveRequest, ocs2ChangeArmCtrlMode
@@ -29,7 +29,7 @@ from trajectory_msgs.msg import JointTrajectory
 from kuavo_msgs.msg import sensorsData
 from h12pro_controller_node.msg import UpdateH12CustomizeConfig
 from kuavo_msgs.srv import adjustZeroPoint, adjustZeroPointRequest, LoadMap, LoadMapRequest, GetAllMaps, GetAllMapsRequest,SetInitialPose, SetInitialPoseRequest
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float64MultiArray
 from nav_msgs.msg import OccupancyGrid
 import cv2
 import numpy as np
@@ -40,6 +40,7 @@ from typing import Tuple
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger, TriggerRequest
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 
 # Replace multiprocessing values with simple variables
 plan_arm_state_progress = 0
@@ -50,6 +51,7 @@ process = None
 response_queue = Queue()
 active_threads: Dict[websockets.WebSocketServerProtocol, threading.Event] = {}
 ACTION_FILE_FOLDER = "~/.config/lejuconfig/action_files"
+ROBAN_TACT_LENGTH = 23
 g_robot_type = ""
 ocs2_current_joint_state = []
 robot_version = (int)(os.environ.get("ROBOT_VERSION", "45"))
@@ -330,11 +332,12 @@ if check_real_kuavo():
 else:
     robot_instance = KuavoRobotSim()
 
-current_arm_joint_state = None
 package_name = 'planarmwebsocketservice'
 package_path = rospkg.RosPack().get_path(package_name)
 
 UPLOAD_FILES_FOLDER = package_path + "/upload_files"
+KUAVO_TACT_LENGTH = 28
+ROBAN_TACT_LENGTH = 23
 
 # 下位机音乐文件存放路径，如果不存在则进行创建
 sudo_user = os.environ.get("SUDO_USER")
@@ -355,7 +358,16 @@ except Exception as e:
 # H12 遥控器按键功能配置文件路径
 h12_package_name = "h12pro_controller_node"
 h12_package_path = rospkg.RosPack().get_path(h12_package_name)
-H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
+joy_package_name = "joy"
+joy_package_path = rospkg.RosPack().get_path(joy_package_name)
+if robot_version >= 40:
+    H12_CONFIG_PATH = h12_package_path + "/config/customize_config.json"
+    current_arm_joint_state = [0] * KUAVO_TACT_LENGTH
+elif robot_version >= 10 and robot_version <= 19:
+    H12_CONFIG_PATH = joy_package_path + "/config/customize_config.json"
+    current_arm_joint_state = [0] * ROBAN_TACT_LENGTH
+_last_joint_msg = None
+_last_hand_msg = None
 
 # 获取仓库路径
  # 获取当前 Python 文件的路径
@@ -399,6 +411,7 @@ else:
 ocs2_joint_state = JointState()
 ocs2_hand_state = robotHandPosition()
 ocs2_head_state = robotHeadMotionData()
+ocs2_waist_state = Float64MultiArray()
 robot_settings = {
     "kuavo":{
         "plan_arm_trajectory_bezier_service_name": "/plan_arm_trajectory_bezier_curve",
@@ -432,16 +445,46 @@ def call_change_arm_ctrl_mode_service(arm_ctrl_mode):
         return result
 
 def sensors_data_callback(msg):
-    global current_arm_joint_state
-    global robot_version
+    """更新关节数据"""
+    global _last_joint_msg, _last_hand_msg, ocs2_hand_state
+    _last_joint_msg = msg
+
+    if _last_hand_msg is None:
+        from sensor_msgs.msg import JointState
+        dummy_hand = JointState()
+        dummy_hand.position = [0.0] * 12
+        _last_hand_msg = dummy_hand
+
+    _update_current_arm_joint_state(_last_joint_msg, _last_hand_msg)
+
+def robot_hand_callback(msg):
+    """更新手部数据"""
+    global _last_hand_msg, _last_joint_msg, ocs2_hand_state
+    left = msg.position[:6] if len(msg.position) >= 6 else [0] * 6
+    right = msg.position[6:12] if len(msg.position) >= 12 else [0] * 6
+
+    _last_hand_msg = msg
+
+    if _last_joint_msg is not None:
+        _update_current_arm_joint_state(_last_joint_msg, _last_hand_msg)
+
+def _update_current_arm_joint_state(joint_msg, hand_msg):
+    """整合 joint_msg 和 hand_msg，更新 current_arm_joint_state"""
+    global ocs2_joint_state
     if robot_version >= 40:
-        current_arm_joint_state = msg.joint_data.joint_q[12:26]
-        current_arm_joint_state = [round(pos, 2) for pos in current_arm_joint_state]
-        current_arm_joint_state.extend([0] * 14)
+        arm_part = list(joint_msg.joint_data.joint_q[12:26])
+        hand_part = list(hand_msg.position[:12]) if len(hand_msg.position) >= 12 else [0.0] * 12
+        head_part = list(joint_msg.joint_data.joint_q[-2:])
+        current_arm_joint_state = arm_part + hand_part + head_part
+
     elif robot_version >= 10 and robot_version < 30:
-        current_arm_joint_state = msg.joint_data.joint_q[12:20]
-        current_arm_joint_state = [round(pos, 2) for pos in current_arm_joint_state]
-        current_arm_joint_state.extend([0] * 8)
+        arm_part = list(joint_msg.joint_data.joint_q[13:21])
+        hand_part = list(hand_msg.position[:12]) if len(hand_msg.position) >= 12 else [0.0] * 12
+        head_part = list(joint_msg.joint_data.joint_q[-2:])
+        waist_part = [joint_msg.joint_data.joint_q[0]]
+        current_arm_joint_state = arm_part + hand_part + head_part + waist_part
+
+    current_arm_joint_state = [round(v, 2) for v in current_arm_joint_state]
 
 def traj_callback(msg):
     global ocs2_joint_state
@@ -465,25 +508,39 @@ def traj_callback(msg):
         ocs2_joint_state.velocity = [math.degrees(vel) for vel in point.velocities[:8]]
         ocs2_joint_state.effort = [0] * 8
 
+        if len(point.positions) == ROBAN_TACT_LENGTH:
+            ocs2_hand_state.left_hand_position = [max(0, int(math.degrees(pos))) for pos in point.positions[8:14]]  # 无符号整数
+            ocs2_hand_state.right_hand_position = [max(0, int(math.degrees(pos))) for pos in
+                                                point.positions[14:20]]  # 无符号整数
+            
+            ocs2_head_state.joint_data = [math.degrees(pos) for pos in point.positions[20:22]]
+
+            ocs2_waist_state.data = [math.degrees(pos) for pos in point.positions[22:]]
+
 
 kuavo_arm_traj_pub = None
 control_hand_pub = None
 control_head_pub = None
+control_waist_pub = None
 update_h12_config_pub = None
+update_joy_config_pub = None
 
 def timer_callback(event):
-    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub
+    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, control_waist_pub
     if g_robot_type == "ocs2" and len(ocs2_joint_state.position) > 0 and plan_arm_state_status is False:
         kuavo_arm_traj_pub.publish(ocs2_joint_state)
         control_hand_pub.publish(ocs2_hand_state)
         control_head_pub.publish(ocs2_head_state)
+        control_waist_pub.publish(ocs2_waist_state)
 
 def init_publishers():
-    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, update_h12_config_pub,load_map_pub
+    global kuavo_arm_traj_pub, control_hand_pub, control_head_pub, control_waist_pub, update_h12_config_pub, update_joy_config_pub, load_map_pub
     kuavo_arm_traj_pub = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=1, tcp_nodelay=True)
     control_hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=1, tcp_nodelay=True)
     control_head_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=1, tcp_nodelay=True)
+    control_waist_pub = rospy.Publisher('/robot_waist_motion_data', Float64MultiArray, queue_size=1, tcp_nodelay=True)
     update_h12_config_pub = rospy.Publisher('/update_h12_customize_config', UpdateH12CustomizeConfig, queue_size=1, tcp_nodelay=True)
+    update_joy_config_pub = rospy.Publisher('/update_joy_customize_config', String, queue_size=1, tcp_nodelay=True)
 
 async def init_ros_node():
     print("Initializing ROS node")
@@ -493,6 +550,7 @@ async def init_ros_node():
     rospy.Subscriber('/bezier/arm_traj', JointTrajectory, traj_callback, queue_size=1, tcp_nodelay=True)
     # rospy.Subscriber('/humanoid_mpc_observation', mpc_observation, mpc_obs_callback)
     rospy.Subscriber('/sensors_data_raw', sensorsData, sensors_data_callback, queue_size=1, tcp_nodelay=True)
+    rospy.Subscriber('/dexhand/state', JointState, robot_hand_callback, queue_size=1, tcp_nodelay=True)
     
     init_publishers()
     
@@ -661,6 +719,14 @@ async def preview_action_handler(
     
     if current_arm_joint_state is None:
         payload.data["code"] = 3
+        response = Response(payload=payload, target=websocket)
+        response_queue.put(response)
+        return
+    
+    is_compatible, msg = verify_robot_version(action_file_path)
+    if not is_compatible:
+        payload.data["code"] = 4
+        payload.data["message"] = msg
         response = Response(payload=payload, target=websocket)
         response_queue.put(response)
         return
@@ -1326,16 +1392,22 @@ async def check_music_path_handler(
 async def update_h12_config_handler(
     websocket: websockets.WebSocketServerProtocol, data: dict
 ):
-    global update_h12_config_pub
+    global update_h12_config_pub, update_joy_config_pub
     payload = Payload(
         cmd="update_h12_config", data={"code": 0, "msg": "msg"}
     )
 
     # 更新H12遥控器按键配置
-    msg = UpdateH12CustomizeConfig()
-    msg.update_msg = "Update H12 Config"
-    update_h12_config_pub.publish(msg)
-
+    global robot_version
+    if robot_version >= 40:
+        msg = UpdateH12CustomizeConfig()
+        msg.update_msg = "Update H12 Config"
+        update_h12_config_pub.publish(msg)
+    elif robot_version >= 10 and robot_version <= 19:
+        msg = String()
+        msg.data = "Update Joy Config"
+        update_joy_config_pub.publish(msg)
+    
     try:
         # 确认音乐文件在上位机还是下位机播放，并进行相应处理
         if is_player_in_body():

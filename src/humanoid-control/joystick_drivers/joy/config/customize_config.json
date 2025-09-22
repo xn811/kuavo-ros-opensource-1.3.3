@@ -1,0 +1,98 @@
+{
+  "customize_action_M1_A": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1_B": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1_X": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1_Y": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M2_A": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M2_B": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M2_X": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M2_Y": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1M2_A": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1M2_B": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1M2_X": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  },
+  "customize_action_M1M2_Y": {
+    "arm_pose_name": [
+      ""
+    ],
+    "music_name": [
+      ""
+    ]
+  }
+}
