@@ -192,6 +192,11 @@ class SwitchedModelReferenceManager : public ReferenceManager {
 
   bool pitchLimitStatusCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
   
+  // VR waist control methods
+  void setVRWaistControlEnabled(bool enabled) { vrWaistControlEnabled_ = enabled; }
+  bool isVRWaistControlEnabled() const { return vrWaistControlEnabled_; }
+  bool vrWaistControlCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+  
   bool getArmControlModeCallback(kuavo_msgs::changeArmCtrlMode::Request &req, kuavo_msgs::changeArmCtrlMode::Response &res)
   {
     res.result = true;
@@ -250,6 +255,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   
   struct baseTrackingQ{
     matrix_t Stance = matrix_t::Zero(24, 24);;
+    matrix_t StanceVRwaist = matrix_t::Zero(24, 24);;  // VR waist control Q matrix
     matrix_t Walk = matrix_t::Zero(24, 24);;
     matrix_t Jump = matrix_t::Zero(24, 24);;
   };
@@ -323,6 +329,7 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   ros::ServiceServer stopSingleStepControlService_;
   ros::ServiceServer enable_pitch_limit_service_;
   ros::ServiceServer pitch_limit_status_service_;
+  ros::ServiceServer vr_waist_control_service_;  // VR waist control service
   ros::Publisher modeSchedulePublisher_;
 
   vector_t cmdVel_;
@@ -342,6 +349,8 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   bool poseTargetUpdated_ = false;
   bool armTargetUpdated_ = false;
   bool waistTargetUpdated_ = false;
+  bool vrWaistControlEnabled_ = false;  // VR waist control flag
+  bool vrWaistControlEnabledPrev_ = false;  // VR waist control flag  
   bool isFirstRun_ = true;
   bool isFirstVelPub_ = true;
   ArmControlMode currentArmControlMode_ = ArmControlMode::AUTO_SWING;
@@ -374,6 +383,9 @@ class SwitchedModelReferenceManager : public ReferenceManager {
   vector_t currentCmdVel_ = vector_t::Zero(6);
   vector_t currentCmdPose_ = vector_t::Zero(6);
   vector_t cachedCmdPoseInWorldFrame_ = vector_t::Zero(6);
+  vector_t currentState_ = vector_t::Zero(24);  // 存储当前状态，用于获取torso yaw角
+  double currentTorsoYaw_ = 0.0; // 存储当前躯干的偏航角
+  double currentTorsoRoll_ = 0.0; // 存储当前躯干的角度
   vector_t joyWaist_ = vector_t::Zero(WaistNums);
   bool ismdPoseInWorldFrameCached_ = false;
 
