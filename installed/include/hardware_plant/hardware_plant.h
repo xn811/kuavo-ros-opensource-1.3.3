@@ -15,7 +15,7 @@
 #include "imu_receiver.h"
 #include "utils.h"
 #include "ruierman_actuator.h"
-#include "ruiwo_actuator.h"
+#include "ruiwo_actuator_base.h"
 #include "jodell_claw_driver.h"
 #include "dynamixel_interface.h"
 #include "ankle_solver.h"
@@ -188,7 +188,7 @@ public:
     uint32_t getCountECMasters() const { return countECMasters; }
     
     // 访问静态ruiwo_actuator指针的方法
-    static RuiWoActuator* getRuiwoActuator();
+    static RuiwoActuatorBase* getRuiwoActuator();
 
     // 是否进入到手臂展开的零点校准姿态
     bool is_cali_set_zero_{false};

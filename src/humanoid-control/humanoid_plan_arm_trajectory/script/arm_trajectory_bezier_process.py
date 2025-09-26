@@ -42,9 +42,13 @@ class ArmTrajectoryBezierDemo:
         self.interrupt_flag  = False  
         self.robot_version = rospy.get_param('/robot_version', 40)
         self.robot_class = KUAVO if self.robot_version >= 40 else ROBAN
+        self.kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
         
         if self.robot_class == KUAVO:
-            self.INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            if self.kuavo_control_scheme == "rl":
+                self.INIT_ARM_POS = [int(0)] * self.KUAVO_TACT_LENGTH
+            else:
+                self.INIT_ARM_POS = [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             self.current_arm_joint_state = [0] * self.KUAVO_TACT_LENGTH
         elif self.robot_class == ROBAN:
             self.INIT_ARM_POS = [22.91831, 0, 0, -45.83662, 22.91831, 0, 0, -45.83662, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # task.info: shoudler_center: 0.4rad, elbow_center: -0.8rad
@@ -87,7 +91,6 @@ class ArmTrajectoryBezierDemo:
         # Add service to execute arm actions
         self.execute_service = rospy.Service('/execute_arm_action', ExecuteArmAction, self.handle_execute_action)
         self._interrupt_service = rospy.Service('/interrupt_arm_traj', Trigger, self.handle_interrupt  )
-        self.kuavo_control_scheme = os.getenv("KUAVO_CONTROL_SCHEME", "ocs2")
 
         # Store the file path base directory for actions
         # self.action_files_path = "/home/lab/kuavo-ros-control/src/humanoid-control/humanoid_plan_arm_trajectory/script/action_files"
@@ -325,15 +328,62 @@ class ArmTrajectoryBezierDemo:
         self._timer = rospy.Timer(rospy.Duration(delay), self._on_timer_trigger, oneshot=True)
 
     def reset_robot_state(self):
-        # 做完动作之后恢复自然摆臂状态，并且手、头、腰部关节归位
-        self.call_change_arm_ctrl_mode_service(1)
-        self.hand_state.left_hand_position = [0] * 6
-        self.hand_state.right_hand_position = [0] * 6
-        self.control_hand_pub.publish(self.hand_state)
-        self.head_state.joint_data = [0] * 2
-        self.control_head_pub.publish(self.head_state)
-        self.waist_state.data = [0]
-        self.control_waist_pub.publish(self.waist_state)
+        if self.kuavo_control_scheme == "rl":
+            self.rl_reset_robot_state()
+        else:
+            # 做完动作之后恢复自然摆臂状态，并且手、头、腰部关节归位
+            self.call_change_arm_ctrl_mode_service(1)
+            self.hand_state.left_hand_position = [0] * 6
+            self.hand_state.right_hand_position = [0] * 6
+            self.control_hand_pub.publish(self.hand_state)
+            self.head_state.joint_data = [0] * 2
+            self.control_head_pub.publish(self.head_state)
+            self.waist_state.data = [0]
+            self.control_waist_pub.publish(self.waist_state)
+
+    def create_action_data(self, finish_time):
+        frames = [
+            {
+                "servos": [int(round(math.degrees(x))) for x in self.current_arm_joint_state],
+                "keyframe": 0,
+                "attribute": {str(i+1): {"CP": [[0,0],[0,0]]} for i in range(self.KUAVO_TACT_LENGTH)}
+            },
+            {
+                "servos": self.INIT_ARM_POS,
+                "keyframe": finish_time * 100,
+                "attribute": {str(i+1): {"CP": [[0,0],[0,0]]} for i in range(self.KUAVO_TACT_LENGTH)}
+            },
+        ]
+        return {"frames": frames}
+
+    def rl_reset_robot_state(self):
+        self.arm_flag = True
+        self.START_FRAME_TIME = 0
+        self.x_shift = self.START_FRAME_TIME  # 动态调整 x_shift
+        finish_time = 2
+        data = self.create_action_data(finish_time)
+
+        if self.kuavo_control_scheme == "rl":
+            finish_time += 1
+        self.END_FRAME_TIME = finish_time
+
+        action_data = self.add_init_frame(data["frames"])
+        filtered_data = self.filter_data(action_data)
+        bezier_request = self.create_bezier_request(filtered_data)
+
+        success = self.plan_arm_trajectory_bezier_curve_client(bezier_request)
+        if success:
+            rospy.loginfo("Arm trajectory planned successfully")
+            # 清除中断标志位，启动发布线程执行回归初始位的轨迹
+            self.interrupt_flag = False
+            threading.Thread(target=self.run).start()
+            # 在复位动作完成后，仅停止发布，不再触发再次复位
+            self._timer = rospy.Timer(
+                rospy.Duration(self.END_FRAME_TIME), self._on_reset_timer_trigger, oneshot=True
+            )
+            return ExecuteArmActionResponse(success=True, message="Action executed successfully")
+        else:
+            return ExecuteArmActionResponse(success=False, message="Failed to execute action")
 
     def _on_timer_trigger(self, event):
         self.running_action = False  # 结束 state=1 的发布
@@ -347,6 +397,11 @@ class ArmTrajectoryBezierDemo:
     def stop_action(self):
         if self._timer:
             self._timer.shutdown()
+
+    def _on_reset_timer_trigger(self, event):
+        """复位动作结束后停止发布，避免递归复位。"""
+        self.arm_flag = False
+        rospy.loginfo("Reset trajectory finished. Stopping publishers.")
 
     def publish_running_action_state(self):
         """持续发布 state=1"""
@@ -408,11 +463,11 @@ class ArmTrajectoryBezierDemo:
         # 发布动作完成状态
         self.publish_action_state(2)   
         
-        # 恢复机器人初始状态
-        self.reset_robot_state()
-
         # 停止等待动作的timer
         self.stop_action()
+
+        # 恢复机器人初始状态
+        self.reset_robot_state()
         
         # 返回标准Trigger响应 
         return TriggerResponse(
