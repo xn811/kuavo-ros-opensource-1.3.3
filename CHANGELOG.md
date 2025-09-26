@@ -12,6 +12,8 @@
 - 新增 Roban 斜坡使用说明文档 [文档链接](./src/humanoid-control/humanoid_controllers/scripts/Roban斜坡交互脚本说明.md)
 
 ## 新增功能
+- Kuavo Humanoid SDK  新增原子策略行为树版本搬箱子
+- Tact 动作文件适配 Roban 机器人，在原先基础上支持灵巧手, 头和腰部的控制描述
 - Kuavo Humanoid SDK 移除重复头部控制和手臂控制类的接口，这些接口从`1.2.2`版本开始废弃，并计划在 2026-06-30 移除
 - Kuavo Humanoid SDK 完善接口阈值保护以及补充说明文档，[文档链接](./src/kuavo_humanoid_sdk/docs/markdown/pages/api_reference.md)
 - 新增 Roban2.1 机器人模型，机器人版本号`ROBOT_VERSION=14`
@@ -39,6 +41,9 @@
 - 改进 PICO 节点与 VR App 端末端力接口数据定义，本地默认提供数组预设参考值
 
 ## 修复问题
+- 键盘控制手臂移动功能优化, 支持双手控制及自由切换, 修复手臂移动累计误差的问题
+- 修复VR过程中可以通过侧扳机固定手臂功能
+- 修复机器初始化时两个夹爪张开角度可能不一致问题
 - 修复 Roban2.1 左右横移时双脚会相碰的问题
 - Kuavo Humanoid SDK 修复导入未定义模块导致无法运行问题
 - 修复日志自动清理功能会删除空目录的问题
