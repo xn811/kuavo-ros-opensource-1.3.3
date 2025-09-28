@@ -3019,6 +3019,7 @@ namespace humanoid_controller
     
     // 检查是否有隔离的核心
     if (isolated_cpus.size() >= 1) {
+      bool ruiwo_isolated_core_ = false;
       // 检查CPU核心编号是否有效
       int max_cpu = sysconf(_SC_NPROCESSORS_ONLN);
       std::cout << "系统CPU核心数: " << max_cpu << std::endl;
@@ -3071,6 +3072,9 @@ namespace humanoid_controller
           }
           std::cout << "已隔离CPU列表: ";
           for (size_t i = 0; i < isolcpus_list.size(); ++i) {
+            if (isolcpus_list[i] == 7){
+              ruiwo_isolated_core_ = true;
+            }
             std::cout << isolcpus_list[i];
             if (i < isolcpus_list.size() - 1) std::cout << ", ";
           }
@@ -3082,10 +3086,10 @@ namespace humanoid_controller
         std::cerr << "警告: 无法打开 /proc/cmdline 文件" << std::endl;
       }
       
+
       // 判断每个CPU是否在隔离列表中
       for (size_t i = 0; i < isolated_cpus.size(); ++i) {
         int cpu_id = isolated_cpus[i];
-        
         // 检查是否在 isolcpus 列表中
         if (std::find(isolcpus_list.begin(), isolcpus_list.end(), cpu_id) != isolcpus_list.end()) {
           actually_isolated_cpus.push_back(cpu_id);
@@ -3094,13 +3098,17 @@ namespace humanoid_controller
           std::cout << "CPU " << cpu_id << " 未隔离" << std::endl;
         }
       }
+      if (!ruiwo_isolated_core_){    // 7 号核心未隔离，不允许启动
+        std::cout << "7 号核心未隔离，跳过CPU亲和性设置" << std::endl;
+        return false;
+      }
     } else {
       std::cout << "隔离的核心列表为空，跳过CPU亲和性设置" << std::endl;
       return false;
     }
 
     // 只有在有真正隔离的CPU时才设置亲和性
-    if (actually_isolated_cpus.size() >= 1) {
+    if (actually_isolated_cpus.size() >= 2) {           // 新版本至少需要两个核心： 2 个核心绑定 WBC
       // 设置CPU亲和性到隔离的核心
       cpu_set_t cpuset;
       CPU_ZERO(&cpuset);
@@ -3127,7 +3135,7 @@ namespace humanoid_controller
         return true;
       }
     } else {
-      std::cout << "没有真正隔离的CPU核心，跳过CPU亲和性设置" << std::endl;
+      std::cout << "没有真正隔离的CPU核心或隔离的CPU核心数不足（至少需要2个核心，2个核心绑定WBC控制线程），跳过CPU亲和性设置" << std::endl;
       return false;
     }
   }
