@@ -46,6 +46,6 @@ public:
      */
     void enableTouchSensor(uint8_t bits = 0xFF);
 private:
-    explicit TouchDexhand(ModbusHandle* handle, uint8_t slave_id_);
+    explicit TouchDexhand(DeviceHandler* handle, uint8_t slave_id_);
 };
 } // namespace dexhand
