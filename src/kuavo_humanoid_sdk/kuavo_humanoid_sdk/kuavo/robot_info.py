@@ -13,41 +13,14 @@ class KuavoRobotInfo(RobotInfoBase):
         self._ros_param = RosParameter()
             
         self._robot_version = kuavo_ros_param['robot_version']
-        self._robot_version_major = (int(self._robot_version) // 10) % 10
         self._end_effector_type = kuavo_ros_param['end_effector_type']
         self._arm_joint_dof = kuavo_ros_param['arm_dof']
-        self._waist_joint_dof = kuavo_ros_param['waist_dof'] if kuavo_ros_param['waist_dof'] is not None else 0
-        self._joint_dof = kuavo_ros_param['arm_dof'] + kuavo_ros_param['leg_dof'] + kuavo_ros_param['head_dof'] + self._waist_joint_dof
+        self._joint_dof = kuavo_ros_param['arm_dof'] + kuavo_ros_param['leg_dof'] + kuavo_ros_param['head_dof']
         self._joint_names = kuavo_ros_param['joint_names']
         self._end_frames_names = kuavo_ros_param['end_frames_names']
         self._head_joint_dof = kuavo_ros_param['head_dof']
         self._head_joint_names = self._joint_names[-2:]
-        
-        # Extract waist joint names
-        if self._waist_joint_dof > 0:
-            # Waist joints are after leg joints (12 joints) and before arm joints
-            leg_dof = kuavo_ros_param['leg_dof']
-            self._waist_joint_names = self._joint_names[leg_dof:leg_dof + self._waist_joint_dof]
-        else:
-            self._waist_joint_names = []
-        
-        if self._robot_version_major == 6:
-            print("当前为轮臂模型")
-            self._arm_joint_names = self._joint_names[4:self._arm_joint_dof + 12]
-        elif self._robot_version_major == 1:
-            print("当前为双足模型")
-            # For version 1: leg joints (12) + waist joint (1) + arm joints (8)
-            leg_dof = kuavo_ros_param['leg_dof']
-            arm_start_idx = leg_dof + self._waist_joint_dof
-            self._arm_joint_names = self._joint_names[arm_start_idx:arm_start_idx + self._arm_joint_dof]
-        else:
-            print("当前为双足模型")
-            # Arm joints are after leg joints (12) and waist joints
-            leg_dof = kuavo_ros_param['leg_dof']
-            arm_start_idx = leg_dof + self._waist_joint_dof
-            self._arm_joint_names = self._joint_names[arm_start_idx:arm_start_idx + self._arm_joint_dof]
-        self._init_stand_height = kuavo_ros_param['init_stand_height']
-
+        self._arm_joint_names = self._joint_names[12:self._arm_joint_dof + 12]
     @property
     def robot_version(self) -> str:
         """返回 Kuavo 机器人的版本。
@@ -125,24 +98,6 @@ class KuavoRobotInfo(RobotInfoBase):
         return self._head_joint_names
 
     @property
-    def waist_joint_dof(self) -> int:
-        """返回 Kuavo 机器人腰部的关节数。
-
-        Returns:
-            int: 腰部的关节数，例如 0 或 1。
-        """
-        return self._waist_joint_dof
-
-    @property
-    def waist_joint_names(self) -> list:
-        """返回 Kuavo 机器人腰部关节的名称。
-
-        Returns:
-            list: 包含腰部关节名称的列表。
-        """
-        return self._waist_joint_names
-
-    @property
     def eef_frame_names(self) -> Tuple[str, str]:
         """返回 Kuavo 机器人末端执行器坐标系的名称。
 
@@ -153,25 +108,6 @@ class KuavoRobotInfo(RobotInfoBase):
                 例如 ("zarm_l7_link", "zarm_r7_link") \n
         """
         return self._end_frames_names[1], self._end_frames_names[2]
-
-    @property
-    def init_stand_height(self) -> float:
-        """返回 Kuavo 机器人初始化站立时的质心高度。
-
-        Returns:
-            float: 初始化站立时的质心高度
-        """
-        return self._init_stand_height
     
     def __str__(self) -> str:
-        return (
-            f"KuavoRobotInfo("
-            f"robot_type={self.robot_type}, "
-            f"robot_version={self.robot_version}, "
-            f"end_effector_type={self.end_effector_type}, "
-            f"joint_names={self.joint_names}, "
-            f"joint_dof={self.joint_dof}, "
-            f"arm_joint_dof={self.arm_joint_dof}, "
-            f"init_stand_height={self.init_stand_height}"
-            f")"
-        )
+        return f"KuavoRobotInfo(robot_type={self.robot_type}, robot_version={self.robot_version}, end_effector_type={self.end_effector_type}, joint_names={self.joint_names}, joint_dof={self.joint_dof}, arm_joint_dof={self.arm_joint_dof})"

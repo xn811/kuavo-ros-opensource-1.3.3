@@ -34,4 +34,3 @@ Kuavo Humanoid SDK
    pages/data_types
    pages/examples
    pages/kuavo_strategy
-   pages/kuavo_strategy_v2

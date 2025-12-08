@@ -15,7 +15,6 @@
 #include <kuavo_msgs/changeArmCtrlMode.h>
 #include <kuavo_msgs/changeTorsoCtrlMode.h>
 #include <kuavo_msgs/armTargetPoses.h>
-#include <std_srvs/SetBool.h>
 
 #include "humanoid_interface/command/HumanoidHandTarget.h"
 #include "humanoid_interface_drake/humanoid_interface_drake.h"
@@ -25,11 +24,6 @@ using namespace humanoid;
 
 enum class ArmCtlIdx { Left, Right, Both };
 enum class ArmCtlMode { JointSpace, TaskSpace };
-enum class ArmControlMode {
-    KEEP = 0,
-    AUTO_SWING = 1,
-    EXTERN_CONTROL = 2,
-};
 
 #define ArmToZeroTime 3
 
@@ -370,9 +364,7 @@ class VRHandCommandNode {
       }
       TargetTrajectories goalTargetTrajectories = goalHandPoseToTargetTrajectories(armJointState, observation_);
       const auto mpcTargetTrajectoriesMsg = ros_msg_conversions::createTargetTrajectoriesMsg(goalTargetTrajectories);
-
       ArmTargetTrajectoriesPublisher_.publish(mpcTargetTrajectoriesMsg);
-      
       // targetTrajectoriesPublisherPtr_->publishTargetTrajectories(goalTargetTrajectories);
       last_joint_state_ = *msg;
     }
@@ -386,10 +378,10 @@ class VRHandCommandNode {
           // 0: Keep current arm pose
           // 1: Auto swing arms during walking
           // 2: External control through VR/teleoperation
-          callSetArmModeSrv(ArmControlMode::EXTERN_CONTROL);
+          callSetArmModeSrv(2);
           backArmPoseToZero();
           ros::Duration(ArmToZeroTime).sleep();
-          callSetArmModeSrv(ArmControlMode::KEEP);
+          callSetArmModeSrv(0);
         }
       }
       get_observation_ = true;
@@ -452,29 +444,29 @@ class VRHandCommandNode {
           ROS_ERROR("[VRHandCommandNode]: Arm control mode can NOT be changed before first observation.");
           return false;
         }
-        ArmControlMode control_mode = static_cast<ArmControlMode>(req.control_mode);
+        int control_mode = req.control_mode;
 
         // Control mode:
         // 0: Keep current arm pose
         // 1: Auto swing arms during walking
         // 2: External control through VR/teleoperation
         if(only_half_up_body_ &&
-          control_mode == ArmControlMode::AUTO_SWING && last_arm_control_mode_ == ArmControlMode::EXTERN_CONTROL) {
+          control_mode == 1 && last_arm_control_mode_ == 2) {
 
           backArmPoseToZero();
         }
 
-        enable_ctrl_ = (control_mode != ArmControlMode::KEEP);
+        enable_ctrl_ = control_mode;
         last_arm_control_mode_ = control_mode;
         res.result = true;
-        std::cout << "Arm control mode changed to " << static_cast<int>(control_mode) << "\n";
+        std::cout << "Arm control mode changed to " << control_mode << "\n";
         callSetArmModeSrv(control_mode);
         return true;
     }
-    void callSetArmModeSrv(ArmControlMode mode)
+    void callSetArmModeSrv(int32_t mode)
     {
       kuavo_msgs::changeArmCtrlMode srv;
-      srv.request.control_mode = static_cast<int>(mode);
+      srv.request.control_mode = mode;
       auto change_arm_mode_service_client_ = nh_.serviceClient<kuavo_msgs::changeArmCtrlMode>("/humanoid_change_arm_ctrl_mode");
 
       // 调用设置arm_mode_changing的服务
@@ -484,7 +476,7 @@ class VRHandCommandNode {
       // 0: Keep current arm pose
       // 1: Auto swing arms during walking
       // 2: External control through VR/teleoperation
-      if (mode == ArmControlMode::EXTERN_CONTROL && ros::service::exists("/quest3/set_arm_mode_changing", false)) {
+      if (mode == 2 && ros::service::exists("/quest3/set_arm_mode_changing", false)) {
         
         auto set_arm_mode_changing_client_ = nh_.serviceClient<std_srvs::Trigger>("/quest3/set_arm_mode_changing");
         if (set_arm_mode_changing_client_.call(trigger_srv))
@@ -602,13 +594,10 @@ class VRHandCommandNode {
 
     ros::Publisher armTargetPosePublisher_;
     bool only_half_up_body_{false};
-    ArmControlMode last_arm_control_mode_{ArmControlMode::KEEP};
+    int last_arm_control_mode_{0};
     sensor_msgs::JointState last_joint_state_;
     // 手臂初始位置
     vector_t init_arm_pos_;
-
-    // 手臂碰撞检查控制，如果 true，表示当前发生了手臂碰撞，正在执行手臂归位，不发送手臂目标轨迹
-    bool arm_collision_check_control_{false};
 };
 
 

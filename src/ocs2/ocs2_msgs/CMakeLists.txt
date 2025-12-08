@@ -26,7 +26,6 @@ add_message_files(
 add_service_files(
   FILES
     reset.srv
-    pause_resume.srv
 )
 
 generate_messages(

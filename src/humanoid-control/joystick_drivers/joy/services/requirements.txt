@@ -1,5 +1,0 @@
-transitions
-rich
-psutil
-graphviz
-pyserial

@@ -77,8 +77,8 @@ typedef struct
   int16_t torque_actual_value;
   uint16_t status_word;
   int16_t mode_of_opration_display;
-  // int32_t position_demand_raw;
-  // int32_t velocity_demand_raw;
+  int32_t position_demand_raw;
+  int32_t velocity_demand_raw;
   int32_t velocity_actual_value;
   int16_t torque_demand_raw;
   uint16_t error_code;
@@ -99,25 +99,16 @@ typedef struct
 
 
 /* yd */
-enum RobotModel
-{
-  KUAVO = 0,         // kuavo
-  ROBAN2 = 1,        // roban2
-  KUAVO5 = 2,        // kuavo5
-  LUNBI = 3,        // lunbi
-  ROBOT_MODEL_NUM    // 用于表示RobotModel的数量，以后有新的映射关系，需要在此加入对应的映射索引。
-};
 typedef struct
 {
   uint16_t status_word;
   int32_t position_actual_value;
   int32_t velocity_actual_value;
   int16_t torque_actual_value;
-  int32_t velocity_demand_raw;
-  int16_t torque_demand_raw;
-  uint16_t error_code;
-  uint16_t igbt_temperature;
   int8_t mode_of_opration_display;
+  uint16_t error_code;
+  int16_t torque_demand_raw;
+  int32_t velocity_demand_raw;
 } YD_SlaveRead_t;
 
 typedef struct
@@ -130,48 +121,18 @@ typedef struct
   int16_t torque_offset;
   int8_t mode_of_opration;//选模式，例：CSP、CSV等。。。
 } YD_SlaveWrite_t;
-
-/* selfd */
-typedef struct
-{
-  int32_t position_actual_value;
-  int16_t torque_actual_value;
-  uint16_t status_word;
-  int16_t mode_of_opration_display;
-  int32_t position_demand;
-  int32_t velocity_demand;
-  int32_t velocity_actual_value;
-  int16_t torque_demand_raw;
-  uint16_t error_code;
-} SELFD_SlaveRead_t;
-
-typedef struct
-{
-  int32_t target_position;
-  int32_t target_velocity;
-  int16_t target_torque;
-  uint16_t max_torque;
-  uint16_t control_word;
-  int16_t mode_of_opration;
-  int32_t position_offset;
-  int32_t velocity_offset;
-  int16_t torque_offset;
-} SELFD_SlaveWrite_t;
-
 #pragma pack()
 
 // 定义input区结构
 struct SlaveBuffersIn {
     ELMO_SlaveRead_t* elmo_slave_input;
     YD_SlaveRead_t* yd_slave_input;
-    SELFD_SlaveRead_t* selfd_slave_input;
 };
 
 // 定义out结构
 struct SlaveBuffersOut {
     ELMO_SlaveWrite_t* elmo_slave_output;
     YD_SlaveWrite_t* yd_slave_output;
-    SELFD_SlaveWrite_t* selfd_slave_output;
 };
 
 enum EcMasterType
@@ -180,15 +141,6 @@ enum EcMasterType
   YD = 1,
   LEJU = 2
 };
-
-typedef struct
-{
-  uint8_t slave_id;   // EC从站ID,即真实的物理id 从1开始
-  uint8_t logical_id; // 逻辑id,即urdf的id 从0开始
-  uint8_t pdo_id;     // 用于PDO读写的索引 从0开始
-  uint8_t physical_id;// 除去分支器的motor连接顺序 从0开始
-  EcMasterType driver_type; // 驱动类型
-} MotorId_t;
 
 typedef struct
 {
@@ -206,8 +158,6 @@ typedef struct
   uint16_t status_word = 0;
   uint16_t error_code = 0;
   double torque_demand_trans = 0.0;
-  double velocity_demand_raw = 0.0;
-  double igbt_temperature = 0.0; 
 } MotorParam_t;
 
 extern enum EcMasterType driver_type[30];
@@ -229,8 +179,6 @@ bool motorIsEnable(const uint16_t id);
 uint8_t motorStatus(const uint16_t id);
 
 extern void motorGetData(const uint16_t *ids, const EcMasterType* driver, uint32_t num, MotorParam_t *data);
-
-extern void setRobotMoudle(const int robot_module);
 
 extern void motorSetPosition(const uint16_t *ids, const EcMasterType* driver, uint32_t num, MotorParam_t *params);
 extern void motorSetVelocity(const uint16_t *ids, const EcMasterType* driver, uint32_t num, MotorParam_t *params);
@@ -267,7 +215,7 @@ extern int motorWriteKp(const std::vector<uint16_t> &ids, EcMasterType driver_ty
 extern int motorWriteKd(const std::vector<uint16_t> &ids, EcMasterType driver_type, const std::vector<int32_t>& joint_kd);
 
 extern bool isMotorEnable(void);
-extern uint32_t getNumMotorSlave(void);
+extern uint32_t getNumSlave(void);
 void setEcEncoderRange(uint32_t *encoder_range_set, uint16_t num);
 
 // void motorGetCurrent(double *current_actual);

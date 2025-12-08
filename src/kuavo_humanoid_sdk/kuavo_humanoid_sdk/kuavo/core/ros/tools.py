@@ -38,9 +38,8 @@ class KuavoRobotToolsCore:
                 self._transform_cache = {}
                 self._initialized = True
             except Exception as e:
-                SDKLogger.error(f"Failed to initialize kuavo_tf2_web_republisher: {str(e)}")
-                SDKLogger.error(f"kuavo_tf2_web_republisher 节点未运行")
-                SDKLogger.error("请运行 `cd <kuavo_ros_application> && source devel/setup.bash && rosrun kuavo_tf2_web_republisher kuavo_tf2_web_republisher` 启动 kuavo_tf2_web_republisher 节点")
+                SDKLogger.error(f"Failed to initialize tf2_web_republisher: {str(e)}")
+                SDKLogger.error("Please make sure tf2_web_republisher node is running")
                 raise
 
     def _get_tf_tree_transform(self, target_frame: str, source_frame: str, 
@@ -61,28 +60,7 @@ class KuavoRobotToolsCore:
                 or None if failed
         """
         try:
-
-            # #####################################
-            # 坐标系转换映射
-            robot_type = rospy.get_param('/robot_type', 2)
-            if robot_type == 1:     # 轮臂机器人
-
-                frame_mapping = {
-                    "base_link": "waist_yaw_link"
-                }
-
-                # 转换坐标系名称
-                if target_frame in frame_mapping:
-                    mapped_target_frame = frame_mapping[target_frame]
-                    SDKLogger.debug(f"🔵 目标坐标系映射: {target_frame} -> {mapped_target_frame}")
-                    target_frame = mapped_target_frame
-
-                if source_frame in frame_mapping:
-                    mapped_source_frame = frame_mapping[source_frame]
-                    SDKLogger.debug(f"🟢 源坐标系映射: {source_frame} -> {mapped_source_frame}")
-                    source_frame = mapped_source_frame
             
-            # #######################################
             # 调用服务
             response = self.tf_service(
                 source_frames=[source_frame],

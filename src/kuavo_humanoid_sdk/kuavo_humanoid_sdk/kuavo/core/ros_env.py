@@ -228,7 +228,6 @@ class KuavoROSEnv:
         """
         try:
             nodes = subprocess.check_output(['rosnode', 'list']).decode('utf-8').split('\n')
-            # print(f"Debug: nodes: {nodes}")
             return node_name in nodes
         except subprocess.CalledProcessError as e:
             SDKLogger.error(f"Error checking if node {node_name} exists: {e}")

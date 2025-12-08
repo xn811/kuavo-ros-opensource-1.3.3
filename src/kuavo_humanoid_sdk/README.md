@@ -77,8 +77,49 @@ chmod +x ./gen_docs.sh
 ![](docs/images/image.png)
 
 ## 搬箱子案例
+**编译**：
+```
+catkin build humanoid_controllers kuavo_msgs gazebo_sim ar_control
+```
 
-请参阅 html 或 markdown 文档中，**策略模块/搬箱子示例**章节内容，获取更多信息。
+**运行**：
+
+⚠️ 在运行之前, 需要确认机器人版本`ROBOT_VERSION=45`，否则会机器人末端控制会有问题
+```
+# 启动gazebo场景
+roslaunch humanoid_controllers load_kuavo_gazebo_manipulate.launch joystick_type:=bt2pro
+
+# 启动ar_tag转换码操作和virtual操作
+roslaunch ar_control robot_strategies.launch  
+
+# 运行搬箱子案例
+python3 grasp_box_example.py 
+```
+
+🚨 第一次启动gazebo场景前需要修改tag尺寸：
+
+在`/opt/ros/noetic/share/apriltag_ros/config/tags.yaml`文件中将tag的size尺寸修改为和立方体tag码的尺寸一致（只需做一次）
+```
+standalone_tags:
+    [
+        {id: 0, size: 0.088, name: 'tag_0'},
+        {id: 1, size: 0.088, name: 'tag_1'},
+        {id: 2, size: 0.088, name: 'tag_2'},
+        {id: 3, size: 0.088, name: 'tag_3'},
+        {id: 4, size: 0.088, name: 'tag_4'},
+        {id: 5, size: 0.088, name: 'tag_5'},
+        {id: 6, size: 0.088, name: 'tag_6'},
+        {id: 7, size: 0.088, name: 'tag_7'},
+        {id: 8, size: 0.088, name: 'tag_8'},
+        {id: 9, size: 0.088, name: 'tag_9'},
+    ]
+```
+🚨 每次启动gazebo场景后需要手动打光：
+
+需要在机器人腰部位置附近给个点光源，否则会找不到tag
+
+![](docs/images/gazebo.jpg)
+
 
 **测试**
 ```

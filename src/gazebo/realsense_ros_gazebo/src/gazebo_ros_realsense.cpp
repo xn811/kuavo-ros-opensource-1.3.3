@@ -34,10 +34,6 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
   this->rosnode_ = new ros::NodeHandle(this->GetHandle());
 
-  // 读取是否使用仿真时间参数
-  this->use_sim_time_ = false;
-  this->rosnode_->param("/use_sim_time", this->use_sim_time_, false);
-
   // initialize camera_info_manager
   this->camera_info_manager_.reset(
       new camera_info_manager::CameraInfoManager(*this->rosnode_, this->GetHandle()));
@@ -61,13 +57,7 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
 
 void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
                                     const transport::PublisherPtr pub) {
-  // 根据参数决定使用仿真时间还是实际时间
-  common::Time current_time;
-  if (this->use_sim_time_) {
-    current_time = this->world->SimTime();
-  } else {
-    current_time = common::Time::GetWallTime();
-  }
+  common::Time current_time = this->world->SimTime();
 
   // identify camera
   std::string camera_id = extractCameraName(cam->Name());
@@ -203,13 +193,8 @@ bool GazeboRosRealsense::FillPointCloudHelper(sensor_msgs::PointCloud2 &point_cl
 }
 
 void GazeboRosRealsense::OnNewDepthFrame() {
-  // 根据参数决定使用仿真时间还是实际时间
-  common::Time current_time;
-  if (this->use_sim_time_) {
-    current_time = this->world->SimTime();
-  } else {
-    current_time = common::Time::GetWallTime();
-  }
+  // get current time
+  common::Time current_time = this->world->SimTime();
 
   RealSensePlugin::OnNewDepthFrame();
 

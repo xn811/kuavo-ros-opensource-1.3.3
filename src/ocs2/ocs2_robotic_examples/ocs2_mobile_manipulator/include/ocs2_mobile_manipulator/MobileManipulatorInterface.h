@@ -93,7 +93,6 @@ class MobileManipulatorInterface final : public RobotInterface {
   std::unique_ptr<StateInputCost> getJointLimitSoftConstraint(const PinocchioInterface& pinocchioInterface, const std::string& taskFile);
 
   std::unique_ptr<StateInputCost> getBaseStateCost(const std::string& taskFile);
-  std::unique_ptr<StateInputCost> getBaseArmRegularizationCost(const std::string& taskFile);
 
   std::unique_ptr<StateConstraint> getBaseStateConstraint(const std::string& taskFile);
 

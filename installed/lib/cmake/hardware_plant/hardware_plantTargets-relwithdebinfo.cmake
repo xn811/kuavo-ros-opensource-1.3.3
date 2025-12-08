@@ -55,6 +55,36 @@ set_target_properties(hardware_plant::ec_app PROPERTIES
 list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::ec_app )
 list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::ec_app "${_IMPORT_PREFIX}/lib/libec_app.a" )
 
+# Import target "hardware_plant::ruierman_actuatorLib" for configuration "RelWithDebInfo"
+set_property(TARGET hardware_plant::ruierman_actuatorLib APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
+set_target_properties(hardware_plant::ruierman_actuatorLib PROPERTIES
+  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libruierman_actuatorLib.so"
+  IMPORTED_SONAME_RELWITHDEBINFO "libruierman_actuatorLib.so"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::ruierman_actuatorLib )
+list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::ruierman_actuatorLib "${_IMPORT_PREFIX}/lib/libruierman_actuatorLib.so" )
+
+# Import target "hardware_plant::jodell_claw_driver" for configuration "RelWithDebInfo"
+set_property(TARGET hardware_plant::jodell_claw_driver APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
+set_target_properties(hardware_plant::jodell_claw_driver PROPERTIES
+  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libjodell_claw_driver.so"
+  IMPORTED_SONAME_RELWITHDEBINFO "libjodell_claw_driver.so"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::jodell_claw_driver )
+list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::jodell_claw_driver "${_IMPORT_PREFIX}/lib/libjodell_claw_driver.so" )
+
+# Import target "hardware_plant::dxl_x64_cpp" for configuration "RelWithDebInfo"
+set_property(TARGET hardware_plant::dxl_x64_cpp APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
+set_target_properties(hardware_plant::dxl_x64_cpp PROPERTIES
+  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libdxl_x64_cpp.so"
+  IMPORTED_SONAME_RELWITHDEBINFO "libdxl_x64_cpp.so"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::dxl_x64_cpp )
+list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::dxl_x64_cpp "${_IMPORT_PREFIX}/lib/libdxl_x64_cpp.so" )
+
 # Import target "hardware_plant::mathtools_hw" for configuration "RelWithDebInfo"
 set_property(TARGET hardware_plant::mathtools_hw APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
 set_target_properties(hardware_plant::mathtools_hw PROPERTIES
@@ -64,6 +94,16 @@ set_target_properties(hardware_plant::mathtools_hw PROPERTIES
 
 list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::mathtools_hw )
 list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::mathtools_hw "${_IMPORT_PREFIX}/lib/libmathtools_hw.so" )
+
+# Import target "hardware_plant::hand_sdkLib" for configuration "RelWithDebInfo"
+set_property(TARGET hardware_plant::hand_sdkLib APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
+set_target_properties(hardware_plant::hand_sdkLib PROPERTIES
+  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libhand_sdkLib.so"
+  IMPORTED_SONAME_RELWITHDEBINFO "libhand_sdkLib.so"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::hand_sdkLib )
+list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::hand_sdkLib "${_IMPORT_PREFIX}/lib/libhand_sdkLib.so" )
 
 # Import target "hardware_plant::lejuclaw" for configuration "RelWithDebInfo"
 set_property(TARGET hardware_plant::lejuclaw APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
@@ -88,32 +128,12 @@ list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::hipnuc_imu_receiver "${_IMPO
 # Import target "hardware_plant::dexhand_sdk" for configuration "RelWithDebInfo"
 set_property(TARGET hardware_plant::dexhand_sdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
 set_target_properties(hardware_plant::dexhand_sdk PROPERTIES
-  IMPORTED_LINK_INTERFACE_LANGUAGES_RELWITHDEBINFO "C;CXX"
+  IMPORTED_LINK_INTERFACE_LANGUAGES_RELWITHDEBINFO "CXX"
   IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libdexhand_sdk.a"
   )
 
 list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::dexhand_sdk )
 list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::dexhand_sdk "${_IMPORT_PREFIX}/lib/libdexhand_sdk.a" )
-
-# Import target "hardware_plant::canbus_sdk" for configuration "RelWithDebInfo"
-set_property(TARGET hardware_plant::canbus_sdk APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
-set_target_properties(hardware_plant::canbus_sdk PROPERTIES
-  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libcanbus_sdk.so"
-  IMPORTED_SONAME_RELWITHDEBINFO "libcanbus_sdk.so"
-  )
-
-list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::canbus_sdk )
-list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::canbus_sdk "${_IMPORT_PREFIX}/lib/libcanbus_sdk.so" )
-
-# Import target "hardware_plant::motorevo_controller" for configuration "RelWithDebInfo"
-set_property(TARGET hardware_plant::motorevo_controller APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)
-set_target_properties(hardware_plant::motorevo_controller PROPERTIES
-  IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/lib/libmotorevo_controller.so"
-  IMPORTED_SONAME_RELWITHDEBINFO "libmotorevo_controller.so"
-  )
-
-list(APPEND _IMPORT_CHECK_TARGETS hardware_plant::motorevo_controller )
-list(APPEND _IMPORT_CHECK_FILES_FOR_hardware_plant::motorevo_controller "${_IMPORT_PREFIX}/lib/libmotorevo_controller.so" )
 
 # Import target "hardware_plant::ruiwo_actuatorLib" for configuration "RelWithDebInfo"
 set_property(TARGET hardware_plant::ruiwo_actuatorLib APPEND PROPERTY IMPORTED_CONFIGURATIONS RELWITHDEBINFO)

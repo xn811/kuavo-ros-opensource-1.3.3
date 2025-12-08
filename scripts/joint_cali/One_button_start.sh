@@ -18,16 +18,13 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "步骤2: 准备启动下位机launch文件..."
 cd $REPO_ROOT
 catkin clean -y
-if [[ "$REPO_ROOT" == *"kuavo-ros-opensource"* ]]; then
-    source installed/setup.bash
-fi
 catkin config -DCMAKE_ASM_COMPILER=/usr/bin/as -DCMAKE_BUILD_TYPE=Release
 catkin build humanoid_controllers motion_capture_ik mobile_manipulator_controllers
 source devel/setup.bash
 
 # 检查是否已有roscore在运行
 # 先关闭roscore
-sudo killall -9 ros roslaunch roscore rosmaster
+sudo killall -9 roslaunch roscore rosmaster
 
 
 
@@ -131,29 +128,6 @@ else
         fi
     done
 fi
-
-# 检查机器人是否成功启动
-
-SERVICE="/mobile_manipulator_mpc_control"
-TIMEOUT=30
-
-echo "等待 $SERVICE 出现..."
-
-found=0
-for ((i=0; i<TIMEOUT; i++)); do
-    if rosservice list | grep -q "$SERVICE"; then
-        echo "✅ 服务 $SERVICE 已经出现，继续执行..."
-        found=1
-        break
-    fi
-    sleep 1
-done
-
-if [[ $found -eq 0 ]]; then
-    echo "❌ 超时：未检测到服务 $SERVICE，请检查机器人是否站立成功或者机器人是否启用运动学 MPC 控制！！！"
-    exit 1
-fi
-
 
 # 3. 启动上位机launch（标定所需的相机和Tag识别）
 echo "==========================================================="

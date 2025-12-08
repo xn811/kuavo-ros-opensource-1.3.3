@@ -65,9 +65,6 @@ protected:
 protected:
   sensor_msgs::Image image_msg_, depth_msg_;
   sensor_msgs::PointCloud2 pointcloud_msg_;
-
-private:
-  bool use_sim_time_{false};
 };
 }
 #endif /* _GAZEBO_ROS_REALSENSE_PLUGIN_ */

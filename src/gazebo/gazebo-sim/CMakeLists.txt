@@ -8,9 +8,6 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros
   gazebo_ros_control
   controller_manager
-  nav_msgs
-  tf
-  kuavo_msgs
   # joint_state_controller
   # robot_state_publisher
 )
@@ -80,19 +77,6 @@ install(DIRECTORY launch/
   FILES_MATCHING PATTERN "*.launch"
 )
 
-# 安装Python脚本
-install(DIRECTORY scripts/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
-  USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.py"
-)
-
-# 安装模型文件
-install(DIRECTORY models/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/models
-  FILES_MATCHING PATTERN "*.sdf" PATTERN "*.config"
-)
-
 # 添加测试程序
 add_executable(shm_test src/shm_test.cpp)
 
@@ -101,18 +85,6 @@ add_dependencies(shm_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_
 
 target_link_libraries(shm_test
   rt
-  ${catkin_LIBRARIES}
-)
-
-# 添加sensor_data_publisher可执行文件
-add_executable(sensor_data_publisher 
-  src/sensor_data_publisher_test.cpp
-  src/sensor_data_publisher.cpp
-)
-
-add_dependencies(sensor_data_publisher ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-target_link_libraries(sensor_data_publisher
   ${catkin_LIBRARIES}
 )
 

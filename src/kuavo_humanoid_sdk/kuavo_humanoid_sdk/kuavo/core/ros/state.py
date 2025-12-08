@@ -4,10 +4,9 @@ import copy
 import rospy
 from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
-from std_srvs.srv import SetBool, SetBoolRequest
 from sensor_msgs.msg import JointState
 from kuavo_humanoid_sdk.msg.kuavo_msgs.msg import sensorsData, lejuClawState, gaitTimeName, dexhandTouchState
-from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, getCurrentGaitName, getCurrentGaitNameRequest,gestureExecuteState, gestureExecuteStateRequest
+from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest, getCurrentGaitName, getCurrentGaitNameRequest
 from kuavo_humanoid_sdk.msg.ocs2_msgs.msg import mpc_observation
 from kuavo_humanoid_sdk.msg.kuavo_msgs.srv import (changeArmCtrlMode, changeArmCtrlModeRequest,setMmCtrlFrame, setMmCtrlFrameRequest, changeTorsoCtrlMode, changeTorsoCtrlModeRequest)
 from collections import deque
@@ -63,16 +62,7 @@ class KuavoRobotStateCore:
 
     def __init__(self):
         if not hasattr(self, '_initialized'):
-            # 根据 use_shm_communication 参数选择订阅的话题
-            use_shm = rospy.get_param('/use_shm_communication', False)
-            if use_shm:
-                sensor_topic = "/sensors_data_raw_shm"
-                SDKLogger.info(f"Using shared memory mode, subscribing to: {sensor_topic}")
-            else:
-                sensor_topic = "/sensors_data_raw"
-                SDKLogger.info(f"Using standard mode, subscribing to: {sensor_topic}")
-            
-            rospy.Subscriber(sensor_topic, sensorsData, self._sensors_data_raw_callback)
+            rospy.Subscriber("/sensors_data_raw", sensorsData, self._sensors_data_raw_callback)
             rospy.Subscriber("/odom", Odometry, self._odom_callback)
             rospy.Subscriber("/humanoid/mpc/terrainHeight", Float64, self._terrain_height_callback)
             rospy.Subscriber("/humanoid_mpc_gait_time_name", gaitTimeName, self._humanoid_mpc_gait_changed_callback)
@@ -212,14 +202,6 @@ class KuavoRobotStateCore:
         return self._manipulation_mpc_control_flow
     
     @property
-    def pitch_limit_enabled(self)->bool:
-        success, status = self._srv_get_pitch_limit_status()
-        if success:
-            return not ('disabled' in status)
-        else:
-            return False
-    
-    @property
     def eef_state(self)->Tuple[EndEffectorState, EndEffectorState]:
         return self._eef_state
     
@@ -294,22 +276,6 @@ class KuavoRobotStateCore:
     def _sensors_data_raw_callback(self, msg)->None:
         # update imu data
         self._imu_data = KuavoImuData(
-            gyro = (msg.imu_data.gyro.x, msg.imu_data.gyro.y, msg.imu_data.gyro.z),
-            acc = (msg.imu_data.acc.x, msg.imu_data.acc.y, msg.imu_data.acc.z),
-            free_acc = (msg.imu_data.free_acc.x, msg.imu_data.free_acc.y, msg.imu_data.free_acc.z),
-            quat = (msg.imu_data.quat.x, msg.imu_data.quat.y, msg.imu_data.quat.z, msg.imu_data.quat.w)
-        )
-        # update joint data
-        self._joint_data = KuavoJointData(
-            position = copy.deepcopy(msg.joint_data.joint_q),
-            velocity = copy.deepcopy(msg.joint_data.joint_v),
-            torque = copy.deepcopy(msg.joint_data.joint_vd),
-            acceleration = copy.deepcopy(msg.joint_data.joint_current if hasattr(msg.joint_data, 'joint_current') else msg.joint_data.joint_torque)
-        )
-
-    def _sensors_data_raw_shm_callback(self, msg)->None:
-        # update imu data
-        self._imu_data_shm = KuavoImuData(
             gyro = (msg.imu_data.gyro.x, msg.imu_data.gyro.y, msg.imu_data.gyro.z),
             acc = (msg.imu_data.acc.x, msg.imu_data.acc.y, msg.imu_data.acc.z),
             free_acc = (msg.imu_data.free_acc.x, msg.imu_data.free_acc.y, msg.imu_data.free_acc.z),
@@ -440,24 +406,6 @@ class KuavoRobotStateCore:
         except Exception as e:
             SDKLogger.error(f"Service call failed: {e}")
         return None
-    def _srv_get_dexhand_gesture_state(self)->bool:
-        
-        try:
-            rospy.wait_for_service('gesture/execute_state',timeout=1.0)
-            # 创建服务代理
-            gesture_state_service = rospy.ServiceProxy('gesture/execute_state', gestureExecuteState)
-            
-            # 创建请求对象
-            request = gestureExecuteStateRequest()
-            
-            response = gesture_state_service(request)
-            
-            return response.is_executing
-        
-        except rospy.ServiceException as e:
-            print(f"Service call failed: {e}")
-        
-        return None
 
     def _srv_get_manipulation_mpc_ctrl_mode(self, )->KuavoManipulationMpcCtrlMode:
         try:
@@ -648,27 +596,7 @@ class KuavoRobotStateCore:
             SDKLogger.error(f"Failed to get manipulation mpc wbc arm trajectory control mode: {e}")
         return KuavoManipulationMpcControlFlow.Error
 
-    def _srv_get_pitch_limit_status(self, )->Tuple[bool, str]:
-        try:
-            service_name = '/humanoid/mpc/pitch_limit_status'
-            rospy.wait_for_service(service_name, timeout=2.0)
-            get_pitch_limit_status_srv = rospy.ServiceProxy(service_name, SetBool)
-            
-            req = SetBoolRequest()
-            
-            resp = get_pitch_limit_status_srv(req)
-            if not resp.success:
-                SDKLogger.error(f"Failed to get pitch limit status: {resp.message}")
-                return False, 'unknown'
-            return resp.success, resp.message
-        except rospy.ServiceException as e:
-            SDKLogger.error(f"Service call to {service_name} failed: {e}")
-        except rospy.ROSException as e: # For timeout from wait_for_service
-            SDKLogger.error(f"Failed to connect to service {service_name}: {e}")
-        except Exception as e:
-            SDKLogger.error(f"Failed to get pitch limit status: {e}")
-        return False, 'unknown'
-    
+
 if __name__ == "__main__":
     state = KuavoRobotStateCore()
     print(state.manipulation_mpc_frame)

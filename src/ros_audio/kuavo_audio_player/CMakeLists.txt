@@ -60,7 +60,6 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   playmusic.srv
-  audio_status.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -222,7 +221,5 @@ install(DIRECTORY launch
 
 catkin_install_python(PROGRAMS
   scripts/loundspeaker.py
-  scripts/audio_stream_player.py
-  tests/audio_stream_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

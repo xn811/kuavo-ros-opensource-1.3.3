@@ -19,7 +19,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    "sphinx.ext.graphviz",
     'sphinx_markdown_builder',
 ]
 exclude_patterns = []

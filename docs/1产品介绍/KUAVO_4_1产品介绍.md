@@ -184,7 +184,7 @@ KUAVO机器人4.1包含头、躯干、手臂、腿部，全身总共28个自由�
 
 - 使用环境：室外；
 
-- 支持物体识别、定位和追踪；
+- 支持物体识别、定位和追踪，可构建人体架构图，人体手势识别、肢体手势和动作判断等。
 
 ### 下位机：摩方i9-13900
 
@@ -264,4 +264,4 @@ KUAVO机器人4.1包含头、躯干、手臂、腿部，全身总共28个自由�
 
 灵巧手产品说明手册：[app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf](https://app.brainco.cn/universal/stark-serialport-prebuild/docs/BC4-0100114095_20240521.pdf)
 
-灵巧手官方文档网站：[灵巧手官方文档网站](https://www.brainco-hz.com/docs/revolimb-hand/revo1/parameters.html)
+灵巧手官方文档网站：[灵巧手官方文档网站](https://www.brainco-hz.com/docs/revolimb-hand/guide/quick_start.html)

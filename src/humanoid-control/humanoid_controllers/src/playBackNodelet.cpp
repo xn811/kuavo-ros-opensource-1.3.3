@@ -576,6 +576,7 @@ namespace humanoid_controller
     static double last_ros_time = ros::Time::now().toSec();
     ros_logger_->publishValue("/monitor/time_cost/controller_loop_time", (ros::Time::now().toSec() - last_ros_time) * 1000);
     last_ros_time = ros::Time::now().toSec();
+    lastObservation_ = currentObservation_;
   }
   void humanoidController::applySensorData()
   {

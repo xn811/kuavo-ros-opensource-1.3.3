@@ -88,16 +88,14 @@ enum EndEffectorType
   jodell,
   qiangnao,
   lejuclaw,
-  qiangnao_touch,
-  revo2
+  qiangnao_touch
 };
 enum MotorDriveType
 {
   EC_MASTER,
   DYNAMIXEL,
   REALMAN,
-  RUIWO,
-  UNKNOWN
+  RUIWO
 };
 
 typedef struct

@@ -199,8 +199,8 @@ namespace ocs2
       {
         std::lock_guard<std::mutex> lock(receivedGaitMutex_);
         std::cerr << "[GaitReceiver]: Setting new gait after time " << finalTime << "\n";
-        std::cerr << receivedGait_;gaitSchedulePtr_->setGaitName(receivedGait_);
-        
+        std::cerr << receivedGait_;
+        // gaitSchedulePtr_->setGaitName(receivedGait_);
         gaitUpdated_ = false;
         current_mode_end_time_ = 0.0;
         // 判断为walk模式才enable
@@ -307,7 +307,14 @@ namespace ocs2
           std::swap(cfg.toeSwingHeight, cfg.heelSwingHeight);
         }
         swingTrajectoryPlannerPtr_->updateConfig(cfg);
-       
+        bool walk_on_slope = swingTrajectoryPlannerPtr_->isWalkingOnSlope();
+        auto feet_normal_vectors = swingTrajectoryPlannerPtr_->getFeetNormalVectors();
+        ros_logger_->publishVector("/gait_receiver/lf_normal_vector", feet_normal_vectors.first);
+        ros_logger_->publishVector("/gait_receiver/rf_normal_vector", feet_normal_vectors.second);
+        double slope_threshold = 0.05;
+        walk_on_slope = feet_normal_vectors.first.head(2).norm() > slope_threshold || feet_normal_vectors.second.head(2).norm() > slope_threshold;
+        ros_logger_->publishValue("/gait_receiver/walk_on_slope", static_cast<double>(walk_on_slope));
+
         if (std::abs(vx_desire) < 0.1 )
           mode_tmp.replaceModes(mode_to_scale, ModeNumber::SS);
         if (old_mode_template != mode_tmp)
@@ -365,7 +372,7 @@ namespace ocs2
       ros_logger_->publishValue("/humanoid/GaitReceiver/getFinalYawSingleStepMode", swingTrajectoryPlannerPtr_->getFinalYawSingleStepMode());
       if(PoseCmdWorldUpdated_ && (!single_step_yaw_computed_ && !swingTrajectoryPlannerPtr_->getFinalYawSingleStepMode()))
       {
-        if(cmd_vector.head(2).norm() > 0.5){//TODO: 这里的阈值可以调整
+        if(cmd_vector.head(2).norm() > 0.3){//TODO: 这里的阈值可以调整
           target_yaw = atan2(cmd_vector(1), cmd_vector(0));//TO-DO: 转换到局部系(2025/01/17 by matthew)
           double yaw_diff = abs(normalizedYaw(normalizedYaw(target_yaw) - normalizedYaw(cmd_vector[2])));
           std::cout << "yaw_diff: " << yaw_diff << std::endl;

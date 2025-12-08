@@ -85,14 +85,6 @@ PinocchioInterface createPinocchioInterface(const std::string& robotUrdfPath, co
       // return pinocchio interface
       return getPinocchioInterfaceFromUrdfFile(robotUrdfPath, jointComposite);
     }
-    case ManipulatorModelType::ActuatedZPitchManipulator: {
-      // add 6 DoF for the floating base
-      pinocchio::JointModelComposite jointComposite(2);
-      jointComposite.addJoint(pinocchio::JointModelTranslation());
-      jointComposite.addJoint(pinocchio::JointModelSphericalZYX());
-      // return pinocchio interface
-      return getPinocchioInterfaceFromUrdfFile(robotUrdfPath, jointComposite);
-    }
     default:
       throw std::invalid_argument("Invalid manipulator model type provided.");
   }
@@ -155,14 +147,6 @@ PinocchioInterface createPinocchioInterface(const std::string& robotUrdfPath, co
       // return pinocchio interface
       return getPinocchioInterfaceFromUrdfModel(newModel, jointComposite);
     }
-    case ManipulatorModelType::ActuatedZPitchManipulator: {
-      // add Z-Pitch joint for the base
-      pinocchio::JointModelComposite jointComposite(2);
-      jointComposite.addJoint(pinocchio::JointModelTranslation());
-      jointComposite.addJoint(pinocchio::JointModelSphericalZYX());
-      // return pinocchio interface
-      return getPinocchioInterfaceFromUrdfModel(newModel, jointComposite);
-    }
     default:
       throw std::invalid_argument("Invalid manipulator model type provided.");
   }
@@ -172,13 +156,12 @@ PinocchioInterface createPinocchioInterface(const std::string& robotUrdfPath, co
 /******************************************************************************************************/
 /******************************************************************************************************/
 ManipulatorModelInfo createManipulatorModelInfo(const PinocchioInterface& interface, const ManipulatorModelType& type,
-                                                const std::string& baseFrame, const std::vector<std::string>& eeFrames, const int waistDof) {
+                                                const std::string& baseFrame, const std::vector<std::string>& eeFrames) {
   const auto& model = interface.getModel();
 
   ManipulatorModelInfo info;
   info.manipulatorModelType = type;
   info.stateDim = model.nq;
-  info.waistDim = waistDof;
   // resolve for actuated dof based on type of robot
   switch (type) {
     case ManipulatorModelType::DefaultManipulator: {
@@ -189,14 +172,14 @@ ManipulatorModelInfo createManipulatorModelInfo(const PinocchioInterface& interf
     }
     case ManipulatorModelType::FloatingArmManipulator: {
       // remove the static 6-DOF base joints that are unactuated.
-      info.inputDim = info.stateDim - 6 - info.waistDim;
+      info.inputDim = info.stateDim - 6;
       info.armDim = info.inputDim;
       break;
     }
     case ManipulatorModelType::FullyActuatedFloatingArmManipulator: {
       // all states are actuatable
       info.inputDim = info.stateDim;
-      info.armDim = info.inputDim - 6 - info.waistDim;
+      info.armDim = info.inputDim - 6;
       break;
     }
     case ManipulatorModelType::WheelBasedMobileManipulator: {
@@ -211,12 +194,6 @@ ManipulatorModelInfo createManipulatorModelInfo(const PinocchioInterface& interf
       info.armDim = info.inputDim - 5;
       break;
     }
-    case ManipulatorModelType::ActuatedZPitchManipulator: {
-      // for z-pitch base, the input dimension is (v_z, dtheta, dq_j) while state dimension is full.
-      info.inputDim = info.stateDim - 4; // (x,y,yaw,roll) is unactuated
-      info.armDim = info.inputDim - 2; // (z,pitch) is actuated
-      break;
-    }
     default:
       throw std::invalid_argument("Invalid manipulator model type provided.");
       break;
@@ -226,7 +203,7 @@ ManipulatorModelInfo createManipulatorModelInfo(const PinocchioInterface& interf
   info.baseFrame = baseFrame;
   // get name of arm joints.
   const auto& jointNames = model.names;
-  info.dofNames = std::vector<std::string>(jointNames.end() - info.armDim - info.waistDim, jointNames.end());
+  info.dofNames = std::vector<std::string>(jointNames.end() - info.armDim, jointNames.end());
 
   return info;
 }

@@ -10,8 +10,6 @@
 #include <condition_variable>
 #include <atomic>
 #include "claw_types.h"
-#include "lejuclaw.h"
-#include "lejuclaw_can_customed.h"
 
 class LeJuClaw;
 
@@ -48,12 +46,8 @@ public:
         kGrabbed = 3,               // 抓取到物品 
     };   
 
-    static LejuClawControllerPtr Create(bool is_can_protocol) {
-        return LejuClawControllerPtr(new LejuClawController(is_can_protocol));
-    }
-    // 兼容旧测试：无参版本默认走 CAN 协议
     static LejuClawControllerPtr Create() {
-        return LejuClawControllerPtr(new LejuClawController(false));
+        return LejuClawControllerPtr(new LejuClawController());
     }
     ~LejuClawController();
     
@@ -136,17 +130,8 @@ public:
 
 private:
     bool execute(const lejuClawCommand &data, std::string &err_msg);
-    
-    // VR控制检测相关变量
-    std::chrono::steady_clock::time_point last_command_time_;
-    bool is_vr_control_mode_ = false;
-    static constexpr int VR_CONTROL_DETECTION_INTERVAL_MS = 200;    // VR控制检测间隔，该ms时间内连续调用认为是VR模式
-    
-    // VR检测方法
-    void update_vr_detection();
 
-    bool is_can_protocol_;
-    explicit LejuClawController(bool is_can_protocol) : is_can_protocol_(is_can_protocol) {}
+    LejuClawController() = default;
     void workerThread();
     /**
      * @brief update the state of the claws
@@ -156,7 +141,6 @@ private:
     void updateState(std::array<State, 2> new_state);
 
     LeJuClaw *claw_ptr_ = nullptr;
-    lejuclaw_can::LeJuClawCan *claw_can_ptr_ = nullptr;
 
     using TaskFunc = std::function<void()>;
     std::optional<TaskFunc> current_task_;
@@ -165,7 +149,7 @@ private:
     std::thread worker_;
     bool stop_worker_ = false;
 
-    std::atomic_bool claw_is_executing_{false};
+    std::atomic_bool claw_is_executing_;
 
     std::array<State, 2> gripper_state_ = {State::kUnknown, State::kUnknown};
 };

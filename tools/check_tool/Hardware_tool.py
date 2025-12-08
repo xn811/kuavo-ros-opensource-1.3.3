@@ -35,6 +35,7 @@ import serial.tools.list_ports
 
 
 import ruierman
+import claw_rs485
 
 
 servo_usb_path = "/dev/usb_servo"
@@ -469,101 +470,35 @@ def handTouch_usb():
 
 
 def ruiwo_zero():
-    # 检查CAN总线接线方式
-    canbus_wiring_file = os.path.expanduser('~/.config/lejuconfig/CanbusWiringType.ini')
-    
-    use_motorevo_tool = False
-    if os.path.exists(canbus_wiring_file):
-        with open(canbus_wiring_file, 'r') as f:
-            wiring_type = f.read().strip()
-            if wiring_type == "dual_bus":
-                use_motorevo_tool = True
-    
-    if use_motorevo_tool:
-        print(bcolors.OKGREEN + "检测到 Roban2 双CAN配置，使用 motorevo_tool.sh 工具" + bcolors.ENDC)
-        # 使用新的双CAN工具
-        command = "bash " + folder_path + "/motorevo_tool.sh --cali"
-
-    else:
-        kuavo_ros_file_path = folder_path +"/ruiwo_zero_set.sh" 
-        kuavo_open_file_path = folder_path +"../../installed/share/hardware_plant/lib/ruiwo_controller/setZero.sh" 
         
+    kuavo_ros_file_path = folder_path +"/ruiwo_zero_set.sh" 
+    kuavo_open_file_path = folder_path +"../../installed/share/hardware_plant/lib/ruiwo_controller/setZero.sh" 
+    
 
-        if os.path.exists(kuavo_ros_file_path):
-            command = "bash "+ kuavo_ros_file_path
-        elif os.path.exists(kuavo_open_file_path):
-            command = "bash "+ kuavo_open_file_path
-        else:
-            print(f"The file {file_path} does not exist.")
-            return
-            
+    if os.path.exists(kuavo_ros_file_path):
+        command = "bash "+ kuavo_ros_file_path
+    elif os.path.exists(kuavo_open_file_path):
+        command = "bash "+ kuavo_open_file_path
+    else:
+        print(f"The file {file_path} does not exist.")
+        return
+        
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
 def ruiwo_negtive():
-    while True:
-        print("请选择机器人类型：")
-        print("1. 4Pro型")
-        print("2. Roban2型")
-        
-        choice = input("请输入选择 (1 或 2): ").strip()
-        
-        if choice == "1":
-            robot_type = "4pro"
-            break
-        elif choice == "2":
-            robot_type = "roban2"
-            break
-        else:
-            print(bcolors.FAIL + "无效选择，请重新选择！" + bcolors.ENDC)
-            continue
 
-        # 定义要运行的命令，传递机器人类型参数
-    command = "bash " + folder_path + "/ruiwo_negtive_set.sh " + robot_type
-
-    # 如果选择了Roban2型，则检查CAN总线接线方式
-    if robot_type == "roban2":
-        # 检查CAN总线接线方式
-        canbus_wiring_file = os.path.expanduser('~/.config/lejuconfig/CanbusWiringType.ini')
-        
-        use_motorevo_tool = False
-        if os.path.exists(canbus_wiring_file):
-            with open(canbus_wiring_file, 'r') as f:
-                wiring_type = f.read().strip()
-                if wiring_type == "dual_bus":
-                    use_motorevo_tool = True
-        
-        if use_motorevo_tool:
-            print(bcolors.OKGREEN + "检测到 Roban2 双CAN配置，使用 motorevo_tool.sh 工具" + bcolors.ENDC)
-
-            # 使用新的双CAN工具
-            command = "bash " + folder_path + "/motorevo_tool.sh --negative"
+    # 定义要运行的命令
+    command = "bash "+ folder_path +"/ruiwo_negtive_set.sh" 
 
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
 
 def qiangnao_hand():
-    # 检查CAN总线配置类型
-    canbus_wiring_file = os.path.expanduser('~/.config/lejuconfig/CanbusWiringType.ini')
-    
-    is_dual_can = False
-    if os.path.exists(canbus_wiring_file):
-        with open(canbus_wiring_file, 'r') as f:
-            wiring_type = f.read().strip()
-            if wiring_type == "dual_bus":
-                is_dual_can = True
-    
-    # 根据CAN总线类型选择不同的命令
-    if is_dual_can:
-        # 双CAN总线配置
-        command = "bash "+ folder_path +"/dexhand_test.sh --touch --test 1"
-        print(bcolors.OKGREEN + "检测到双CAN配置，使用双CAN测试命令" + bcolors.ENDC)
-    else:
-        # 单CAN总线配置
-        command = "bash "+ folder_path +"/hand_grab_test.sh"
-        print(bcolors.OKGREEN + "检测到单CAN配置，使用单CAN测试命令" + bcolors.ENDC)
-    
+    # 定义要运行的命令
+    command = "bash "+ folder_path +"/hand_grab_test.sh" 
+
     # 使用 subprocess.run() 运行命令
     subprocess.run(command, shell=True)
 
@@ -574,7 +509,7 @@ def touch_dexhand():
     if choice == "1":
         handTouch_usb()
     elif choice == "2":
-        command = "bash "+ folder_path +"/dexhand_test.sh --touch --test" 
+        command = "bash "+ folder_path +"/touch_dexhand_test.sh --test" 
         # 使用 subprocess.run() 运行命令
         subprocess.run(command, shell=True)
     else:
@@ -800,30 +735,6 @@ def reset_folder():
     else:
         print("您输入的字符不符，请重试。")
 
-def roban2_joint_breakin():
-    """Roban2机器人手臂和腿部统一磨线功能"""
-    roban2_script_path = folder_path + "/roban2_joint_breakin/roban2_joint_breakin.py"
-    
-    if not os.path.exists(roban2_script_path):
-        print(bcolors.FAIL + f"错误：Roban2磨线脚本不存在: {roban2_script_path}" + bcolors.ENDC)
-        return
-    
-    print(bcolors.OKCYAN + "启动Roban2机器人统一磨线程序..." + bcolors.ENDC)
-    print(bcolors.WARNING + "注意：此功能需要root权限运行" + bcolors.ENDC)
-    
-    # 检查是否有root权限
-    if os.geteuid() != 0:
-        print(bcolors.FAIL + "错误：请使用root权限运行此功能" + bcolors.ENDC)
-        print(bcolors.WARNING + "请使用: sudo python3 " + os.path.abspath(__file__) + bcolors.ENDC)
-        return
-    
-    try:
-        # 运行Roban2磨线脚本
-        command = f"python3 {roban2_script_path}"
-        subprocess.run(command, shell=True)
-    except Exception as e:
-        print(bcolors.FAIL + f"运行Roban2磨线脚本时出错: {e}" + bcolors.ENDC)
-
 def read_and_edit_env_file(file_path, target_variable, new_value):
     try:
         # 读取 .env 文件内容
@@ -921,71 +832,34 @@ def robot_login():
     
     # sudo systemctl start report_robot_network_info.service
 
-def get_git_info():
-    """
-    获取 Git 信息:
-    1. 如果存在 .git 文件夹，则调用 git log 获取
-    2. 否则读取 .version 目录下的 GIT_* 文件
-    """
-    # 获取脚本所在目录
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+def get_git_info():# 获取最新 commit 的 hash、日期和提交信息（title）
+    try:
+        result = subprocess.run(
+            ['git', 'log', '-1', '--format=%H%n%ci%n%s'],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5
+        )
+        output = result.stdout.decode('utf-8').strip().split('\n')
 
-    # 回退两级目录，得到仓库根目录
-    repo_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-
-
-    # 拼接 .git 和 .version 路径
-    git_dir = os.path.join(repo_root, ".git")
-    version_dir = os.path.join(repo_root, ".version")
-
-    # 情况1: 存在 .git 文件夹
-    if os.path.exists(git_dir):
-        try:
-            result = subprocess.run(
-                ['git', 'log', '-1', '--format=%H%n%ci%n%s'],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=5
-            )
-            output = result.stdout.decode('utf-8').strip().split('\n')
-
-            if len(output) < 3:
-                raise ValueError("Unexpected git output: " + repr(output))
-
-            return {
-                'commit_hash': output[0],
-                'commit_date': output[1],
-                'commit_message': output[2],
-                'branch': subprocess.run(
-                    ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-                    check=True, stdout=subprocess.PIPE
-                ).stdout.decode('utf-8').strip()
-            }
-
-        except Exception as e:
-            print("❌ Git command failed:", str(e))
-            return None
-
-    # 情况2: 没有 .git，尝试读取 .version 目录
-    elif os.path.exists(version_dir):
-        def read_file(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return f.read().strip()
-            except FileNotFoundError:
-                return None
+        if len(output) < 3:
+            raise ValueError("Unexpected git output: " + repr(output))
 
         return {
-            'commit_hash': read_file(os.path.join(version_dir, "GIT_COMMIT")),
-            'branch': read_file(os.path.join(version_dir, "GIT_BRANCH")),
-            'remote': read_file(os.path.join(version_dir, "GIT_REMOTE")),
-            'tag': read_file(os.path.join(version_dir, "GIT_TAG")),
+            'commit_hash': output[0],
+            'commit_date': output[1],
+            'commit_message': output[2]
         }
 
-    else:
-        print("⚠️ Neither .git nor .version found, cannot get commit info.")
-        return None
+    except subprocess.TimeoutExpired:
+        print("⚠️ Git command timed out.")
+    except subprocess.CalledProcessError as e:
+        print("❌ Git command failed:", e.stderr.decode('utf-8').strip())
+    except FileNotFoundError:
+        print("❌ Git is not installed or not in PATH.")
+    except Exception as e:
+        print("❌ Unexpected error:", str(e))
 
 def secondary_menu():
     while True:
@@ -1008,7 +882,7 @@ def secondary_menu():
         print("k. 更新当前目录程序(注意：会重置文件内容，建议备份文件)")
         # print("m. MAC 地址")
         print("l. license导入")
-        print("m. 执行机器人磨线")
+        print("m. 执行手臂磨线")
         print("n. 更新ros密钥")
         print("o. 国产IMU配置udev规则")
         print("p. 国产IMU测试")
@@ -1107,14 +981,25 @@ def secondary_menu():
             print(bcolors.HEADER + "###结束，license已导入，请确认验证###" + bcolors.ENDC)   
             break  
         elif option == "m":
-            print(bcolors.HEADER + "###开始，执行机器人磨线###" + bcolors.ENDC)
-            kuavo_breakin_script = os.path.join(folder_path, "joint_breakin", "joint_breakin.py")
-            if os.path.exists(kuavo_breakin_script):
-                command = "sudo python3 " + kuavo_breakin_script
-                subprocess.run(command, shell=True)
-            else:
-                print(bcolors.FAIL + f"错误：磨线脚本不存在: {kuavo_breakin_script}" + bcolors.ENDC)
-            print(bcolors.HEADER + "###结束，执行机器人磨线###" + bcolors.ENDC)
+            print(bcolors.HEADER + "###在执行手臂磨线之前，请先确保完成手臂电机零点设置###" + bcolors.ENDC)
+            print("请摆正手臂，按 d 执行电机零点校准，并执行手臂磨线。")
+            print("按 q 退出程序")
+            while True:
+                option = input("请输入你的选择：")
+                if option == 'q':
+                    print("\n*-------------退出程序-------------*")
+                    exit()
+                elif option == 'd':
+                    print(bcolors.HEADER + "###开始，执行手臂零点校准###" + bcolors.ENDC)
+                    arm_setzero()
+                    ruiwo_zero()
+                    print(bcolors.HEADER + "###结束，执行手臂零点校准###" + bcolors.ENDC)
+                    print(bcolors.HEADER + "###开始，执行手臂磨线###" + bcolors.ENDC)
+                    arm_breakin()
+                    print(bcolors.HEADER + "###结束，执行手臂磨线###" + bcolors.ENDC)
+                    break
+                else:
+                    print(bcolors.FAIL + "无效的选项编号，请重新输入！\n" + bcolors.ENDC)
             break
         elif option == "n":
             print(bcolors.HEADER + "###开始，更新ros密钥###" + bcolors.ENDC)
@@ -1175,26 +1060,11 @@ if __name__ == '__main__':
 
     git_info = get_git_info()
     if git_info:
-        # 公共信息
-        if 'commit_hash' in git_info:
-            print(f"程序提交版本: {git_info['commit_hash']}")
-
-        # Git 仓库模式
-        if 'commit_date' in git_info:
-            print(f"程序提交日期: {git_info['commit_date']}")
-        if 'commit_message' in git_info:
-            print(f"程序提交信息: {git_info['commit_message']}")
-        if 'branch' in git_info and git_info['branch']:
-            print(f"程序所在分支: {git_info['branch']}")
-
-        # .version 模式下的额外信息
-        if 'tag' in git_info and git_info['tag']:
-            print(f"程序 Tag: {git_info['tag']}")
-        if 'remote' in git_info and git_info['remote']:
-            print(f"程序远程仓库: {git_info['remote']}")
-
+        print(f"程序提交版本: {git_info['commit_hash']}")
+        print(f"程序提交日期: {git_info['commit_date']}")
+        print(f"程序提交信息: {git_info['commit_message']}")
     else:
-        print("❌ Failed to retrieve Git information.")
+        print("Failed to retrieve Git information.")
     
     dev_flag = 0
     if len(sys.argv) > 1:  # 至少有一个参数
@@ -1274,3 +1144,6 @@ if __name__ == '__main__':
 
         else:
             print(bcolors.FAIL + "无效的选项编号，请重新输入！\n" + bcolors.ENDC)
+            
+
+

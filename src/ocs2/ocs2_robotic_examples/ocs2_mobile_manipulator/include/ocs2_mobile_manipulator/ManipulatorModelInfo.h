@@ -45,7 +45,6 @@ enum class ManipulatorModelType {
   FloatingArmManipulator = 2,               // adds dummy XYZ-RPY joints to the model parsed from URDF
   FullyActuatedFloatingArmManipulator = 3,  // adds actuatable XYZ-RPY joints to the model parsed from URDF
   ActuatedXYZYawPitchManipulator = 4,       // adds actuatable XYZ-Yaw-Pitch joints to the model parsed from URDF
-  ActuatedZPitchManipulator = 5,            // adds actuatable Z-Pitch joints to the model parsed from URDF
 };
 
 /**
@@ -58,7 +57,6 @@ struct ManipulatorModelInfo {
   size_t stateDim;                            // number of states needed to define the system flow map
   size_t inputDim;                            // number of inputs needed to define the system flow map
   size_t armDim;                              // number of DOFs in the robot arm
-  size_t waistDim;                            // number of DOFs in the robot waist
   std::string baseFrame;                      // name of the root frame of the robot
   // std::string eeFrame;                        // name of the end-effector frame of the robot
   std::vector<std::string> eeFrames;          // name of the end-effector frames of the robot
@@ -90,10 +88,6 @@ static std::string modelTypeEnumToString(ManipulatorModelType manipulatorModelTy
     }
     case ManipulatorModelType::ActuatedXYZYawPitchManipulator: {
       manipulatorModelTypeString = "actuatedXYZYawPitchManipulator";
-      break;
-    }
-    case ManipulatorModelType::ActuatedZPitchManipulator: {
-      manipulatorModelTypeString = "actuatedZPitchManipulator";
       break;
     }
     default:

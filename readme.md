@@ -61,22 +61,21 @@ git clone git@gitee.com:leju-robot/kuavo-ros-opensource.git
 - docker镜像可以自行根据后续章节使用`./docker/Dockerfile`构建，或者下载已经编译好的镜像：
 
 ```bash  
-wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_mpc_wbc_img_v1.2.1.tar.gz
+wget https://kuavo.lejurobot.com/docker_images/kuavo_opensource_mpc_wbc_img_v0.6.1.tar.gz
 ```
 
 - 执行以下命令导入容器镜像：
 ```bash
-docker load -i kuavo_opensource_mpc_wbc_img_v1.2.1.tar.gz
+docker load -i kuavo_opensource_mpc_wbc_img_v0.6.1.tar.gz
 ```
 - 执行`./docker/run.sh`进入容器后，默认在仓库的映射目录`/root/kuavo_ws`，执行以下命令开始编译：
 
 ```bash
 catkin config -DCMAKE_ASM_COMPILER=/usr/bin/as -DCMAKE_BUILD_TYPE=Release # Important! 
 # -DCMAKE_ASM_COMPILER=/usr/bin/as 为配置了ccache必要操作，否则可能出现找不到编译器的情况
-source installed/setup.zsh # 加载一些已经安装的ROS包依赖环境，包括硬件包等
+source installed/setup.bash # 加载一些已经安装的ROS包依赖环境，包括硬件包等
 catkin build humanoid_controllers #会编译所有依赖项
 ```
-- 注意：容器镜像内部默认使用zsh
 
 ##### 实机环境
 
@@ -99,19 +98,19 @@ catkin build  humanoid_controllers
 ##### 仿真运行
 * 使用mujoco仿真器
 ```bash
-source devel/setup.bash # 如果使用docker环境，则使用source devel/setup.zsh
+source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
 roslaunch humanoid_controllers load_kuavo_mujoco_sim.launch # 启动控制器、mpc、wbc、mujoco仿真器
 ```
 * 使用gazebo仿真器
 ```bash
 catkin build humanoid_controllers gazebo_sim # 需要编译gazebo_sim包
-source devel/setup.bash # 如果使用docker环境，则使用source devel/setup.zsh
+source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
 roslaunch humanoid_controllers load_kuavo_gazebo_sim.launch # 启动控制器、mpc、wbc、gazebo仿真器
 ```
 * 使用isaac-sim仿真器
 ```bash
 catkin build humanoid_controllers isaac_sim # 需要编译isaac_sim包
-source devel/setup.bash # 如果使用docker环境，则使用source devel/setup.zsh
+source devel/setup.bash # 如果使用zsh，则使用source devel/setup.zsh
 roslaunch humanoid_controllers load_kuavo_isaac_sim.launch  # 启动控制器、mpc、wbc、isaac_sim仿真器
 ```
 
@@ -119,7 +118,6 @@ roslaunch humanoid_controllers load_kuavo_isaac_sim.launch  # 启动控制器、
 
 ##### 末端执行器配置
 在运行实物之前, 您需要先修改`src/kuavo_assets/config/kuavo_v$ROBOT_VERSION/kuavo.json`中EndEffectorType为您实物机器人的执行器类型:
-- `none`: 无末端执行器或者需要屏蔽末端执行器时使用
 - `qiangnao` : 灵巧手, 默认值
 - `lejuclaw` : 二指夹爪
 - `qiangnao_touch` : 触觉灵巧手
@@ -306,16 +304,6 @@ roslaunch humanoid_controllers load_kuavo_real_half_up_body.launch
    # VR先和机器人连到同一局域网，查看VR里面的ip地址记下来
    # 然后在机器人上运行以下命令，ip_address输入quest3的ip地址，
    roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch ip_address:=192.168.3.32
-
-   # 可选配置参数：use_cpp_ik
-   # 启动python版本的ik
-   roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch ip_address:=192.168.3.32 use_cpp_ik:=false 
-
-   # 启动C++版本的ik
-   roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch ip_address:=192.168.3.32 use_cpp_ik:=true
-
-   # 可选配置参数：use_incremental_ik(仅当use_cpp_ik:=true 时，可选是否启用增量式IK)
-   roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch ip_address:=192.168.3.32 use_cpp_ik:=true use_incremental_ik:=true
   ```
   > 如果希望同时映射躯干的运动（上下蹲和弯腰），可以增加选项`control_torso:=1`，使用前**务必在站立状态下长按VR右手柄的meta键**以标定躯干高度。
 
@@ -333,17 +321,6 @@ roslaunch humanoid_controllers load_kuavo_real_half_up_body.launch
   - x键为模式切换辅助键，按住x键之后,其他按键的作用如下：
     - A:手臂模式切换为外部控制/自动摆手，这两种模式切换之后会有一个平滑同步到当前规划轨迹的过程
     - B:手臂模式切换为保持姿态
-  - VR低时延模式
-    - 在使用有线连接情况下，建议使用低时延模式，可以实现更快速的动作
-    - 启动VR之后，按下左边前扳机+X，开启低时延模式；按下左边侧扳机+X，关闭低时延模式
-  - VR映射躯干的运动（上下蹲和弯腰）使用前**务必在站立状态下长按VR右手柄的meta键**以标定躯干高度
-    - 通过给launch_quest3_ik.launch文件传入参数`control_torso:=true`才能开启躯干控制
-    - 启动VR之后，手指覆盖右手A按键不按下+按下左手Y，开启映射躯干模式；再次手指覆盖右手A按键不按下+按下左手Y，关闭映射躯干模式
-    - **开启或者关闭均需在站立情况下进行**
-  - VR右摇杆单步转向
-    - 需要在`roslaunch noitom_hi5_hand_udp_python launch_quest3_ik.launch`启用时需在启动时传入参数`use_step_turning:=true`
-    - 目前分为 4 档转向: 15°, 30°, 45°,60°, 大约占比摇杆区间行程的:0~15%, 15~45%,45~75%,75~100%
-    - 注意只有当左摇杆不动时（即没有控制前后左右运动），右摇杆左右操作才会进行单独转向，否则会采用普通模式进行转向
  
  ## 键盘控制
  - 如没有手柄或者VR等，可以使用键盘控制节点进行控制, 如运行仿真器并且使用键盘控制节点
