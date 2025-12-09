@@ -7,9 +7,21 @@
   <!-- depth cam 设置 -->
   <xacro:include filename="$(find realsense_ros_gazebo)/xacro/depthcam.xacro"/>
 
+  <!-- 添加雷达 -->
+  <xacro:include filename="$(find kuavo_assets)/models/biped_s42/urdf/livox_lidar.xacro"/>
+
   <!-- d435 声明 -->
   <xacro:realsense_d435 sensor_name="camera" parent_link="camera_base" rate="30">
     <origin rpy="0 0 0 " xyz="0 0 0"/>
   </xacro:realsense_d435>
+
+  <!-- 添加 lidar -->
+  <xacro:livox_sensor 
+    link_name="radar" 
+    topic="/livox/lidar"
+    sensor_pose="0 0 -0.01 0 0 0"
+    always_on="true"
+    update_rate="50" 
+    visualize="false" />
 
 </robot>

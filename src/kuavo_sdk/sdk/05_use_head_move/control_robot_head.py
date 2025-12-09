@@ -40,7 +40,7 @@ if __name__ == '__main__':
         # 初始化ROS节点，节点名称为'robot_head_controller'
         rospy.init_node('robot_head_controller', anonymous=True)
         # 发布一次头部目标位置为0, 0
-        set_head_target(0, 0)
+        set_head_target(0, -20)
     except rospy.ROSInterruptException:
         # 捕获ROS中断异常，通常在节点关闭时发生
         pass
