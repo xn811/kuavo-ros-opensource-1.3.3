@@ -1,0 +1,70 @@
+# ============================================
+# Gazebo房间配置文件
+# 单位：米
+# ============================================
+
+room:
+  name: my_room              # 房间名称，用于Gazebo模型命名
+  wall_height: 3.0           # 墙体高度（米）
+  wall_thickness: 0.2        # 墙体厚度（米）
+
+# 材质配置
+# 可选值: white, gray, brick, concrete, wood, plaster, blue, green, yellow
+materials:
+  outer_wall: brick          # 外墙材质
+  partition: plaster         # 隔断墙材质
+  floor: wood                # 地板材质
+
+# 外墙顶点坐标（按顺序连接形成闭合多边形）
+outer_walls:
+  points:                    # 顶点列表 [x, y]，支持任意多边形
+    - [6, 6]                 # 右上角
+    - [6, -6]                # 右下角
+    - [-6, -6]               # 左下角
+    - [-6, 6]                # 左上角
+  closed: true               # 是否闭合（true=首尾相连）
+
+# 内部隔断墙（可添加多个）
+partitions:
+  - points:                  # 第一个隔断：L型
+      - [0, 0]               # 起点
+      - [0, 2]               # 向上延伸2米
+      - [3, 2]               # 向右延伸3米
+    closed: false            # 是否闭合（隔断通常不闭合）
+  
+  # - points:                  # 第二个隔断：直线
+  #     - [-3, -2]             # 起点
+  #     - [-3, 2]              # 终点（垂直线，长4米）
+  #   closed: false
+
+# 门配置
+# doors:
+  # - wall_type: outer         # 墙类型：outer=外墙，partition=隔断
+  #   wall_index: 0            # 墙段索引（从0开始，按points顺序）
+  #   position: 0.5            # 门在墙上的位置（0=起点，1=终点，0.5=中间）
+  #   width: 1.0               # 门宽度（米）
+  #   height: 2.1              # 门高度（米）
+  
+  # - wall_type: partition     # 在隔断上开门
+  #   wall_index: 0            # 第一段隔断
+  #   position: 0.6            # 偏向终点位置
+  #   width: 0.9               # 门宽度
+
+# 窗户配置
+# windows:
+  # - wall_type: outer         # 墙类型
+  #   wall_index: 1            # 第二段外墙（索引1）
+  #   position: 0.3            # 窗户位置
+  #   width: 1.5               # 窗户宽度（米）
+  #   height: 1.2              # 窗户高度（米）
+  #   sill_height: 1.0         # 窗台高度（距地面，米）
+  
+  # - wall_type: outer
+  #   wall_index: 3            # 第四段外墙
+  #   position: 0.5
+  #   width: 2.0
+  #   height: 1.2
+  #   sill_height: 1.0
+
+# 输出配置
+output: coure_task.world        # 生成的Gazebo world文件名

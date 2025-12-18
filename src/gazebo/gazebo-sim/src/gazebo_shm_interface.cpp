@@ -237,15 +237,21 @@ void GazeboShmInterface::setInitialState()
 
     // 设置base位姿
     if (robot_init_state_param_.size() >= 7) {
+        // 获取Gazebo中模型当前的位姿（spawn时设置的位置）
+        ignition::math::Pose3d current_pose = model_->WorldPose();
+        
         std::vector<double> base_pose(robot_init_state_param_.begin(), robot_init_state_param_.begin() + 7);
         ignition::math::Pose3d new_pose;
-        new_pose.Pos().Set(base_pose[0], base_pose[1], base_pose[2]);
-        new_pose.Rot().Set(base_pose[3], base_pose[4], base_pose[5], base_pose[6]);  // w,x,y,z
+        
+        // 使用Gazebo spawn时的x, y位置，只使用参数中的z高度
+        new_pose.Pos().Set(current_pose.Pos().X(), current_pose.Pos().Y(), base_pose[2]);
+        // 使用Gazebo spawn时的朝向
+        new_pose.Rot() = current_pose.Rot();
         model_->SetWorldPose(new_pose);
         
         std::cout << "[GazeboShmInterface] Setting model pose to: "
-                  << "pos[" << base_pose[0] << "," << base_pose[1] << "," << base_pose[2] << "] "
-                  << "rot[" << base_pose[3] << "," << base_pose[4] << "," << base_pose[5] << "," << base_pose[6] << "]" << std::endl;
+                  << "pos[" << new_pose.Pos().X() << "," << new_pose.Pos().Y() << "," << new_pose.Pos().Z() << "] "
+                  << "(using spawn position for x,y and orientation)" << std::endl;
     }
 
     // 设置关节位置
