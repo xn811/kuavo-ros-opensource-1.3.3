@@ -22,6 +22,15 @@ MATERIALS = {
     'blue': {'ambient': '0.3 0.4 0.6 1', 'diffuse': '0.4 0.5 0.7 1'},
     'green': {'ambient': '0.3 0.5 0.3 1', 'diffuse': '0.4 0.6 0.4 1'},
     'yellow': {'ambient': '0.9 0.85 0.6 1', 'diffuse': '0.95 0.9 0.65 1'},
+    # 工业风格材质
+    'black_marble': {'ambient': '0.08 0.08 0.1 1', 'diffuse': '0.12 0.12 0.15 1'},  # 黑色大理石
+    'dark_concrete': {'ambient': '0.25 0.25 0.25 1', 'diffuse': '0.3 0.3 0.3 1'},   # 深色水泥
+    'steel': {'ambient': '0.4 0.42 0.45 1', 'diffuse': '0.5 0.52 0.55 1'},          # 钢材
+    'rust': {'ambient': '0.4 0.25 0.15 1', 'diffuse': '0.5 0.3 0.2 1'},             # 铁锈
+    'industrial_gray': {'ambient': '0.35 0.38 0.4 1', 'diffuse': '0.45 0.48 0.5 1'}, # 工业灰
+    'epoxy_floor': {'ambient': '0.5 0.55 0.5 1', 'diffuse': '0.55 0.6 0.55 1'},     # 环氧地坪(绿灰)
+    'warehouse': {'ambient': '0.55 0.5 0.45 1', 'diffuse': '0.6 0.55 0.5 1'},       # 仓库墙面
+    'metal_panel': {'ambient': '0.6 0.62 0.65 1', 'diffuse': '0.7 0.72 0.75 1'},    # 金属板
 }
 
 
@@ -277,18 +286,11 @@ class RoomWithPartitionsGenerator:
     <model name="{self.name}">
       <static>true</static>
       <link name="floor">
-        <pose>{floor_center[0]:.4f} {floor_center[1]:.4f} 0.005 0 0 0</pose>
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>{floor_size[0]:.4f} {floor_size[1]:.4f} 0.01</size>
-            </box>
-          </geometry>
-        </collision>
+        <pose>{floor_center[0]:.4f} {floor_center[1]:.4f} 0.001 0 0 0</pose>
         <visual name="visual">
           <geometry>
             <box>
-              <size>{floor_size[0]:.4f} {floor_size[1]:.4f} 0.01</size>
+              <size>{floor_size[0]:.4f} {floor_size[1]:.4f} 0.002</size>
             </box>
           </geometry>
           <material>

@@ -47,7 +47,6 @@
         args="-urdf -model apriltag_cube3 -param apriltag_cube_description3 -x 1.5 -y 0 -z 0 -R 0 -P 0 -Y 0"/>
   <!-- 加载block -->
   <param name="block_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/block.urdf.xacro"/>
-  kuavo-ros-control/src/gazebo/gazebo-sim/plugins/test.world
   <!-- 生成block模型，使用floating joint -->
   <node name="spawn_block" pkg="gazebo_ros" type="spawn_model" 
         args="-urdf -model block -param block_description -x 0.0 -y -2.0 -z 1.2 -R 0 -P 0 -Y 0"

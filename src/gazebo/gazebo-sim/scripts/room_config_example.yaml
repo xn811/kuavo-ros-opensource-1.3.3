@@ -10,10 +10,12 @@ room:
 
 # 材质配置
 # 可选值: white, gray, brick, concrete, wood, plaster, blue, green, yellow
+#        black_marble(黑色大理石), dark_concrete(深色水泥), steel(钢材), rust(铁锈)
+#        industrial_gray(工业灰), epoxy_floor(环氧地坪), warehouse(仓库墙), metal_panel(金属板)
 materials:
-  outer_wall: brick          # 外墙材质
-  partition: plaster         # 隔断墙材质
-  floor: wood                # 地板材质
+  outer_wall: warehouse          # 外墙材质
+  partition: industrial_gray         # 隔断墙材质
+  floor: epoxy_floor                # 地板材质
 
 # 外墙顶点坐标（按顺序连接形成闭合多边形）
 outer_walls:
@@ -27,8 +29,8 @@ outer_walls:
 # 内部隔断墙（可添加多个）
 partitions:
   - points:                  # 第一个隔断：L型
-      - [0, 0]               # 起点
-      - [0, 2]               # 向上延伸2米
+      - [-3, 0]               # 起点
+      - [-3, 2]               # 向上延伸2米
       - [3, 2]               # 向右延伸3米
     closed: false            # 是否闭合（隔断通常不闭合）
   
@@ -67,4 +69,4 @@ partitions:
   #   sill_height: 1.0
 
 # 输出配置
-output: coure_task.world        # 生成的Gazebo world文件名
+output: course_task.world        # 生成的Gazebo world文件名

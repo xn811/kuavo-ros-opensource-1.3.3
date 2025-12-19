@@ -1,4 +1,7 @@
 <launch>
+  <!-- 设置Gazebo模型路径 -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find gazebo_sim)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
   <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
   <param name="robot_version"    value="$(arg robot_version)"/>
   <arg name="use_xacro" value="$(eval int(arg('robot_version')) >= 40)"/>
@@ -10,6 +13,58 @@
   <arg name="roll" default="0"/>
   <arg name="pitch" default="0"/>
   <arg name="yaw" default="3.14159"/>
+
+  <!-- Table 1 position arguments -->
+  <arg name="table1_x" default="0.0"/>
+  <arg name="table1_y" default="-5.0"/>
+  <arg name="table1_z" default="0.01"/>
+  <arg name="table1_yaw" default="0.0"/>
+
+  <!-- Table 2 position arguments -->
+  <arg name="table2_x" default="1.0"/>
+  <arg name="table2_y" default="1.0"/>
+  <arg name="table2_z" default="0.01"/>
+  <arg name="table2_yaw" default="0.0"/>
+
+  <!-- Block absolute position (默认在table1上方) -->
+  <arg name="block_x" default="0.4"/>
+  <arg name="block_y" default="-4.75"/>
+  <arg name="block_z" default="1.2"/>
+
+  <!-- 盘子和水杯绝对位置 (桌面高度0.8m + table1_z) -->
+  <arg name="plate1_x" default="-0.3"/>
+  <arg name="plate1_y" default="-4.8"/>
+  <arg name="plate2_x" default="-0.1"/>
+  <arg name="plate2_y" default="-4.70"/>
+  <arg name="cup1_x" default="-0.3"/>
+  <arg name="cup1_y" default="-4.70"/>
+  <arg name="cup2_x" default="-0.1"/>
+  <arg name="cup2_y" default="-4.8"/>
+
+  <!-- 剪刀位置 -->
+  <arg name="scissors1_x" default="0.0"/>
+  <arg name="scissors1_y" default="-4.7"/>
+  <arg name="scissors2_x" default="0.1"/>
+  <arg name="scissors2_y" default="-4.8"/>
+
+  <!-- 台阶参数 -->
+  <arg name="use_stairs" default="false" doc="是否添加楼梯"/>
+  <arg name="use_stairs2" default="true" doc="是否添加第二段楼梯（下楼梯）"/>
+  <arg name="stairs_x" default="-0.05" doc="楼梯位置X坐标"/>
+  <arg name="stairs_y" default="4.0" doc="楼梯位置Y坐标"/>
+  <arg name="stairs_z" default="0.005" doc="楼梯位置Z坐标"/>
+  <arg name="stairs_roll" default="0.0" doc="楼梯绕X轴旋转角度"/>
+  <arg name="stairs_pitch" default="0.0" doc="楼梯绕Y轴旋转角度"/>
+  <arg name="stairs_yaw" default="0.0" doc="楼梯绕Z轴旋转角度"/>
+
+  <!-- 斜坡参数 -->
+  <arg name="use_slope" default="true" doc="是否添加斜坡"/>
+  <arg name="slope_x" default="3.0" doc="斜坡位置X坐标"/>
+  <arg name="slope_y" default="4.0" doc="斜坡位置Y坐标"/>
+  <arg name="slope_z" default="0.005" doc="斜坡位置Z坐标"/>
+  <arg name="slope_roll" default="0.0" doc="斜坡绕X轴旋转角度"/>
+  <arg name="slope_pitch" default="0.0" doc="斜坡绕Y轴旋转角度"/>
+  <arg name="slope_yaw" default="1.57" doc="斜坡绕Z轴旋转角度"/>
 
   <!-- Start Gazebo -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -48,6 +103,70 @@
 
   <!-- Load controller configuration -->
   <rosparam file="$(find kuavo_assets)/models/biped_s42/config/controllers.yaml"/>
+
+  <!-- 加载桌子+二维码模型 (可独立配置两张桌子位置和朝向) -->
+  <param name="tables_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/standalone_cube_configurable.xacro table1_x:=$(arg table1_x) table1_y:=$(arg table1_y) table1_z:=$(arg table1_z) table1_yaw:=$(arg table1_yaw) table2_x:=$(arg table2_x) table2_y:=$(arg table2_y) table2_z:=$(arg table2_z) table2_yaw:=$(arg table2_yaw)"/>
+
+  <!-- 生成桌子+二维码模型 -->
+  <node name="spawn_tables" pkg="gazebo_ros" type="spawn_model" 
+        args="-urdf -model tables_with_apriltag -param tables_description"/>
+
+  <!-- 加载block (可抓取方块) -->
+  <param name="block_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/block.urdf.xacro"/>
+
+  <!-- 生成可抓取方块 -->
+  <node name="spawn_block" pkg="gazebo_ros" type="spawn_model" 
+        args="-urdf -model block -param block_description -x $(arg block_x) -y $(arg block_y) -z $(arg block_z) -R 0 -P 0 -Y 0"
+        launch-prefix="bash -c 'sleep 2.5; $0 $@' "/>
+
+  <!-- 在桌子1上放置盘子和水杯 (桌面高度0.8m, 桌子尺寸1.2x0.7m) -->
+  <!-- 盘子1 (左前) -->
+  <node name="spawn_plate1" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model plate1 -file $(find gazebo_sim)/models/Ecoforms_Plant_Plate_S11Turquoise/model.sdf -x $(arg plate1_x) -y $(arg plate1_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 3.0; $0 $@' "/>
+  <!-- 盘子2 (右前) -->
+  <node name="spawn_plate2" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model plate2 -file $(find gazebo_sim)/models/Ecoforms_Plant_Plate_S11Turquoise/model.sdf -x $(arg plate2_x) -y $(arg plate2_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 3.2; $0 $@' "/>
+  <!-- 水杯1 (左后) -->
+  <node name="spawn_cup1" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model cup1 -file $(find gazebo_sim)/models/Plastic_Cup/model.sdf -x $(arg cup1_x) -y $(arg cup1_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 3.4; $0 $@' "/>
+  <!-- 水杯2 (右后) -->
+  <node name="spawn_cup2" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model cup2 -file $(find gazebo_sim)/models/Plastic_Cup/model.sdf -x $(arg cup2_x) -y $(arg cup2_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 4.0; $0 $@' "/>
+  <!-- 剪刀1 -->
+  <node name="spawn_scissors1" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model scissors1 -file $(find gazebo_sim)/models/Diamond_Visions_Scissors_Red/model.sdf -x $(arg scissors1_x) -y $(arg scissors1_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 4.2; $0 $@' "/>
+  <!-- 剪刀2 -->
+  <node name="spawn_scissors2" pkg="gazebo_ros" type="spawn_model"
+        args="-sdf -model scissors2 -file $(find gazebo_sim)/models/Diamond_Visions_Scissors_Red/model.sdf -x $(arg scissors2_x) -y $(arg scissors2_y) -z 0.85"
+        launch-prefix="bash -c 'sleep 4.4; $0 $@' "/>
+
+  <!-- 加载楼梯 (使用include引用load_stairs.launch) -->
+  <include file="$(find gazebo_sim)/launch/load_stairs.launch">
+    <arg name="use_stairs" value="$(arg use_stairs)"/>
+    <arg name="use_stairs2" value="$(arg use_stairs2)"/>
+    <arg name="stairs_x" value="$(arg stairs_x)"/>
+    <arg name="stairs_y" value="$(arg stairs_y)"/>
+    <arg name="stairs_z" value="$(arg stairs_z)"/>
+    <arg name="stairs_roll" value="$(arg stairs_roll)"/>
+    <arg name="stairs_pitch" value="$(arg stairs_pitch)"/>
+    <arg name="stairs_yaw" value="$(arg stairs_yaw)"/>
+  </include>
+
+  <!-- 加载斜坡 (使用include引用load_slope.launch) -->
+  <include file="$(find gazebo_sim)/launch/load_slope.launch">
+    <arg name="use_slope" value="$(arg use_slope)"/>
+    <arg name="slope_x" value="$(arg slope_x)"/>
+    <arg name="slope_y" value="$(arg slope_y)"/>
+    <arg name="slope_z" value="$(arg slope_z)"/>
+    <arg name="slope_roll" value="$(arg slope_roll)"/>
+    <arg name="slope_pitch" value="$(arg slope_pitch)"/>
+    <arg name="slope_yaw" value="$(arg slope_yaw)"/>
+  </include>
 
   <!-- Start controller manager -->
   <!-- <node name="controller_manager" pkg="controller_manager" type="controller_manager" /> -->

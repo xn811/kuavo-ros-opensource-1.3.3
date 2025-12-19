@@ -20,5 +20,5 @@
     sensor_pose="0 0 -0.01 0 0 0"
     always_on="true"
     update_rate="50" 
-    visualize="true" />
+    visualize="false" />
 </robot>
