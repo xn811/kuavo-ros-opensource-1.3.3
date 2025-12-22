@@ -7,26 +7,14 @@
   <xacro:property name="leg_radius" value="0.02" />
   
   <!-- 可配置的桌子位置参数 (通过xacro:arg传入) -->
-  <!-- 桌子1: 物品拾取桌 -->
   <xacro:arg name="table1_x" default="0.0"/>
-  <xacro:arg name="table1_y" default="-5.0"/>
+  <xacro:arg name="table1_y" default="-2.0"/>
   <xacro:arg name="table1_z" default="0.0"/>
   <xacro:arg name="table1_yaw" default="0.0"/>
-  <!-- 桌子2: 放置桌A -->
   <xacro:arg name="table2_x" default="0.0"/>
-  <xacro:arg name="table2_y" default="1.0"/>
+  <xacro:arg name="table2_y" default="2.0"/>
   <xacro:arg name="table2_z" default="0.0"/>
   <xacro:arg name="table2_yaw" default="0.0"/>
-  <!-- 桌子3: 放置桌B -->
-  <xacro:arg name="table3_x" default="-2.0"/>
-  <xacro:arg name="table3_y" default="1.0"/>
-  <xacro:arg name="table3_z" default="0.0"/>
-  <xacro:arg name="table3_yaw" default="0.0"/>
-  <!-- 桌子4: 放置桌C -->
-  <xacro:arg name="table4_x" default="2.0"/>
-  <xacro:arg name="table4_y" default="1.0"/>
-  <xacro:arg name="table4_z" default="0.0"/>
-  <xacro:arg name="table4_yaw" default="0.0"/>
   
   <xacro:property name="t1_x" value="$(arg table1_x)"/>
   <xacro:property name="t1_y" value="$(arg table1_y)"/>
@@ -36,14 +24,6 @@
   <xacro:property name="t2_y" value="$(arg table2_y)"/>
   <xacro:property name="t2_z" value="$(arg table2_z)"/>
   <xacro:property name="t2_yaw" value="$(arg table2_yaw)"/>
-  <xacro:property name="t3_x" value="$(arg table3_x)"/>
-  <xacro:property name="t3_y" value="$(arg table3_y)"/>
-  <xacro:property name="t3_z" value="$(arg table3_z)"/>
-  <xacro:property name="t3_yaw" value="$(arg table3_yaw)"/>
-  <xacro:property name="t4_x" value="$(arg table4_x)"/>
-  <xacro:property name="t4_y" value="$(arg table4_y)"/>
-  <xacro:property name="t4_z" value="$(arg table4_z)"/>
-  <xacro:property name="t4_yaw" value="$(arg table4_yaw)"/>
   
   <!-- 引入apriltag -->
   <xacro:include filename="$(find kuavo_assets)/models/apriltag/urdf/apriltag.xacro"/>
@@ -176,14 +156,8 @@
     </xacro:apriltag_marker>
   </xacro:macro>
   
-  <!-- 生成四张桌子 (二维码y偏移: 都在桌子y负方向-0.3，位置一致便于识别) -->
-  <!-- 桌子1: 物品拾取桌, AprilTag ID=1 -->
+  <!-- 生成两张桌子 (二维码y偏移: 都在桌子y负方向-0.3) -->
   <xacro:table_with_apriltag prefix="table1" tx="${t1_x}" ty="${t1_y}" tz="${t1_z}" tyaw="${t1_yaw}" cube_y_offset="-0.3" tag_id="1"/>
-  <!-- 桌子2: 放置桌A, AprilTag ID=2 -->
   <xacro:table_with_apriltag prefix="table2" tx="${t2_x}" ty="${t2_y}" tz="${t2_z}" tyaw="${t2_yaw}" cube_y_offset="-0.3" tag_id="2"/>
-  <!-- 桌子3: 放置桌B, AprilTag ID=3 -->
-  <xacro:table_with_apriltag prefix="table3" tx="${t3_x}" ty="${t3_y}" tz="${t3_z}" tyaw="${t3_yaw}" cube_y_offset="-0.3" tag_id="3"/>
-  <!-- 桌子4: 放置桌C, AprilTag ID=4 -->
-  <xacro:table_with_apriltag prefix="table4" tx="${t4_x}" ty="${t4_y}" tz="${t4_z}" tyaw="${t4_yaw}" cube_y_offset="-0.3" tag_id="4"/>
 
 </robot>
