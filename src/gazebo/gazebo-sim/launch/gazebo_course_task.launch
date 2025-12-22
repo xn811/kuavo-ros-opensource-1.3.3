@@ -8,23 +8,35 @@
   
   <!-- Robot spawn position arguments -->
   <arg name="x" default="4"/>
-  <arg name="y" default="4"/>
+  <arg name="y" default="4.5"/>
   <arg name="z" default="1.0"/>
   <arg name="roll" default="0"/>
   <arg name="pitch" default="0"/>
   <arg name="yaw" default="3.14159"/>
 
-  <!-- Table 1 position arguments -->
+  <!-- Table 1 position arguments (物品拾取桌, AprilTag ID=1) -->
   <arg name="table1_x" default="0.0"/>
   <arg name="table1_y" default="-5.0"/>
   <arg name="table1_z" default="0.01"/>
   <arg name="table1_yaw" default="0.0"/>
 
-  <!-- Table 2 position arguments -->
-  <arg name="table2_x" default="1.0"/>
+  <!-- Table 2 position arguments (放置桌A, AprilTag ID=2) -->
+  <arg name="table2_x" default="0.0"/>
   <arg name="table2_y" default="1.0"/>
   <arg name="table2_z" default="0.01"/>
-  <arg name="table2_yaw" default="0.0"/>
+  <arg name="table2_yaw" default="3.14159"/>
+
+  <!-- Table 3 position arguments (放置桌B, AprilTag ID=3) -->
+  <arg name="table3_x" default="-2.0"/>
+  <arg name="table3_y" default="1.0"/>
+  <arg name="table3_z" default="0.01"/>
+  <arg name="table3_yaw" default="3.14159"/>
+
+  <!-- Table 4 position arguments (放置桌C, AprilTag ID=4) -->
+  <arg name="table4_x" default="2.0"/>
+  <arg name="table4_y" default="1.0"/>
+  <arg name="table4_z" default="0.01"/>
+  <arg name="table4_yaw" default="3.14159"/>
 
   <!-- Block absolute position (默认在table1上方) -->
   <arg name="block_x" default="0.4"/>
@@ -51,7 +63,7 @@
   <arg name="use_stairs" default="false" doc="是否添加楼梯"/>
   <arg name="use_stairs2" default="true" doc="是否添加第二段楼梯（下楼梯）"/>
   <arg name="stairs_x" default="-0.05" doc="楼梯位置X坐标"/>
-  <arg name="stairs_y" default="4.0" doc="楼梯位置Y坐标"/>
+  <arg name="stairs_y" default="4.5" doc="楼梯位置Y坐标"/>
   <arg name="stairs_z" default="0.005" doc="楼梯位置Z坐标"/>
   <arg name="stairs_roll" default="0.0" doc="楼梯绕X轴旋转角度"/>
   <arg name="stairs_pitch" default="0.0" doc="楼梯绕Y轴旋转角度"/>
@@ -60,7 +72,7 @@
   <!-- 斜坡参数 -->
   <arg name="use_slope" default="true" doc="是否添加斜坡"/>
   <arg name="slope_x" default="3.0" doc="斜坡位置X坐标"/>
-  <arg name="slope_y" default="4.0" doc="斜坡位置Y坐标"/>
+  <arg name="slope_y" default="4.5" doc="斜坡位置Y坐标"/>
   <arg name="slope_z" default="0.005" doc="斜坡位置Z坐标"/>
   <arg name="slope_roll" default="0.0" doc="斜坡绕X轴旋转角度"/>
   <arg name="slope_pitch" default="0.0" doc="斜坡绕Y轴旋转角度"/>
@@ -104,8 +116,8 @@
   <!-- Load controller configuration -->
   <rosparam file="$(find kuavo_assets)/models/biped_s42/config/controllers.yaml"/>
 
-  <!-- 加载桌子+二维码模型 (可独立配置两张桌子位置和朝向) -->
-  <param name="tables_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/standalone_cube_configurable.xacro table1_x:=$(arg table1_x) table1_y:=$(arg table1_y) table1_z:=$(arg table1_z) table1_yaw:=$(arg table1_yaw) table2_x:=$(arg table2_x) table2_y:=$(arg table2_y) table2_z:=$(arg table2_z) table2_yaw:=$(arg table2_yaw)"/>
+  <!-- 加载桌子+二维码模型 (4张桌子，每张有独立AprilTag ID用于区分放置目标) -->
+  <param name="tables_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/standalone_cube_configurable.xacro table1_x:=$(arg table1_x) table1_y:=$(arg table1_y) table1_z:=$(arg table1_z) table1_yaw:=$(arg table1_yaw) table2_x:=$(arg table2_x) table2_y:=$(arg table2_y) table2_z:=$(arg table2_z) table2_yaw:=$(arg table2_yaw) table3_x:=$(arg table3_x) table3_y:=$(arg table3_y) table3_z:=$(arg table3_z) table3_yaw:=$(arg table3_yaw) table4_x:=$(arg table4_x) table4_y:=$(arg table4_y) table4_z:=$(arg table4_z) table4_yaw:=$(arg table4_yaw)"/>
 
   <!-- 生成桌子+二维码模型 -->
   <node name="spawn_tables" pkg="gazebo_ros" type="spawn_model" 
