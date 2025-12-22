@@ -1,6 +1,12 @@
 <?xml version="1.0"?>
 <sdf version="1.6">
   <world name="my_room_world">
+    <!-- Link Attacher 插件 - 用于灵巧手吸附抓取 -->
+    <!-- max_attach_distance: 最大吸附距离(米)，超过此距离无法吸附 -->
+    <plugin name="link_attacher_plugin" filename="libgazebo_ros_link_attacher.so">
+      <max_attach_distance>0.25</max_attach_distance>
+    </plugin>
+    
     <include>
       <uri>model://sun</uri>
     </include>

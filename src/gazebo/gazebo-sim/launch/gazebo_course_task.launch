@@ -7,12 +7,12 @@
   <arg name="use_xacro" value="$(eval int(arg('robot_version')) >= 40)"/>
   
   <!-- Robot spawn position arguments -->
-  <arg name="x" default="4"/>
-  <arg name="y" default="4.5"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="-4"/>
   <arg name="z" default="1.0"/>
   <arg name="roll" default="0"/>
   <arg name="pitch" default="0"/>
-  <arg name="yaw" default="3.14159"/>
+  <arg name="yaw" default="-1.5709"/>
 
   <!-- Table 1 position arguments (物品拾取桌, AprilTag ID=1) -->
   <arg name="table1_x" default="0.0"/>
