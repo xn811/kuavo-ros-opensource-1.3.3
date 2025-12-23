@@ -1,0 +1,11 @@
+# 抓取服务请求
+# arm: "left" 或 "right"，指定使用哪只手臂
+# action: "grasp" 或 "release"，抓取或释放
+string arm
+string action
+---
+# 响应
+bool ok
+string message
+string object_name
+float64 distance

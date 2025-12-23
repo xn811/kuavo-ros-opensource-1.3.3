@@ -8,7 +8,7 @@
 #define GAZEBO_ROS_LINK_ATTACHER_HH
 
 #include <boost/thread/recursive_mutex.hpp>
-
+#include <map>
 #include <ros/ros.h>
 
 #include <sdf/sdf.hh>
@@ -24,6 +24,9 @@
 #include "gazebo_ros_link_attacher/Attach.h"
 #include "gazebo_ros_link_attacher/AttachRequest.h"
 #include "gazebo_ros_link_attacher/AttachResponse.h"
+#include "gazebo_ros_link_attacher/Grasp.h"
+#include "gazebo_ros_link_attacher/GraspRequest.h"
+#include "gazebo_ros_link_attacher/GraspResponse.h"
 
 namespace gazebo
 {
@@ -76,6 +79,8 @@ namespace gazebo
                               gazebo_ros_link_attacher::Attach::Response &res);
         bool detach_callback(gazebo_ros_link_attacher::Attach::Request &req,
                              gazebo_ros_link_attacher::Attach::Response &res);
+        bool grasp_callback(gazebo_ros_link_attacher::Grasp::Request &req,
+                            gazebo_ros_link_attacher::Grasp::Response &res);
 
         std::vector<fixedJoint> joints;
 
@@ -89,10 +94,25 @@ namespace gazebo
         
         /// \brief Maximum distance for attach (meters)
         double max_attach_distance_;
+        
+        /// \brief Minimum distance for attach (meters)
+        double min_attach_distance_;
 
+        // Grasp config
+        std::string robot_model_name_;
+        double min_grasp_distance_;  // 最小抓取距离
+        double max_grasp_distance_;  // 最大抓取距离
+        std::map<std::string, std::string> arm_links_;  // arm -> link_name
+        std::map<std::string, std::string> graspable_objects_;  // object_name -> link_name
+        std::map<std::string, std::string> grasped_objects_;  // arm -> object_name
+        
+        ros::NodeHandle grasp_nh_;  // 用于grasp服务的NodeHandle
+        ros::ServiceServer grasp_service_;
+        
+        void loadGraspConfig();
+        std::pair<std::string, double> findNearestObject(const std::string& arm);
    };
 
 }
 
 #endif
-

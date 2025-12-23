@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 加载抓取配置参数到私有命名空间 -->
+    <rosparam file="$(find gazebo_ros_link_attacher)/config/grasp_config.yaml" command="load"/>
+</launch>

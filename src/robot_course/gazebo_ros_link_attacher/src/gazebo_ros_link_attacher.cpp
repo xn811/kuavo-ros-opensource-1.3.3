@@ -5,28 +5,90 @@
 #include "gazebo_ros_link_attacher/Attach.h"
 #include "gazebo_ros_link_attacher/AttachRequest.h"
 #include "gazebo_ros_link_attacher/AttachResponse.h"
+#include "gazebo_ros_link_attacher/Grasp.h"
+#include "gazebo_ros_link_attacher/GraspRequest.h"
+#include "gazebo_ros_link_attacher/GraspResponse.h"
 #include <ignition/math/Pose3.hh>
 #include <cmath>
 #include <sstream>
+#include <XmlRpcValue.h>
 
 namespace gazebo
 {
   // Constructor
   GazeboRosLinkAttacher::GazeboRosLinkAttacher() :
     nh_("link_attacher_node"),
-    max_attach_distance_(0.15)  // 默认最大吸附距离 0.15m
+    grasp_nh_("kuavo_attacher_node"),
+    max_attach_distance_(0.15),
+    min_attach_distance_(0.0),
+    min_grasp_distance_(0.0),
+    max_grasp_distance_(0.15)
   {
   }
-
 
   // Destructor
   GazeboRosLinkAttacher::~GazeboRosLinkAttacher()
   {
   }
 
+  void GazeboRosLinkAttacher::loadGraspConfig()
+  {
+    ros::NodeHandle nh;  // 使用全局命名空间
+    
+    // 加载机器人模型名称
+    nh.param<std::string>("robot_model_name", robot_model_name_, "biped_s42");
+    ROS_INFO_STREAM("[Grasp Service] Robot model name: " << robot_model_name_);
+    
+    // 加载最小抓取距离
+    nh.param<double>("min_grasp_distance", min_grasp_distance_, 0.0);
+    ROS_INFO_STREAM("[Grasp Service] Min grasp distance: " << min_grasp_distance_ << "m");
+    
+    // 加载最大抓取距离
+    nh.param<double>("max_grasp_distance", max_grasp_distance_, 0.15);
+    ROS_INFO_STREAM("[Grasp Service] Max grasp distance: " << max_grasp_distance_ << "m");
+    
+    // 加载手臂链接配置
+    if (nh.hasParam("arm_links"))
+    {
+      XmlRpc::XmlRpcValue arm_links_param;
+      nh.getParam("arm_links", arm_links_param);
+      
+      for (auto it = arm_links_param.begin(); it != arm_links_param.end(); ++it)
+      {
+        std::string arm = it->first;
+        std::string link_name = static_cast<std::string>(it->second["link_name"]);
+        arm_links_[arm] = link_name;
+        ROS_INFO_STREAM("[Grasp Service] Arm " << arm << " -> " << link_name);
+      }
+    }
+    else
+    {
+      // 默认配置
+      arm_links_["left"] = "zarm_l7_link";
+      arm_links_["right"] = "zarm_r7_link";
+      ROS_INFO("[Grasp Service] Using default arm links config");
+    }
+    
+    // 加载可抓取物品列表
+    if (nh.hasParam("graspable_objects"))
+    {
+      XmlRpc::XmlRpcValue objects_param;
+      nh.getParam("graspable_objects", objects_param);
+      
+      for (auto it = objects_param.begin(); it != objects_param.end(); ++it)
+      {
+        std::string obj_name = it->first;
+        std::string link_name = static_cast<std::string>(it->second["link_name"]);
+        graspable_objects_[obj_name] = link_name;
+        ROS_INFO_STREAM("[Grasp Service] Graspable object: " << obj_name << " -> " << link_name);
+      }
+    }
+    
+    ROS_INFO_STREAM("[Grasp Service] Loaded " << graspable_objects_.size() << " graspable objects");
+  }
+
   void GazeboRosLinkAttacher::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
   {
-    // Make sure the ROS node for Gazebo has already been initialized                                                                                    
     if (!ros::isInitialized())
     {
       ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
@@ -38,17 +100,27 @@ namespace gazebo
     this->physics = this->world->Physics();
     this->physics_mutex = this->physics->GetPhysicsUpdateMutex();
 
-    // 从SDF参数读取最大吸附距离
+    // 从SDF参数读取attach服务的距离限制（仅用于attach/detach服务）
+    if (_sdf->HasElement("min_attach_distance"))
+    {
+      this->min_attach_distance_ = _sdf->Get<double>("min_attach_distance");
+    }
     if (_sdf->HasElement("max_attach_distance"))
     {
       this->max_attach_distance_ = _sdf->Get<double>("max_attach_distance");
     }
-    ROS_INFO_STREAM("Max attach distance set to: " << this->max_attach_distance_ << "m");
+    ROS_INFO_STREAM("[Attach Service] Min attach distance: " << this->min_attach_distance_ << "m");
+    ROS_INFO_STREAM("[Attach Service] Max attach distance: " << this->max_attach_distance_ << "m");
+
+    // 加载抓取配置（grasp服务使用独立的距离参数）
+    loadGraspConfig();
 
     this->attach_service_ = this->nh_.advertiseService("attach", &GazeboRosLinkAttacher::attach_callback, this);
     ROS_INFO_STREAM("Attach service at: " << this->nh_.resolveName("attach"));
     this->detach_service_ = this->nh_.advertiseService("detach", &GazeboRosLinkAttacher::detach_callback, this);
     ROS_INFO_STREAM("Detach service at: " << this->nh_.resolveName("detach"));
+    this->grasp_service_ = this->grasp_nh_.advertiseService("grasp", &GazeboRosLinkAttacher::grasp_callback, this);
+    ROS_INFO_STREAM("Grasp service at: " << this->grasp_nh_.resolveName("grasp"));
     ROS_INFO("Link attacher node initialized.");
   }
 
@@ -93,14 +165,40 @@ namespace gazebo
     return std::sqrt(dx*dx + dy*dy + dz*dz);
   }
 
+  std::pair<std::string, double> GazeboRosLinkAttacher::findNearestObject(const std::string& arm)
+  {
+    std::string nearest_obj = "";
+    double min_distance = std::numeric_limits<double>::max();
+    
+    auto arm_it = arm_links_.find(arm);
+    if (arm_it == arm_links_.end())
+    {
+      ROS_ERROR_STREAM("Unknown arm: " << arm);
+      return std::make_pair("", -1.0);
+    }
+    
+    std::string arm_link = arm_it->second;
+    
+    for (const auto& obj : graspable_objects_)
+    {
+      std::string obj_name = obj.first;
+      std::string obj_link = obj.second;
+      
+      double distance = getDistance(robot_model_name_, arm_link, obj_name, obj_link);
+      
+      if (distance >= 0 && distance < min_distance)
+      {
+        min_distance = distance;
+        nearest_obj = obj_name;
+      }
+    }
+    
+    return std::make_pair(nearest_obj, min_distance);
+  }
+
   bool GazeboRosLinkAttacher::attach(std::string model1, std::string link1,
                                      std::string model2, std::string link2)
   {
-
-    // look for any previous instance of the joint first.
-    // if we try to create a joint in between two links
-    // more than once (even deleting any reference to the first one)
-    // gazebo hangs/crashes
     fixedJoint j;
     if(this->getJoint(model1, link1, model2, link2, j)){
         ROS_INFO_STREAM("Joint already existed, reusing it.");
@@ -186,7 +284,6 @@ namespace gazebo
   bool GazeboRosLinkAttacher::detach(std::string model1, std::string link1,
                                      std::string model2, std::string link2)
   {
-      // search for the instance of joint and do detach
       fixedJoint j;
       if(this->getJoint(model1, link1, model2, link2, j)){
           boost::recursive_mutex::scoped_lock lock(*this->physics_mutex);
@@ -210,7 +307,6 @@ namespace gazebo
         }
     }
     return false;
-
   }
 
   bool GazeboRosLinkAttacher::attach_callback(gazebo_ros_link_attacher::Attach::Request &req,
@@ -220,7 +316,6 @@ namespace gazebo
                     << "' using link: '" << req.link_name_1 << "' with model: '"
                     << req.model_name_2 << "' using link: '" <<  req.link_name_2 << "'");
     
-    // 距离检测
     double distance = this->getDistance(req.model_name_1, req.link_name_1,
                                         req.model_name_2, req.link_name_2);
     
@@ -232,12 +327,22 @@ namespace gazebo
       return true;
     }
     
-    ROS_INFO_STREAM("Distance between links: " << distance << "m (max: " << this->max_attach_distance_ << "m)");
+    ROS_INFO_STREAM("Distance between links: " << distance << "m (min: " << this->min_attach_distance_ << "m, max: " << this->max_attach_distance_ << "m)");
+    
+    if (distance < this->min_attach_distance_)
+    {
+      std::stringstream ss;
+      ss << "Links too close! Distance: " << distance << "m (min: " << this->min_attach_distance_ << "m)";
+      ROS_WARN_STREAM(ss.str());
+      res.ok = false;
+      res.message = ss.str();
+      return true;
+    }
     
     if (distance > this->max_attach_distance_)
     {
       std::stringstream ss;
-      ss << "Links too far apart! Distance: " << distance << "m";
+      ss << "Links too far apart! Distance: " << distance << "m (max: " << this->max_attach_distance_ << "m)";
       ROS_WARN_STREAM(ss.str());
       res.ok = false;
       res.message = ss.str();
@@ -256,7 +361,6 @@ namespace gazebo
       res.message = "Attach successful";
     }
     return true;
-
   }
 
   bool GazeboRosLinkAttacher::detach_callback(gazebo_ros_link_attacher::Attach::Request &req,
@@ -276,6 +380,140 @@ namespace gazebo
         res.message = "Detach successful";
       }
       return true;
+  }
+
+  bool GazeboRosLinkAttacher::grasp_callback(gazebo_ros_link_attacher::Grasp::Request &req,
+                                             gazebo_ros_link_attacher::Grasp::Response &res)
+  {
+    std::string arm = req.arm;
+    std::string action = req.action;
+    
+    // 转小写
+    std::transform(arm.begin(), arm.end(), arm.begin(), ::tolower);
+    std::transform(action.begin(), action.end(), action.begin(), ::tolower);
+    
+    ROS_INFO_STREAM("Grasp request: arm=" << arm << ", action=" << action);
+    
+    // 验证手臂参数
+    if (arm != "left" && arm != "right")
+    {
+      res.ok = false;
+      res.message = "Invalid arm: must be 'left' or 'right'";
+      return true;
+    }
+    
+    // 验证动作参数
+    if (action != "grasp" && action != "release")
+    {
+      res.ok = false;
+      res.message = "Invalid action: must be 'grasp' or 'release'";
+      return true;
+    }
+    
+    std::string arm_link = arm_links_[arm];
+    
+    if (action == "grasp")
+    {
+      // 检查该手是否已经抓着物品
+      if (grasped_objects_.find(arm) != grasped_objects_.end() && !grasped_objects_[arm].empty())
+      {
+        res.ok = false;
+        res.message = "Arm " + arm + " already holding: " + grasped_objects_[arm];
+        res.object_name = grasped_objects_[arm];
+        return true;
+      }
+      
+      // 查找最近的物品
+      auto result = findNearestObject(arm);
+      std::string nearest_obj = result.first;
+      double distance = result.second;
+      
+      res.distance = distance;
+      res.object_name = nearest_obj;
+      
+      if (nearest_obj.empty())
+      {
+        res.ok = false;
+        res.message = "No graspable objects found";
+        return true;
+      }
+      
+      // 检查距离 - 最小和最大限制
+      if (distance < min_grasp_distance_)
+      {
+        std::stringstream ss;
+        ss << "Object " << nearest_obj << " too close: " << distance << "m (min: " << min_grasp_distance_ << "m)";
+        res.ok = false;
+        res.message = ss.str();
+        return true;
+      }
+      
+      if (distance > max_grasp_distance_)
+      {
+        std::stringstream ss;
+        ss << "Object " << nearest_obj << " too far: " << distance << "m (max: " << max_grasp_distance_ << "m)";
+        res.ok = false;
+        res.message = ss.str();
+        return true;
+      }
+      
+      // 检查物品是否已被另一只手抓取
+      std::string other_arm = (arm == "left") ? "right" : "left";
+      if (grasped_objects_.find(other_arm) != grasped_objects_.end() && 
+          grasped_objects_[other_arm] == nearest_obj)
+      {
+        res.ok = false;
+        res.message = "Object " + nearest_obj + " already held by " + other_arm + " arm";
+        return true;
+      }
+      
+      // 执行抓取
+      std::string obj_link = graspable_objects_[nearest_obj];
+      if (attach(robot_model_name_, arm_link, nearest_obj, obj_link))
+      {
+        grasped_objects_[arm] = nearest_obj;
+        res.ok = true;
+        res.message = "Successfully grasped " + nearest_obj + " with " + arm + " arm";
+        ROS_INFO_STREAM(res.message);
+      }
+      else
+      {
+        res.ok = false;
+        res.message = "Failed to grasp " + nearest_obj;
+        ROS_ERROR_STREAM(res.message);
+      }
+    }
+    else  // release
+    {
+      // 检查该手是否抓着物品
+      if (grasped_objects_.find(arm) == grasped_objects_.end() || grasped_objects_[arm].empty())
+      {
+        res.ok = false;
+        res.message = "Arm " + arm + " is not holding anything";
+        return true;
+      }
+      
+      std::string object_name = grasped_objects_[arm];
+      res.object_name = object_name;
+      
+      // 执行释放
+      std::string obj_link = graspable_objects_[object_name];
+      if (detach(robot_model_name_, arm_link, object_name, obj_link))
+      {
+        grasped_objects_[arm] = "";
+        res.ok = true;
+        res.message = "Successfully released " + object_name + " from " + arm + " arm";
+        ROS_INFO_STREAM(res.message);
+      }
+      else
+      {
+        res.ok = false;
+        res.message = "Failed to release " + object_name;
+        ROS_ERROR_STREAM(res.message);
+      }
+    }
+    
+    return true;
   }
 
 }

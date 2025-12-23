@@ -30,6 +30,7 @@ find_package(gazebo REQUIRED)
 add_service_files(
   FILES
   Attach.srv
+  Grasp.srv
 )
 
 
@@ -68,7 +69,7 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 #############
 
 install(PROGRAMS
-  scripts/demo.py
+  scripts/grasp_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -80,7 +81,7 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 
-foreach (dir launch worlds)
+foreach (dir launch worlds config)
   install(DIRECTORY ${dir}/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
 endforeach(dir)

@@ -2,6 +2,9 @@
   <!-- 设置Gazebo模型路径 -->
   <env name="GAZEBO_MODEL_PATH" value="$(find gazebo_sim)/models:$(optenv GAZEBO_MODEL_PATH)"/>
 
+  <!-- 加载抓取服务配置参数 -->
+  <rosparam file="$(find gazebo_ros_link_attacher)/config/grasp_config.yaml" command="load"/>
+
   <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
   <param name="robot_version"    value="$(arg robot_version)"/>
   <arg name="use_xacro" value="$(eval int(arg('robot_version')) >= 40)"/>

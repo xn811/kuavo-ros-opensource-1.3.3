@@ -1,0 +1,33 @@
+# Kuavo 抓取服务配置文件
+
+# 机器人模型名称 (Gazebo中的模型名)
+robot_model_name: "biped_s42"
+
+# 手臂链接配置
+arm_links:
+  left:
+    link_name: "zarm_l7_link"
+  right:
+    link_name: "zarm_r7_link"
+
+# 抓取距离限制 (米)
+min_grasp_distance: 0.1
+max_grasp_distance: 0.25
+
+# 可抓取物品列表
+# 格式: 物品名称 -> 链接名称
+graspable_objects:
+  # block:
+  #   link_name: "link"
+  cup1:
+    link_name: "link"
+  cup2:
+    link_name: "link"
+  plate1:
+    link_name: "link_0"
+  plate2:
+    link_name: "link_0"
+  scissors1:
+    link_name: "link_0"
+  scissors2:
+    link_name: "link_0"
