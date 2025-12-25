@@ -46,21 +46,39 @@
   <arg name="block_y" default="-4.75"/>
   <arg name="block_z" default="1.2"/>
 
-  <!-- 盘子和水杯绝对位置 (桌面高度0.8m + table1_z) -->
-  <arg name="plate1_x" default="-0.3"/>
-  <arg name="plate1_y" default="-4.8"/>
-  <arg name="plate2_x" default="-0.1"/>
-  <arg name="plate2_y" default="-4.70"/>
-  <arg name="cup1_x" default="-0.3"/>
-  <arg name="cup1_y" default="-4.70"/>
-  <arg name="cup2_x" default="-0.1"/>
-  <arg name="cup2_y" default="-4.8"/>
-
-  <!-- 剪刀位置 -->
-  <arg name="scissors1_x" default="0.0"/>
-  <arg name="scissors1_y" default="-4.7"/>
-  <arg name="scissors2_x" default="0.1"/>
-  <arg name="scissors2_y" default="-4.8"/>
+  <!-- ==================== 随机化物品位置配置 ==================== -->
+  <!-- 随机数种子 (相同种子产生相同的物品分配) -->
+  <arg name="random_seed" default="110" doc="随机数种子"/>
+  <param name="random_seed" value="$(arg random_seed)"/>
+  
+  <!-- 6个物品放置位置 (可通过launch参数修改) -->
+  <arg name="object_pos1_x" default="-0.0" doc="位置1 X坐标"/>
+  <arg name="object_pos1_y" default="-4.8" doc="位置1 Y坐标"/>
+  <arg name="object_pos2_x" default="-0.43" doc="位置2 X坐标"/>
+  <arg name="object_pos2_y" default="-5.1" doc="位置2 Y坐标"/>
+  <arg name="object_pos3_x" default="-0.22" doc="位置3 X坐标"/>
+  <arg name="object_pos3_y" default="-4.78" doc="位置3 Y坐标"/>
+  <arg name="object_pos4_x" default="-0.43" doc="位置4 X坐标"/>
+  <arg name="object_pos4_y" default="-4.8" doc="位置4 Y坐标"/>
+  <arg name="object_pos5_x" default="0.44" doc="位置5 X坐标"/>
+  <arg name="object_pos5_y" default="-5.02" doc="位置5 Y坐标"/>
+  <arg name="object_pos6_x" default="0.42" doc="位置6 X坐标"/>
+  <arg name="object_pos6_y" default="-5.2" doc="位置6 Y坐标"/>
+  
+  <!-- 将位置参数加载到参数服务器 -->
+  <param name="object_pos1_x" value="$(arg object_pos1_x)"/>
+  <param name="object_pos1_y" value="$(arg object_pos1_y)"/>
+  <param name="object_pos2_x" value="$(arg object_pos2_x)"/>
+  <param name="object_pos2_y" value="$(arg object_pos2_y)"/>
+  <param name="object_pos3_x" value="$(arg object_pos3_x)"/>
+  <param name="object_pos3_y" value="$(arg object_pos3_y)"/>
+  <param name="object_pos4_x" value="$(arg object_pos4_x)"/>
+  <param name="object_pos4_y" value="$(arg object_pos4_y)"/>
+  <param name="object_pos5_x" value="$(arg object_pos5_x)"/>
+  <param name="object_pos5_y" value="$(arg object_pos5_y)"/>
+  <param name="object_pos6_x" value="$(arg object_pos6_x)"/>
+  <param name="object_pos6_y" value="$(arg object_pos6_y)"/>
+  <!-- ========================================================== -->
 
   <!-- 台阶参数 -->
   <arg name="use_stairs" default="false" doc="是否添加楼梯"/>
@@ -112,10 +130,6 @@
   <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" 
         args="-urdf -model biped_s42 -param robot_description -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)"/>
 
-
-  <!-- Optionally, start robot state publisher to publish TF -->
-  <!-- <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" /> -->
-
   <!-- Load controller configuration -->
   <rosparam file="$(find kuavo_assets)/models/biped_s42/config/controllers.yaml"/>
 
@@ -134,31 +148,8 @@
         args="-urdf -model block -param block_description -x $(arg block_x) -y $(arg block_y) -z $(arg block_z) -R 0 -P 0 -Y 0"
         launch-prefix="bash -c 'sleep 2.5; $0 $@' "/>
 
-  <!-- 在桌子1上放置盘子和水杯 (桌面高度0.8m, 桌子尺寸1.2x0.7m) -->
-  <!-- 盘子1 (左前) -->
-  <node name="spawn_plate1" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model plate1 -file $(find gazebo_sim)/models/Ecoforms_Plant_Plate_S11Turquoise/model.sdf -x $(arg plate1_x) -y $(arg plate1_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 3.0; $0 $@' "/>
-  <!-- 盘子2 (右前) -->
-  <node name="spawn_plate2" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model plate2 -file $(find gazebo_sim)/models/Ecoforms_Plant_Plate_S11Turquoise/model.sdf -x $(arg plate2_x) -y $(arg plate2_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 3.2; $0 $@' "/>
-  <!-- 水杯1 (左后) -->
-  <node name="spawn_cup1" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model cup1 -file $(find gazebo_sim)/models/Plastic_Cup/model.sdf -x $(arg cup1_x) -y $(arg cup1_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 3.4; $0 $@' "/>
-  <!-- 水杯2 (右后) -->
-  <node name="spawn_cup2" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model cup2 -file $(find gazebo_sim)/models/Plastic_Cup/model.sdf -x $(arg cup2_x) -y $(arg cup2_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 4.0; $0 $@' "/>
-  <!-- 剪刀1 -->
-  <node name="spawn_scissors1" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model scissors1 -file $(find gazebo_sim)/models/Diamond_Visions_Scissors_Red/model.sdf -x $(arg scissors1_x) -y $(arg scissors1_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 4.2; $0 $@' "/>
-  <!-- 剪刀2 -->
-  <node name="spawn_scissors2" pkg="gazebo_ros" type="spawn_model"
-        args="-sdf -model scissors2 -file $(find gazebo_sim)/models/Diamond_Visions_Scissors_Red/model.sdf -x $(arg scissors2_x) -y $(arg scissors2_y) -z 0.85"
-        launch-prefix="bash -c 'sleep 4.4; $0 $@' "/>
+  <!-- 随机生成物品 (根据random_seed和6个位置参数) -->
+  <node name="spawn_random_objects" pkg="gazebo_sim" type="spawn_random_objects.py" output="screen"/>
 
   <!-- 加载楼梯 (使用include引用load_stairs.launch) -->
   <include file="$(find gazebo_sim)/launch/load_stairs.launch">
@@ -183,19 +174,4 @@
     <arg name="slope_yaw" value="$(arg slope_yaw)"/>
   </include>
 
-  <!-- Start controller manager -->
-  <!-- <node name="controller_manager" pkg="controller_manager" type="controller_manager" /> -->
-  <!-- <node pkg="nodelet" type="nodelet" name="controller_manager"
-      args="load controller_manager/ControllerManager nodelet_manager" output="screen"/> -->
-  <!-- <rosparam file="$(find gazebo_sim)/launch/defaultQ.yaml" command="load" /> -->
-
-  <!-- Load and start your controller -->
-  <!-- <node name="limbs_effort_controller" pkg="controller_manager" type="spawner" args="limbs_effort_controller"/> -->
-  <!-- <node name="joint_state_controller" pkg="controller_manager" type="spawner" args="joint_state_controller"/> -->
-  <!-- <node name="joint_position_controller" pkg="controller_manager" type="spawner" args="joint_position_controller"/> -->
-
-  <!-- Start the sensor_data_publisher node to sync IMU and joint states -->
-  <!-- <node name="sensor_data_publisher" pkg="gazebo_sim" type="sensor_data_publisher" output="screen"/>
-
-  <node name="joint_cmd_publisher" pkg="gazebo_sim" type="joint_cmd_publisher" output="screen"/> -->
 </launch>

@@ -107,8 +107,8 @@ gz model --info -m cup1
 
 ```bash
 # 连接
-rosservice call /link_attacher_node/attach "model_name_1: 'biped_s42'
-link_name_1: 'zarm_r7_link'
+rosservice call /link_attacher_node/attach "model_name_1: 'plate1'
+link_name_1: 'link_0'
 model_name_2: 'cup1'
 link_name_2: 'link'"
 
