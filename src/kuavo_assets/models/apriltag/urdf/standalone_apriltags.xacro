@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="standalone_apriltags">
+  
+  <!-- 引入apriltag宏 -->
+  <xacro:include filename="$(find kuavo_assets)/models/apriltag/urdf/apriltag.xacro"/>
+  
+  <!-- AprilTag 位置参数 (ID 0-3) -->
+  <xacro:arg name="tag0_x" default="2.0"/>
+  <xacro:arg name="tag0_y" default="0.0"/>
+  <xacro:arg name="tag0_z" default="1.0"/>
+  <xacro:arg name="tag0_yaw" default="3.14159"/>
+  
+  <xacro:arg name="tag1_x" default="0.0"/>
+  <xacro:arg name="tag1_y" default="2.0"/>
+  <xacro:arg name="tag1_z" default="1.0"/>
+  <xacro:arg name="tag1_yaw" default="-1.5708"/>
+  
+  <xacro:arg name="tag2_x" default="-2.0"/>
+  <xacro:arg name="tag2_y" default="0.0"/>
+  <xacro:arg name="tag2_z" default="1.0"/>
+  <xacro:arg name="tag2_yaw" default="0.0"/>
+  
+  <xacro:arg name="tag3_x" default="0.0"/>
+  <xacro:arg name="tag3_y" default="-2.0"/>
+  <xacro:arg name="tag3_z" default="1.0"/>
+  <xacro:arg name="tag3_yaw" default="1.5708"/>
+  
+  <link name="world"/>
+  
+  <!-- AprilTag 支架宏 (带立柱的二维码) -->
+  <xacro:macro name="apriltag_stand" params="id tx ty tz tyaw troll:=1.5708 tpitch:=0 tyaw_tag:=-1.5708">
+    <!-- 支架底座 -->
+    <link name="tag${id}_base">
+      <visual>
+        <geometry>
+          <cylinder radius="0.05" length="0.02"/>
+        </geometry>
+        <material name="dark_grey">
+          <color rgba="0.2 0.2 0.2 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.05" length="0.02"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.5"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+    
+    <joint name="world_to_tag${id}_base" type="fixed">
+      <parent link="world"/>
+      <child link="tag${id}_base"/>
+      <origin xyz="${tx} ${ty} 0.01" rpy="0 0 0"/>
+    </joint>
+    
+    <!-- 支架立柱 -->
+    <link name="tag${id}_pole">
+      <visual>
+        <geometry>
+          <cylinder radius="0.015" length="${tz}"/>
+        </geometry>
+        <material name="silver">
+          <color rgba="0.7 0.7 0.7 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.015" length="${tz}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.3"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+    
+    <joint name="tag${id}_base_to_pole" type="fixed">
+      <parent link="tag${id}_base"/>
+      <child link="tag${id}_pole"/>
+      <origin xyz="0 0 ${tz/2}" rpy="0 0 0"/>
+    </joint>
+    
+    <!-- 二维码背板 -->
+    <link name="tag${id}_board">
+      <visual>
+        <geometry>
+          <box size="0.12 0.12 0.01"/>
+        </geometry>
+        <material name="white">
+          <color rgba="1.0 1.0 1.0 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.12 0.12 0.01"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+    
+    <joint name="tag${id}_pole_to_board" type="fixed">
+      <parent link="tag${id}_pole"/>
+      <child link="tag${id}_board"/>
+      <origin xyz="0 0 ${tz/2}" rpy="0 0 ${tyaw}"/>
+    </joint>
+    
+    <gazebo reference="tag${id}_base">
+      <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    <gazebo reference="tag${id}_pole">
+      <material>Gazebo/Grey</material>
+    </gazebo>
+    <gazebo reference="tag${id}_board">
+      <material>Gazebo/White</material>
+    </gazebo>
+    
+    <!-- AprilTag 二维码 -->
+    <xacro:apriltag_marker parent_link="tag${id}_board" id="${id}">
+      <origin xyz="0 0 0.06" rpy="${troll} ${tpitch} ${tyaw_tag}"/>
+    </xacro:apriltag_marker>
+  </xacro:macro>
+  
+  <!-- 生成 4 个 AprilTag (ID 0-3) -->
+  <xacro:apriltag_stand id="0" tx="$(arg tag0_x)" ty="$(arg tag0_y)" tz="$(arg tag0_z)" tyaw="$(arg tag0_yaw)"/>
+  <xacro:apriltag_stand id="1" tx="$(arg tag1_x)" ty="$(arg tag1_y)" tz="$(arg tag1_z)" tyaw="$(arg tag1_yaw)"/>
+  <xacro:apriltag_stand id="2" tx="$(arg tag2_x)" ty="$(arg tag2_y)" tz="$(arg tag2_z)" tyaw="$(arg tag2_yaw)"/>
+  <xacro:apriltag_stand id="3" tx="$(arg tag3_x)" ty="$(arg tag3_y)" tz="$(arg tag3_z)" tyaw="$(arg tag3_yaw)"/>
+
+</robot>

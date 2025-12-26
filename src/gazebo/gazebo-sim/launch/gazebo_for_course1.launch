@@ -1,0 +1,107 @@
+<launch>
+  <!-- 设置Gazebo模型路径 -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find gazebo_sim)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
+  <arg name="robot_version"      default="$(optenv ROBOT_VERSION 40)"/>
+  <param name="robot_version"    value="$(arg robot_version)"/>
+  <arg name="use_xacro" value="$(eval int(arg('robot_version')) >= 40)"/>
+
+  <!-- Robot spawn position arguments (可通过launch参数修改机器人初始位置) -->
+  <arg name="x" default="0" doc="机器人初始X坐标"/>
+  <arg name="y" default="0" doc="机器人初始Y坐标"/>
+  <arg name="z" default="1.0" doc="机器人初始Z坐标"/>
+  <arg name="roll" default="0" doc="机器人初始Roll角度"/>
+  <arg name="pitch" default="0" doc="机器人初始Pitch角度"/>
+  <arg name="yaw" default="1.5708" doc="机器人初始Yaw角度"/>
+
+  <!-- 将机器人位置参数加载到参数服务器 -->
+  <param name="robot_init_x" value="$(arg x)"/>
+  <param name="robot_init_y" value="$(arg y)"/>
+  <param name="robot_init_z" value="$(arg z)"/>
+  <param name="robot_init_roll" value="$(arg roll)"/>
+  <param name="robot_init_pitch" value="$(arg pitch)"/>
+  <param name="robot_init_yaw" value="$(arg yaw)"/>
+
+  <!-- AprilTag 二维码位置参数 (ID 0-3) -->
+
+  <arg name="tag0_x" default="0.0" doc="AprilTag ID=0 X坐标"/>
+  <arg name="tag0_y" default="2.0" doc="AprilTag ID=0 Y坐标"/>
+  <arg name="tag0_z" default="1.0" doc="AprilTag ID=0 Z坐标"/>
+  <arg name="tag0_yaw" default="-1.5708" doc="AprilTag ID=0 Yaw角度"/>
+
+  <arg name="tag1_x" default="2.0" doc="AprilTag ID=1 X坐标"/>
+  <arg name="tag1_y" default="0.0" doc="AprilTag ID=1 Y坐标"/>
+  <arg name="tag1_z" default="1.0" doc="AprilTag ID=1 Z坐标"/>
+  <arg name="tag1_yaw" default="3.1416" doc="AprilTag ID=1 Yaw角度"/>
+
+  <arg name="tag2_x" default="2.0" doc="AprilTag ID=2 X坐标"/>
+  <arg name="tag2_y" default="1.0" doc="AprilTag ID=2 Y坐标"/>
+  <arg name="tag2_z" default="1.0" doc="AprilTag ID=2 Z坐标"/>
+  <arg name="tag2_yaw" default="0.0" doc="AprilTag ID=2 Yaw角度"/>
+
+  <arg name="tag3_x" default="2.0" doc="AprilTag ID=3 X坐标"/>
+  <arg name="tag3_y" default="-1.0" doc="AprilTag ID=3 Y坐标"/>
+  <arg name="tag3_z" default="1.0" doc="AprilTag ID=3 Z坐标"/>
+  <arg name="tag3_yaw" default="0.0" doc="AprilTag ID=3 Yaw角度"/>
+
+  <!-- Start Gazebo -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find gazebo_sim)/worlds/course1.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="false"/>
+    <arg name="gui" value="true"/>
+  </include>
+
+  <!-- Load URDF or XACRO file based on robot version -->
+  <group if="$(arg use_xacro)">
+    <!-- For versions 40, 41, 42, 43, 45 -->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/biped_s$(arg robot_version)_gazebo_vis_lidar.xacro"/>
+    <!-- static tf transform -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_to_robot_frame" args="0 0 0 0 0 0 camera_base camera_base_link" />
+    <!-- camera meta data And Gobal tf transform -->
+    <include file="$(find realsense_sim_metadata)/launch/metadata_start.launch">
+      <arg name="camera_name" value="camera"/>
+      <arg name="use_nvblox" value="false"/>
+      <arg name="use_tf" value="true"/>
+    </include>
+  </group>
+
+  <group unless="$(arg use_xacro)">
+    <!-- For versions 30, 31 32 -->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/biped_s$(arg robot_version)/urdf/biped_s$(arg robot_version)_gazebo.urdf"/>
+  </group>
+
+  <!-- Spawn URDF model into Gazebo -->
+  <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" 
+        args="-urdf -model biped_s42 -param robot_description -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)"/>
+
+  <!-- 加载 AprilTag 二维码 (ID 0-3) -->
+  <param name="apriltags_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/standalone_apriltags.xacro tag0_x:=$(arg tag0_x) tag0_y:=$(arg tag0_y) tag0_z:=$(arg tag0_z) tag0_yaw:=$(arg tag0_yaw) tag1_x:=$(arg tag1_x) tag1_y:=$(arg tag1_y) tag1_z:=$(arg tag1_z) tag1_yaw:=$(arg tag1_yaw) tag2_x:=$(arg tag2_x) tag2_y:=$(arg tag2_y) tag2_z:=$(arg tag2_z) tag2_yaw:=$(arg tag2_yaw) tag3_x:=$(arg tag3_x) tag3_y:=$(arg tag3_y) tag3_z:=$(arg tag3_z) tag3_yaw:=$(arg tag3_yaw)"/>
+
+  <!-- 生成 AprilTag 二维码模型 -->
+  <node name="spawn_apriltags" pkg="gazebo_ros" type="spawn_model" 
+        args="-urdf -model apriltags -param apriltags_description"/>
+
+
+  <!-- Optionally, start robot state publisher to publish TF -->
+  <!-- <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" /> -->
+
+  <!-- Load controller configuration -->
+  <rosparam file="$(find kuavo_assets)/models/biped_s42/config/controllers.yaml"/>
+
+  <!-- Start controller manager -->
+  <!-- <node name="controller_manager" pkg="controller_manager" type="controller_manager" /> -->
+  <!-- <node pkg="nodelet" type="nodelet" name="controller_manager"
+      args="load controller_manager/ControllerManager nodelet_manager" output="screen"/> -->
+  <!-- <rosparam file="$(find gazebo_sim)/launch/defaultQ.yaml" command="load" /> -->
+
+  <!-- Load and start your controller -->
+  <!-- <node name="limbs_effort_controller" pkg="controller_manager" type="spawner" args="limbs_effort_controller"/> -->
+  <!-- <node name="joint_state_controller" pkg="controller_manager" type="spawner" args="joint_state_controller"/> -->
+  <!-- <node name="joint_position_controller" pkg="controller_manager" type="spawner" args="joint_position_controller"/> -->
+
+  <!-- Start the sensor_data_publisher node to sync IMU and joint states -->
+  <!-- <node name="sensor_data_publisher" pkg="gazebo_sim" type="sensor_data_publisher" output="screen"/>
+
+  <node name="joint_cmd_publisher" pkg="gazebo_sim" type="joint_cmd_publisher" output="screen"/> -->
+</launch>
