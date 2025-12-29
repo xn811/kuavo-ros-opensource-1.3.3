@@ -1,0 +1,9 @@
+# 抓取物体服务
+string target_class    # 目标类别: cup/plate/scissors
+int32 track_id         # 指定track_id抓取 (-1表示自动选择最近的)
+bool grasp_only        # true: 只抓取不释放, false: 抓取后释放
+---
+bool success           # 是否成功
+string message         # 结果信息
+int32 grasped_track_id # 抓取的物体track_id
+string grasped_hand    # 使用的手: left/right

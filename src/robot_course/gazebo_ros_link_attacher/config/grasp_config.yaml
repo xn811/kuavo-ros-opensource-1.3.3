@@ -12,7 +12,7 @@ arm_links:
 
 # 抓取距离限制 (米)
 min_grasp_distance: 0.1
-max_grasp_distance: 0.25
+max_grasp_distance: 0.30
 
 # 可抓取物品列表
 # 格式: 物品名称 -> 链接名称

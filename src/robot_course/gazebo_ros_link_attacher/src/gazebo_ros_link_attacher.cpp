@@ -451,7 +451,7 @@ namespace gazebo
       if (distance > max_grasp_distance_)
       {
         std::stringstream ss;
-        ss << "Object " << nearest_obj << " too far: " << distance << "m (max: " << max_grasp_distance_ << "m)";
+        ss << "Object " << " too far.";
         res.ok = false;
         res.message = ss.str();
         return true;

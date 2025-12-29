@@ -1,0 +1,14 @@
+path: /root/kuavo_ws/src/robot_course/task_solver/dataset/task_grasp
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 3
+names: ['cup', 'plate', 'scissors']
+
+roboflow:
+  workspace: sisafohiaohfis
+  project: task_grasp
+  version: 1
+  license: MIT
+  url: https://universe.roboflow.com/sisafohiaohfis/task_grasp/dataset/1

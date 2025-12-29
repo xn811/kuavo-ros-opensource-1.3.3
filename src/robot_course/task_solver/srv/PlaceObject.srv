@@ -1,0 +1,6 @@
+# 放置物体服务
+string hand            # 使用的手: left/right (空字符串表示自动)
+bool reset_arm         # 是否复位手臂 (默认true，false时只释放物体不复位)
+---
+bool success           # 是否成功
+string message         # 结果信息

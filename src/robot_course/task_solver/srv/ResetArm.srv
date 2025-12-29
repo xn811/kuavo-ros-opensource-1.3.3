@@ -1,0 +1,5 @@
+# 复位手臂服务 (放置后后退再复位)
+string hand            # 使用的手: left/right
+---
+bool success           # 是否成功
+string message         # 结果信息

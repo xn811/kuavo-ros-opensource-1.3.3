@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- YOLO参数 -->
+  <arg name="yolo_model" default="/root/kuavo_ws/src/robot_course/task_solver/models/best.pt"/>
+  <arg name="publish_yolo_image" default="true"/>
+  <arg name="confidence_threshold" default="0.5"/>
+  <arg name="image_topic" default="/camera/color/image_raw"/>
+  
+  <!-- 滤波参数 -->
+  <arg name="window_size" default="5" doc="滑动窗口大小(帧数)，越大越平滑"/>
+  
+  <!-- 桌面高度过滤 -->
+  <arg name="table_height" default="0.8" doc="桌面高度(m)，None表示不过滤"/>
+  <arg name="table_height_tolerance" default="0.15"/>
+  
+  <!-- 抓取控制器参数 -->
+  <arg name="use_sim" default="true" doc="仿真模式使用吸附服务"/>
+  <arg name="use_offset" default="true" doc="启用偏移量补偿"/>
+  
+  <!-- YOLO检测节点 -->
+  <node name="yolo_detector" pkg="task_solver" type="yolo_detector.py" output="screen">
+    <param name="model_path" value="$(arg yolo_model)"/>
+    <param name="confidence_threshold" value="$(arg confidence_threshold)"/>
+    <param name="image_topic" value="$(arg image_topic)"/>
+    <param name="publish_image" value="$(arg publish_yolo_image)"/>
+  </node>
+  
+  <!-- 3D检测节点 -->
+  <node name="detection_3d" pkg="task_solver" type="detection_3d.py" output="screen">
+    <param name="window_size" value="$(arg window_size)"/>
+    <param name="table_height" value="$(arg table_height)"/>
+    <param name="table_height_tolerance" value="$(arg table_height_tolerance)"/>
+  </node>
+  
+  <!-- 抓取控制器节点 (服务模式) -->
+  <node name="grasp_controller" pkg="task_solver" type="grasp_controller.py" output="screen">
+    <param name="use_sim" value="$(arg use_sim)"/>
+    <param name="use_offset" value="$(arg use_offset)"/>
+    <param name="service_mode" value="true"/>
+  </node>
+
+</launch>
