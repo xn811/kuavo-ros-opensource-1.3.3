@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
-<robot name="block">
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="block">
+  
+  <!-- 引入apriltag宏 -->
+  <xacro:include filename="$(find kuavo_assets)/models/apriltag/urdf/apriltag.xacro"/>
+  
   <link name="world"/>
   
   <link name="base_link">
@@ -125,4 +129,22 @@
     <child link="base_link"/>
     <origin xyz="0 -1.0 0.9" rpy="0 0 0"/>
   </joint>
+
+  <!-- Gazebo物理参数：增加摩擦力防止滑落 -->
+  <gazebo reference="base_link">
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.1</maxVel>
+  </gazebo>
+
+  <!-- 在Block前面(Y负方向)贴上AprilTag ID=0 -->
+  <!-- 二维码贴在前墙外表面，面向Y负方向 -->
+  <!-- rpy: roll=0, pitch=90°(绕X轴立起来), yaw=180°(面向Y负方向) -->
+  <xacro:apriltag_marker parent_link="base_link" id="0">
+    <origin xyz="0 -0.101 0" rpy="1.5708 0 3.14159"/>
+  </xacro:apriltag_marker>
+
 </robot>

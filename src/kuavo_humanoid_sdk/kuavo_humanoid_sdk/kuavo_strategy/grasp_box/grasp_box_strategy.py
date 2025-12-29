@@ -917,7 +917,7 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         
         return True
     
-    def _arrive_pose(self, target_position: list, target_yaw: float, timeout: float = 10.0) -> bool:
+    def _arrive_pose(self, target_position: list, target_yaw: float, timeout: float = 600.0) -> bool:
         """控制机器人移动到指定位姿并等待到达
         
         Args:

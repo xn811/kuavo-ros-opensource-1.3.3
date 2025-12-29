@@ -143,9 +143,9 @@
   <!-- 加载block (可抓取方块) -->
   <param name="block_description" command="$(find xacro)/xacro --inorder $(find kuavo_assets)/models/apriltag/urdf/block.urdf.xacro"/>
 
-  <!-- 生成可抓取方块 -->
+  <!-- 生成可抓取方块 (旋转180度放置，使二维码面向机器人) -->
   <node name="spawn_block" pkg="gazebo_ros" type="spawn_model" 
-        args="-urdf -model block -param block_description -x $(arg block_x) -y $(arg block_y) -z $(arg block_z) -R 0 -P 0 -Y 0"
+        args="-urdf -model block -param block_description -x $(arg block_x) -y $(arg block_y) -z $(arg block_z) -R 0 -P 0 -Y 3.14159"
         launch-prefix="bash -c 'sleep 2.5; $0 $@' "/>
 
   <!-- 随机生成物品 (根据random_seed和6个位置参数) -->

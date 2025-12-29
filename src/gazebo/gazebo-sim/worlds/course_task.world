@@ -5,7 +5,7 @@
     <!-- max_attach_distance: 最大吸附距离(米)，超过此距离无法吸附 -->
     <plugin name="link_attacher_plugin" filename="libgazebo_ros_link_attacher.so">
       <min_attach_distance>0.0</min_attach_distance>
-      <max_attach_distance>0.25</max_attach_distance>
+      <max_attach_distance>0.30</max_attach_distance>
     </plugin>
     
     <include>
