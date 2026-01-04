@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   message_runtime
   trajectory_msgs
+  nav_msgs
   urdf
   kuavo_msgs
 )
@@ -89,6 +90,7 @@ generate_messages(
   std_msgs
   geometry_msgs
   trajectory_msgs
+  nav_msgs
   humanoid_plan_arm_trajectory
   kuavo_msgs
 )
