@@ -15,6 +15,7 @@ import json
 import os
 from collections import deque
 
+import tf2_ros
 from std_msgs.msg import String
 from kuavo_msgs.msg import armTargetPoses, robotHandPosition, robotHeadMotionData
 from kuavo_msgs.srv import changeArmCtrlMode, changeArmCtrlModeRequest
@@ -53,16 +54,20 @@ class GraspController:
     
     # 运动时间参数
     ARM_MOVE_TIME = 3      # 手臂运动时间(秒)
-    ARM_WAIT_TIME = 10.0    # 等待手臂运动时间(秒)
+    ARM_STAGE_WAIT = 15.0   # 中间阶段等待时间(秒)，用于固定姿态
+    ARM_TF_TIMEOUT = 60.0  # TF等待超时时间(秒)，用于IK目标位置
+    ARM_STABLE_THRESHOLD = 0.001  # 稳定检测阈值(米)，误差变化小于此值认为稳定
+    ARM_STABLE_COUNT = 50  # 稳定检测次数，连续稳定此次数认为运动完成(20次@10Hz=2秒)
+    ARM_SETTLE_TIME = 1.0  # 运动完成后额外等待时间(秒)
     
     # 目标类别映射 (YOLO类别名 -> 配置)
     # grasp_type: 'side' 侧面抓取(杯子/水瓶), 'top' 顶部抓取(盘子/剪刀/橘子)
     TARGET_CONFIG = {
         'cup': {
             'grasp_type': 'side',  # 侧面抓取
-            'offset_z': 0.138,
+            'offset_z': 0.12,  # 减小z偏移，让手更接近杯子
             'offset_x_l': -0.045, 'offset_y_l': -0.05,
-            'offset_x_r': -0.045, 'offset_y_r': -0.05,
+            'offset_x_r': -0.045, 'offset_y_r': 0.04,
             'offset_angle': 0.9,
             'hand_close': [80, 100, 80, 75, 75, 75],
         },
@@ -144,6 +149,10 @@ class GraspController:
             self.place_srv = rospy.Service('/grasp_controller/place', PlaceObject, self._handle_place_service)
             self.reset_arm_srv = rospy.Service('/grasp_controller/reset_arm', ResetArm, self._handle_reset_arm_service)
             rospy.loginfo("抓取服务已注册: /grasp_controller/grasp, /grasp_controller/place, /grasp_controller/reset_arm")
+        
+        # TF监听器
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
         rospy.sleep(0.5)  # 等待发布器注册
         rospy.loginfo(f"GraspController initialized (sim={self.use_sim})")
@@ -465,6 +474,83 @@ class GraspController:
         self.arm_pub.publish(msg)
         rospy.loginfo("手臂移动中...")
     
+    def get_end_effector_position(self, hand="right"):
+        """
+        获取手末端在base_link坐标系下的位置
+        :param hand: "left" 或 "right"
+        :return: (x, y, z) 或 None
+        """
+        # 末端link名称
+        if hand == "left":
+            end_link = "zarm_l7_link"
+        else:
+            end_link = "zarm_r7_link"
+        
+        try:
+            trans = self.tf_buffer.lookup_transform('base_link', end_link, rospy.Time(0), rospy.Duration(1.0))
+            pos = trans.transform.translation
+            return (pos.x, pos.y, pos.z)
+        except Exception as e:
+            rospy.logwarn(f"获取TF失败: {e}")
+            return None
+    
+    def wait_arm_reach_position(self, target_pos, hand="right", timeout=None):
+        """
+        等待手臂运动完成（通过检测位置稳定）
+        :param target_pos: 目标位置 (x, y, z)，用于计算误差
+        :param hand: "left" 或 "right"
+        :param timeout: 超时时间，None则使用默认值 ARM_TF_TIMEOUT
+        :return: True 运动完成
+        """
+        if timeout is None:
+            timeout = self.ARM_TF_TIMEOUT
+        
+        start_time = time.time()
+        rate = rospy.Rate(10)
+        
+        # 稳定检测：记录最近几次误差
+        last_error = None
+        stable_count = 0
+        
+        while not rospy.is_shutdown():
+            elapsed = time.time() - start_time
+            if elapsed > timeout:
+                rospy.logwarn(f"等待手臂到位超时 ({timeout}s)")
+                return True  # 超时也继续
+            
+            current_pos = self.get_end_effector_position(hand)
+            if current_pos is None:
+                rate.sleep()
+                continue
+            
+            # 计算位置误差
+            error = math.sqrt(
+                (current_pos[0] - target_pos[0])**2 +
+                (current_pos[1] - target_pos[1])**2 +
+                (current_pos[2] - target_pos[2])**2
+            )
+            
+            # 稳定检测：误差不再变化说明运动已完成
+            if last_error is not None:
+                error_change = abs(error - last_error)
+                if error_change < self.ARM_STABLE_THRESHOLD:
+                    stable_count += 1
+                    if stable_count >= self.ARM_STABLE_COUNT:
+                        rospy.loginfo(f"手臂运动已稳定，最终误差: {error:.4f}m")
+                        time.sleep(self.ARM_SETTLE_TIME)
+                        return True
+                else:
+                    stable_count = 0  # 重置计数
+            last_error = error
+            
+            # 每秒打印一次进度
+            if int(elapsed) != int(elapsed - 0.1):
+                rospy.loginfo(f"等待手臂到位... 当前:({current_pos[0]:.3f}, {current_pos[1]:.3f}, {current_pos[2]:.3f}) 误差: {error:.3f}m")
+            
+            rate.sleep()
+        
+        return True
+    
     def set_arm_mode(self, mode):
         """设置手臂控制模式 1:自动摆手 2:外部控制"""
         try:
@@ -615,7 +701,7 @@ class GraspController:
             eef_pose_msg.hand_poses.right_pose.quat_xyzw = quat_xyzw
             eef_pose_msg.hand_poses.right_pose.elbow_pos_xyz = np.zeros(3)
         
-        return eef_pose_msg, cfg['hand_close']
+        return eef_pose_msg, cfg['hand_close'], (grasp_x, grasp_y, grasp_z)
     
     def grasp_by_track_id(self, track_id):
         """根据track_id抓取指定物体"""
@@ -677,7 +763,7 @@ class GraspController:
         time.sleep(0.5)
         
         # IK求解
-        eef_pose_msg, hand_close = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
+        eef_pose_msg, hand_close, _ = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
         res = self.call_ik_service(eef_pose_msg)
         
         if res is None or not res.success:
@@ -723,7 +809,7 @@ class GraspController:
         time.sleep(0.5)
         
         # 5. 计算IK
-        eef_pose_msg, hand_close = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
+        eef_pose_msg, hand_close, _ = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
         res = self.call_ik_service(eef_pose_msg)
         
         if res is None or not res.success:
@@ -1079,7 +1165,7 @@ class GraspController:
         time.sleep(0.5)
         
         # IK求解
-        eef_pose_msg, hand_close = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
+        eef_pose_msg, hand_close, grasp_pos = self.compute_grasp_pose(target_pos, target_class, use_left_hand)
         res = self.call_ik_service(eef_pose_msg)
         
         if res is None or not res.success:
@@ -1088,6 +1174,8 @@ class GraspController:
             self.set_head(0, 0)
             return False, -1, ""
         
+        rospy.loginfo(f"IK求解成功, 耗时: {res.time_cost:.2f}ms")
+        
         # 获取IK结果
         if use_left_hand:
             target_joints = list(res.hand_poses.left_pose.joint_angles)
@@ -1095,7 +1183,7 @@ class GraspController:
             target_joints = list(res.hand_poses.right_pose.joint_angles)
         
         # 执行抓取动作序列 (不释放)
-        self._execute_grasp_only(target_joints, use_left_hand, hand_close, target_class)
+        self._execute_grasp_only(target_joints, use_left_hand, hand_close, target_class, grasp_pos)
         
         # 保存状态
         self.grasped_object = target_class
@@ -1109,50 +1197,63 @@ class GraspController:
         rospy.loginfo(f"抓取完成，物体保持在 {hand} 手中")
         return True, track_id, hand
     
-    def _execute_grasp_only(self, target_joints, use_left_hand, hand_close, target_class):
-        """执行抓取动作序列 - 只抓取不释放"""
+    def _execute_grasp_only(self, target_joints, use_left_hand, hand_close, target_class, grasp_pos=None):
+        """执行抓取动作序列 - 只抓取不释放（完整版：包含中间姿态避免碰撞）"""
         arm_name = "left" if use_left_hand else "right"
         other_joints = [0.35, 0.0, 0.0, -0.52, 0.0, 0.0, 0.0]
         
-        # 阶段1: 初始位置
+        # ========== 阶段1: 初始位置 + 张开手 ==========
         self.set_hand(self.HAND_ZERO, self.HAND_ZERO)
         self.set_arm(self.ARM_MOVE_TIME, [20.0, 0.0, 0.0, -30.0, 0.0, 0.0, 0.0,
                                           20.0, 0.0, 0.0, -30.0, 0.0, 0.0, 0.0])
-        time.sleep(self.ARM_WAIT_TIME)
         
-        # 阶段2: 准备姿态（侧抬）
+        # ========== 阶段2: 准备姿态（手臂侧抬） ==========
         if use_left_hand:
             self.set_arm(self.ARM_MOVE_TIME, [20, 90, 0, -30, 0, 0, 0,
                                               20, 0, 0, -30, 0, 0, 0])
-            time.sleep(self.ARM_WAIT_TIME)
+            time.sleep(self.ARM_STAGE_WAIT)
             self.set_hand(self.HAND_OPEN, None)
         else:
             self.set_arm(self.ARM_MOVE_TIME, [20, 0, 0, -30, 0, 0, 0,
                                               20, -90, 0, -30, 0, 0, 0])
-            time.sleep(self.ARM_WAIT_TIME)
+            time.sleep(self.ARM_STAGE_WAIT)
             self.set_hand(None, self.HAND_OPEN)
         time.sleep(0.5)
         
-        # 阶段3: 中间位置（弯肘）
+        # ========== 阶段3: 中间位置（侧抬+弯肘） ==========
         if use_left_hand:
-            self.set_arm(self.ARM_MOVE_TIME, [20, 90, 0, -110, 0, 0, 0,
+            self.set_arm(self.ARM_MOVE_TIME, [20, 90, 45, -110, 0, 0, 0,
                                               20, 0, 0, -30, 0, 0, 0])
         else:
             self.set_arm(self.ARM_MOVE_TIME, [20, 0, 0, -30, 0, 0, 0,
-                                              20, -90, 0, -110, 0, 0, 0])
-        time.sleep(self.ARM_WAIT_TIME)
+                                              20, -90, -45, -110, 0, 0, 0])
+        time.sleep(self.ARM_STAGE_WAIT)
         
-        # 阶段4: 抓取位置
+        # ========== 阶段4: 最终抓取位置（使用完整IK结果，TF等待到位） ==========
         target_deg = [math.degrees(rad) for rad in target_joints]
+        rospy.loginfo(f"IK关节角度(度): {[f'{d:.1f}' for d in target_deg]}")
+        
         if use_left_hand:
             final_joints = target_deg + [math.degrees(r) for r in other_joints]
         else:
             final_joints = [math.degrees(r) for r in other_joints] + target_deg
         
+        rospy.loginfo(f"发送关节角度: {[f'{d:.1f}' for d in final_joints]}")
         self.set_arm(self.ARM_MOVE_TIME, final_joints)
-        time.sleep(self.ARM_WAIT_TIME)
         
-        # 阶段5: 抓取
+        # 等待手臂开始响应指令
+        time.sleep(0.5)
+        
+        # 使用TF等待手臂到达目标位置（超时时间较长）
+        if grasp_pos is not None:
+            rospy.loginfo(f"等待手臂到达抓取位置: ({grasp_pos[0]:.3f}, {grasp_pos[1]:.3f}, {grasp_pos[2]:.3f})")
+            reached = self.wait_arm_reach_position(grasp_pos, hand=arm_name, timeout=self.ARM_TF_TIMEOUT)
+            if not reached:
+                rospy.logwarn("TF等待超时，继续执行抓取...")
+        else:
+            time.sleep(self.ARM_STAGE_WAIT)
+        
+        # ========== 阶段5: 抓取 ==========
         if self.use_sim:
             success, _ = self.sim_grasp(arm_name, "grasp")
             if not success:
@@ -1165,16 +1266,14 @@ class GraspController:
                 self.set_hand(None, cfg['hand_close'])
         time.sleep(1.0)
         
-        # 阶段6: 抬起到搬运姿态 (侧抬+弯肘，便于行走)
+        # ========== 阶段6: 抬起到搬运姿态 (侧抬+弯肘，便于行走) ==========
         if use_left_hand:
-            # 到中间搬运位置 (侧抬+弯肘)
             self.set_arm(self.ARM_MOVE_TIME, [20, 90, 0, -110, 0, 0, 0,
                                               20, 0, 0, -30, 0, 0, 0])
         else:
-            # 到中间搬运位置 (侧抬+弯肘)
             self.set_arm(self.ARM_MOVE_TIME, [20, 0, 0, -30, 0, 0, 0,
                                               20, -90, 0, -110, 0, 0, 0])
-        time.sleep(self.ARM_WAIT_TIME)
+        time.sleep(self.ARM_STAGE_WAIT)
     
     def place_only(self, hand=None, reset_arm=True):
         """

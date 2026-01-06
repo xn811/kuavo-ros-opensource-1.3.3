@@ -91,8 +91,19 @@
    <node pkg="nodelet" type="nodelet" name="ekf_se" args="load RobotLocalization/EkfNodelet nodelet_manager" respawn="false" output="screen" required="true" launch-prefix="taskset -c 18">
       <rosparam command="load" file="$(find humanoid_estimation)/params/ekf_template.yaml" />
     </node>
+    <!-- Robot spawn position arguments -->
+    <arg name="x" default="0"/>
+    <arg name="y" default="-4"/>
+    <arg name="z" default="1.0"/>
+    <arg name="yaw" default="-1.5709"/>
+
     <group unless="$(arg play_back)">
-      <include file="$(find gazebo_sim)/launch/gazebo_course_task.launch"/>
+      <include file="$(find gazebo_sim)/launch/gazebo_course_task.launch">
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="yaw" value="$(arg yaw)"/>
+      </include>
     </group>
       <include file="$(find humanoid_interface)/launch/rosbag_nodelet.launch"/>
    <group if="$(arg use_joystick)">
