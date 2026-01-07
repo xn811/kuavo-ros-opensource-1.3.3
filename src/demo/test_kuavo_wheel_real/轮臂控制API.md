@@ -4,6 +4,10 @@
 
 ## 目录
 
+### 相关文件目录
+
+src/demo/test_kuavo_wheel_real 包含实物测试案例，可供参考
+
 ### 发布话题 (Published Topics)
 
 功能话题可分为三个类别：底盘控制，下肢控制，上肢控制，
