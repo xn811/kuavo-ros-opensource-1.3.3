@@ -2,10 +2,19 @@
 """
 箱子抓取课程解决方案 - 使用预设关节轨迹
 不使用manipulation_mpc，直接用关节位置控制
+
+用法:
+  仿真模式: python3 grasp_box_course_solver.py --sim
+  实物模式: python3 grasp_box_course_solver.py
+  速度控制转向(低配电脑): python3 grasp_box_course_solver.py --velocity-turn
 """
 import time
+import math
+import argparse
 import numpy as np
 import rospy
+import tf2_ros
+from tf.transformations import euler_from_quaternion
 from kuavo_humanoid_sdk import KuavoRobot, KuavoRobotState, KuavoRobotTools, KuavoRobotVision
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, AprilTagData, PoseQuaternion
 from kuavo_humanoid_sdk.kuavo_strategy.grasp_box.grasp_box_strategy import KuavoGraspBox, BoxInfo
@@ -17,6 +26,13 @@ try:
 except ImportError:
     HAS_ATTACH_SERVICE = False
     print("警告: gazebo_ros_link_attacher 未安装，将不使用物理抓取")
+
+# 全局配置
+USE_VELOCITY_TURN = False  # 是否使用速度控制转向
+
+# 距离配置
+GRASP_DISTANCE = 0.35   # 抓取时与AprilTag的距离(米)
+PLACE_DISTANCE = 0.75   # 放置时与AprilTag的距离(米)，比抓取远一点
 
 # ============== 预设手臂关节位置 (角度制) ==============
 # 每个手臂7个关节: [shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, wrist_yaw, wrist_pitch, wrist_roll]
@@ -172,7 +188,283 @@ def adjust_grasp_pose(robot):
                 print(f"⚠️ 输入格式错误: {e}")
                 print("  示例: -33.2, 2.5, -15.0, -40.0, 12.0, 0.0, 0.0, -33.2, 2.5, -15.0, -40.0, -12.0, 0.0, 0.0")
 
+def get_current_yaw():
+    """通过TF获取当前机器人yaw角度"""
+    try:
+        tf_buffer = tf2_ros.Buffer()
+        tf_listener = tf2_ros.TransformListener(tf_buffer)
+        time.sleep(0.2)
+        
+        transform = tf_buffer.lookup_transform('odom', 'base_link', rospy.Time(0), rospy.Duration(1.0))
+        quat = [
+            transform.transform.rotation.x,
+            transform.transform.rotation.y,
+            transform.transform.rotation.z,
+            transform.transform.rotation.w
+        ]
+        _, _, yaw = euler_from_quaternion(quat)
+        return yaw
+    except Exception as e:
+        print(f"⚠️ 获取yaw角度失败: {e}")
+        return None
+
+def velocity_turn_to_target(robot, robot_state, target_yaw, angular_speed=0.3, tolerance=0.1):
+    """
+    使用速度控制转向到目标角度
+    
+    Args:
+        robot: 机器人对象
+        robot_state: 机器人状态对象
+        target_yaw: 目标yaw角度(弧度)
+        angular_speed: 转向角速度(rad/s)，默认0.3
+        tolerance: 角度容差(弧度)，默认0.1(约5.7度)
+    """
+    print(f"  [速度控制转向] 目标角度: {math.degrees(target_yaw):.1f}°")
+    
+    max_time = 30.0  # 最大转向时间
+    start_time = time.time()
+    
+    while time.time() - start_time < max_time:
+        current_yaw = get_current_yaw()
+        if current_yaw is None:
+            time.sleep(0.1)
+            continue
+        
+        # 计算角度差，归一化到[-pi, pi]
+        yaw_error = target_yaw - current_yaw
+        while yaw_error > math.pi:
+            yaw_error -= 2 * math.pi
+        while yaw_error < -math.pi:
+            yaw_error += 2 * math.pi
+        
+        print(f"    当前: {math.degrees(current_yaw):.1f}°, 误差: {math.degrees(yaw_error):.1f}°")
+        
+        # 检查是否到达目标
+        if abs(yaw_error) < tolerance:
+            # 停止转向
+            robot.walk(0.0, 0.0, 0.0)
+            time.sleep(0.5)
+            print(f"  ✅ 转向完成")
+            return True
+        
+        # 计算转向速度（带方向）
+        turn_speed = angular_speed if yaw_error > 0 else -angular_speed
+        # 接近目标时减速
+        if abs(yaw_error) < 0.3:  # 约17度
+            turn_speed = turn_speed * 0.5
+        
+        robot.walk(0.0, 0.0, turn_speed)
+        time.sleep(0.1)
+    
+    # 超时，停止转向
+    robot.walk(0.0, 0.0, 0.0)
+    print(f"  ⚠️ 转向超时")
+    return False
+
+def velocity_walk_to_target(robot, robot_state, target_x, target_y, target_yaw, 
+                            linear_speed=0.12, angular_speed=0.15, 
+                            pos_tolerance=0.2, yaw_tolerance=0.1):
+    """
+    使用速度控制行走到目标位置（基于odom坐标系的闭环控制）
+    
+    三阶段策略：
+    1. 先转向目标方向
+    2. 直线行走到目标位置（边走边微调）
+    3. 最后调整到目标朝向
+    
+    Args:
+        robot: 机器人对象
+        robot_state: 机器人状态对象
+        target_x, target_y: 目标位置(odom坐标系)
+        target_yaw: 目标朝向(弧度)
+        linear_speed: 线速度(m/s)
+        angular_speed: 角速度(rad/s)
+        pos_tolerance: 位置容差(米)
+        yaw_tolerance: 角度容差(弧度)
+    """
+    print(f"  [速度控制行走] 目标: ({target_x:.2f}, {target_y:.2f}), yaw={math.degrees(target_yaw):.1f}°")
+    
+    # 初始化TF
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    time.sleep(0.3)
+    
+    def get_robot_pose():
+        """获取机器人当前位姿"""
+        try:
+            transform = tf_buffer.lookup_transform('odom', 'base_link', rospy.Time(0), rospy.Duration(0.5))
+            x = transform.transform.translation.x
+            y = transform.transform.translation.y
+            quat = [
+                transform.transform.rotation.x,
+                transform.transform.rotation.y,
+                transform.transform.rotation.z,
+                transform.transform.rotation.w
+            ]
+            _, _, yaw = euler_from_quaternion(quat)
+            return x, y, yaw
+        except Exception as e:
+            return None, None, None
+    
+    def normalize_angle(angle):
+        """归一化角度到[-pi, pi]"""
+        while angle > math.pi:
+            angle -= 2 * math.pi
+        while angle < -math.pi:
+            angle += 2 * math.pi
+        return angle
+    
+    def publish_vel(vx, vy, vz):
+        """发布速度命令"""
+        robot.walk(vx, vy, vz)
+    
+    # ========== 阶段1：转向目标方向 ==========
+    print("  阶段1: 转向目标方向...")
+    max_turn_time = 120.0  # 增加超时时间，仿真中转向较慢
+    start_time = time.time()
+    last_print_time = 0
+    
+    while time.time() - start_time < max_turn_time:
+        current_x, current_y, current_yaw = get_robot_pose()
+        if current_x is None:
+            time.sleep(0.1)
+            continue
+        
+        # 计算目标方向
+        dx = target_x - current_x
+        dy = target_y - current_y
+        target_dir = math.atan2(dy, dx)
+        
+        # 计算角度差
+        angle_diff = normalize_angle(target_dir - current_yaw)
+        
+        # 每2秒打印一次状态
+        elapsed = time.time() - start_time
+        if elapsed - last_print_time > 2.0:
+            print(f"    [转向] 当前yaw={math.degrees(current_yaw):.1f}°, 目标={math.degrees(target_dir):.1f}°, 差={math.degrees(angle_diff):.1f}°")
+            last_print_time = elapsed
+        
+        if abs(angle_diff) < yaw_tolerance:
+            publish_vel(0.0, 0.0, 0.0)
+            print(f"    ✓ 转向完成 (误差={math.degrees(angle_diff):.1f}°)")
+            break
+        
+        # 速度规划（限制在 SDK 允许范围内 [-0.4, 0.4]）
+        turn_speed = 0.4 if abs(angle_diff) > 0.25 else 0.15
+        turn_speed = turn_speed if angle_diff > 0 else -turn_speed
+        
+        publish_vel(0.0, 0.0, turn_speed)
+        time.sleep(0.02)
+    else:
+        publish_vel(0.0, 0.0, 0.0)
+        print("    ⚠️ 转向超时")
+    
+    time.sleep(0.3)
+    
+    # ========== 阶段2：直线行走到目标位置 ==========
+    print("  阶段2: 行走到目标位置...")
+    max_walk_time = 90.0
+    start_time = time.time()
+    
+    while time.time() - start_time < max_walk_time:
+        current_x, current_y, current_yaw = get_robot_pose()
+        if current_x is None:
+            time.sleep(0.1)
+            continue
+        
+        # 计算距离
+        dx = target_x - current_x
+        dy = target_y - current_y
+        distance = math.sqrt(dx*dx + dy*dy)
+        
+        if distance < pos_tolerance:
+            publish_vel(0.0, 0.0, 0.0)
+            print(f"    ✓ 到达位置 (距离={distance:.2f}m)")
+            break
+        
+        # 计算目标方向和角度差
+        target_dir = math.atan2(dy, dx)
+        angle_diff = normalize_angle(target_dir - current_yaw)
+        
+        # 速度规划（限制在 SDK 允许范围内 [-0.4, 0.4]）
+        vx = 0.4 if distance > 0.3 else 0.3
+        
+        # 边走边微调方向
+        vz = 0.08 if angle_diff > 0 else -0.08
+        
+        publish_vel(vx, 0.0, vz)
+        time.sleep(0.02)
+    else:
+        publish_vel(0.0, 0.0, 0.0)
+        print("    ⚠️ 行走超时")
+    
+    time.sleep(0.3)
+    
+    # ========== 阶段3：调整最终朝向 ==========
+    print("  阶段3: 调整最终朝向...")
+    max_turn_time = 120.0  # 增加超时时间，仿真中转向较慢
+    start_time = time.time()
+    last_print_time = 0
+    
+    while time.time() - start_time < max_turn_time:
+        current_x, current_y, current_yaw = get_robot_pose()
+        if current_x is None:
+            time.sleep(0.1)
+            continue
+        
+        # 计算角度差
+        angle_diff = normalize_angle(target_yaw - current_yaw)
+        
+        # 每2秒打印一次状态
+        elapsed = time.time() - start_time
+        if elapsed - last_print_time > 2.0:
+            print(f"    [朝向] 当前yaw={math.degrees(current_yaw):.1f}°, 目标={math.degrees(target_yaw):.1f}°, 差={math.degrees(angle_diff):.1f}°")
+            last_print_time = elapsed
+        
+        if abs(angle_diff) < yaw_tolerance:
+            publish_vel(0.0, 0.0, 0.0)
+            print(f"    ✓ 朝向调整完成 (误差={math.degrees(angle_diff):.1f}°)")
+            time.sleep(0.5)
+            print(f"  ✅ 到达目标位置")
+            return True
+        
+        # 速度规划（限制在 SDK 允许范围内 [-0.4, 0.4]）
+        turn_speed = 0.4 if abs(angle_diff) > 0.25 else 0.15
+        turn_speed = turn_speed if angle_diff > 0 else -turn_speed
+        
+        publish_vel(0.0, 0.0, turn_speed)
+        time.sleep(0.02)
+    
+    publish_vel(0.0, 0.0, 0.0)
+    print("    ⚠️ 朝向调整超时")
+    return False
+
 def main():
+    global USE_VELOCITY_TURN
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='箱子抓取课程解决方案')
+    parser.add_argument('--sim', action='store_true', help='仿真模式 (默认max_yaw_step=90)')
+    parser.add_argument('--max-yaw-step', type=float, default=None, help='自定义单步最大转向角度(度)')
+    parser.add_argument('--velocity-turn', action='store_true', help='使用速度控制转向(适用于低配电脑)')
+    args = parser.parse_args()
+    
+    # 设置转向模式
+    USE_VELOCITY_TURN = args.velocity_turn
+    
+    # 确定max_yaw_step
+    if args.max_yaw_step is not None:
+        max_yaw_step = args.max_yaw_step
+    else:
+        max_yaw_step = 90 if args.sim else 15
+    
+    mode_str = "速度控制" if USE_VELOCITY_TURN else "步态规划"
+    print(f"运行模式: {'仿真' if args.sim else '实物'}, 转向方式: {mode_str}, max_yaw_step={max_yaw_step}°")
+    
+    # 设置ROS参数
+    rospy.set_param('/kuavo_sdk/max_yaw_step', max_yaw_step)
+    rospy.set_param('/kuavo_sdk/use_velocity_turn', USE_VELOCITY_TURN)
+    
     print("初始化机器人...")
     robot = KuavoRobot()
     robot_state = KuavoRobotState()
@@ -181,7 +473,7 @@ def main():
     
     grasp_strategy = KuavoGraspBox(robot, robot_state, robot_tools, robot_vision)
     
-    # AprilTag目标
+    # AprilTag目标 - 箱子上的标签
     target_april_tag = AprilTagData(
         id=[0],
         size=[0.088],
@@ -191,7 +483,17 @@ def main():
         )]
     )
     
-    # 放置位置 (yaw=180°)
+    # 放置位置的 AprilTag - 货架上的标签
+    placement_april_tag = AprilTagData(
+        id=[2],                                 # 放置位置的 AprilTag ID
+        size=[0.088],                           # AprilTag 标签尺寸
+        pose=[PoseQuaternion(
+            position=(-4.0, 0.0, 1.2),          # 基于odom坐标系下的大致位置
+            orientation=(0.0, 0.0, 1.0, 0.0)    # 四元数方向 - 旋转180度
+        )]
+    )
+    
+    # 备用：固定放置位置 (yaw=180°)，当无法识别AprilTag时使用
     placement_pose = KuavoPose(
         position=(-4.80, 0.0, 0.9),
         orientation=(0.0, 0.0, 1.0, 0.0)
@@ -206,11 +508,20 @@ def main():
         print("\n1. 寻找目标箱子...")
         robot.disable_head_tracking()
         
-        find_success = grasp_strategy.head_find_target(
-            target_april_tag, 
-            max_search_time=15.0,
-            search_pattern="rotate_body"
-        )
+        if USE_VELOCITY_TURN:
+            # 速度控制模式：使用头部搜索，不旋转身体
+            find_success = grasp_strategy.head_find_target(
+                target_april_tag, 
+                max_search_time=15.0,
+                search_pattern="rotate_head"  # 只用头部搜索，不旋转身体
+            )
+        else:
+            # 步态规划模式：可以旋转身体
+            find_success = grasp_strategy.head_find_target(
+                target_april_tag, 
+                max_search_time=15.0,
+                search_pattern="rotate_body"
+            )
         
         if not find_success:
             print("❌ 寻找目标失败")
@@ -220,11 +531,64 @@ def main():
 
         # 步骤2：走路接近目标
         print("\n2. 走路接近目标...")
-        approach_success = grasp_strategy.walk_approach_target(
-            target_april_tag,
-            target_distance=0.35,
-            approach_speed=0.2
-        )
+        
+        if USE_VELOCITY_TURN:
+            # 速度控制模式：获取AprilTag位置，用速度控制接近
+            # 从视觉获取目标位置
+            target_id = target_april_tag.id[0]
+            target_data = robot_vision.get_data_by_id_from_odom(target_id)
+            
+            if target_data and 'poses' in target_data and len(target_data['poses']) > 0:
+                tag_pose = target_data['poses'][0]
+                
+                # 使用与原有方法一致的计算逻辑：
+                # 沿着AprilTag的Z轴方向（法线方向）后退target_distance米
+                from scipy.spatial.transform import Rotation as R
+                
+                p_wa = np.array([tag_pose.position.x, tag_pose.position.y, tag_pose.position.z])
+                quat_wa = np.array([tag_pose.orientation.x, tag_pose.orientation.y, 
+                                   tag_pose.orientation.z, tag_pose.orientation.w])
+                R_wa = R.from_quat(quat_wa).as_matrix()
+                
+                # 计算目标位置：沿AprilTag法线方向后退
+                target_distance = GRASP_DISTANCE  # 抓取时与AprilTag的距离(米)
+                p_at = np.array([0, 0, target_distance], np.float32)  # AprilTag坐标系下的偏移
+                p_at_w = R_wa @ p_at  # 转换到世界坐标系
+                p_wt = p_wa + p_at_w  # 最终目标位置
+                
+                # 计算目标朝向：面向AprilTag
+                target_yaw = math.atan2(p_at_w[1], p_at_w[0])
+                target_yaw += math.pi  # 转180度，面向AprilTag
+                while target_yaw > math.pi:
+                    target_yaw -= 2 * math.pi
+                while target_yaw < -math.pi:
+                    target_yaw += 2 * math.pi
+                
+                print(f"  AprilTag位置: ({p_wa[0]:.2f}, {p_wa[1]:.2f})")
+                print(f"  接近位置: ({p_wt[0]:.2f}, {p_wt[1]:.2f})")
+                print(f"  目标朝向: {math.degrees(target_yaw):.1f}°")
+                
+                approach_success = velocity_walk_to_target(
+                    robot, robot_state,
+                    p_wt[0], p_wt[1], target_yaw,
+                    linear_speed=0.15,
+                    angular_speed=0.3,
+                    pos_tolerance=0.2
+                )
+            else:
+                print("⚠️ 无法获取目标位置，使用策略模块")
+                approach_success = grasp_strategy.walk_approach_target(
+                    target_april_tag,
+                    target_distance=GRASP_DISTANCE,
+                    approach_speed=0.2
+                )
+        else:
+            # 步态规划模式
+            approach_success = grasp_strategy.walk_approach_target(
+                target_april_tag,
+                target_distance=GRASP_DISTANCE,
+                approach_speed=0.2
+            )
         
         if not approach_success:
             print("❌ 接近目标失败")
@@ -284,17 +648,141 @@ def main():
         print("\n7. 走到放置位置...")
         robot.disable_head_tracking()
         
-        # 使用walk_to_pose
-        placement_box_info = BoxInfo(
-            pose=placement_pose,
-            size=(0.3, 0.2, 0.15),
-            mass=0.5
-        )
-        move_success = grasp_strategy.walk_to_pose(
-            placement_box_info,
-            target_distance=0.4,
-            approach_speed=0.2,
-        )
+        # 是否启用放置位置的 AprilTag 识别（设为 False 则直接用固定坐标）
+        USE_PLACEMENT_APRILTAG = True
+        
+        # 中间位置：先走到这里再识别放置位置的 AprilTag
+        mid_position = (-2.0, 0.0)  # 中间位置坐标
+        
+        find_placement_success = False
+        if USE_PLACEMENT_APRILTAG:
+            # 先走到中间位置
+            print(f"  先走到中间位置 ({mid_position[0]}, {mid_position[1]})...")
+            
+            if USE_VELOCITY_TURN:
+                mid_success = velocity_walk_to_target(
+                    robot, robot_state,
+                    mid_position[0], mid_position[1], math.pi,  # 面向放置位置方向
+                    linear_speed=0.15,
+                    angular_speed=0.3,
+                    pos_tolerance=0.3
+                )
+            else:
+                mid_pose = KuavoPose(
+                    position=(mid_position[0], mid_position[1], 0.9),
+                    orientation=(0.0, 0.0, 1.0, 0.0)  # yaw=180°
+                )
+                mid_box_info = BoxInfo(
+                    pose=mid_pose,
+                    size=(0.3, 0.2, 0.15),
+                    mass=0.5
+                )
+                mid_success = grasp_strategy.walk_to_pose(
+                    mid_box_info,
+                    target_distance=0.1,
+                    approach_speed=0.2,
+                )
+            
+            if mid_success:
+                print("  ✅ 已到达中间位置，开始寻找放置位置的 AprilTag...")
+                # 到达中间位置后再识别
+                find_placement_success = grasp_strategy.head_find_target(
+                    placement_april_tag,
+                    max_search_time=15.0,
+                    search_pattern="rotate_body" if not USE_VELOCITY_TURN else "rotate_head",
+                    pitch_angles_deg=[-15, 0],  # 放置位置可能在较高处
+                    yaw_angles_deg=[0, -20, 20, -40, 40]
+                )
+            else:
+                print("  ⚠️ 走到中间位置失败")
+        
+        if find_placement_success:
+            print("  ✅ 找到放置位置的 AprilTag")
+            
+            if USE_VELOCITY_TURN:
+                # 速度控制模式：获取AprilTag位置，用速度控制接近
+                placement_tag_id = placement_april_tag.id[0]
+                placement_data = robot_vision.get_data_by_id_from_odom(placement_tag_id)
+                
+                if placement_data and 'poses' in placement_data and len(placement_data['poses']) > 0:
+                    tag_pose = placement_data['poses'][0]
+                    
+                    # 计算接近位置
+                    from scipy.spatial.transform import Rotation as R
+                    
+                    p_wa = np.array([tag_pose.position.x, tag_pose.position.y, tag_pose.position.z])
+                    quat_wa = np.array([tag_pose.orientation.x, tag_pose.orientation.y, 
+                                       tag_pose.orientation.z, tag_pose.orientation.w])
+                    R_wa = R.from_quat(quat_wa).as_matrix()
+                    
+                    # 计算目标位置：沿AprilTag法线方向后退
+                    target_distance = PLACE_DISTANCE  # 放置时与AprilTag的距离(米)
+                    p_at = np.array([0, 0, target_distance], np.float32)
+                    p_at_w = R_wa @ p_at
+                    p_wt = p_wa + p_at_w
+                    
+                    # 计算目标朝向：面向AprilTag
+                    target_yaw = math.atan2(p_at_w[1], p_at_w[0])
+                    target_yaw += math.pi
+                    while target_yaw > math.pi:
+                        target_yaw -= 2 * math.pi
+                    while target_yaw < -math.pi:
+                        target_yaw += 2 * math.pi
+                    
+                    print(f"  放置AprilTag位置: ({p_wa[0]:.2f}, {p_wa[1]:.2f})")
+                    print(f"  接近位置: ({p_wt[0]:.2f}, {p_wt[1]:.2f})")
+                    
+                    move_success = velocity_walk_to_target(
+                        robot, robot_state,
+                        p_wt[0], p_wt[1], target_yaw,
+                        linear_speed=0.15,
+                        angular_speed=0.3,
+                        pos_tolerance=0.4
+                    )
+                else:
+                    print("  ⚠️ 无法获取放置位置，使用固定坐标")
+                    move_success = velocity_walk_to_target(
+                        robot, robot_state,
+                        placement_pose.position[0], placement_pose.position[1], math.pi,
+                        linear_speed=0.15,
+                        angular_speed=0.3,
+                        pos_tolerance=0.4
+                    )
+            else:
+                # 步态规划模式：使用 walk_approach_target
+                move_success = grasp_strategy.walk_approach_target(
+                    placement_april_tag,
+                    target_distance=PLACE_DISTANCE,
+                    approach_speed=0.2
+                )
+        else:
+            # 未找到AprilTag，使用固定坐标
+            print("  ⚠️ 未找到放置位置的 AprilTag，使用固定坐标")
+            
+            if USE_VELOCITY_TURN:
+                target_x = placement_pose.position[0]
+                target_y = placement_pose.position[1]
+                target_yaw = math.pi  # 180度
+                
+                move_success = velocity_walk_to_target(
+                    robot, robot_state,
+                    target_x, target_y, target_yaw,
+                    linear_speed=0.15,
+                    angular_speed=0.3,
+                    pos_tolerance=0.4
+                )
+            else:
+                placement_box_info = BoxInfo(
+                    pose=placement_pose,
+                    size=(0.3, 0.2, 0.15),
+                    mass=0.5
+                )
+                move_success = grasp_strategy.walk_to_pose(
+                    placement_box_info,
+                    target_distance=PLACE_DISTANCE,
+                    approach_speed=0.2,
+                )
+        
         if not move_success:
             print("❌ 移动到放置位置失败")
             return

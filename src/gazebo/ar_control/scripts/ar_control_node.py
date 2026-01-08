@@ -20,6 +20,8 @@ class ARControlNode(object):
         self.publisher = rospy.Publisher('/robot_tag_info', AprilTagDetectionArray, queue_size=10)
         self.publisher_odom = rospy.Publisher('/robot_tag_info_odom', AprilTagDetectionArray, queue_size=10)
         self.subscription = rospy.Subscriber('/tag_detections', AprilTagDetectionArray, self.tag_callback)
+        # 记录上次发布的时间戳，避免重复发布
+        self.last_tf_stamps = {}
     def pub_kuavo_head_traj(self, from_joint_state, target_joint_state):
         # 头部包含两个电机，数据格式为长度为 2 的数组
         # 第一个值代表水平方向，范围 -30 ~ 30
@@ -74,7 +76,7 @@ class ARControlNode(object):
                 new_msg.detections.append(detection)
     
                 # Broadcast transform to tf
-                self.broadcast_transform(transformed_pose, detection.id)
+                self.broadcast_transform(transformed_pose, detection.id, msg.header.stamp)
 
                 # 转换到odom坐标系
                 try:
@@ -114,9 +116,15 @@ class ARControlNode(object):
         self.publisher.publish(new_msg)
         self.publisher_odom.publish(new_msg_odom)
 
-    def broadcast_transform(self, pose, tag_id):
+    def broadcast_transform(self, pose, tag_id, stamp):
+        # 避免重复发布相同时间戳的 TF
+        tag_key = str(tag_id)
+        if tag_key in self.last_tf_stamps and self.last_tf_stamps[tag_key] == stamp:
+            return
+        self.last_tf_stamps[tag_key] = stamp
+        
         transform_stamped = TransformStamped()
-        transform_stamped.header.stamp = rospy.Time.now()
+        transform_stamped.header.stamp = stamp
         transform_stamped.header.frame_id = 'base_link'
         transform_stamped.child_frame_id = 'tag_origin_' + str(tag_id)
         transform_stamped.transform.translation.x = pose.pose.position.x
