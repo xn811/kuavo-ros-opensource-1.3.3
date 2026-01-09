@@ -58,10 +58,10 @@ fi
 show_container_info() {
     local div_line="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "\n$div_line"
-    echo -e "📌 \033[34mContainer Info\033[0m: $CONTAINER_NAME"
-    echo -e "📂 \033[32mWorking Directory\033[0m:"
+    echo -e " \033[34mContainer Info\033[0m: $CONTAINER_NAME"
+    echo -e " \033[32mWorking Directory\033[0m:"
     echo -e "   $PARENT_DIR"
-    echo -e "🔗 \033[33mMounted Volumes\033[0m:"
+    echo -e " \033[33mMounted Volumes\033[0m:"
     # docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}' $CONTAINER_NAME
 
     docker inspect -f '{{range .Mounts}}   {{.Source}} → {{.Destination}}{{println}}{{end}}' $CONTAINER_NAME
@@ -170,14 +170,17 @@ fi
 if [[ -z "$EXISTING_CONTAINER" ]]; then
     echo "Creating a new container '${CONTAINER_NAME}' based on image '${IMAGE_NAME}' ..."
     
-    # 创建独立的 Docker 网络（如果不存在）
-    NETWORK_NAME="kuavo_net_${CURRENT_USER}_${DIR_HASH}"
-    if ! docker network inspect $NETWORK_NAME >/dev/null 2>&1; then
-        echo "Creating isolated network: $NETWORK_NAME"
-        docker network create $NETWORK_NAME
-    fi
+    # 为每个容器分配独立的 ROS Master 端口（将十六进制哈希转换为十进制）
+    DIR_HASH_DEC=$((16#${DIR_HASH}))
+    USER_HASH=$(echo "$CURRENT_USER" | md5sum | cut -c1-4)
+    USER_HASH_DEC=$((16#${USER_HASH}))
+    PORT_OFFSET=$(( (DIR_HASH_DEC + USER_HASH_DEC) % 1000 ))
+    ROS_MASTER_PORT=$((11311 + PORT_OFFSET))
+    GAZEBO_MASTER_PORT=$((11345 + PORT_OFFSET))
+    echo "Using ROS_MASTER_URI: http://localhost:${ROS_MASTER_PORT}"
+    echo "Using GAZEBO_MASTER_URI: http://localhost:${GAZEBO_MASTER_PORT}"
     
-	docker run -it --network $NETWORK_NAME --gpus all \
+	docker run -it --net host --gpus all \
 		--runtime nvidia \
         --name $CONTAINER_NAME \
 		--privileged \
@@ -189,25 +192,33 @@ if [[ -z "$EXISTING_CONTAINER" ]]; then
 		-v "${HOME}/.config/pulse:/root/.config/pulse:ro" \
         -e NVIDIA_VISIBLE_DEVICES=all \
         -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,display \
+        -e __NV_PRIME_RENDER_OFFLOAD=1 \
+        -e __GLX_VENDOR_LIBRARY_NAME=nvidia \
         -e CARB_GRAPHICS_API=vulkan \
         -e GDK_SYNCHRONIZE=1 \
 		-e PULSE_SERVER=unix:/run/user/${USER_ID}/pulse/native \
 		-e PULSE_COOKIE=/run/user/${USER_ID}/pulse/cookie \
 		-e XDG_RUNTIME_DIR=/run/user/${USER_ID} \
 		-e HOME=/root \
+		-e ROS_MASTER_URI=http://localhost:${ROS_MASTER_PORT} \
+		-e GAZEBO_MASTER_URI=http://localhost:${GAZEBO_MASTER_PORT} \
+		-e GAZEBO_IP=127.0.0.1 \
+		-e GAZEBO_MASTER_IP=127.0.0.1 \
+		-e IGN_PARTITION=${CONTAINER_NAME} \
 		--device /dev/snd \
 		--group-add=${AUDIO_GID} \
 		--group-add=dialout \
+		--group-add=video \
 		--ulimit rtprio=99 \
 		--cap-add=sys_nice \
-		--ipc=host \
-		-e DISPLAY=${DISPLAY:-:1} \
+		--ipc=private \
+		-e DISPLAY=$DISPLAY \
 		-e ROBOT_VERSION=45 \
 		--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
 		${IMAGE_NAME} \
 		bash -c "
-			chmod -R 777 /run/user/${USER_ID}/pulse 2>/dev/null
-			# 修改 .zshrc 中的 ROBOT_VERSION
+			chmod -R 777 /run/user/${USER_ID}/pulse 2>/dev/null || true
+			# 修改 .zshrc 中的 ROBOT_VERSION 和 ROS/Gazebo 端口
 			if grep -q '^export ROBOT_VERSION=' /root/.zshrc; then
 				sed -i 's/^export ROBOT_VERSION=.*/export ROBOT_VERSION=45/' /root/.zshrc
 			elif grep -q 'export ROBOT_VERSION=' /root/.zshrc; then
@@ -217,6 +228,13 @@ if [[ -z "$EXISTING_CONTAINER" ]]; then
 				echo '# Auto-configured by docker script' >> /root/.zshrc
 				echo 'export ROBOT_VERSION=45' >> /root/.zshrc
 			fi
+			
+			# 设置独立的 ROS/Gazebo Master URI
+			sed -i '/ROS_MASTER_URI/d' /root/.zshrc 2>/dev/null || true
+			sed -i '/GAZEBO_MASTER_URI/d' /root/.zshrc 2>/dev/null || true
+			echo \"export ROS_MASTER_URI=http://localhost:${ROS_MASTER_PORT}\" >> /root/.zshrc
+			echo \"export GAZEBO_MASTER_URI=http://localhost:${GAZEBO_MASTER_PORT}\" >> /root/.zshrc
+			
 			exec zsh
 		"
 fi
