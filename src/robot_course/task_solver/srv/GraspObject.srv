@@ -2,6 +2,7 @@
 string target_class    # 目标类别: cup/plate/scissors
 int32 track_id         # 指定track_id抓取 (-1表示自动选择最近的)
 bool grasp_only        # true: 只抓取不释放, false: 抓取后释放
+string hand            # 指定使用的手: left/right/auto (空字符串或auto表示自动判断)
 ---
 bool success           # 是否成功
 string message         # 结果信息

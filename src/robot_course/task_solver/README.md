@@ -12,6 +12,9 @@
 - **智能抓取**：支持侧面抓取(杯子)和顶部抓取(盘子/剪刀)两种姿态
 - **ROS服务接口**：提供抓取/放置服务，支持外部程序调用
 - **仿真/实机兼容**：仿真使用吸附服务，实机使用手指控制
+- **AprilTag定位**：基于AprilTag二维码定位物品和放置点
+- **闭环运动控制**：基于odom的三阶段移动（转向→行走→调整朝向）
+- **完整课程流程**：整合抓取放置和搬箱子任务
 - **RViz可视化**：MarkerArray显示检测结果和物体ID
 
 ## 快速开始
@@ -19,7 +22,7 @@
 ### 1. 依赖安装
 
 ```bash
-pip install ultralytics
+pip install ultralytics scipy
 ```
 
 ### 2. 编译
@@ -46,11 +49,237 @@ roslaunch task_solver task_grasp.launch
 # 抓取杯子（只抓取不释放）
 rosservice call /grasp_controller/grasp "target_class: 'cup'
 track_id: -1
-grasp_only: true"
+grasp_only: true
+hand: 'right'"
 
 # 放置物体
 rosservice call /grasp_controller/place "hand: ''"
 ```
+
+---
+
+## 完整课程解决方案 (full_course_solver.py)
+
+整合抓取放置和搬箱子两个任务的完整流程。
+
+### 流程
+
+```
+阶段0 (可选): 导航到识别点 (move_base)
+    ↓
+阶段1: 抓取放置任务 (grasp_demo.py)
+    ├─ 检测AprilTag定位物品
+    ├─ 移动到物品前方
+    ├─ 抓取物品
+    ├─ 移动到放置点
+    ├─ 放置物品
+    └─ 后退并复位手臂
+    ↓
+阶段2: 搬箱子任务 (grasp_box_course_solver.py)
+    ├─ 检测AprilTag定位箱子
+    ├─ 移动到箱子前方
+    ├─ 双手抓取箱子
+    ├─ 搬运到目标位置
+    └─ 放下箱子
+```
+
+### 基本用法
+
+```bash
+# 运行完整流程（抓取放置 + 搬箱子）
+rosrun task_solver full_course_solver.py
+
+# 仿真模式
+rosrun task_solver full_course_solver.py --sim
+
+# 跳过抓取任务，只运行搬箱子
+rosrun task_solver full_course_solver.py --skip_grasp
+
+# 跳过搬箱子任务，只运行抓取放置
+rosrun task_solver full_course_solver.py --skip_box
+
+# 先导航到识别点再开始任务
+rosrun task_solver full_course_solver.py --nav_to_start \
+    --nav_x 1.0 --nav_y 2.0 --nav_z 0.707 --nav_w 0.707
+```
+
+### 完整参数示例
+
+```bash
+rosrun task_solver full_course_solver.py \
+    --nav_to_start --nav_x 1.0 --nav_y 2.0 --nav_z 0.0 --nav_w 1.0 \
+    --grasp_tag_id 0 \
+    --lateral_offset 0.75 \
+    --grasp_offset 0.15 \
+    --place_lateral_offset -0.50 \
+    --place_offset 0.32 \
+    --backward_distance 1.0
+```
+
+### 参数说明
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| **通用参数** | | |
+| `--sim` | false | 仿真模式 |
+| `--skip_grasp` | false | 跳过抓取放置任务 |
+| `--skip_box` | false | 跳过搬箱子任务 |
+| `--wait_between` | 3.0 | 任务之间等待时间(秒) |
+| **导航参数** | | |
+| `--nav_to_start` | false | 启用导航到识别点 |
+| `--nav_x` | 0.0 | 识别点X坐标 |
+| `--nav_y` | 0.0 | 识别点Y坐标 |
+| `--nav_z` | 0.0 | 朝向四元数z分量 |
+| `--nav_w` | 1.0 | 朝向四元数w分量 |
+| **抓取放置参数** | | |
+| `--target` | cup | 抓取目标 |
+| `--grasp_tag_id` | 0 | AprilTag ID |
+| `--lateral_offset` | 0.75 | 物品横向偏移(正=右) |
+| `--forward_offset` | 0.0 | 物品前向偏移 |
+| `--grasp_offset` | 0.15 | 抓取距离 |
+| `--place_offset` | 0.32 | 放置距离 |
+| `--place_lateral_offset` | -0.50 | 放置点横向偏移 |
+| `--backward_distance` | 1.0 | 放置后后退距离 |
+| `--grasp_hand` | right | 抓取用手 |
+| `--lateral` | false | 使用左右平移 |
+| `--speed` | 0.1 | 移动速度(m/s) |
+| `--tolerance` | 0.1 | 位置精度(m) |
+| **搬箱子参数** | | |
+| `--velocity_turn` | true | 使用速度控制转向(默认启用) |
+| `--no_velocity_turn` | false | 禁用速度控制转向 |
+| `--max_yaw_step` | None | 单步最大转向角度 |
+
+---
+
+## 抓取演示程序 (grasp_demo.py)
+
+提供完整的导航+抓取+放置流程演示，支持多种定位方式。
+
+### 定位方式
+
+1. **AprilTag定位**（推荐）：基于AprilTag二维码定位物品位置
+2. **YOLO检测定位**：基于3D检测结果定位
+3. **固定坐标**：使用预设的固定坐标
+
+### AprilTag定位模式（推荐）
+
+```bash
+# 基本用法
+rosrun task_solver grasp_demo.py --use_apriltag --tag_id 0
+
+# 完整参数
+rosrun task_solver grasp_demo.py --use_apriltag --tag_id 0 \
+    --lateral_offset 0.75 \
+    --grasp_offset 0.15 \
+    --place_lateral_offset -0.50 \
+    --place_offset 0.32 \
+    --backward_distance 1.0
+```
+
+### AprilTag偏移量说明
+
+```
+                    AprilTag
+                       │
+    ←── lateral_offset ──→
+                       │
+         ┌─────────────┼─────────────┐
+         │             │             │
+    物品位置      AprilTag位置    放置位置
+  (lateral>0)                  (lateral<0)
+         │             │             │
+         └─────────────┼─────────────┘
+                       │
+                       ↓ forward_offset
+                       │
+                    机器人
+                  (grasp_offset)
+```
+
+- `lateral_offset`: 物品相对AprilTag的横向偏移（正=机器人右边，负=左边）
+- `forward_offset`: 物品相对AprilTag的前向偏移
+- `grasp_offset`: 机器人停在物品前方的距离
+- `place_lateral_offset`: 放置点相对AprilTag的横向偏移
+- `place_offset`: 机器人停在放置点前方的距离
+- `backward_distance`: 放置后后退距离
+
+### YOLO检测定位模式
+
+```bash
+rosrun task_solver grasp_demo.py --use_detection --target cup --grasp_offset 0.5
+```
+
+### 固定坐标模式
+
+```bash
+rosrun task_solver grasp_demo.py --position_mode gazebo \
+    --grasp_x -0.28 --grasp_y -4.4 \
+    --place_x 0.88 --place_y -4.35
+```
+
+### 运行模式
+
+| 模式 | 说明 |
+|------|------|
+| `--mode auto` | 自动导航+抓取+放置（默认） |
+| `--mode manual` | 等待机器人到达位置后触发 |
+| `--mode grasp` | 只在当前位置抓取 |
+| `--mode place` | 只在当前位置放置 |
+
+### 移动方式
+
+```bash
+# 转向+前进（默认，三阶段控制）
+rosrun task_solver grasp_demo.py --use_apriltag --tag_id 0
+
+# 左右平移（全向移动，保持朝向不变）
+rosrun task_solver grasp_demo.py --use_apriltag --tag_id 0 --lateral
+```
+
+### 三阶段移动控制
+
+```
+阶段1: 转向目标方向
+    └─ 原地旋转直到面向目标点
+    └─ 角度误差 < 0.1 rad (≈5.7°)
+    ↓
+阶段2: 直线行走到目标位置
+    └─ 边走边微调方向
+    └─ 位置误差 < 0.1m
+    ↓
+阶段3: 调整最终朝向
+    └─ 原地旋转到目标朝向
+    └─ 角度误差 < 0.1 rad
+```
+
+### 完整参数列表
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--mode` | auto | 运行模式 |
+| `--position_mode` | gazebo | 位置判断：odom/gazebo |
+| `--target` | cup | 抓取目标 |
+| `--grasp_hand` | right | 抓取用手：left/right/auto |
+| `--lateral` | false | 使用左右平移 |
+| `--speed` | 0.1 | 移动速度(m/s) |
+| `--tolerance` | 0.1 | 位置精度(m) |
+| **AprilTag参数** | | |
+| `--use_apriltag` | false | 启用AprilTag定位 |
+| `--tag_id` | 0 | AprilTag ID |
+| `--lateral_offset` | 0.75 | 物品横向偏移(m) |
+| `--forward_offset` | 0.0 | 物品前向偏移(m) |
+| `--grasp_offset` | 0.15 | 抓取距离(m) |
+| `--place_offset` | 0.32 | 放置距离(m) |
+| `--place_lateral_offset` | -0.50 | 放置点横向偏移(m) |
+| `--backward_distance` | 1.0 | 后退距离(m) |
+| **YOLO检测参数** | | |
+| `--use_detection` | false | 启用YOLO检测定位 |
+| **固定坐标参数** | | |
+| `--grasp_x/y` | -0.28, -4.4 | 抓取位置 |
+| `--place_x/y` | 0.88, -4.35 | 放置位置 |
+| `--robot_model` | biped_s42 | Gazebo模型名称 |
+
+---
 
 ## 抓取服务接口
 
@@ -66,6 +295,7 @@ launch文件启动后，`grasp_controller` 以服务模式运行，提供以下�
 | `target_class` | string | 目标类别：cup/plate/scissors |
 | `track_id` | int32 | 指定track_id抓取，-1表示自动选择最近的 |
 | `grasp_only` | bool | true: 只抓取不释放，false: 抓取后释放 |
+| `hand` | string | 指定使用的手：left/right/auto |
 
 **返回：**
 | 参数 | 类型 | 说明 |
@@ -83,6 +313,22 @@ launch文件启动后，`grasp_controller` 以服务模式运行，提供以下�
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `hand` | string | 使用的手：left/right，空字符串表示自动 |
+| `reset_arm` | bool | 是否复位手臂，false时只释放物体不复位 |
+
+**返回：**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `success` | bool | 是否成功 |
+| `message` | string | 结果信息 |
+
+### /grasp_controller/reset_arm
+
+手臂复位服务（放置后后退再调用）。
+
+**请求参数：**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `hand` | string | 使用的手：left/right |
 
 **返回：**
 | 参数 | 类型 | 说明 |
@@ -93,31 +339,31 @@ launch文件启动后，`grasp_controller` 以服务模式运行，提供以下�
 ### 服务调用示例
 
 ```bash
-# 按类别抓取最近的杯子
+# 按类别抓取最近的杯子（右手）
 rosservice call /grasp_controller/grasp "target_class: 'cup'
 track_id: -1
-grasp_only: true"
+grasp_only: true
+hand: 'right'"
 
 # 按track_id抓取指定物体
 rosservice call /grasp_controller/grasp "target_class: ''
 track_id: 3
-grasp_only: true"
+grasp_only: true
+hand: 'auto'"
 
-# 抓取后立即释放
-rosservice call /grasp_controller/grasp "target_class: 'plate'
-track_id: -1
-grasp_only: false"
+# 放置物体（不复位手臂）
+rosservice call /grasp_controller/place "hand: 'right'
+reset_arm: false"
 
-# 放置当前抓取的物体
-rosservice call /grasp_controller/place "hand: ''"
-
-# 指定手放置
-rosservice call /grasp_controller/place "hand: 'right'"
+# 复位手臂
+rosservice call /grasp_controller/reset_arm "hand: 'right'"
 ```
 
-## 抓取演示程序 (grasp_demo.py)
+---
 
-提供完整的导航+抓取+放置流程演示。
+## 抓取演示程序 (grasp_demo.py) - 命令行模式
+
+除了上面详细介绍的AprilTag模式，还支持以下简单用法：
 
 ### 运行模式
 
@@ -144,41 +390,7 @@ rosrun task_solver grasp_demo.py --mode grasp --target cup
 rosrun task_solver grasp_demo.py --mode place --hand right
 ```
 
-### 位置判断方式
-
-```bash
-# 使用odom话题（默认）
---position_mode odom
-
-# 使用二维码检测
---position_mode aruco
-
-# 使用Gazebo真实值
---position_mode gazebo --robot_model biped_s42
-```
-
-### 移动方式
-
-```bash
-# 转向+前进（默认）
-rosrun task_solver grasp_demo.py --mode auto --target cup
-
-# 左右平移（全向移动，保持朝向不变）
-rosrun task_solver grasp_demo.py --mode auto --target cup --lateral
-```
-
-### 参数说明
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--mode` | auto | 运行模式：auto/manual/grasp/place |
-| `--position_mode` | odom | 位置判断：odom/aruco/gazebo |
-| `--target` | cup | 抓取目标：cup/plate/scissors |
-| `--grasp_x/y` | -0.28, -4.4 | 抓取位置坐标 |
-| `--place_x/y` | -0.88, -4.4 | 放置位置坐标 |
-| `--robot_model` | biped_s42 | Gazebo机器人模型名称 |
-| `--hand` | "" | 放置时使用的手 |
-| `--lateral` | false | 使用左右平移移动 |
+---
 
 ## 命令行抓取（独立运行）
 
@@ -375,23 +587,25 @@ roslaunch task_solver task_grasp.launch yolo_model:=/path/to/best.pt
 ```
 task_solver/
 ├── scripts/
-│   ├── yolo_detector.py      # YOLO检测节点
-│   ├── detection_3d.py       # 3D位置计算+物体追踪
-│   ├── grasp_controller.py   # 抓取控制器（支持服务模式）
-│   ├── grasp_demo.py         # 抓取放置演示程序
+│   ├── yolo_detector.py        # YOLO检测节点
+│   ├── detection_3d.py         # 3D位置计算+物体追踪
+│   ├── grasp_controller.py     # 抓取控制器（支持服务模式）
+│   ├── grasp_demo.py           # 抓取放置演示程序
+│   ├── full_course_solver.py   # 完整课程解决方案
 │   ├── test_position_compare.py  # 位置精度测试工具
-│   ├── collect_dataset.py    # 数据采集工具
-│   └── train_yolo.py         # 模型训练脚本
+│   ├── collect_dataset.py      # 数据采集工具
+│   └── train_yolo.py           # 模型训练脚本
 ├── launch/
-│   └── task_grasp.launch     # 启动文件（含抓取服务）
+│   └── task_grasp.launch       # 启动文件（含抓取服务）
 ├── srv/
-│   ├── GraspObject.srv       # 抓取服务定义
-│   └── PlaceObject.srv       # 放置服务定义
+│   ├── GraspObject.srv         # 抓取服务定义
+│   ├── PlaceObject.srv         # 放置服务定义
+│   └── ResetArm.srv            # 手臂复位服务定义
 ├── models/
-│   └── best.pt               # 训练好的YOLO模型
+│   └── best.pt                 # 训练好的YOLO模型
 ├── cfg/
-│   └── GraspController.cfg   # 动态参数配置
-└── dataset/                  # 训练数据集
+│   └── GraspController.cfg     # 动态参数配置
+└── dataset/                    # 训练数据集
 ```
 
 ## 系统架构
@@ -405,6 +619,7 @@ task_solver/
         ▼                       ▼                       ▼
   /yolo/detections      /yolo/detections_3d    /grasp_controller/grasp
   /yolo/detection_image /yolo/markers          /grasp_controller/place
+                        /yolo/detections_3d_odom /grasp_controller/reset_arm
                                                         │
                                                         ▼
                                                ┌─────────────────┐
@@ -413,7 +628,15 @@ task_solver/
                                                └─────────────────┘
                                                         │
                                                         ▼
-                                               导航+抓取+放置流程
+                                               ┌─────────────────┐
+                                               │full_course_solver│
+                                               │  (完整流程)     │
+                                               └─────────────────┘
+                                                        │
+                                        ┌───────────────┴───────────────┐
+                                        ▼                               ▼
+                               抓取放置任务                      搬箱子任务
+                             (grasp_demo.py)           (grasp_box_course_solver.py)
 ```
 
 ### 典型使用流程
@@ -425,16 +648,19 @@ roslaunch gazebo_sim gazebo_course_task.launch random_seed:=110
 # 终端2: 启动检测和抓取服务
 roslaunch task_solver task_grasp.launch
 
-# 终端3: 运行演示程序
-rosrun task_solver grasp_demo.py --mode auto --position_mode gazebo --lateral --target cup
+# 终端3: 运行完整课程流程
+rosrun task_solver full_course_solver.py
+
+# 或者只运行抓取放置演示
+rosrun task_solver grasp_demo.py --use_apriltag --tag_id 0
 ```
 
-### 服务调用流程图
+### 抓取放置流程图
 
 ```
 grasp_demo.py                    grasp_controller.py
      │                                  │
-     │  GraspObject(cup, grasp_only=true)
+     │  GraspObject(cup, hand=right, grasp_only=true)
      │─────────────────────────────────▶│
      │                                  │ grasp_only()
      │                                  │ ├─ 低头检测
@@ -446,12 +672,20 @@ grasp_demo.py                    grasp_controller.py
      │                                  │
      │  (机器人移动到放置区)            │
      │                                  │
-     │  PlaceObject(hand)               │
+     │  PlaceObject(hand, reset_arm=false)
      │─────────────────────────────────▶│
      │                                  │ place_only()
      │                                  │ ├─ 伸出手臂
-     │                                  │ ├─ 释放物体
-     │                                  │ └─ 复位
+     │                                  │ └─ 释放物体
+     │◀─────────────────────────────────│
+     │  success                         │
+     │                                  │
+     │  (机器人后退1m)                  │
+     │                                  │
+     │  ResetArm(hand)                  │
+     │─────────────────────────────────▶│
+     │                                  │ reset_arm()
+     │                                  │ └─ 复位手臂
      │◀─────────────────────────────────│
      │  success                         │
 ```

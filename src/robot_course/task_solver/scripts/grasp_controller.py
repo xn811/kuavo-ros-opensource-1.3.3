@@ -54,10 +54,11 @@ class GraspController:
     
     # 运动时间参数
     ARM_MOVE_TIME = 3      # 手臂运动时间(秒)
+    ARM_WAIT_TIME = 3.0    # 手臂运动等待时间(秒)
     ARM_STAGE_WAIT = 15.0   # 中间阶段等待时间(秒)，用于固定姿态
     ARM_TF_TIMEOUT = 60.0  # TF等待超时时间(秒)，用于IK目标位置
     ARM_STABLE_THRESHOLD = 0.001  # 稳定检测阈值(米)，误差变化小于此值认为稳定
-    ARM_STABLE_COUNT = 50  # 稳定检测次数，连续稳定此次数认为运动完成(20次@10Hz=2秒)
+    ARM_STABLE_COUNT = 20  # 稳定检测次数，连续稳定此次数认为运动完成(20次@10Hz=2秒)
     ARM_SETTLE_TIME = 1.0  # 运动完成后额外等待时间(秒)
     
     # 目标类别映射 (YOLO类别名 -> 配置)
@@ -536,7 +537,7 @@ class GraspController:
                 if error_change < self.ARM_STABLE_THRESHOLD:
                     stable_count += 1
                     if stable_count >= self.ARM_STABLE_COUNT:
-                        rospy.loginfo(f"手臂运动已稳定，最终误差: {error:.4f}m")
+                        rospy.loginfo(f"手臂运动已稳定")
                         time.sleep(self.ARM_SETTLE_TIME)
                         return True
                 else:
@@ -751,10 +752,16 @@ class GraspController:
         success = self._do_grasp(target_pos, target_class)
         return success, track_id
     
-    def _do_grasp(self, target_pos, target_class):
+    def _do_grasp(self, target_pos, target_class, prefer_hand=""):
         """执行抓取的核心逻辑"""
         # 判断左右手
-        use_left_hand = target_pos[1] > 0
+        if prefer_hand in ["left", "right"]:
+            use_left_hand = (prefer_hand == "left")
+            rospy.loginfo(f"指定使用 {prefer_hand} 手")
+        else:
+            use_left_hand = target_pos[1] > 0  # 自动判断：y>0用左手
+            rospy.loginfo(f"自动判断使用 {'left' if use_left_hand else 'right'} 手 (y={target_pos[1]:.2f})")
+        
         hand_name = "左手" if use_left_hand else "右手"
         rospy.loginfo(f"使用 {hand_name} 抓取 {target_class}")
         
@@ -1018,15 +1025,15 @@ class GraspController:
         """处理抓取服务请求"""
         resp = GraspObjectResponse()
         
-        rospy.loginfo(f"[服务] 收到抓取请求: class={req.target_class}, track_id={req.track_id}, grasp_only={req.grasp_only}")
+        rospy.loginfo(f"[服务] 收到抓取请求: class={req.target_class}, track_id={req.track_id}, grasp_only={req.grasp_only}, hand={req.hand}")
         
         try:
             if req.track_id >= 0:
                 # 按track_id抓取
-                success, track_id, hand = self.grasp_only(target_class=None, track_id=req.track_id)
+                success, track_id, hand = self.grasp_only(target_class=None, track_id=req.track_id, prefer_hand=req.hand)
             else:
                 # 按类别抓取最近的
-                success, track_id, hand = self.grasp_only(target_class=req.target_class)
+                success, track_id, hand = self.grasp_only(target_class=req.target_class, prefer_hand=req.hand)
             
             if success:
                 if not req.grasp_only:
@@ -1131,11 +1138,12 @@ class GraspController:
         
         return resp
     
-    def grasp_only(self, target_class=None, track_id=-1):
+    def grasp_only(self, target_class=None, track_id=-1, prefer_hand=""):
         """
         只执行抓取动作，不释放
         :param target_class: 目标类别 (与track_id二选一)
         :param track_id: 指定track_id
+        :param prefer_hand: 指定使用的手 "left"/"right"/"auto"/""，空或auto表示自动判断
         :return: (success, track_id, hand)
         """
         rospy.loginfo(f"========== 抓取 (grasp_only) ==========")
@@ -1156,7 +1164,13 @@ class GraspController:
             return False, -1, ""
         
         # 判断左右手
-        use_left_hand = target_pos[1] > 0
+        if prefer_hand in ["left", "right"]:
+            use_left_hand = (prefer_hand == "left")
+            rospy.loginfo(f"指定使用 {prefer_hand} 手")
+        else:
+            use_left_hand = target_pos[1] > 0  # 自动判断：y>0用左手
+            rospy.loginfo(f"自动判断使用 {'left' if use_left_hand else 'right'} 手 (y={target_pos[1]:.2f})")
+        
         hand = "left" if use_left_hand else "right"
         rospy.loginfo(f"使用 {hand} 手抓取 {target_class}")
         
