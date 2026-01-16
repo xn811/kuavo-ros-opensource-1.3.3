@@ -41,13 +41,13 @@ PLACE_DISTANCE = 0.75   # 放置时与AprilTag的距离(米)，比抓取远一�
 ARM_POSES = {
     # 安全收起姿态
     "safe": [
-        7.6, 68.8, 0.0, -90.8, 77.1, 0.0, 0.0,    # 左臂
-        7.6, -68.8, 0.0, -90.8, -77.1, 0.0, 0.0   # 右臂
+        20, 90.8, 0.0, -30, 0.0, 0.0, 0.0,    # 左臂
+        20, -90.8, 0.0, -30, -0.0, 0.0, 0.0   # 右臂
     ],
     # 准备抓取姿态 (手臂向前伸展，准备抱箱子)
     "pre_grasp": [
-        -33.0, 4.7, 9.4, -40.0, 12.0, 0.0, 0.0,   # 左臂
-        -33.0, -4.7, 9.4, -40.0, -12.0, 0.0, 0.0   # 右臂
+        7.6, 68.8, 0.0, -90.8, 77.1, 0.0, 0.0,    # 左臂
+        7.6, -68.8, 0.0, -90.8, -77.1, 0.0, 0.0   # 右臂
     ],
     # 抓取姿态 (手臂合拢抱住箱子)
     "grasp": [
@@ -607,21 +607,21 @@ def main():
         print("✅ 机器人已站稳")
         
         # 移动到安全姿态
-        move_arm_to_pose(robot, "safe", duration=2.0)
+        move_arm_to_pose(robot, "safe", duration=5.0)
         
         # if not wait_for_confirm("步骤4: 手臂准备抓取"):
         #     return
 
         # 步骤4：手臂准备抓取
         print("\n4. 手臂准备抓取...")
-        move_arm_to_pose(robot, "pre_grasp", duration=2.0)
+        move_arm_to_pose(robot, "pre_grasp", duration=4.0)
         
         # if not wait_for_confirm("步骤5: 抓取箱子"):
         #     return
 
         # 步骤5：抓取
         print("\n5. 抓取箱子...")
-        move_arm_to_pose(robot, "grasp", duration=2.0)
+        move_arm_to_pose(robot, "grasp", duration=4.0)
         time.sleep(2.0)  # 等待手臂到位
         # 交互式调整抓取姿态 (调试时启用)
         # if not adjust_grasp_pose(robot):
@@ -808,7 +808,7 @@ def main():
         detach_box("zarm_r7_link", "block", "base_link")
         
         # 收回手臂
-        move_arm_to_pose(robot, "safe", duration=2.0)
+        move_arm_to_pose(robot, "safe", duration=5.0)
         
         print("\n========== 箱子抓取任务完成 ==========")
         
