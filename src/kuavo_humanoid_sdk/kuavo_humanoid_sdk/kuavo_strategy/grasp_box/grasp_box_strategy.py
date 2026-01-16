@@ -1061,20 +1061,51 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # 使用 ArmOnly 模式（不下蹲时身体保持不动）
         self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
         self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
-
-        # 控制手臂移动到预抓取位置
-        if not self.robot.control_robot_end_effector_pose(
-            left_pose_init,
-            right_pose_init,
-            KuavoManipulationMpcFrame.WorldFrame
-        ):
-            return False
-        time.sleep(2.0)
         
-        SDKLogger.debug("执行预抓取姿态到抓取姿态的轨迹...")
+        # 重置 MPC 状态，让其同步当前手臂位置，避免切换时跳变
+        self.robot.manipulation_mpc_reset()
+        time.sleep(1.0)
+
+        # 获取当前末端位置，用于平滑过渡
+        left_end_transform = self.tools.get_tf_transform("odom", "zarm_l7_end_effector")
+        right_end_transform = self.tools.get_tf_transform("odom", "zarm_r7_end_effector")
+        
+        if left_end_transform and right_end_transform:
+            left_current = KuavoPose(
+                position=left_end_transform.position,
+                orientation=left_end_transform.orientation
+            )
+            right_current = KuavoPose(
+                position=right_end_transform.position,
+                orientation=right_end_transform.orientation
+            )
+            
+            # 打印起点和终点，分析差距
+            SDKLogger.info(f"  左手当前: pos={left_current.position}, ori={left_current.orientation}")
+            SDKLogger.info(f"  左手目标: pos={left_pose_init.position}, ori={left_pose_init.orientation}")
+            SDKLogger.info(f"  右手当前: pos={right_current.position}, ori={right_current.orientation}")
+            SDKLogger.info(f"  右手目标: pos={right_pose_init.position}, ori={right_pose_init.orientation}")
+            
+            # 从当前位置平滑过渡到预抓取位置
+            SDKLogger.info("从当前位置平滑过渡到预抓取位置 (30点, 5秒)...")
+            left_traj_transition = KuavoGraspBox._interpolate_poses(left_current, left_pose_init, num_points=30)
+            right_traj_transition = KuavoGraspBox._interpolate_poses(right_current, right_pose_init, num_points=30)
+            self._execute_trajectory(left_traj_transition, right_traj_transition, total_time=5.0)
+        else:
+            # 如果获取失败，直接移动到预抓取位置（可能会抖动）
+            SDKLogger.warn("⚠️ 无法获取当前末端位置，直接移动到预抓取位置")
+            if not self.robot.control_robot_end_effector_pose(
+                left_pose_init,
+                right_pose_init,
+                KuavoManipulationMpcFrame.WorldFrame
+            ):
+                return False
+            time.sleep(2.0)
+        
+        SDKLogger.info("执行预抓取姿态到抓取姿态的轨迹 (20点, 3秒)...")
         left_traj_grasp = KuavoGraspBox._interpolate_poses(left_pose_init, left_pose_target)
         right_traj_grasp = KuavoGraspBox._interpolate_poses(right_pose_init, right_pose_target)
-        self._execute_trajectory(left_traj_grasp, right_traj_grasp)
+        self._execute_trajectory(left_traj_grasp, right_traj_grasp, total_time=3.0)
         
         time.sleep(2)
         self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.NoControl)

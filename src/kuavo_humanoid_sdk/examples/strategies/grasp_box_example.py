@@ -30,11 +30,11 @@ from scipy.spatial.transform import Rotation as R
 
 # ============== 距离配置 ==============
 GRASP_DISTANCE = 0.28    # 抓取时与AprilTag的距离(米)
-PLACE_DISTANCE = 0.75    # 放置时与AprilTag的距离(米)
+PLACE_DISTANCE = 0.53    # 放置时与AprilTag的距离(米)
 
 # ============== 中间位置配置 ==============
 # 放置位置的AprilTag在后方，需要先走到中间位置再转向识别
-MID_POSITION = (-0.3, 0.0)  # 中间位置坐标 (odom坐标系)
+MID_POSITION = (-0.5, 0.0)  # 中间位置坐标 (odom坐标系)
 
 # ============== 预设手臂关节位置 (角度制) ==============
 # 每个手臂7个关节: [shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, wrist_yaw, wrist_pitch, wrist_roll]
@@ -99,7 +99,8 @@ def get_robot_pose_from_tf():
 
 def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
                             linear_speed=0.3, angular_speed=0.3,
-                            pos_tolerance=0.2, yaw_tolerance=0.1):
+                            pos_tolerance=0.2, yaw_tolerance=0.1,
+                            walk_timeout=15.0):
     """
     使用速度控制行走到目标位置（基于odom坐标系的闭环控制）
     
@@ -107,6 +108,9 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
     1. 先转向目标方向
     2. 直线行走到目标位置（边走边微调）
     3. 最后调整到目标朝向
+    
+    Args:
+        walk_timeout: 阶段2行走的超时时间(秒)，默认15秒
     """
     SDKLogger.info(f"[速度控制行走] 目标: ({target_x:.2f}, {target_y:.2f}), yaw={math.degrees(target_yaw):.1f}°")
     
@@ -181,7 +185,7 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
     
     # ========== 阶段2：直线行走到目标位置 ==========
     SDKLogger.info("  阶段2: 行走到目标位置...")
-    max_walk_time = 15.0
+    max_walk_time = walk_timeout
     start_time = time.time()
     last_print_time = 0
     
@@ -196,17 +200,6 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
         dy = target_y - current_y
         distance = math.sqrt(dx*dx + dy*dy)
         
-        # 每2秒打印一次状态
-        elapsed = time.time() - start_time
-        if elapsed - last_print_time > 2.0:
-            SDKLogger.debug(f"    [行走] 当前位置=({current_x:.2f}, {current_y:.2f}), 距离目标={distance:.2f}m")
-            last_print_time = elapsed
-        
-        if distance < pos_tolerance:
-            publish_vel(0.0, 0.0, 0.0)
-            SDKLogger.info(f"    ✓ 到达位置 (距离={distance:.2f}m)")
-            break
-        
         # 计算目标方向和角度差
         target_dir = math.atan2(dy, dx)
         angle_diff = normalize_angle(target_dir - current_yaw)
@@ -216,6 +209,17 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
         
         # 边走边微调方向
         vz = 0.1 if angle_diff > 0.05 else (-0.1 if angle_diff < -0.05 else 0.0)
+        
+        # 每0.5秒打印一次详细状态
+        elapsed = time.time() - start_time
+        if elapsed - last_print_time > 0.5:
+            SDKLogger.debug(f"    [行走] pos=({current_x:.2f}, {current_y:.2f}), dist={distance:.2f}m, angle_diff={math.degrees(angle_diff):.1f}°, vx={vx:.2f}, vz={vz:.2f}")
+            last_print_time = elapsed
+        
+        if distance < pos_tolerance:
+            publish_vel(0.0, 0.0, 0.0)
+            SDKLogger.info(f"    ✓ 到达位置 (距离={distance:.2f}m)")
+            break
         
         publish_vel(vx, 0.0, vz)
         time.sleep(0.02)
@@ -567,9 +571,10 @@ def main():
             mid_success = velocity_walk_to_target(
                 robot,
                 MID_POSITION[0], MID_POSITION[1], math.pi,
-                linear_speed=0.2,  # 搬箱子时的速度
+                linear_speed=0.15,  # 搬箱子时的速度
                 angular_speed=0.2,
-                pos_tolerance=0.3
+                pos_tolerance=0.2,  # 搬箱子时精度要求不高，避免边界震荡
+                walk_timeout=5.0  # 中间位置超时时间短一些
             )
         else:
             mid_pose = KuavoPose(
@@ -629,7 +634,7 @@ def main():
                     
                     move_success = velocity_walk_to_target(
                         robot, target_x, target_y, target_yaw,
-                        linear_speed=0.2,  # 搬箱子时的速度
+                        linear_speed=0.15,  # 搬箱子时的速度
                         angular_speed=0.2,
                         pos_tolerance=0.3
                     )
@@ -642,7 +647,7 @@ def main():
                         placement_pose.position[0],
                         placement_pose.position[1],
                         target_yaw,
-                        linear_speed=0.2,  # 搬箱子时的速度
+                        linear_speed=0.15,  # 搬箱子时的速度
                         angular_speed=0.2,
                         pos_tolerance=0.3
                     )
