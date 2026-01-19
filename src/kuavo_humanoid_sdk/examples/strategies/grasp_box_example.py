@@ -14,6 +14,10 @@
 注意:
   手臂控制模式已固定为 ArmOnly（身体保持不动，只有手臂运动）
 """
+import os
+# 禁用日志服务器连接，加快启动速度
+os.environ['KUAVO_DISABLE_LOGGER_SERVER'] = '1'
+
 import time
 import math
 import argparse
@@ -54,6 +58,10 @@ ARM_POSES = {
         -35.4, 14.5, -27.7, -51.0, 15.3, 0.0, 0.0,   # 左臂 - 抬高
         -35.4, -14.5, 27.7, -51.0, -15.3, 0.0, 0.0   # 右臂 - 抬高
     ],
+    "prepare_high": [
+        7.6, 68.8, -25.0, -90.8, 77.1, 0.0, 0.0,    # 左臂
+        7.6, -68.8, 25.0, -90.8, -77.1, 0.0, 0.0   # 右臂
+    ],
 }
 
 # 预设点执行顺序（列表格式保证顺序）
@@ -61,7 +69,7 @@ ARM_POSES = {
 ARM_POSE_SEQUENCE = [
     ("side", ARM_POSES["side"]),
     ("safe", ARM_POSES["safe"]),
-    # ("prepare_high", ARM_POSES["prepare_high"]),  # 取消注释以启用
+    ("prepare_high", ARM_POSES["prepare_high"]),  # 取消注释以启用
 ]
 
 
@@ -363,6 +371,7 @@ def main():
     parser = argparse.ArgumentParser(description='箱子抓取示例')
     parser.add_argument('--sim', action='store_true', help='仿真模式')
     parser.add_argument('--velocity-control', action='store_true', help='使用速度控制模式')
+    parser.add_argument('--wait-for-bottle', action='store_true', help='等待抓水瓶任务完成信号后再开始')
     args = parser.parse_args()
     
     use_velocity_control = args.velocity_control
@@ -374,19 +383,27 @@ def main():
     SDKLogger.info(f"手臂模式: ArmOnly（身体保持不动）")
     
     # 初始化SDK
+    SDKLogger.info("正在初始化 SDK...")
+    init_start = time.time()
     if not KuavoSDK().Init():
         SDKLogger.error("Init KuavoSDK failed, exit!")
         exit(1)
+    SDKLogger.info(f"✅ SDK 初始化完成 (耗时: {time.time()-init_start:.2f}秒)")
     
-    SDKLogger.info("初始化机器人...")
+    SDKLogger.info("正在初始化机器人组件...")
+    components_start = time.time()
     # 初始化机器人及相关组件
     robot = KuavoRobot()
     robot_state = KuavoRobotState()
     robot_tools = KuavoRobotTools()
     robot_vision = KuavoRobotVision()
+    SDKLogger.info(f"✅ 机器人组件初始化完成 (耗时: {time.time()-components_start:.2f}秒)")
     
     # 初始化箱子抓取策略
+    SDKLogger.info("正在初始化抓取策略...")
+    strategy_start = time.time()
     grasp_strategy = KuavoGraspBox(robot, robot_state, robot_tools, robot_vision)
+    SDKLogger.info(f"✅ 抓取策略初始化完成 (耗时: {time.time()-strategy_start:.2f}秒)")
     
     # ============== 箱子配置 ==============
     # 箱子尺寸 (宽, 长, 高) 单位：米
@@ -420,6 +437,29 @@ def main():
     )
     
     time.sleep(1)
+    
+    # ============== 等待抓水瓶任务完成信号 ==============
+    # 如果设置了 --wait-for-bottle 参数，则等待抓水瓶任务完成的信号
+    if hasattr(args, 'wait_for_bottle') and args.wait_for_bottle:
+        SDKLogger.info("=" * 60)
+        SDKLogger.info("⏳ 等待抓水瓶任务完成信号...")
+        SDKLogger.info("提示: 抓水瓶程序完成后会发布 /bottle_task_done 话题")
+        SDKLogger.info("=" * 60)
+        
+        try:
+            from std_msgs.msg import Bool
+            # 等待抓水瓶任务完成信号（最多等待300秒=5分钟）
+            msg = rospy.wait_for_message('/bottle_task_done', Bool, timeout=300.0)
+            if msg.data:
+                SDKLogger.info("✅ 收到抓水瓶任务完成信号，开始搬箱子任务")
+            else:
+                SDKLogger.warn("⚠️ 收到抓水瓶任务失败信号，但仍继续搬箱子任务")
+        except rospy.ROSException:
+            SDKLogger.warn("⚠️ 等待抓水瓶任务信号超时，继续执行搬箱子任务")
+        except Exception as e:
+            SDKLogger.error(f"❌ 等待信号时发生错误: {e}")
+            return
+    
     # 执行完整抓取策略
     try:
         SDKLogger.info("========== 开始执行箱子抓取策略 ==========")

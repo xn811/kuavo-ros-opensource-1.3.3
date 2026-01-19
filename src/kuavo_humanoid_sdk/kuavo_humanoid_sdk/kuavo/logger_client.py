@@ -5,6 +5,7 @@ import json
 import threading
 import datetime
 import inspect
+import os
 
 # 全局单例对象
 _logger_instance = None
@@ -18,6 +19,15 @@ def get_logger(timeout: int = 3):
 
 class LoggerClient:
     def __init__(self, uri: str = None, timeout=3):
+        # 检查是否禁用日志服务器
+        if os.environ.get('KUAVO_DISABLE_LOGGER_SERVER', '0') == '1':
+            print("[LoggerClient] 日志服务器已禁用 (KUAVO_DISABLE_LOGGER_SERVER=1)")
+            self._loop = None
+            self._ws = None
+            self._connected_event = threading.Event()
+            self._connected_event.set()  # 立即设置为已连接状态
+            return
+        
         # 强制使用 localhost
         self.uri = "ws://localhost:8889"
         print(f"[LoggerClient] 使用 localhost 构造连接地址: {self.uri}")
