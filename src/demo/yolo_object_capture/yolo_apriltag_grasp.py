@@ -182,9 +182,6 @@ class AprilTagGraspDemo:
         self.hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)
         self.arm_pub = rospy.Publisher('kuavo_arm_target_poses', armTargetPoses, queue_size=10)
         
-        # 关键：等待Publisher注册完成（与yolo_object_capture.py一致）
-        rospy.sleep(0.5)
-        
         # 创建手部消息对象（复用，与yolo_object_capture.py一致）
         self.hand_msg = robotHandPosition()
         self.hand_msg.left_hand_position = ZERO_HAND
@@ -198,9 +195,6 @@ class AprilTagGraspDemo:
         while self.hand_pub.get_num_connections() == 0 and not rospy.is_shutdown():
             rospy.loginfo("等待 control_robot_hand_position 订阅者连接...")
             rate.sleep()
-        
-        # 再等待一下确保连接稳定
-        rospy.sleep(0.3)
         
         rospy.loginfo("AprilTagGraspDemo 初始化完成")
     
@@ -401,7 +395,6 @@ class AprilTagGraspDemo:
         if right is not None:
             self.hand_msg.right_hand_position = right
         self.hand_pub.publish(self.hand_msg)
-        rospy.loginfo(f"手部控制: 左={self.hand_msg.left_hand_position}, 右={self.hand_msg.right_hand_position}")
 
     def grasp_object(self, target_id=39, hand="auto",
                     offset_z=-0.013, temp_x_l=-0.016, temp_y_l=0.038,
@@ -426,9 +419,6 @@ class AprilTagGraspDemo:
         if robot_version == 52:
             robot_zero = (-0.012, -0.255 + 0.03, -0.315)
         elif robot_version == 45:
-            robot_zero = (-0.0173, -0.2927, -0.2837)
-        elif robot_version == 49:
-            # 49系列机器人参数（与45系列相同，根据实际调整）
             robot_zero = (-0.0173, -0.2927, -0.2837)
         else:
             rospy.logerr("不支持的机器人版本")
@@ -526,53 +516,56 @@ class AprilTagGraspDemo:
         else:
             target_joints = list(res.hand_poses.right_pose.joint_angles)
         
-        # 执行抓取动作序列 (与yolo_object_capture.py一致的提肘方式)
+        # 执行抓取动作序列 (与grasp_controller一致)
         # ========== 阶段1: 初始位置 + 双手归零 ==========
         self.set_hand(ZERO_HAND, ZERO_HAND)
-        self.publish_arm_poses([1.5], [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
-        rospy.loginfo("回到初始位置")
-        time.sleep(0.5)
+        self.publish_arm_poses([3], [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
         
-        # ========== 阶段2: 准备姿态（提肘，与yolo_object_capture.py一致） ==========
+        # ========== 阶段2: 准备姿态（手臂侧抬90°） ==========
         if use_left:
-            # 左手提肘: [40, 20, 0, -120, 0, 0, -20] 手腕有-20度旋转
-            self.publish_arm_poses([2.5], [40, 20, 0, -120, 0, 0, -20, 20, 0, 0, -30, 0, 0, 0])
-            time.sleep(2)
+            self.publish_arm_poses([3], [20, 90, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
+            time.sleep(3)
             self.set_hand(left=OPEN_HAND)
         else:
-            # 右手提肘: [40, -20, 0, -120, 0, 0, -20]
-            self.publish_arm_poses([2.5], [20, 0, 0, -30, 0, 0, 0, 40, -20, 0, -120, 0, 0, -20])
-            time.sleep(2)
+            self.publish_arm_poses([3], [20, 0, 0, -30, 0, 0, 0, 20, -90, 0, -30, 0, 0, 0])
+            time.sleep(3)
             self.set_hand(right=OPEN_HAND)
-        time.sleep(1.5)  # 等待手部张开完成
+        time.sleep(1.5)  # 等待手部张开完成（与yolo_object_capture.py一致）
         
-        # ========== 阶段3: 最终抓取位置（使用IK结果，另一只手保持初始） ==========
-        # 另一只手使用弧度值 [0.35, 0, 0, -0.52, 0, 0, 0] 约等于 [20, 0, 0, -30, 0, 0, 0]
+        # ========== 阶段3: 中间位置（侧抬+弯肘，避免碰撞） ==========
         if use_left:
-            joint_end_angles = list(target_joints) + [0.35, 0, 0, -0.52, 0, 0, 0]
+            self.publish_arm_poses([3], [20, 90, 45, -110, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
         else:
-            joint_end_angles = [0.35, 0, 0, -0.52, 0, 0, 0] + list(target_joints)
+            self.publish_arm_poses([3], [20, 0, 0, -30, 0, 0, 0, 20, -90, -45, -110, 0, 0, 0])
+        time.sleep(3)
         
-        target_deg = [math.degrees(rad) for rad in joint_end_angles]
-        self.publish_arm_poses([2.5], target_deg)
-        rospy.loginfo("到达抓取位置")
+        # ========== 阶段4: 最终抓取位置（使用IK结果） ==========
+        target_deg = [math.degrees(rad) for rad in target_joints]
+        other_joints_deg = [20, 0, 0, -30, 0, 0, 0]  # 另一只手保持
+        
+        if use_left:
+            final_joints = target_deg + other_joints_deg
+        else:
+            final_joints = other_joints_deg + target_deg
+        
+        self.publish_arm_poses([3], final_joints)
         time.sleep(5)
         
-        # ========== 阶段4: 握紧 ==========
+        # ========== 阶段5: 握紧 ==========
         if use_left:
             self.set_hand(left=CLOSE_HAND)
         else:
             self.set_hand(right=CLOSE_HAND)
         time.sleep(1)
         
-        # ========== 阶段5: 抬起（递水位置，避免打到桌子） ==========
+        # ========== 阶段6: 递水位置（避免打到桌子） ==========
         if use_left:
             self.publish_arm_poses([2], [-60, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
         else:
             self.publish_arm_poses([2], [20, 0, 0, -30, 0, 0, 0, -60, 0, 0, -30, 0, 0, 0])
         time.sleep(3)
         
-        # ========== 阶段6: 抬起到搬运位置（侧抬+弯肘） ==========
+        # ========== 阶段7: 抬起到搬运位置（侧抬+弯肘） ==========
         if use_left:
             self.publish_arm_poses([3], [20, 90, 0, -110, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0])
         else:

@@ -332,7 +332,7 @@ def main():
         temp_x_l=-0.016
         temp_y_l=0.038
         temp_x_r=0.055 
-        temp_y_r=0.128
+        temp_y_r=-0.038
     else :
         offset_z = temp_x_l = temp_y_l = temp_x_r = temp_y_r = 0.0
 
@@ -396,12 +396,8 @@ def main():
         robot_zero_x = -0.0173
         robot_zero_y = -0.2927
         robot_zero_z = -0.2837
-    elif robot_version == 49:
-        robot_zero_x = -0.0173
-        robot_zero_y = -0.2927
-        robot_zero_z = -0.2837
     else :
-        print("机器人版本号错误, 仅支持 45、49、52 系列")
+        print("机器人版本号错误, 仅支持 45、52 系列")
         return
 
 
@@ -413,7 +409,6 @@ def main():
     hand_control_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=10)
     # 创建消息对象
     hand_control_msg = robotHandPosition()
-    rospy.sleep(0.5)  # 等待订阅者连接
     
     # 手臂控制api
     arm_control_pub = rospy.Publisher('kuavo_arm_target_poses', armTargetPoses, queue_size=10)
