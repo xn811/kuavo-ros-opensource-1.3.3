@@ -1,7 +1,7 @@
 import numpy as np
 import rospy
 #from kuavo_humanoid_sdk.common.logger import SDKLogger
-from std_msgs.msg import Int16MultiArray
+from std_msgs.msg import Int16MultiArray, String
 from lib.microphone import Microphone
 from lib.audio_manager import DialogSession
 from lib.realtime_dialog_client import RealtimeDialogClient
@@ -30,6 +30,9 @@ class ROSDialogSession(DialogSession):
         self.session_id = str(uuid.uuid4())
         self.client = RealtimeDialogClient(config=ws_config, session_id=self.session_id)
         self.audio_data_publisher = rospy.Publisher('audio_data', Int16MultiArray, queue_size=10)
+        
+        # 添加ASR结果发布者（用于任务触发）
+        self.asr_result_publisher = rospy.Publisher('/voice_asr_result', String, queue_size=10)
         
         # Initialize session state variables
         self.is_running = True
@@ -330,7 +333,17 @@ class ROSDialogSession(DialogSession):
                     # Only log final results (not interim)
                     if not is_interim and text:
                         print(f"[Speech] 用户说话: {text}")
-                         # 先检查步态
+                        
+                        # 发布ASR结果到ROS话题（用于任务触发）
+                        try:
+                            asr_msg = String()
+                            asr_msg.data = text
+                            self.asr_result_publisher.publish(asr_msg)
+                            print(f"[Speech] ASR结果已发布到 /voice_asr_result")
+                        except Exception as e:
+                            print(f"[Speech] 发布ASR结果失败: {e}")
+                        
+                        # 先检查步态
                         is_standing = self.check_gait()
                     
                         # 再检查手臂控制模式
