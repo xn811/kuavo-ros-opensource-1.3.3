@@ -23,7 +23,7 @@ from std_msgs.msg import Bool
 
 # ==================== 全局配置：脚本路径 ====================
 # 水瓶抓取脚本路径
-BOTTLE_SCRIPT_PATH = "../../yolo_object_capture/yolo_apriltag_grasp.py"
+BOTTLE_SCRIPT_PATH = "../../../demo/yolo_object_capture/yolo_apriltag_grasp.py"
 
 # 搬箱子脚本路径
 BOX_SCRIPT_PATH = "./grasp_box_example.py"
