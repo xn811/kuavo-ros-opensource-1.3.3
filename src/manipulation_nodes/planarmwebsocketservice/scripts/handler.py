@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 import rospy
 import rospkg
 import os
@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import tf
 import geometry_msgs.msg
 import traceback
+import vr_manager
 
 # 全局变量存储地图信息，用于坐标系转换
 global_map_info = None
@@ -1573,16 +1574,18 @@ async def get_robot_info_handler(
             robot_version_info = robot_version
     except:
         robot_version_info = robot_version
-    
+    # 获取VR录制保存路径
+    vr_recording_path = os.path.expanduser(vr_manager.RECORDING_SAVE_PATH)
     payload = Payload(
-        cmd="get_robot_info", 
+        cmd="get_robot_info",
         data={
-            "code": 0, 
+            "code": 0,
             "robot_type": robot_version_info.version_number(),
             "music_folder_path": MUSIC_FILE_FOLDER,
             "maps_folder_path": MAP_FILE_FOLDER,
             "h12_config_path": H12_CONFIG_PATH,
-            "repo_path": REPO_PATH
+            "repo_path": REPO_PATH,
+            "vr_recording_path": vr_recording_path
         }
     )
 
