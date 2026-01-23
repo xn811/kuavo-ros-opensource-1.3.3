@@ -146,7 +146,7 @@
           </noise>
         </camera>
         <always_on>1</always_on>
-        <update_rate>15</update_rate>
+        <update_rate>${rate}</update_rate>
         <visualize>1</visualize>
       </sensor>
       <sensor name="${sensor_name}_ired1" type="camera">
@@ -220,7 +220,7 @@
       <plugin name="${sensor_name}" filename="librealsense_gazebo_plugin.so">
         <prefix>${sensor_name}_</prefix>
         <depthUpdateRate>${rate}</depthUpdateRate>
-        <colorUpdateRate>15</colorUpdateRate>
+        <colorUpdateRate>${rate}</colorUpdateRate>
         <infraredUpdateRate>${rate}</infraredUpdateRate>
         <depthTopicName>depth/image_rect_raw</depthTopicName>
         <depthCameraInfoTopicName>depth/camera_info</depthCameraInfoTopicName>
