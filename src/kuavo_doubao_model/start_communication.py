@@ -19,8 +19,8 @@ class VoiceConversation:
             print("初始化RobotSpeech成功")
             
             if not self.robot_speech.establish_doubao_speech_connection(
-                app_id="5671185766", 
-                access_key="dhIJGPoEHHMsils6DNPe2p9J5n7KRRR5"
+                app_id="XXXXXXXXXXXXXX", 
+                access_key="XXXXXXXXXXXXXX"
             ):
                 print("语音服务连接失败")
                 return False

@@ -92,11 +92,11 @@ RECORD_SECONDS = 60
 INPUT_FILE = "input.pcm"
 
 # 讯飞ASR配置
-app_id = "86fd6286"
-api_key = "acf0bf5718c736ccbf132cf815d99cb3"
+app_id = "XXXXXXXXXX"
+api_key = "XXXXXXXXXX"
 
 # Moonshot API 配置
-MOONSHOT_API_KEY = "sk-aWUEXV237FZjY7HRh4GjB7GxqIUHb6JKAw4tlOnTGtlsOqg8"
+MOONSHOT_API_KEY = "XXXXXXXXXX"
 
 
 class Microphone:
