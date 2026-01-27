@@ -25,6 +25,7 @@ import numpy as np
 import rospy
 import tf2_ros
 from tf.transformations import euler_from_quaternion
+from geometry_msgs.msg import Twist
 from kuavo_humanoid_sdk import KuavoSDK, KuavoRobot, KuavoRobotState, KuavoRobotTools, KuavoRobotVision
 from kuavo_humanoid_sdk.common.logger import SDKLogger
 from kuavo_humanoid_sdk.interfaces.data_types import KuavoPose, AprilTagData, PoseQuaternion
@@ -122,6 +123,10 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
     """
     SDKLogger.info(f"[速度控制行走] 目标: ({target_x:.2f}, {target_y:.2f}), yaw={math.degrees(target_yaw):.1f}°")
     
+    # 初始化速度发布器
+    cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    rospy.sleep(0.3)  # 等待发布器初始化
+    
     # 初始化TF
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -145,8 +150,12 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
             return None, None, None
     
     def publish_vel(vx, vy, vz):
-        """发布速度命令"""
-        robot.walk(vx, vy, vz)
+        """发布速度命令到 /cmd_vel 话题"""
+        cmd_vel_msg = Twist()
+        cmd_vel_msg.linear.x = vx
+        cmd_vel_msg.linear.y = vy
+        cmd_vel_msg.angular.z = vz
+        cmd_vel_pub.publish(cmd_vel_msg)
     
     # ========== 阶段1：转向目标方向 ==========
     SDKLogger.info("  阶段1: 转向目标方向...")
@@ -305,6 +314,10 @@ def velocity_backward(robot, distance=0.5, linear_speed=0.2, tolerance=0.05):
     """
     SDKLogger.info(f"  [闭环后退] 目标距离: {distance:.2f}m")
     
+    # 初始化速度发布器
+    cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    rospy.sleep(0.3)  # 等待发布器初始化
+    
     # 初始化TF
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -319,6 +332,14 @@ def velocity_backward(robot, distance=0.5, linear_speed=0.2, tolerance=0.05):
             return x, y
         except Exception as e:
             return None, None
+    
+    def publish_vel(vx, vy, vz):
+        """发布速度命令到 /cmd_vel 话题"""
+        cmd_vel_msg = Twist()
+        cmd_vel_msg.linear.x = vx
+        cmd_vel_msg.linear.y = vy
+        cmd_vel_msg.angular.z = vz
+        cmd_vel_pub.publish(cmd_vel_msg)
     
     # 获取起始位置
     start_x, start_y = get_robot_pose()
@@ -351,17 +372,17 @@ def velocity_backward(robot, distance=0.5, linear_speed=0.2, tolerance=0.05):
         
         # 检查是否到达目标距离
         if moved_distance >= distance - tolerance:
-            robot.walk(0.0, 0.0, 0.0)
+            publish_vel(0.0, 0.0, 0.0)
             time.sleep(0.3)
             SDKLogger.info(f"    ✓ 后退完成 (实际距离={moved_distance:.2f}m)")
             return True
         
         # 后退（负速度）
-        robot.walk(-linear_speed, 0.0, 0.0)
+        publish_vel(-linear_speed, 0.0, 0.0)
         time.sleep(0.02)
     
     # 超时停止
-    robot.walk(0.0, 0.0, 0.0)
+    publish_vel(0.0, 0.0, 0.0)
     SDKLogger.warn("    ⚠️ 后退超时")
     return False
 
@@ -600,10 +621,6 @@ def main():
         # 步骤6：寻找放置位置的AprilTag并移动
         SDKLogger.info("6. 寻找放置位置并移动...")
         
-        # 确保机器人处于行走状态
-        robot.stance()
-        time.sleep(0.5)
-        
         # 先走到中间位置
         SDKLogger.info(f"  先走到中间位置 ({MID_POSITION[0]}, {MID_POSITION[1]})...")
         
@@ -676,7 +693,8 @@ def main():
                         robot, target_x, target_y, target_yaw,
                         linear_speed=0.15,  # 搬箱子时的速度
                         angular_speed=0.2,
-                        pos_tolerance=0.3
+                        pos_tolerance=0.3,
+                        walk_timeout=45.0
                     )
                 else:
                     SDKLogger.warn("  ⚠️ 无法获取放置位置，使用固定坐标")

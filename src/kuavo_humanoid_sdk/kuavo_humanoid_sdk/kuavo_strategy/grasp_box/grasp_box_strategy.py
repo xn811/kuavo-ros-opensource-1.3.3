@@ -1057,14 +1057,16 @@ class KuavoGraspBox(KuavoRobotStrategyBase):
         # ========== 最后阶段：移动到抓取位置并执行抓取 ==========
         final_stage = len(preset_poses) + 1 if preset_poses else 1
         SDKLogger.info(f"阶段{final_stage}: 移动到抓取位置并执行抓取...")
-        
-        # 使用 ArmOnly 模式（不下蹲时身体保持不动）
-        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
-        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
-        
+
         # 重置 MPC 状态，让其同步当前手臂位置，避免切换时跳变
         self.robot.manipulation_mpc_reset()
         time.sleep(1.0)
+        
+        # 使用 ArmOnly 模式（不下蹲时身体保持不动）
+        # 注意：必须先设置mode，再设置control_flow
+        self.robot.set_manipulation_mpc_mode(KuavoManipulationMpcCtrlMode.ArmOnly)
+        self.robot.set_manipulation_mpc_control_flow(KuavoManipulationMpcControlFlow.DirectToWbc)
+        time.sleep(1.0)  # 等待模式切换稳定
 
         # 获取当前末端位置，用于平滑过渡
         left_end_transform = self.tools.get_tf_transform("odom", "zarm_l7_end_effector")
