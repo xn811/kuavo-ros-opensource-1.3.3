@@ -70,7 +70,7 @@ ARM_POSES = {
 ARM_POSE_SEQUENCE = [
     ("side", ARM_POSES["side"]),
     ("safe", ARM_POSES["safe"]),
-    ("prepare_high", ARM_POSES["prepare_high"]),  # 取消注释以启用
+    # ("prepare_high", ARM_POSES["prepare_high"]),  # 取消注释以启用
 ]
 
 
@@ -109,7 +109,7 @@ def get_robot_pose_from_tf():
 def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
                             linear_speed=0.3, angular_speed=0.3,
                             pos_tolerance=0.2, yaw_tolerance=0.1,
-                            walk_timeout=15.0):
+                            walk_timeout=180.0):
     """
     使用速度控制行走到目标位置（基于odom坐标系的闭环控制）
     
@@ -159,7 +159,7 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
     
     # ========== 阶段1：转向目标方向 ==========
     SDKLogger.info("  阶段1: 转向目标方向...")
-    max_turn_time = 60.0
+    max_turn_time = 180.0
     start_time = time.time()
     last_print_time = 0
     
@@ -184,21 +184,29 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
             last_print_time = elapsed
         
         if abs(angle_diff) < yaw_tolerance:
-            publish_vel(0.0, 0.0, 0.0)
             SDKLogger.info(f"    ✓ 转向完成 (误差={math.degrees(angle_diff):.1f}°)")
             break
         
-        # 速度规划
-        turn_speed = angular_speed if abs(angle_diff) > 0.25 else angular_speed * 0.5
+        # 改进：平滑的速度规划，避免在阈值附近抖动
+        if abs(angle_diff) > 0.35:  # 大角度
+            turn_speed = angular_speed
+        elif abs(angle_diff) > 0.2:  # 中等角度，线性插值
+            turn_speed = angular_speed * 0.5 + (abs(angle_diff) - 0.2) / (0.35 - 0.2) * angular_speed * 0.5
+        else:  # 小角度
+            turn_speed = angular_speed * 0.5
+        
         turn_speed = turn_speed if angle_diff > 0 else -turn_speed
         
         publish_vel(0.0, 0.0, turn_speed)
-        time.sleep(0.02)
+        time.sleep(0.1)
     else:
-        publish_vel(0.0, 0.0, 0.0)
         SDKLogger.warn("    ⚠️ 转向超时")
     
-    time.sleep(0.3)
+    # 改进：保持微小前进速度，避免触发 stance
+    SDKLogger.debug("    保持微小速度，准备进入下一阶段...")
+    for _ in range(10):  # 持续1秒
+        publish_vel(0.05, 0.0, 0.0)  # 0.05 m/s，避免触发 stance
+        time.sleep(0.1)
     
     # ========== 阶段2：直线行走到目标位置 ==========
     SDKLogger.info("  阶段2: 行走到目标位置...")
@@ -221,11 +229,22 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
         target_dir = math.atan2(dy, dx)
         angle_diff = normalize_angle(target_dir - current_yaw)
         
-        # 速度规划
-        vx = linear_speed if distance > 0.3 else linear_speed * 0.7
+        # 改进：平滑的速度规划，避免突变
+        if distance > 0.5:
+            vx = linear_speed
+        elif distance > 0.35:
+            # 线性插值：0.35m→0.7*linear_speed, 0.5m→linear_speed
+            vx = linear_speed * 0.7 + (distance - 0.35) / (0.5 - 0.35) * linear_speed * 0.3
+        else:
+            vx = linear_speed * 0.7
         
-        # 边走边微调方向
-        vz = 0.1 if angle_diff > 0.05 else (-0.1 if angle_diff < -0.05 else 0.0)
+        # 改进：角速度死区，避免小角度频繁调整
+        if abs(angle_diff) < 0.05:  # 约3°的死区
+            vz = 0.0
+        elif abs(angle_diff) < 0.15:  # 小角度平滑调整
+            vz = 0.1 if angle_diff > 0 else -0.1
+        else:  # 大角度快速调整
+            vz = 0.15 if angle_diff > 0 else -0.15
         
         # 每0.5秒打印一次详细状态
         elapsed = time.time() - start_time
@@ -234,17 +253,19 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
             last_print_time = elapsed
         
         if distance < pos_tolerance:
-            publish_vel(0.0, 0.0, 0.0)
             SDKLogger.info(f"    ✓ 到达位置 (距离={distance:.2f}m)")
             break
         
         publish_vel(vx, 0.0, vz)
-        time.sleep(0.02)
+        time.sleep(0.1)
     else:
-        publish_vel(0.0, 0.0, 0.0)
         SDKLogger.warn("    ⚠️ 行走超时")
     
-    time.sleep(0.3)
+    # 改进：保持微小前进速度，避免触发 stance
+    SDKLogger.debug("    保持微小速度，准备进入下一阶段...")
+    for _ in range(10):  # 持续1秒
+        publish_vel(0.05, 0.0, 0.0)  # 0.05 m/s，避免触发 stance
+        time.sleep(0.1)
     
     # ========== 阶段3：调整最终朝向 ==========
     SDKLogger.info("  阶段3: 调整最终朝向...")
@@ -268,21 +289,38 @@ def velocity_walk_to_target(robot, target_x, target_y, target_yaw,
             last_print_time = elapsed
         
         if abs(angle_diff) < yaw_tolerance:
-            publish_vel(0.0, 0.0, 0.0)
             SDKLogger.info(f"    ✓ 朝向调整完成 (误差={math.degrees(angle_diff):.1f}°)")
+            # 改进：逐渐减速到停止，避免突然触发 stance
+            SDKLogger.debug("    逐渐减速停止...")
+            for i in range(10):
+                speed = 0.05 * (10 - i) / 10  # 从 0.05 逐渐降到 0
+                publish_vel(speed, 0.0, 0.0)
+                time.sleep(0.1)
+            publish_vel(0.0, 0.0, 0.0)
             time.sleep(0.5)
             SDKLogger.info(f"  ✅ 到达目标位置")
             return True
         
-        # 速度规划
-        turn_speed = angular_speed if abs(angle_diff) > 0.25 else angular_speed * 0.5
+        # 改进：平滑的速度规划，避免在阈值附近抖动
+        if abs(angle_diff) > 0.35:  # 大角度
+            turn_speed = angular_speed
+        elif abs(angle_diff) > 0.2:  # 中等角度，线性插值
+            turn_speed = angular_speed * 0.5 + (abs(angle_diff) - 0.2) / (0.35 - 0.2) * angular_speed * 0.5
+        else:  # 小角度
+            turn_speed = angular_speed * 0.5
+        
         turn_speed = turn_speed if angle_diff > 0 else -turn_speed
         
         publish_vel(0.0, 0.0, turn_speed)
-        time.sleep(0.02)
+        time.sleep(0.1)
     
+    # 超时情况也要逐渐减速
+    SDKLogger.warn("    ⚠️ 朝向调整超时，逐渐减速停止...")
+    for i in range(10):
+        speed = 0.05 * (10 - i) / 10
+        publish_vel(speed, 0.0, 0.0)
+        time.sleep(0.1)
     publish_vel(0.0, 0.0, 0.0)
-    SDKLogger.warn("    ⚠️ 朝向调整超时")
     return False
 
 
@@ -631,7 +669,7 @@ def main():
                 linear_speed=0.15,  # 搬箱子时的速度
                 angular_speed=0.2,
                 pos_tolerance=0.2,  # 搬箱子时精度要求不高，避免边界震荡
-                walk_timeout=5.0  # 中间位置超时时间短一些
+                walk_timeout=15.0  # 中间位置超时时间短一些
             )
         else:
             mid_pose = KuavoPose(
@@ -693,8 +731,7 @@ def main():
                         robot, target_x, target_y, target_yaw,
                         linear_speed=0.15,  # 搬箱子时的速度
                         angular_speed=0.2,
-                        pos_tolerance=0.3,
-                        walk_timeout=45.0
+                        pos_tolerance=0.3
                     )
                 else:
                     SDKLogger.warn("  ⚠️ 无法获取放置位置，使用固定坐标")
