@@ -413,10 +413,10 @@ def main():
     """
     # 初始化ROS节点
     rospy.init_node('arm_trajectory_bezier_demo')
-    
+    rospy.set_param('/end_effector_joints_num', 0)
     # 创建订阅者和发布者
     rospy.Subscriber('/bezier/arm_traj', JointTrajectory, traj_callback, queue_size=1, tcp_nodelay=True)
-    rospy.Subscriber('/sensors_data_raw', sensorsData, sensors_data_callback, queue_size=1, tcp_nodelay=True)
+    rospy.Subscriber('/share_memory/sensor_data_raw', sensorsData, sensors_data_callback, queue_size=1, tcp_nodelay=True)
     kuavo_arm_traj_pub = rospy.Publisher('/kuavo_arm_traj', JointState, queue_size=1, tcp_nodelay=True)
     control_hand_pub = rospy.Publisher('/control_robot_hand_position', robotHandPosition, queue_size=1, tcp_nodelay=True)
     control_head_pub = rospy.Publisher('/robot_head_motion_data', robotHeadMotionData, queue_size=1, tcp_nodelay=True)

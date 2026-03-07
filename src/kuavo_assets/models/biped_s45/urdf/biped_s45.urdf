@@ -37,7 +37,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_leg_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -60,7 +60,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_leg_yaw.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -83,7 +83,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_leg_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -106,7 +106,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_knee.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -129,7 +129,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_foot_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -152,7 +152,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_foot_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
     <collision>
@@ -259,7 +259,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_leg_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -282,7 +282,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_leg_yaw.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -305,7 +305,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_leg_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -328,7 +328,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_knee.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -351,7 +351,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_foot_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -374,7 +374,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_foot_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
     <collision>
@@ -481,7 +481,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_arm_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -527,7 +527,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_arm_yaw.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -619,7 +619,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_hand_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -655,7 +655,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_arm_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -701,7 +701,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_arm_yaw.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -793,7 +793,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_hand_pitch.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -875,7 +875,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/camera.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -912,7 +912,7 @@
       <material
         name="">
         <color
-          rgba="1 1 1 1" />
+          rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
     <collision>
@@ -949,7 +949,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/radar.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>

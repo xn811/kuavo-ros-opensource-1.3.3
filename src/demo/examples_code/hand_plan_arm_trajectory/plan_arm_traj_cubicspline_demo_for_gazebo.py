@@ -59,9 +59,6 @@ positions = [
     # 左手进一步调整，右手保持
     [deg_to_rad(angle) for angle in [14,20,33,-35,76,-18,3.5,-30,-25,-54,-15,-6,-22,-4]],
     # 回到中间位置
-    [deg_to_rad(angle) for angle in [20,0,0,-30,0,0,0,20,0,0,-30,0,0,0]],
-    # 回到初始位置
-    [deg_to_rad(angle) for angle in [0,0,0,0,0,0,0,0,0,0,0,0,0,0]],
 ]
 # 位置序列的长度
 position_size = len(positions)

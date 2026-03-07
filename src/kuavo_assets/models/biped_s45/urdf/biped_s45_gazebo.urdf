@@ -158,7 +158,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/l_foot_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -386,7 +386,7 @@
         <mesh filename="package://kuavo_assets/models/biped_s45/meshes/r_foot_roll.STL" />
       </geometry>
       <material name="">
-        <color rgba="1 1 1 1" />
+        <color rgba="0.15 0.15 0.15 1" />
       </material>
     </visual>
   </link>
@@ -1017,6 +1017,7 @@
     <kd value="100.0"/>
     <maxVel>3</maxVel>
     <minDepth>0.00</minDepth>
+    <material>Gazebo/Black</material>
   </gazebo>
   <gazebo reference="l_foot_heel">
     <mu1>1.5</mu1>
@@ -1082,6 +1083,7 @@
     <kd value="100.0"/>
     <maxVel>3</maxVel>
     <minDepth>0.00</minDepth>
+    <material>Gazebo/Black</material>
   </gazebo>
   <gazebo reference="r_foot_heel">
     <mu1>1.5</mu1>
@@ -1200,5 +1202,30 @@
       </contacts>
       </plugin>
   </gazebo>
-  
+
+  <!-- 腿部颜色（黑色） -->
+  <gazebo reference="leg_l1_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_l2_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_l3_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_l4_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_l5_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_r1_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_r2_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_r3_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_r4_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="leg_r5_link"><material>Gazebo/Black</material></gazebo>
+
+  <!-- 摄像头/雷达颜色（黑色） -->
+  <gazebo reference="camera"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="camera_base"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="radar"><material>Gazebo/Black</material></gazebo>
+
+  <!-- 手臂颜色（黑色） -->
+  <gazebo reference="zarm_l1_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="zarm_r1_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="zarm_l3_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="zarm_r3_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="zarm_l7_link"><material>Gazebo/Black</material></gazebo>
+  <gazebo reference="zarm_r7_link"><material>Gazebo/Black</material></gazebo>
+
 </robot>
