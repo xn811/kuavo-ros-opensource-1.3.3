@@ -764,6 +764,12 @@ void GazeboShmInterface::updateWheelControl()
         robot_x_dis = 0.232489;
         robot_y_dis = 0.232489;
     }
+    else if(robotVersion_ == 63)
+    {
+        wheel_radius = 0.13035;
+        robot_x_dis = 0.23865;  // s63 底盘轮距更大
+        robot_y_dis = 0.23865;
+    }
     
     // 四个轮子的位置（相对于底盘中心）
     std::vector<ignition::math::Vector2d> wheel_positions = {

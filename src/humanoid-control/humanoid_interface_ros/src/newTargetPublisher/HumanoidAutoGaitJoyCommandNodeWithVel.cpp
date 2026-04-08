@@ -163,6 +163,7 @@ namespace ocs2
 #define JOYSTICK_BEITONG_MAP_JSON "bt2pro"
 #define JOYSTICK_BEITONG_BUTTON_NUM 16
 #define JOYSTICK_AXIS_NUM 8
+#define WAIST_YAW_MAX_ANGLE_DEG 180.0  // 腰部最大旋转角度（度），±180度
 
   class JoyControl
   {
@@ -380,6 +381,7 @@ namespace ocs2
       switch_controller_client_ = nodeHandle_.serviceClient<kuavo_msgs::switchController>("/humanoid_controller/switch_controller");
       get_controller_list_client_ = nodeHandle_.serviceClient<kuavo_msgs::getControllerList>("/humanoid_controller/get_controller_list");
       switch_to_next_controller_client_ = nodeHandle_.serviceClient<kuavo_msgs::switchToNextController>("/humanoid_controller/switch_to_next_controller");
+      switch_to_previous_controller_client_ = nodeHandle_.serviceClient<kuavo_msgs::switchToNextController>("/humanoid_controller/switch_to_previous_controller");
       auto_gait_change_client_ = nodeHandle_.serviceClient<std_srvs::SetBool>("/humanoid_auto_gait");
       joy_sub_ = nodeHandle_.subscribe(current_joy_topic_, 10, &JoyControl::joyCallback, this);
       
@@ -464,6 +466,8 @@ namespace ocs2
       trigger_fall_stand_up_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/humanoid_controller/trigger_fall_stand_up");
       // Fall down state client
       set_fall_down_state_client_ = nodeHandle_.serviceClient<std_srvs::SetBool>("/humanoid_controller/set_fall_down_state");
+      // Dance controller trigger client
+      trigger_dance_client_ = nodeHandle_.serviceClient<std_srvs::Trigger>("/humanoid_controller/switch_to_dance_controller");
       last_status_check_time_ = ros::Time(0);
 
       // 加载命令配置
@@ -586,11 +590,11 @@ namespace ocs2
           commands_map_[current_cmd.name] = current_cmd;
         }
         
-        std::cout << "Loaded " << commands_map_.size() << " commands" <<std::endl;
-        for (const auto& cmd : commands_map_)
-        {
-          std::cout << " - " << cmd.first << ": "<< cmd.second.type << " " << cmd.second.value << " " << cmd.second.description << std::endl;
-        }
+        // std::cout << "Loaded " << commands_map_.size() << " commands" <<std::endl;
+        // for (const auto& cmd : commands_map_)
+        // {
+        //   std::cout << " - " << cmd.first << ": "<< cmd.second.type << " " << cmd.second.value << " " << cmd.second.description << std::endl;
+        // }
       }
       catch (const std::exception& e)
       {
@@ -913,28 +917,25 @@ namespace ocs2
         return;
       }
 
-      if (old_joy_msg_.buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_XBOX_BUTTON_NUM)
-      {
-        nodeHandle_.setParam("joystick_type", JOYSTICK_XBOX_MAP_JSON);
-        std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_XBOX_MAP_JSON + ".json";
-        nodeHandle_.setParam("channel_map_path", channel_map_path);
-        ROS_WARN("[JoyController]: Joystick data mapping has changed from BEITONG to X-Box");
-        reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_XBOX_BUTTON_NUM);
-        loadJoyJsonConfig(channel_map_path, joyButtonMap, joyAxisMap);
-        old_joy_msg_ = *joy_msg;
-        return;
-      }
-      if(old_joy_msg_.buttons.size() == JOYSTICK_XBOX_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM)
-      {
-        nodeHandle_.setParam("joystick_type", JOYSTICK_BEITONG_MAP_JSON);
-        std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_BEITONG_MAP_JSON + ".json";
-        nodeHandle_.setParam("channel_map_path", channel_map_path);
-        ROS_WARN("[JoyController]: Joystick data mapping has changed from X-Box to BEITONG");
-        reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_BEITONG_BUTTON_NUM);
-        loadJoyJsonConfig(channel_map_path, joyButtonMap, joyAxisMap);
-        old_joy_msg_ = *joy_msg;
-        return;
-      }
+      // if (old_joy_msg_.buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_XBOX_BUTTON_NUM)
+      // {
+      //   nodeHandle_.setParam("joystick_type", JOYSTICK_XBOX_MAP_JSON);
+      //   std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_XBOX_MAP_JSON + ".json";
+      //   nodeHandle_.setParam("channel_map_path", channel_map_path);
+      //   ROS_WARN("[JoyController]: Joystick data mapping has changed from BEITONG to X-Box");
+      //   reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_XBOX_BUTTON_NUM);
+      // }
+      // if(old_joy_msg_.buttons.size() == JOYSTICK_XBOX_BUTTON_NUM && joy_msg->buttons.size() == JOYSTICK_BEITONG_BUTTON_NUM)
+      // {
+      //   nodeHandle_.setParam("joystick_type", JOYSTICK_BEITONG_MAP_JSON);
+      //   std::string channel_map_path = ros::package::getPath("humanoid_controllers") + "/launch/joy/" + JOYSTICK_BEITONG_MAP_JSON + ".json";
+      //   nodeHandle_.setParam("channel_map_path", channel_map_path);
+      //   ROS_WARN("[JoyController]: Joystick data mapping has changed from X-Box to BEITONG");
+      //   reloadJoystickMapping(JOYSTICK_AXIS_NUM, JOYSTICK_BEITONG_BUTTON_NUM);
+      //   // 更新old_joy_msg并跳过本次处理，避免状态混乱
+      //   old_joy_msg_ = *joy_msg;
+      //   return;
+      // }
 
       if (rb_version_.major() != 1)
       {
@@ -1016,6 +1017,15 @@ namespace ocs2
         // 发布头部控制命令
         controlHead(current_head_yaw_, current_head_pitch_);
         // return;
+
+        // RT + X: 切换到上一个控制器
+        if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_RL"]] && joy_msg->buttons[joyButtonMap["BUTTON_RL"]])
+        {
+          ROS_INFO("[JoyControl] RT+BUTTON_RL: switch to previous controller");
+          switchToPreviousController();
+          old_joy_msg_ = *joy_msg;
+          return;
+        }
 
         if(!joy_execute_action_)
         {
@@ -1222,6 +1232,14 @@ namespace ocs2
         if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_RL"]] && joy_msg->buttons[joyButtonMap["BUTTON_RL"]])
         {
           callTriggerFallStandUpSrv();
+          old_joy_msg_ = *joy_msg;
+          return;
+        }
+        // RB + BUTTON_WALK(Y): 切换到 DanceController
+        if (!old_joy_msg_.buttons[joyButtonMap["BUTTON_WALK"]] && joy_msg->buttons[joyButtonMap["BUTTON_WALK"]])
+        {
+          ROS_INFO("Switching to DanceController via RB+Y");
+          callTriggerDanceSrv();
           old_joy_msg_ = *joy_msg;
           return;
         }
@@ -1469,7 +1487,7 @@ namespace ocs2
         updated[2] = true;
         // current_target_(2) = com_height_ + commad_line_target_(2);
         cmdVel.linear.z = commad_line_target_(2);
-        std::cout << "base height: " << current_target_(2) << std::endl;
+        ROS_INFO_THROTTLE(1.0, "base height: %f", current_target_(2));
       }
       else
       {
@@ -1609,6 +1627,50 @@ namespace ocs2
       else
       {
         ROS_ERROR("[JoyControl] Failed to call set_fall_down_state service");
+      }
+    }
+
+    void callTriggerDanceSrv()
+    {
+      std::cout << "trigger callTriggerDanceSrv" << std::endl;
+      
+      // 首先获取当前控制器，再决定切换方向
+      kuavo_msgs::getControllerList get_list_srv;
+      if (!get_controller_list_client_.call(get_list_srv) || !get_list_srv.response.success)
+      {
+        ROS_ERROR("[JoyControl] Failed to get current controller");
+        return;
+      }
+      
+      std::string current_controller = get_list_srv.response.current_controller;
+      ROS_INFO("[JoyControl] Current controller: %s", current_controller.c_str());
+      
+      // 如果当前已经在dance_controller，切换到amp_controller
+      if (current_controller == "dance_controller")
+      {
+        ROS_INFO("[JoyControl] Switching from DanceController to AmpWalkController");
+        if (callSwitchControllerService("amp_controller"))
+        {
+          ROS_INFO("[JoyControl] Successfully switched to AmpWalkController");
+        }
+        else
+        {
+          ROS_ERROR("[JoyControl] Failed to switch to AmpWalkController");
+        }
+      }
+      else
+      {
+        // 否则切换到dance_controller（通过专门的trigger_dance服务）
+        ROS_INFO("[JoyControl] Switching to DanceController");
+        std_srvs::Trigger srv;
+        if (trigger_dance_client_.call(srv) && srv.response.success)
+        {
+          ROS_INFO("[JoyControl] Successfully switched to DanceController: %s", srv.response.message.c_str());
+        }
+        else
+        {
+          ROS_ERROR("[JoyControl] Failed to switch to DanceController");
+        }
       }
     }
 
@@ -1832,6 +1894,27 @@ namespace ocs2
       }
     }
 
+    bool switchToPreviousController()
+    {
+      kuavo_msgs::switchToNextController srv;
+      
+      if (switch_to_previous_controller_client_.call(srv)) {
+        if (srv.response.success) {
+          ROS_INFO("Switch to previous controller successful: %s", srv.response.message.c_str());
+          ROS_INFO("Switched from %s (index: %d) to %s (index: %d)", 
+                   srv.response.current_controller.c_str(), srv.response.current_index,
+                   srv.response.next_controller.c_str(), srv.response.next_index);
+          return true;
+        } else {
+          ROS_ERROR("Switch to previous controller failed: %s", srv.response.message.c_str());
+          return false;
+        }
+      } else {
+        ROS_ERROR("Switch to previous controller service call failed");
+        return false;
+      }
+    }
+
     bool changeAutoGaitStatus(bool flag)
     {
       std_srvs::SetBool srv;
@@ -1911,6 +1994,7 @@ namespace ocs2
     ros::ServiceClient switch_controller_client_;
     ros::ServiceClient get_controller_list_client_;
     ros::ServiceClient switch_to_next_controller_client_;
+    ros::ServiceClient switch_to_previous_controller_client_;
     ros::ServiceClient auto_gait_change_client_;
     
     // 楼梯检测相关
@@ -1934,6 +2018,8 @@ namespace ocs2
     ros::ServiceClient trigger_fall_stand_up_client_;
     // Fall down state service (SetBool)
     ros::ServiceClient set_fall_down_state_client_;
+    // Dance controller trigger service
+    ros::ServiceClient trigger_dance_client_;
     bool robot_launched_{false};
     ros::Time last_status_check_time_;
     bool real_{false};

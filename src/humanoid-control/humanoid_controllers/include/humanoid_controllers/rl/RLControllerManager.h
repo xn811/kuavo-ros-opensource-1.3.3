@@ -115,7 +115,6 @@ namespace humanoid_controller
      * @return 当前控制器名称，如果是MPC控制器则返回空字符串
      */
     std::string getCurrentControllerName();
-    
 
     /**
      * @brief 检查控制器是否存在
@@ -185,6 +184,24 @@ namespace humanoid_controller
      * @return 是否初始化成功
      */
     bool initializeRosServices(ros::NodeHandle& nh);
+    
+    /**
+     * @brief 设置是否直接切换到RL控制器（跳过MPC过渡）
+     */
+    void setDirectSwitchToRL(bool direct)
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex_);
+      direct_switch_to_rl_ = direct;
+    }
+
+    /**
+     * @brief 获取当前是否直接切换到RL控制器（跳过MPC过渡）
+     */
+    bool getDirectSwitchToRL() const
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex_);
+      return direct_switch_to_rl_;
+    }
 
     /**
      * @brief 更新MPC控制器的stance状态（由humanoidController调用）
@@ -225,7 +242,6 @@ namespace humanoid_controller
      */
     bool isTorsoVelocityStable();
 
-
   private:
     /**
      * @brief 异步切换手臂控制模式
@@ -252,6 +268,18 @@ namespace humanoid_controller
                                         kuavo_msgs::switchToNextController::Response &res);
 
     /**
+     * @brief ROS服务回调：切换到上一个控制器
+     */
+    bool switchToPreviousControllerCallback(kuavo_msgs::switchToNextController::Request &req, 
+                                            kuavo_msgs::switchToNextController::Response &res);
+    
+    /**
+     * @brief ROS服务回调：设置RL切换模式（是否直接切换）
+     */
+    bool setRLSwitchModeCallback(std_srvs::SetBool::Request &req,
+                                 std_srvs::SetBool::Response &res);
+
+    /**
      * @brief ROS服务回调：设置倒地状态
      */
     bool setFallDownStateCallback(std_srvs::SetBool::Request &req,
@@ -262,6 +290,12 @@ namespace humanoid_controller
      */
     bool switchToVMPControllerCallback(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res);
+
+    /**
+     * @brief ROS服务回调：切换到Dance控制器
+     */
+    bool switchToDanceControllerCallback(std_srvs::Trigger::Request &req,
+                                         std_srvs::Trigger::Response &res);
 
     /**
      * @brief 更新按类型分组的控制器列表
@@ -284,13 +318,17 @@ namespace humanoid_controller
     ros::ServiceServer switch_controller_srv_;      ///< 切换控制器服务
     ros::ServiceServer get_controller_list_srv_;     ///< 获取控制器列表服务
     ros::ServiceServer switch_to_next_controller_srv_;  ///< 切换到下一个控制器服务
+    ros::ServiceServer switch_to_previous_controller_srv_;  ///< 切换到上一个控制器服务
+    ros::ServiceServer set_rl_switch_mode_srv_;       ///< 设置RL切换模式服务
     ros::ServiceServer set_fall_down_state_srv_;     ///< 设置倒地状态服务
     ros::ServiceServer switch_to_vmp_controller_srv_; ///< 切换到VMP控制器服务
+    ros::ServiceServer switch_to_dance_controller_srv_; ///< 切换到Dance控制器服务
     ros::NodeHandle* nh_ptr_;                       ///< ROS节点句柄指针
 
+    // RL切换模式：true 直接切换到RL；false 使用MPC过渡
+    bool direct_switch_to_rl_ = true;
     // 倒地状态回调函数
     std::function<void(int)> fall_down_state_callback_;  ///< 设置倒地状态的回调函数
-
     // 躯干速度检查相关
     std::function<bool()> torso_stability_callback_;          ///< 获取躯干稳定性状态的回调函数
 
