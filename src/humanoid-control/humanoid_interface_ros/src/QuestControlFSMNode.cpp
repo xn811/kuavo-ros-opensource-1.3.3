@@ -929,10 +929,25 @@ namespace ocs2
             {
                 if (!joystick_data_prev_.right_second_button_pressed && joystick_data_.right_second_button_pressed) // 关闭手臂控制、自动摆手
                 {
-                    
-                    auto new_arm_mode = (arm_ctrl_mode_!=0) ? 0 : 2;
-                    std::cout << "[QuestControlFSM] change arm mode to :" << new_arm_mode << std::endl;
-                    callSetArmModeSrv(new_arm_mode);
+                    if (robot_type_ == 2) // 人形机器人
+                    {
+                        auto new_arm_mode = (arm_ctrl_mode_!=0) ? 0 : 1;
+                        callSetArmModeSrv(new_arm_mode);
+                    }
+                    else if (robot_type_ == 1) // 轮臂机器人,通过奇偶按键次数锁定/解锁
+                    {
+                        if (!vr_torso_arm_locked_) {
+                            // 第一次按：锁定手臂
+                            callSetArmModeSrv(0);
+                            vr_torso_arm_locked_ = true;
+                            ROS_INFO("[QuestControlFSM] VR torso mode: arm locked");
+                        } else {
+                            // 第二次按：解锁手臂，切换到BaseArm模式，允许底盘移动
+                            callSetArmModeSrv(2);
+                            vr_torso_arm_locked_ = false;
+                            ROS_INFO("[QuestControlFSM] VR torso mode: arm unlocked");
+                        }
+                    }
                 }
                 else if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed) // 启用手臂控制
                 {
@@ -948,6 +963,11 @@ namespace ocs2
                     }
                     else {
                         callSetArmModeSrv(new_arm_mode);
+                    }
+
+                    if(1 == robot_type_) // 轮臂机器人
+                    {
+                        callWheelMpcControlMode(3);  // BaseArm mode
                     }
                 }
 
@@ -1093,7 +1113,7 @@ namespace ocs2
             joystick_data_prev_ = joystick_data_;
         }
 
-        void updateStateLegacyWheelVr()  // 轮臂vr遥操
+        void updateStateLegacyWheelVr()
         {
             if (!get_observation_ && !joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed)
             {
@@ -1101,20 +1121,20 @@ namespace ocs2
                 return;
             }
 
-            if (joystick_data_.left_first_button_pressed && joystick_data_.left_second_button_pressed) // 左边第一二个按钮同时按下，关闭机器人
+            if (joystick_data_.left_first_button_pressed && joystick_data_.left_second_button_pressed)
             {
-                callTerminateSrv(); 
+                callTerminateSrv();
                 return;
             }
 
             if (joystick_data_.left_trigger > 0.5)
             {
-                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)  // 使能 WBC 手臂轨迹控制
+                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)
                 {
                     callEnableWbcArmTrajectorySrv(1);
                     return;
                 }
-                if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed)  // 切换到下一个控制器
+                if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed)
                 {
                     callSwitchToNextControllerSrv();
                     return;
@@ -1123,7 +1143,7 @@ namespace ocs2
 
             if (joystick_data_.left_grip > 0.5)
             {
-                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)  // 不使能 WBC 手臂轨迹控制
+                if (!joystick_data_prev_.left_first_button_pressed && joystick_data_.left_first_button_pressed)
                 {
                     callEnableWbcArmTrajectorySrv(0);
                     return;
@@ -1132,25 +1152,24 @@ namespace ocs2
 
             if (joystick_data_.left_first_button_pressed)
             {
-                if (!joystick_data_prev_.right_second_button_pressed && joystick_data_.right_second_button_pressed)  // 锁定或解锁手臂
+                if (!joystick_data_prev_.right_second_button_pressed && joystick_data_.right_second_button_pressed)
                 {
-                    auto new_arm_ctrl_mode_wheel_ = (arm_ctrl_mode_ != 0) ? 0 : 2;
-                    callSetArmModeSrv(new_arm_ctrl_mode_wheel_);
-                    std::cout << "[QuestControlFSM] change arm mode to :" << new_arm_ctrl_mode_wheel_ << std::endl;
+                    callSetArmModeSrv(0);
+                    arm_ctrl_mode_ = 0;
                 }
-                else if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed)  // 跟随或外部控制模式
+                else if (!joystick_data_prev_.right_first_button_pressed && joystick_data_.right_first_button_pressed)
                 {
                     if (arm_collision_control_) {
+                        arm_ctrl_mode_ = 2;
                         arm_collision_control_ = false;
-                        return;
                     }
-                    auto new_arm_ctrl_mode_wheel_ = (arm_ctrl_mode_ != 2) ? 2 : 1;
-                    std::cout << "[QuestControlFSM] change arm mode to :" << new_arm_ctrl_mode_wheel_ << std::endl;
+                    else arm_ctrl_mode_ = (arm_ctrl_mode_!=1) ? 1 : 2;
+                    std::cout << "[QuestControlFSM] change arm mode to :" << arm_ctrl_mode_ << std::endl;
                     if (only_half_up_body_) {
-                        callVRSetArmModeSrv(new_arm_ctrl_mode_wheel_);
+                        callVRSetArmModeSrv(arm_ctrl_mode_);
                     }
                     else {
-                        callSetArmModeSrv(new_arm_ctrl_mode_wheel_);
+                        callSetArmModeSrv(arm_ctrl_mode_);
                     }
 
                     if(1 == robot_type_)
@@ -1161,7 +1180,7 @@ namespace ocs2
                 return;
             }
 
-            if (joystick_data_.left_trigger > 0.5)  // 腰部控制
+            if (joystick_data_.left_trigger > 0.5)
             {
                 if (!joystick_data_prev_.right_second_button_pressed && joystick_data_.right_second_button_pressed)
                 {
@@ -1221,7 +1240,6 @@ namespace ocs2
                 }
             }
 
-            // 接触时实时腰部控制：当手只放在左边第二个按钮时，右边摇杆变为腰部控制指令
             if ((joystick_data_.left_second_button_touched && !joystick_data_.left_first_button_touched) && !torso_control_enabled_)
             {
                 updateTorsoControl();
