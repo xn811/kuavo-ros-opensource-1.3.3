@@ -690,27 +690,19 @@ namespace humanoid_controller
     mpcStartSub_ = controllerNh_.subscribe<std_msgs::Bool>("/start_mpc", 10, &humanoidController::startMpccallback, this);
     arm_joint_trajectory_.initialize(armNumReal_);
     mm_arm_joint_trajectory_.initialize(armNumReal_);
-    arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
-      {
-        if (is_rl_controller_ == false)
-        {
-          if(msg->name.size() != armNumReal_){
-            std::cerr << "The dimensin of arm joint pos is NOT equal to the armNumReal_!!" << msg->name.size() << " vs " << armNumReal_ << "\n";
-            return;
+    arm_traj_receiver_.init(
+        controllerNh_, armNumReal_,
+        [this](const double* pos, const double* vel, const double* tau, int n,
+               uint64_t /*stamp_nsec*/) {
+          const int count = std::min(n, static_cast<int>(armNumReal_));
+          for (int i = 0; i < count; ++i) {
+            arm_joint_trajectory_.pos[i] = pos[i];
+            arm_joint_trajectory_.vel[i] = (vel != nullptr) ? vel[i] : 0.0;
+            arm_joint_trajectory_.tau[i] = (tau != nullptr) ? tau[i] : 0.0;
           }
-          for(int i = 0; i < armNumReal_; i++)
-          {
-            // std::cout << "arm joint pos: " << msg->position[i] << std::endl;
-            arm_joint_trajectory_.pos[i] = msg->position[i] * M_PI / 180.0;
-            if(msg->velocity.size() == armNumReal_)
-              arm_joint_trajectory_.vel[i] = msg->velocity[i] * M_PI / 180.0;
-            if(msg->effort.size() == armNumReal_)
-              arm_joint_trajectory_.tau[i] = msg->effort[i];
-          }
-        }
-        // std::cout << "arm joint pos: " << arm_joint_trajectory_.pos.size() << std::endl;
-      });
-      mm_arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/mm_kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
+        },
+        "/humanoid_controller/set_incremental_arm_traj_link");
+    mm_arm_joint_traj_sub_ = controllerNh_.subscribe<sensor_msgs::JointState>("/mm_kuavo_arm_traj", 10, [this](const sensor_msgs::JointState::ConstPtr &msg)
       {
         if(msg->name.size() != armNumReal_){
           std::cerr << "The dimensin of arm joint pos is NOT equal to the armNumReal_!!" << msg->name.size() << " vs " << armNumReal_ << "\n";
