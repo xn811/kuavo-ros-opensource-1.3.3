@@ -95,6 +95,7 @@
     <param name="joy_execute_action" value="$(arg joy_execute_action)"/>
     <param name="init_fall_down_state" value="$(arg init_fall_down_state)"/>
     <param name="/use_sit_init" value="$(arg use_sit_init)"/>
+    <param name="/hardware_sit_prep_ready" value="false"/>
     <param name="run_mujoco_camera" value="$(arg run_mujoco_camera)"/>
     <!-- Launch script to collect kuavo-launch information -->
     <node pkg="humanoid_controllers" type="collect_launch_info.sh" name="collect_launch_info" />
