@@ -1,0 +1,72 @@
+<launch>
+  <arg name="config" default="$(find quest_webxr_bridge)/config/default.yaml"/>
+  <arg name="pose_config" default="$(find quest_webxr_bridge)/config/v49_calibration_poses.yaml"/>
+  <arg name="cert_file" default=""/>
+  <arg name="key_file" default=""/>
+  <arg name="enable_output" default="false"/>
+  <arg name="enable_head" default="true"/>
+  <arg name="start_ik" default="true"/>
+  <arg name="quest_compatible_ik" default="true"/>
+  <arg name="visualize_ik" default="false"/>
+  <!-- Execute the bridge with python3 resolved from the caller's PATH. This
+       preserves the project .venv-webxr selected by the launch shell instead
+       of the catkin wrapper's build-time /usr/bin/python3 shebang. -->
+  <arg name="webxr_python" default="$(optenv WEBXR_PYTHON python3)"/>
+  <!-- The bridge state machine owns the safe mode switch before automatic
+       staging. ik_ros_uni must never race it with a second mode request. -->
+  <arg name="ik_send_srv" default="0"/>
+
+  <rosparam command="load" file="$(arg config)" ns="quest_webxr_kuavo_bridge"/>
+  <rosparam command="load" file="$(arg pose_config)" ns="quest_webxr_kuavo_bridge/pose_config"/>
+
+  <group if="$(arg start_ik)">
+    <!-- Reuse the proven Python IK path for WebXR target poses. Its output is
+         normalized below to the fuller JointState layout found in the C++
+         Quest3 reference bag. -->
+    <node if="$(arg quest_compatible_ik)"
+          pkg="motion_capture_ik"
+          type="ik_ros_uni.py"
+          name="ik_ros_uni"
+          args="--ctrl_arm_idx 2 --ik_type_idx 0 --send_srv=0 --control_torso=false --control_finger_type=0 --predict_gesture=false --ee_type=qiangnao --hand_reference_mode=thumb_index --use_two_stage_ik=true"
+          output="screen">
+      <param name="use_arm_collision" value="false"/>
+      <!-- The reference task1 bag was produced by ik_ros_uni_cpp_node, whose
+           JointState contains position, velocity and effort. Keep the proven
+           Python solver for WebXR retargeting, but route its output through a
+           small format/synchronization adapter before exposing canonical
+           control topics. -->
+      <remap from="/kuavo_arm_traj"
+             to="/quest_webxr/internal_ik_arm_traj"/>
+      <!-- External WebXR supplies the real six-channel hand command. Once
+           ik_ros_uni switches to external-pose mode its internal hand state is
+           empty and would otherwise interleave zero commands into the bag. -->
+      <remap from="control_robot_hand_position"
+             to="/quest_webxr/internal_ik_hand_unused"/>
+    </node>
+    <node if="$(arg quest_compatible_ik)"
+          pkg="quest_webxr_bridge"
+          type="quest_webxr_control_contract_adapter.py"
+          name="quest_webxr_control_contract_adapter"
+          output="screen">
+      <rosparam command="load" file="$(arg config)"/>
+      <rosparam command="load" file="$(arg pose_config)" ns="pose_config"/>
+    </node>
+    <include unless="$(arg quest_compatible_ik)"
+             file="$(find motion_capture_ik)/launch/ik_node.launch">
+      <arg name="visualize" value="$(arg visualize_ik)"/>
+    </include>
+  </group>
+
+  <node pkg="quest_webxr_bridge"
+        type="quest_webxr_kuavo_bridge.py"
+        name="quest_webxr_kuavo_bridge"
+        launch-prefix="$(arg webxr_python)"
+        output="screen">
+    <param name="cert_file" value="$(arg cert_file)"/>
+    <param name="key_file" value="$(arg key_file)"/>
+    <param name="enable_output" value="$(arg enable_output)"/>
+    <param name="enable_head" value="$(arg enable_head)"/>
+    <remap from="/control_robot_hand_position"
+           to="/quest_webxr/internal_hand_position"/>
+  </node>
+</launch>

@@ -1,0 +1,246 @@
+# Kuavo v49 WebXR calibration/teleoperation staging poses.
+#
+# These values are loaded by the guarded WebXR state machine.  They have been
+# visually approved in MuJoCo only; real-robot use still requires a separate
+# low-speed, clear-workspace validation.
+
+schema_version: 1
+robot_version: 49
+created_at: "2026-10-23"
+updated_at: "2026-11-03"
+angle_unit: deg
+time_unit: s
+trajectory_time_base: mpc_observation_time
+
+joint_layout:
+  command_topic: /quest_webxr/auto_arm_target
+  command_type: sensor_msgs/JointState
+  canonical_output_topic: /kuavo_arm_traj
+  canonical_output_owner: /quest_webxr_control_contract_adapter
+  validation_preview_topic: /kuavo_arm_target_poses
+  validation_preview_type: kuavo_msgs/armTargetPoses
+  feedback_topic: /sensors_data_raw
+  feedback_type: kuavo_msgs/sensorsData
+  feedback_slice: "joint_data.joint_q[12:26]"
+  feedback_angle_unit: rad
+  command_frame: base_link
+  joint_order:
+    - left_arm_joint_1
+    - left_arm_joint_2
+    - left_arm_joint_3
+    - left_arm_joint_4
+    - left_arm_joint_5
+    - left_arm_joint_6
+    - left_arm_joint_7
+    - right_arm_joint_1
+    - right_arm_joint_2
+    - right_arm_joint_3
+    - right_arm_joint_4
+    - right_arm_joint_5
+    - right_arm_joint_6
+    - right_arm_joint_7
+
+control_mode:
+  trajectory_mode: 2
+  # This service first seeds the arm controller with the measured pose and then
+  # changes mode.  It prevented the jump observed with the direct service.
+  safe_switch_service: /arm_traj_change_mode
+  state_query_service: /humanoid_get_arm_ctrl_mode
+  forbidden_for_entry: /humanoid_change_arm_ctrl_mode
+  forbidden_reason: >-
+    A direct 0-to-2 switch was tested in MuJoCo and the arms moved toward a stale
+    internal zero target before the new trajectory was accepted. Always enter
+    trajectory mode through /arm_traj_change_mode.
+
+# Limits transcribed from the biped_s49 URDF.  The preview envelope keeps a
+# five-degree margin from every hard stop and is the envelope used for these
+# calibration-pose reviews.
+limits:
+  hard_lower_deg: [-180, -20, -90, -150, -90, -75, -40, -180, -120, -90, -150, -90, -40, -40]
+  hard_upper_deg: [90, 120, 90, 0, 90, 40, 40, 90, 20, 90, 0, 90, 75, 40]
+  preview_lower_deg: [-175, -15, -85, -145, -85, -70, -35, -175, -115, -85, -145, -85, -35, -35]
+  preview_upper_deg: [85, 115, 85, -5, 85, 35, 35, 85, 15, 85, -5, 85, 70, 35]
+
+safety_policy:
+  require_robot_version: 49
+  require_only_half_up_body: true
+  require_fresh_feedback_max_age_s: 0.30
+  require_no_external_target_stream: true
+  entry_pose_tolerance_deg: 3.0
+  completion_tolerance_deg: 2.0
+  completion_hold_s: 1.0
+  left_right_symmetry_tolerance_deg: 3.0
+  trajectory_timeout_margin_s: 5.0
+  # Measured during this MuJoCo session.  The arm trajectory node adds `times`
+  # to /humanoid_wbc_observation.time, not to the ROS wall clock.
+  measured_mpc_time_to_wall_time_ratio: 0.549
+  wall_timeout_formula: "requested_mpc_duration_s / measured_ratio + trajectory_timeout_margin_s"
+  # Preview transitions use target displacement / duration <= 5 deg/s.  The
+  # native time-trajectory controller determines the instantaneous profile;
+  # actual peak velocity and acceleration were not logged in the first preview.
+  max_commanded_average_joint_speed_deg_s: 5.0
+  actual_peak_speed_available: false
+  actual_acceleration_available: false
+  latest_segment_feedback_peak_speed_logged: false
+
+poses:
+  home:
+    status: nominal_plus_observed_start
+    description: "MuJoCo v49 initial arm pose, hands beside the body"
+    nominal_deg: [20, 0, 0, -30, 0, 0, 0, 20, 0, 0, -30, 0, 0, 0]
+    observed_before_home_to_t_deg: [20.047, 0.001, -0.008, -30.120, 0.008, 0.013, 0.047, 20.048, -0.001, 0.003, -30.120, -0.002, -0.003, 0.040]
+
+  t:
+    status: validated_in_mujoco
+    description: "Both upper limbs extended laterally; elbow kept 5 deg away from its hard stop"
+    target_deg: [0, 90, 0, -5, 0, 0, 0, 0, -90, 0, -5, 0, 0, 0]
+    observed_after_settle_deg: [0.031, 90.049, 0.020, -4.986, 0.022, -0.071, -0.016, 0.031, -90.052, -0.021, -4.986, -0.022, 0.097, -0.016]
+    visual_review: "approved by operator; slow, safe, smooth, final pose good"
+
+  t_bent:
+    status: validated_in_mujoco
+    description: "T pose with symmetric elbow flexion; adapted from xteleop staging concept for Kuavo v49"
+    target_deg: [0, 90, 0, -85, 0, 0, 0, 0, -90, 0, -85, 0, 0, 0]
+    observed_after_settle_deg: [0.043, 90.081, 0.009, -84.757, 0.079, 0.026, -0.053, 0.043, -90.082, -0.007, -84.748, -0.082, -0.032, -0.099]
+    operator_review: "approved together with the complete T-to-T_BENT-to-L path"
+
+  l:
+    status: validated_in_mujoco
+    description: >-
+      Symmetric human/robot alignment pose for the tall-cup scene: upper arms
+      remain 20 deg abducted instead of becoming vertical beside the torso,
+      elbows are flexed 90 deg, and the forearms remain forward.
+    target_deg: [0, 20, 0, -90, 0, 0, 0, 0, -20, 0, -90, 0, 0, 0]
+    observed_after_settle_deg: [0.007, 20.026, -0.007, -90.080, 0.028, 0.010, 0.086, 0.008, -20.026, 0.007, -90.084, -0.027, -0.010, 0.099]
+    final_max_target_error_deg: 0.099
+    min_preview_limit_margin_deg: 35.0
+    operator_review: >-
+      Approved in the dedicated tall-cup MuJoCo scene after the complete
+      HOME-to-T-to-T_BENT-to-L path. No dexhand touch channel reported contact
+      and the cup pose remained stable after settling.
+
+transitions:
+  home_to_t:
+    status: validated_in_mujoco
+    controller: native_time_target_trajectory
+    duration_s: 18.0
+    duration_time_base: mpc_observation_time
+    estimated_wall_duration_at_measured_ratio_s: 32.79
+    max_abs_average_joint_speed_deg_s: 5.0
+    command_times: [18.0]
+    start_source: measured_feedback
+    target_pose: t
+    notes: "Entered mode 2 through /arm_traj_change_mode, then sent one absolute target."
+
+  t_to_t_bent:
+    status: validated_in_mujoco_via_guarded_resume
+    controller: native_time_target_trajectory
+    duration_s: 18.0
+    duration_time_base: mpc_observation_time
+    estimated_wall_duration_at_measured_ratio_s: 32.79
+    max_abs_average_joint_speed_deg_s: 4.445
+    command_times: [18.0]
+    start_pose: t
+    target_pose: t_bent
+    moving_joints: [left_arm_joint_4, right_arm_joint_4]
+    execution_note: >-
+      The first preview was interrupted by an incorrectly wall-clock-based
+      monitor near -59.42 deg.  Mode 0 held the posture; mode 2 was then safely
+      re-entered from measured feedback and the target was completed with the
+      guarded resume segment recorded below.
+    guarded_resume:
+      start_observed_deg: [0.056, 90.118, -0.041, -59.418, 0.148, 0.022, -0.005, 0.056, -90.119, 0.040, -59.418, -0.148, -0.021, -0.007]
+      duration_mpc_s: 8.0
+      measured_wall_elapsed_to_settle_s: 15.279
+      max_abs_commanded_average_joint_speed_deg_per_mpc_s: 3.198
+      max_feedback_speed_deg_per_wall_s: 3.486
+      max_feedback_speed_by_joint_deg_per_wall_s: [0.060, 0.113, 0.047, 3.486, 0.157, 0.047, 0.623, 0.060, 0.115, 0.046, 3.432, 0.148, 0.029, 0.296]
+      final_max_target_error_deg: 0.252
+      result: reached_without_limit_or_symmetry_guard_violation
+
+  t_bent_to_l:
+    status: validated_in_mujoco_tall_cup_clearance_l
+    controller: native_time_target_trajectory
+    duration_s: 18.0
+    duration_time_base: mpc_observation_time
+    estimated_wall_duration_at_measured_ratio_s: 32.79
+    max_abs_average_joint_speed_deg_s: 3.889
+    command_times: [18.0]
+    start_pose: t_bent
+    target_pose: l
+    moving_joints: [left_arm_joint_2, left_arm_joint_4, right_arm_joint_2, right_arm_joint_4]
+    min_preview_limit_margin_deg: 35.0
+    min_hard_limit_margin_deg: 40.0
+    final_max_target_error_deg: 0.099
+    actual_peak_speed_logged: false
+    result: reached_without_limit_symmetry_feedback_or_speed_guard_violation
+    notes: >-
+      Operator approved the tall-cup clearance path and final pose. The path
+      lowers shoulder roll symmetrically from +/-90 deg to +/-20 deg while
+      changing elbow flexion from -85 deg to -90 deg. No measured peak-speed
+      trace was retained, so only commanded average speed is recorded.
+
+validation_history:
+  - date: "2026-10-23"
+    environment: mujoco
+    robot_version: 49
+    transition: home_to_t
+    result: passed
+    notes:
+      - "A direct /humanoid_change_arm_ctrl_mode switch was rejected after an unexpected move toward a stale zero target."
+      - "The native /arm_traj_change_mode entry path held the measured initial pose."
+      - "Final absolute target error was below 0.1 deg in the sampled feedback."
+  - date: "2026-10-23"
+    environment: mujoco
+    robot_version: 49
+    transition: t_to_t_bent
+    result: preview_interrupted_by_monitor_only
+    notes:
+      - "The pose path remained inside the preview envelope and left/right elbow mismatch stayed near 0.013 deg."
+      - "A wall-clock timeout at 23 s interrupted the move near -59.42 deg; mode 0 held that posture safely."
+      - "Measured /humanoid_wbc_observation.time progression was 0.549 times wall time; monitoring must use the MPC time base or a ratio-aware timeout."
+  - date: "2026-10-23"
+    environment: mujoco
+    robot_version: 49
+    transition: t_to_t_bent_guarded_resume
+    result: reached_pending_operator_visual_approval
+    notes:
+      - "Safely re-entered mode 2 from measured feedback at approximately -59.42 deg elbow flexion."
+      - "Completed to the -85 deg target using 8 MPC-observation seconds; measured wall settle time was 15.279 s."
+      - "Maximum sampled feedback speed was 3.486 deg/s; no preview-limit, non-target-drift, or symmetry guard fired."
+  - date: "2026-10-23"
+    environment: mujoco
+    robot_version: 49
+    transition: t_bent_to_l
+    result: superseded_by_2026-10-25_replacement_l
+    notes:
+      - "This entry describes the previous rosbag-derived L pose and is retained only as validation history."
+      - "Completed the 18 MPC-observation-second absolute joint trajectory in 34.866 wall seconds."
+      - "Maximum sampled feedback speed was 4.313 deg/s and maximum left/right mirror error was 0.217 deg."
+      - "The smallest preview-envelope margin was 1.049 deg at joint 7; the corresponding hard-limit margin was 6.049 deg."
+      - "No limit, symmetry, feedback, or speed guard fired."
+  - date: "2026-10-25"
+    environment: mujoco
+    robot_version: 49
+    transition: t_bent_to_replacement_l
+    result: passed_and_operator_approved
+    target_deg: [0, 0, 0, -90, 0, 0, 0, 0, 0, 0, -90, 0, 0, 0]
+    observed_after_settle_deg: [0.006, -0.105, -0.014, -90.084, -0.099, 0.036, 0.093, 0.007, 0.107, 0.015, -90.092, -0.104, -0.032, 0.102]
+    notes:
+      - "Maximum final target error was 0.107 deg."
+      - "The smallest preview-envelope margin is 15 deg; the smallest hard-limit margin is 20 deg."
+      - "Operator approved both the guarded transition and the final alignment pose."
+      - "Safety-hold and limit-recovery behavior was intentionally not changed in this revision."
+  - date: "2026-11-03"
+    environment: mujoco_tall_cup_scene
+    robot_version: 49
+    transition: t_bent_to_tall_cup_clearance_l
+    result: passed_and_operator_approved
+    target_deg: [0, 20, 0, -90, 0, 0, 0, 0, -20, 0, -90, 0, 0, 0]
+    observed_after_settle_deg: [0.007, 20.026, -0.007, -90.080, 0.028, 0.010, 0.086, 0.008, -20.026, 0.007, -90.084, -0.027, -0.010, 0.099]
+    notes:
+      - "Completed HOME -> T -> T_BENT -> L using the native time-target controller."
+      - "The T_BENT -> L segment used 18 MPC seconds; maximum commanded average joint speed was 3.889 deg/s."
+      - "Maximum final target error was 0.099 deg."
+      - "All ten dexhand touch channels reported zero force after settling."
+      - "The coffee-cup pose remained stable and the operator approved the final clearance pose."

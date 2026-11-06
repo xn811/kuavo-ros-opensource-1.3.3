@@ -1,0 +1,10 @@
+numpy
+# The Kuavo Noetic image uses Python 3.8. vuer 0.1.x currently resolves to
+# params-proto 3.3.0, whose runtime annotations require Python 3.9+.
+vuer==0.0.67
+params-proto>=2.13.0,<3.0
+# vuer 0.0.67 exposes its server extras as optional metadata, while this
+# bridge always uses the aiohttp HTTPS server path.
+aiohttp==3.10.5
+aiohttp-cors==0.7.0
+killport>=1.2.0

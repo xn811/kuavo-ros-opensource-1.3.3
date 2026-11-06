@@ -1,0 +1,172 @@
+enable_output: false
+enable_arm: true
+enable_hand: true
+enable_head: true
+
+host: 0.0.0.0
+port: 8012
+webxr_fps: 60
+# Match ik_ros_uni.controller_dt = 0.01 s. New WebXR samples update the target;
+# the latest valid target is republished on this 100 Hz controller clock.
+publish_rate: 100.0
+tracking_timeout: 0.25
+
+# xteleop-style two-hand safety gestures. Start: both hands open with both
+# palms up for 5 s. Stop: both hands in a fist for 3 s. Both commands require
+# stable two-hand tracking, continuous hold, release-to-rearm and cooldown.
+enable_gesture_control: true
+gesture_start_hold: 5.0
+gesture_stop_hold: 3.0
+gesture_release_hold: 1.0
+gesture_cooldown: 2.0
+gesture_valid_frames: 3
+gesture_invalid_grace: 0.8
+gesture_open_ratio: 3.0
+gesture_fist_ratio: 2.35
+gesture_palm_up_dot: 0.65
+
+# HTTPS is mandatory for WebXR on a remote Quest browser.
+cert_file: ""
+key_file: ""
+
+base_frame: base_link
+# Kuavo v49 two-stage IK consumes R6 positions and R7 end-effector
+# orientations.  Every numeric target is expressed in base_frame.
+left_position_frame: zarm_l6_link
+right_position_frame: zarm_r6_link
+left_orientation_frame: zarm_l7_end_effector
+right_orientation_frame: zarm_r7_end_effector
+
+# After the palms-up start gesture is released, output stays inhibited until
+# the HMD and both wrists remain inside this multi-frame stability window.
+calibration_hold: 1.0
+calibration_prepare_hold: 3.0
+calibration_min_samples: 30
+calibration_max_position_spread: 0.015
+calibration_max_rotation_spread: 0.12
+
+# Direct Kuavo IK input. The launch default starts Quest3's ik_ros_uni.py,
+# which publishes the resulting /kuavo_arm_traj in the stock bag layout.
+arm_command_topic: /ik/two_arm_hand_pose_cmd
+hand_command_topic: /control_robot_hand_position
+head_command_topic: /robot_head_motion_data
+arm_frame: 2
+
+# Static WebXR Z-up convention correction.  At neutral calibration the bridge
+# adds a yaw correction that maps the HMD's horizontal forward to Base +X.
+axis_mapping: [1.0, 0.0, 0.0,
+               0.0, 1.0, 0.0,
+               0.0, 0.0, 1.0]
+# Unscaled WebXR displacement test: preserve one metre of operator wrist
+# displacement as one metre of robot target displacement after axis alignment.
+position_scale: [1.0, 1.0, 1.0]
+max_linear_speed: 0.60
+max_angular_speed: 1.20
+max_input_position_jump: 0.20
+max_input_rotation_jump: 0.80
+workspace_min: [0.10, -0.65, -0.25]
+workspace_max: [0.75, 0.65, 0.65]
+left_shoulder_position: [-0.017499853, 0.2927, 0.4245]
+right_shoulder_position: [-0.017499853, -0.2927, 0.4245]
+min_shoulder_reach: 0.15
+max_shoulder_reach: 0.62
+midline_margin: 0.05
+body_exclusion_front: 0.18
+body_exclusion_half_width: 0.20
+
+# Joint-space safety is enforced by the sole /kuavo_arm_traj publisher.  Auto
+# staging deliberately keeps the 5 deg/s speed that was reviewed in MuJoCo.
+feedback_timeout: 0.30
+# Feedback may use the five-degree URDF-to-preview buffer for a guarded,
+# low-speed return. Exceeding the URDF hard envelope (apart from this small
+# numeric tolerance) remains a non-recoverable adapter fault.
+feedback_hard_limit_tolerance_deg: 0.25
+# Match the bridge's existing feedback-ready tolerance and avoid chattering at
+# the exact preview boundary while the low-speed return settles.
+feedback_safe_envelope_tolerance_deg: 0.5
+auto_joint_speed_deg_s: 5.0
+auto_joint_velocity_deg_s: [5.0]
+auto_joint_acceleration_deg_s2: [10.0]
+hold_joint_velocity_deg_s: [5.0]
+hold_joint_acceleration_deg_s2: [10.0]
+teleop_joint_velocity_deg_s: [25, 30, 30, 40, 45, 45, 45,
+                              25, 30, 30, 40, 45, 45, 45]
+teleop_joint_acceleration_deg_s2: [80, 100, 100, 120, 150, 150, 150,
+                                   80, 100, 100, 120, 150, 150, 150]
+raw_ik_jump_limit_deg: 25.0
+ik_handoff_limit_deg: 12.0
+ik_handoff_valid_frames: 10
+ik_handoff_timeout_s: 10.0
+# During ACTIVE, transient WebXR/IK limit faults hold the measured pose while
+# safe IK candidates continue to be evaluated from the original L-pose
+# calibration anchor.  Recovery never re-anchors at an arbitrary task pose.
+# Five new safe reports enter the live low-speed recovery profile immediately;
+# the operator may continue moving while the limiter follows the current safe
+# target.  Only an explicit L-pose realignment creates a new anchor.
+recovery_valid_frames: 5
+# Final <=3 degree convergence must remain valid for this interval before the
+# adapter returns to the normal teleoperation speed profile.
+recovery_complete_hold_s: 0.75
+recovery_envelope_margin_deg: 0.5
+recovery_candidate_delta_deg: 3.0
+recovery_max_projection_m: 0.002
+recovery_complete_error_deg: 3.0
+# Original recovery target-lead guard, disabled for the unrestricted low-speed
+# recovery trial. Keep the setting commented until the trial is accepted or
+# the 20-degree guard is restored.
+# recovery_dynamic_follow_error_deg: 20.0
+recovery_joint_velocity_deg_s: [5.0]
+recovery_joint_acceleration_deg_s2: [10.0]
+# A safe IK target may be arbitrarily far away, but the command presented to
+# the low-speed limiter may lead fresh measured feedback by at most this much
+# per joint. This prevents contact from accumulating a distant command.
+recovery_command_lead_deg: [12.0]
+# MuJoCo grasping trial: tolerate transient contact-induced arm lag while the
+# existing joint velocity/acceleration, IK-jump and joint-envelope guards stay
+# active. Revisit these values before transferring the workflow to hardware.
+tracking_error_limit_deg: 45.0
+tracking_error_grace_s: 1.0
+auto_pose_tolerance_deg: 2.0
+auto_pose_hold_s: 1.0
+auto_motion_timeout_margin_s: 8.0
+
+# Pause is a reversible hold.  A two-hand pinch enters the separate full-exit
+# confirmation layer; releasing it and then holding two fists returns L ->
+# T_BENT -> T -> HOME before mode 1 is requested.
+exit_pinch_ratio: 0.20
+exit_pinch_hold: 2.0
+exit_release_hold: 1.0
+exit_fist_hold: 3.0
+
+# MuJoCo/Kuavo order is [thumb_MCP, thumb_CMC, index, middle, ring, pinky].
+# The tracker initially computes [CMC opposition, MCP bend], so swap the two
+# live thumb channels before publishing.  Dynamic mode makes both channels
+# follow WebXR; set it false to reproduce the reference bag's fixed aux=100.
+thumb_swap: true
+thumb_aux_dynamic: true
+thumb_aux_value: 100
+# Closure range correction measured from WebXR rosbag data.  Each semantic
+# close command is divided by its value and then clipped to [0, 100].  Set any
+# entry to 1.0 to restore that finger's original mapping.  Thumb CMC
+# abduction/opposition is intentionally not included and remains unchanged.
+finger_close_denominators:
+  thumb: 0.8
+  index: 0.8
+  middle: 0.8
+  ring: 0.9
+  pinky: 0.8
+# Neutral dexterous-hand command used during T/T_BENT/L realignment and the
+# L/T_BENT/T/HOME full-exit path.  This prevents the gesture that selected the
+# transition from leaving the robot hand in a fist or pinch.
+neutral_hand_position: [0, 0, 0, 0, 0, 0]
+
+# Match noitom_hi5_hand_udp_python/scripts/config.json (Quest3 defaults).
+head_yaw_limits: [-90.0, 90.0]
+head_pitch_limits: [-20.0, 30.0]
+head_yaw_sign: 1.0
+head_pitch_sign: 1.0
+startup_head_pitch_deg: 25.0
+
+# Unlike a direct /humanoid_change_arm_ctrl_mode call, this service seeds the
+# trajectory controller from measured feedback before entering mode 2.
+safe_arm_mode_services: [/arm_traj_change_mode, /humanoid_change_arm_ctrl_mode]

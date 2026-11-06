@@ -1,0 +1,26 @@
+{
+  "record_topics": [
+    "/cam_h/color/camera_info",
+    "/cam_h/color/image_raw/compressed",
+    "/cam_h/color/metadata",
+    "/cam_h/depth/image_raw/compressed",
+    "/cam_l/color/camera_info",
+    "/cam_l/color/image_raw/compressed",
+    "/cam_l/color/metadata",
+    "/cam_l/depth/image_rect_raw/compressed",
+    "/cam_r/color/camera_info",
+    "/cam_r/color/image_raw/compressed",
+    "/cam_r/color/metadata",
+    "/cam_r/depth/image_rect_raw/compressed",
+    "/robot_head_motion_data",
+    "/control_robot_hand_position",
+    "/dexhand/state",
+    "/dexhand/touch_state",
+    "/joint_cmd",
+    "/kuavo_arm_traj",
+    "/sensors_data_raw",
+    "/tf",
+    "/tf_static",
+    "/humanoid_controller/wbc_arm_eef_pose"
+  ]
+}
